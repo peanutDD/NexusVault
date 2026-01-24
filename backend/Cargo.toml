@@ -1,0 +1,63 @@
+[package]
+name = "file-storage-backend"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["multipart", "json"] }
+bytes = "1.0"
+tokio = { version = "1", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "timeout", "limit"] }
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Authentication
+jsonwebtoken = "9.2"
+bcrypt = "0.15"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Configuration
+dotenv = "0.15"
+config = "0.14"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# File handling
+mime = "0.3"
+mime_guess = "2.0"
+
+# AWS S3
+aws-sdk-s3 = "1.0"
+aws-config = "1.0"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+validator = { version = "0.18", features = ["derive"] }
+
+# Rate limiting - implemented as custom middleware
+
+# Async traits
+async-trait = "0.1"
+
+# ZIP for batch download
+zip = "2.2"
+
+# Random token generation
+rand = "0.8"
+
+# Hashing for API tokens
+sha2 = "0.10"

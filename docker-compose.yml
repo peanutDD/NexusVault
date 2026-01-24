@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: file_storage_db
+    environment:
+      POSTGRES_USER: file_storage
+      POSTGRES_PASSWORD: file_storage_password
+      POSTGRES_DB: file_storage
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U file_storage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: file_storage_backend
+    environment:
+      DATABASE_URL: postgresql://file_storage:file_storage_password@postgres:5432/file_storage
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      JWT_EXPIRY: 24h
+      STORAGE_BACKEND: local
+      STORAGE_PATH: /app/uploads
+      MAX_FILE_SIZE: 104857600
+      ALLOWED_MIME_TYPES: image/*,application/pdf,text/*,application/zip
+      PORT: 3000
+      CORS_ORIGIN: "*"
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - "3000:3000"
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: file_storage_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  backend_uploads:

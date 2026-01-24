@@ -1,0 +1,71 @@
+# Rust
+/target/
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Node
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+**/dist/
+dist-ssr/
+*.local
+
+# Environment
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+**/.DS_Store
+
+# Uploads
+uploads/
+**/uploads/
+backend/uploads/
+frontend/uploads/
+
+# Logs
+*.log
+logs/
+**/*.log
+
+# Database
+*.db
+*.sqlite
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Coverage
+coverage/
+*.gcov
+*.gcda
+*.gcno
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
