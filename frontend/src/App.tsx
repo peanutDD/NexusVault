@@ -1,7 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useHydrationStore } from './store/hydrationStore';
+import { useThemeStore } from './store/themeStore';
 import ErrorBoundary from './components/ErrorBoundary';
 import Spinner from './components/common/Spinner';
 
@@ -42,6 +43,18 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const { effectiveTheme } = useThemeStore();
+
+  // 初始化主题应用到 DOM
+  useEffect(() => {
+    const root = document.documentElement;
+    if (effectiveTheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [effectiveTheme]);
+
   return (
     <ErrorBoundary>
       <BrowserRouter>

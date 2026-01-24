@@ -19,7 +19,8 @@ import BatchShareDialog from './BatchShareDialog';
 import BatchMoveDialog from './BatchMoveDialog';
 import FileRow from './FileRow';
 import FileListFilters from './FileListFilters';
-import Spinner from '../common/Spinner';
+import { FileListSkeleton } from '../common/Skeleton';
+import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
 
 export default function FileList() {
   const [files, setFiles] = useState<FileMetadata[]>([]);
@@ -183,6 +184,60 @@ export default function FileList() {
     setPage(1);
   }, []);
 
+  // 键盘快捷键支持
+  useKeyboardShortcuts([
+    {
+      key: SHORTCUTS.SEARCH,
+      handler: () => {
+        // 通过全局变量访问搜索输入框（FileListFilters 中设置）
+        const searchInput = (window as any).__fileListSearchInput as HTMLInputElement | undefined;
+        searchInput?.focus();
+        searchInput?.select();
+      },
+      description: '聚焦搜索框',
+    },
+    {
+      key: SHORTCUTS.SELECT_ALL,
+      handler: () => {
+        if (files.length > 0) {
+          toggleSelectAll();
+        }
+      },
+      description: '全选/取消全选',
+    },
+    {
+      key: SHORTCUTS.BATCH_DELETE,
+      handler: () => {
+        if (selectedFiles.size > 0) {
+          handleBatchDelete();
+        }
+      },
+      description: '批量删除选中文件',
+    },
+    {
+      key: SHORTCUTS.DELETE,
+      handler: () => {
+        if (selectedFiles.size === 1) {
+          const fileId = Array.from(selectedFiles)[0];
+          handleDelete(fileId);
+        }
+      },
+      description: '删除选中的单个文件',
+    },
+    {
+      key: SHORTCUTS.ESCAPE,
+      handler: () => {
+        setSelectedFiles(new Set());
+        setPreviewFile(null);
+        setShareFile(null);
+        setShowBatchShare(false);
+        setShowBatchMove(false);
+      },
+      description: '取消选择/关闭对话框',
+      preventInInput: false,
+    },
+  ]);
+
   return (
     <div>
       <FileListFilters
@@ -226,34 +281,34 @@ export default function FileList() {
       />
 
       {selectedFiles.size > 0 && (
-        <div className="mb-4 p-3 bg-purple-500/20 border border-purple-500/50 rounded-lg flex items-center justify-between">
-          <span className="text-purple-200">
+        <div className="mb-4 p-3 bg-purple-500/20 dark:bg-purple-600/20 border border-purple-500/50 dark:border-purple-600/50 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in transition-all duration-200">
+          <span className="text-purple-200 dark:text-purple-300 font-medium">
             已选择 {selectedFiles.size} 个文件
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowBatchMove(true)}
-              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+              className="px-3 sm:px-4 py-2 bg-amber-600 dark:bg-amber-700 text-white rounded-lg hover:bg-amber-700 dark:hover:bg-amber-600 transition-all duration-200 text-sm"
             >
               批量移动
             </button>
             <button
               onClick={() => setShowBatchShare(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="px-3 sm:px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 text-sm"
             >
               批量分享
             </button>
             <button
               onClick={handleBatchDownload}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="px-3 sm:px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200 text-sm"
             >
               批量下载 ZIP
             </button>
             <button
               onClick={handleBatchDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              className="px-3 sm:px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-all duration-200 text-sm"
             >
-              批量删除
+              批量删除 (Ctrl+Shift+D)
             </button>
           </div>
         </div>
@@ -268,9 +323,8 @@ export default function FileList() {
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-3">
-          <Spinner size="lg" />
-          <span>加载中…</span>
+        <div className="bg-gray-800 dark:bg-gray-900 rounded-lg overflow-hidden transition-colors duration-200">
+          <FileListSkeleton count={5} />
         </div>
       ) : files.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
@@ -278,9 +332,9 @@ export default function FileList() {
         </div>
       ) : (
         <>
-          <div className="bg-gray-800 rounded-lg overflow-hidden">
+          <div className="bg-gray-800 dark:bg-gray-900 rounded-lg overflow-hidden shadow-lg transition-all duration-200">
             <div
-              className="grid grid-cols-[auto_72px_1fr_80px_120px_100px_100px_auto] gap-0 items-center px-6 py-3 bg-gray-700 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
+              className="grid grid-cols-[auto_72px_1fr_80px_120px_100px_100px_auto] gap-0 items-center px-6 py-3 bg-gray-700 dark:bg-gray-800 text-left text-xs font-medium text-gray-300 dark:text-gray-400 uppercase tracking-wider transition-colors duration-200"
               style={{ minWidth: 800 }}
             >
               <div>

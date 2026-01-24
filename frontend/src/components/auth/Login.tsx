@@ -44,9 +44,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-      <div className="max-w-md w-full mx-4">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 dark:from-gray-950 dark:via-purple-950 dark:to-gray-950 transition-colors duration-300">
+      <div className="max-w-md w-full mx-4 animate-fade-in">
+        <div className="bg-white/10 dark:bg-gray-900/80 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20 dark:border-gray-700/50 transition-all duration-300">
           <div className="flex items-center justify-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
               <svg
@@ -65,10 +65,10 @@ export default function Login() {
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-center text-white mb-2">
+          <h1 className="text-3xl font-bold text-center text-white dark:text-gray-100 mb-2 transition-colors duration-200">
             File Upload Download Server
           </h1>
-          <p className="text-center text-gray-300 mb-8">
+          <p className="text-center text-gray-300 dark:text-gray-400 mb-8 transition-colors duration-200">
             Sign in to upload and manage your files
           </p>
 

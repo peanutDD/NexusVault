@@ -43,17 +43,23 @@ const FileListFilters = memo(function FileListFilters({
     <div className="mb-6 space-y-4">
       <div className="flex gap-4 flex-wrap">
         <input
+          ref={(el) => {
+            // 用于键盘快捷键聚焦
+            if (el) {
+              (window as any).__fileListSearchInput = el;
+            }
+          }}
           type="text"
-          placeholder="搜索文件..."
+          placeholder="搜索文件... (Ctrl+K)"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="flex-1 min-w-48 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="flex-1 min-w-48 px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
           aria-label="搜索文件"
         />
         <select
           value={mimeType}
           onChange={(e) => onMimeTypeChange(e.target.value)}
-          className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
           aria-label="按文件类型筛选"
         >
           <option value="">所有类型</option>
@@ -66,7 +72,7 @@ const FileListFilters = memo(function FileListFilters({
           aria-label="按分类筛选"
           value={category}
           onChange={(e) => onCategoryChange(e.target.value)}
-          className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
         >
           <option value="">全部分类</option>
           <option value="__uncategorized__">未分类</option>
@@ -79,7 +85,7 @@ const FileListFilters = memo(function FileListFilters({
       </div>
       <div className="flex gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <label htmlFor="date-from" className="text-sm text-gray-300 whitespace-nowrap">
+          <label htmlFor="date-from" className="text-sm text-gray-300 dark:text-gray-400 whitespace-nowrap transition-colors duration-200">
             日期从:
           </label>
           <input
@@ -87,11 +93,11 @@ const FileListFilters = memo(function FileListFilters({
             type="date"
             value={dateFrom}
             onChange={(e) => onDateFromChange(e.target.value)}
-            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
           />
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="date-to" className="text-sm text-gray-300 whitespace-nowrap">
+          <label htmlFor="date-to" className="text-sm text-gray-300 dark:text-gray-400 whitespace-nowrap transition-colors duration-200">
             日期到:
           </label>
           <input
@@ -99,11 +105,11 @@ const FileListFilters = memo(function FileListFilters({
             type="date"
             value={dateTo}
             onChange={(e) => onDateToChange(e.target.value)}
-            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
           />
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="size-min" className="text-sm text-gray-300 whitespace-nowrap">
+          <label htmlFor="size-min" className="text-sm text-gray-300 dark:text-gray-400 whitespace-nowrap transition-colors duration-200">
             大小最小(MB):
           </label>
           <input
@@ -113,11 +119,11 @@ const FileListFilters = memo(function FileListFilters({
             placeholder="MB"
             value={sizeMin}
             onChange={(e) => onSizeMinChange(e.target.value)}
-            className="w-24 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-24 px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
           />
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="size-max" className="text-sm text-gray-300 whitespace-nowrap">
+          <label htmlFor="size-max" className="text-sm text-gray-300 dark:text-gray-400 whitespace-nowrap transition-colors duration-200">
             大小最大(MB):
           </label>
           <input
@@ -127,13 +133,13 @@ const FileListFilters = memo(function FileListFilters({
             placeholder="MB"
             value={sizeMax}
             onChange={(e) => onSizeMaxChange(e.target.value)}
-            className="w-24 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-24 px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
           />
         </div>
         {hasFilters && (
           <button
             onClick={onClearFilters}
-            className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+            className="px-4 py-2 bg-gray-700 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition-all duration-200"
           >
             清除筛选
           </button>
