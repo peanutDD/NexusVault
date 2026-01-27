@@ -68,7 +68,7 @@ impl FolderService {
                     .await?;
 
             if parent_exists.is_none() {
-                return Err(AppError::NotFound("父文件夹不存在".to_string()));
+                return Err(AppError::Validation("父文件夹不存在".to_string()));
             }
         }
 
@@ -183,7 +183,7 @@ impl FolderService {
 
         match folder {
             Some(f) => Ok(f.into()),
-            None => Err(AppError::NotFound("文件夹不存在".to_string())),
+            None => Err(AppError::NotFound),
         }
     }
 
