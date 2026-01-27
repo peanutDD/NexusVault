@@ -1,3 +1,48 @@
+//! # 文件服务模块
+//!
+//! 提供文件管理的核心业务逻辑，包括：
+//!
+//! - **文件上传**: 普通上传和分块上传
+//! - **文件查询**: 列表、搜索、过滤
+//! - **文件操作**: 下载、预览、删除
+//! - **批量操作**: 批量删除、批量移动、批量下载
+//! - **存储配额**: 配额检查和使用量统计
+//!
+//! ## 架构设计
+//!
+//! ```text
+//! ┌─────────────┐
+//! │  Handlers   │
+//! └──────┬──────┘
+//!        │
+//! ┌──────▼──────┐
+//! │ FileService │  ← 业务逻辑层
+//! └──────┬──────┘
+//!        │
+//! ┌──────▼──────┐     ┌────────────┐
+//! │  Database   │────→│  Storage   │
+//! │   (SQLx)    │     │ (Local/S3) │
+//! └─────────────┘     └────────────┘
+//! ```
+//!
+//! ## 使用示例
+//!
+//! ```rust,ignore
+//! let service = FileService::new(pool, storage, config);
+//!
+//! // 上传文件
+//! let file = service.create_file(user_id, filename, mime, size, data).await?;
+//!
+//! // 列出文件
+//! let (files, total) = service.list_files(user_id, query).await?;
+//! ```
+
+use chrono::Utc;
+use sqlx::PgPool;
+use std::path::Path;
+use std::sync::Arc;
+use uuid::Uuid;
+
 use crate::{
     config::Config,
     models::file::{BatchMoveRequest, File, FileListQuery, FileResponse},
@@ -7,13 +52,9 @@ use crate::{
     services::storage::{LocalStorage, S3Storage, StorageBackend},
     utils::AppError,
 };
-use chrono::Utc;
-use sqlx::PgPool;
-use std::path::Path;
-use std::sync::Arc;
-use uuid::Uuid;
 
-pub const CHUNK_SIZE: u32 = 5 * 1024 * 1024; // 5 MiB
+/// 分块上传的块大小（5 MiB）
+pub const CHUNK_SIZE: u32 = 5 * 1024 * 1024;
 
 pub struct FileService {
     pool: PgPool,
@@ -138,6 +179,26 @@ impl FileService {
             param_index += 1;
         }
 
+        // Folder ID filter
+        let folder_id_filter: Option<Option<uuid::Uuid>> = query.folder_id.as_ref().map(|s| {
+            let t = s.trim();
+            if t.is_empty() || t.to_lowercase() == "null" || t == "root" {
+                None // 根目录
+            } else {
+                uuid::Uuid::parse_str(t).ok()
+            }
+        });
+
+        // 如果指定了 folder_id 参数，按文件夹过滤
+        if let Some(folder_opt) = &folder_id_filter {
+            if folder_opt.is_some() {
+                conditions.push(format!("folder_id = ${}", param_index));
+                param_index += 1;
+            } else {
+                conditions.push("folder_id IS NULL".to_string());
+            }
+        }
+
         // Search filter
         if search_pattern.is_some() {
             conditions.push(format!(
@@ -215,9 +276,9 @@ impl FileService {
             format!("WHERE {}", conditions.join(" AND "))
         };
 
-        // Build query with dynamic WHERE clause - only select needed columns for better performance
+        // Build query with dynamic WHERE clause. SELECT 需包含 File 全部字段，否则 FromRow 报 no column file_path
         let query_sql = format!(
-            "SELECT id, user_id, filename, original_filename, file_size, mime_type, category, created_at, updated_at FROM files {} ORDER BY created_at DESC LIMIT ${} OFFSET ${}",
+            "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, created_at, updated_at FROM files {} ORDER BY created_at DESC LIMIT ${} OFFSET ${}",
             where_clause,
             param_index,
             param_index + 1
@@ -230,6 +291,11 @@ impl FileService {
 
         if let Some(ref cat) = category_filter_exact {
             query_builder = query_builder.bind(cat);
+        }
+
+        // Bind folder_id if specified and not null (null case uses IS NULL in WHERE)
+        if let Some(Some(fid)) = &folder_id_filter {
+            query_builder = query_builder.bind(*fid);
         }
 
         if let Some(ref search_pattern) = search_pattern {
@@ -271,6 +337,11 @@ impl FileService {
 
         if let Some(ref cat) = category_filter_exact {
             count_builder = count_builder.bind(cat);
+        }
+
+        // Bind folder_id if specified and not null
+        if let Some(Some(fid)) = &folder_id_filter {
+            count_builder = count_builder.bind(*fid);
         }
 
         if let Some(ref search_pattern) = search_pattern {

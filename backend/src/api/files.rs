@@ -3,9 +3,11 @@
 //! 定义文件管理相关的 API 路由。
 
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{delete, get, post, put},
     Router,
 };
+use tower_http::limit::RequestBodyLimitLayer;
 
 use crate::handlers::files::{
     batch_delete_handler, batch_download_zip_handler, batch_move_handler, categories_handler,
@@ -14,6 +16,12 @@ use crate::handlers::files::{
     download_file_handler, list_files_handler, preview_file_handler, storage_usage_handler,
     upload_file_handler,
 };
+use crate::AppState;
+
+/// 单文件上传最大 100MB（小文件直接上传，大文件使用分块上传）
+const MAX_UPLOAD_BODY: usize = 104_857_600;
+/// 分块上传每块最大 12 MiB（前端使用 10MB 块，留出边界空间）
+const MAX_CHUNK_BODY: usize = 12 * 1024 * 1024;
 
 /// 创建文件管理相关的路由
 ///
@@ -41,14 +49,20 @@ use crate::handlers::files::{
 /// ## 其他
 /// - `GET /storage-usage`: 获取存储使用情况
 /// - `GET /categories`: 获取文件分类列表
-pub fn create_router() -> Router {
+pub fn create_router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_files_handler))
-        .route("/upload", post(upload_file_handler))
+        .route(
+            "/upload",
+            post(upload_file_handler)
+                .layer(RequestBodyLimitLayer::new(MAX_UPLOAD_BODY)),
+        )
         .route("/upload/chunked/init", post(chunked_upload_init_handler))
+        // Chunk 用 Bytes extractor，须 DefaultBodyLimit 否则默认 2MB 拒收 5MB 块
         .route(
             "/upload/chunked/:id/chunk",
-            put(chunked_upload_chunk_handler),
+            put(chunked_upload_chunk_handler)
+                .layer(DefaultBodyLimit::max(MAX_CHUNK_BODY)),
         )
         .route(
             "/upload/chunked/:id/status",

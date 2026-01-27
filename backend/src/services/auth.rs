@@ -1,19 +1,38 @@
-use crate::{
-    config::Config,
-    models::user::{LoginRequest, RegisterRequest, User, UserResponse},
-    utils::AppError,
-};
-use bcrypt::{hash, verify, DEFAULT_COST};
+//! # 认证服务模块
+//!
+//! 提供用户认证相关的业务逻辑，包括：
+//!
+//! - **用户注册**: 创建新用户，密码哈希存储
+//! - **用户登录**: 验证凭据，生成 JWT token
+//! - **Token 管理**: 生成和验证 JWT token
+//! - **密码管理**: 修改密码
+//!
+//! ## 安全特性
+//!
+//! - 使用 bcrypt 进行密码哈希
+//! - JWT token 有过期时间
+//! - 所有认证失败返回统一错误，防止信息泄露
+
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::{
+    config::Config,
+    models::user::{LoginRequest, RegisterRequest, User, UserResponse},
+    utils::{hash_password, now_timestamp, parse_jwt_expiry, verify_password, AppError},
+};
+
+/// JWT Claims 结构
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String, // user id
+    /// Subject (用户 ID)
+    pub sub: String,
+    /// Expiration time (Unix timestamp)
     pub exp: usize,
+    /// Issued at (Unix timestamp)
     pub iat: usize,
 }
 
@@ -58,7 +77,7 @@ impl AuthService {
         }
 
         // Hash password
-        let password_hash = hash(&req.password, DEFAULT_COST).map_err(|_| AppError::Internal)?;
+        let password_hash = hash_password(&req.password)?;
 
         // Create user
         let user = sqlx::query_as::<_, User>(
@@ -82,9 +101,7 @@ impl AuthService {
             .ok_or_else(|| AppError::Auth("Invalid email or password".to_string()))?;
 
         // Verify password
-        if !verify(&req.password, &user.password_hash)
-            .map_err(|_| AppError::Auth("Invalid email or password".to_string()))?
-        {
+        if !verify_password(&req.password, &user.password_hash)? {
             return Err(AppError::Auth("Invalid email or password".to_string()));
         }
 
@@ -93,18 +110,8 @@ impl AuthService {
     }
 
     pub fn generate_token(&self, user_id: &Uuid) -> Result<String, AppError> {
-        let now = Utc::now().timestamp() as usize;
-        let exp = match self.config.jwt_expiry.as_str() {
-            s if s.ends_with('h') => {
-                let hours: usize = s.trim_end_matches('h').parse().unwrap_or(24);
-                now + hours * 3600
-            }
-            s if s.ends_with('d') => {
-                let days: usize = s.trim_end_matches('d').parse().unwrap_or(1);
-                now + days * 86400
-            }
-            _ => now + 86400, // Default 24 hours
-        };
+        let now = now_timestamp();
+        let exp = parse_jwt_expiry(&self.config.jwt_expiry);
 
         let claims = Claims {
             sub: user_id.to_string(),
@@ -167,15 +174,12 @@ impl AuthService {
             .ok_or(AppError::NotFound)?;
 
         // Verify current password
-        if !verify(&current_password, &user.password_hash)
-            .map_err(|_| AppError::Auth("Current password is incorrect".to_string()))?
-        {
+        if !verify_password(&current_password, &user.password_hash)? {
             return Err(AppError::Auth("Current password is incorrect".to_string()));
         }
 
         // Hash new password
-        let new_password_hash =
-            hash(&new_password, DEFAULT_COST).map_err(|_| AppError::Internal)?;
+        let new_password_hash = hash_password(&new_password)?;
 
         // Update password
         sqlx::query("UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3")

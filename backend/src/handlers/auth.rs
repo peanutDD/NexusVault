@@ -12,22 +12,15 @@
 //! 2. **业务逻辑分离**: 所有业务逻辑都在 `AuthService` 中
 //! 3. **错误处理**: 使用 `AppError` 统一错误响应
 
-use axum::extract::Extension;
+use axum::extract::State;
 use axum::response::Response;
 use serde_json::json;
-use sqlx::PgPool;
-use std::sync::Arc;
 
-use crate::config::Config;
 use crate::extractors::AuthenticatedUser;
 use crate::models::user::{ChangePasswordRequest, LoginRequest, RegisterRequest};
 use crate::services::auth::AuthService;
 use crate::utils::{json_response, success_response, AppError};
-
-/// 创建 AuthService 实例的辅助函数
-fn create_auth_service(pool: PgPool, config: &Config) -> AuthService {
-    AuthService::new(pool, config.clone())
-}
+use crate::AppState;
 
 /// 用户注册
 ///
@@ -52,11 +45,10 @@ fn create_auth_service(pool: PgPool, config: &Config) -> AuthService {
 /// }
 /// ```
 pub async fn register_handler(
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
+    State(state): State<AppState>,
     axum::Json(req): axum::Json<RegisterRequest>,
 ) -> Result<Response, AppError> {
-    let auth_service = create_auth_service(pool, config.as_ref());
+    let auth_service = AuthService::new(state.pool.clone(), (*state.config).clone());
 
     // 注册用户
     let user = auth_service.register(req).await?;
@@ -92,11 +84,10 @@ pub async fn register_handler(
 /// }
 /// ```
 pub async fn login_handler(
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
+    State(state): State<AppState>,
     axum::Json(req): axum::Json<LoginRequest>,
 ) -> Result<Response, AppError> {
-    let auth_service = create_auth_service(pool, config.as_ref());
+    let auth_service = AuthService::new(state.pool.clone(), (*state.config).clone());
 
     // 验证凭据并生成 token
     let token = auth_service.login(req).await?;
@@ -115,11 +106,10 @@ pub async fn login_handler(
 ///
 /// 需要认证，从请求头中的 token 提取用户信息。
 pub async fn me_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
 ) -> Result<Response, AppError> {
-    let auth_service = create_auth_service(pool, config.as_ref());
+    let auth_service = AuthService::new(state.pool.clone(), (*state.config).clone());
     let user = auth_service.get_user(user_id).await?;
     Ok(json_response(json!({ "user": user })))
 }
@@ -134,12 +124,11 @@ pub async fn me_handler(
 /// }
 /// ```
 pub async fn change_password_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
     axum::Json(req): axum::Json<ChangePasswordRequest>,
 ) -> Result<Response, AppError> {
-    let auth_service = create_auth_service(pool, config.as_ref());
+    let auth_service = AuthService::new(state.pool.clone(), (*state.config).clone());
 
     auth_service
         .change_password(user_id, req.current_password, req.new_password)

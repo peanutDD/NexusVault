@@ -45,9 +45,10 @@ const FileListFilters = memo(function FileListFilters({
         <input
           ref={(el) => {
             // 用于键盘快捷键聚焦
-            if (el) {
-              (window as any).__fileListSearchInput = el;
-            }
+            const w = window as unknown as {
+              __fileListSearchInput?: HTMLInputElement;
+            };
+            w.__fileListSearchInput = el ?? undefined;
           }}
           type="text"
           placeholder="搜索文件... (Ctrl+K)"

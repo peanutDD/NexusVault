@@ -1,14 +1,13 @@
-use crate::{
-    models::file::{
-        BatchShareRequest, BatchShareResponse, CreateShareRequest, FileShare, ShareResponse,
-    },
-    utils::AppError,
-};
-use bcrypt::{hash, verify, DEFAULT_COST};
-use chrono::{Duration, Utc};
-use rand::Rng;
+use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::{
+    models::share::{
+        BatchShareRequest, BatchShareResponse, CreateShareRequest, FileShare, ShareResponse,
+    },
+    utils::{calculate_expiration, generate_random_token, hash_password, verify_password, AppError},
+};
 
 pub struct ShareService {
     pool: PgPool,
@@ -19,15 +18,11 @@ impl ShareService {
         Self { pool }
     }
 
+    /// 生成分享令牌
+    ///
+    /// 使用 `utils::crypto::generate_random_token` 生成 32 字符的随机令牌。
     pub fn generate_share_token() -> String {
-        // Generate a random 32-character token
-        let mut rng = rand::thread_rng();
-        let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-            .chars()
-            .collect();
-        (0..32)
-            .map(|_| chars[rng.gen_range(0..chars.len())])
-            .collect()
+        generate_random_token(32)
     }
 
     pub async fn create_share(
@@ -51,16 +46,14 @@ impl ShareService {
         let share_token = Self::generate_share_token();
 
         // Hash password if provided
-        let password_hash = if let Some(password) = &req.password {
-            Some(hash(password, DEFAULT_COST).map_err(|_| AppError::Internal)?)
-        } else {
-            None
-        };
+        let password_hash = req
+            .password
+            .as_ref()
+            .map(|p| hash_password(p))
+            .transpose()?;
 
         // Calculate expiration
-        let expires_at = req
-            .expires_in_days
-            .map(|days| Utc::now() + Duration::days(days as i64));
+        let expires_at = calculate_expiration(req.expires_in_days);
 
         // Create share
         let share = sqlx::query_as::<_, FileShare>(
@@ -121,7 +114,7 @@ impl ShareService {
         password: &str,
     ) -> Result<bool, AppError> {
         if let Some(ref hash) = share.password_hash {
-            verify(password, hash).map_err(|_| AppError::Auth("密码验证失败".to_string()))
+            verify_password(password, hash)
         } else {
             Ok(true) // No password required
         }
@@ -162,16 +155,14 @@ impl ShareService {
         let mut failed = Vec::new();
 
         // Hash password if provided (same for all shares)
-        let password_hash = if let Some(password) = &req.password {
-            Some(hash(password, DEFAULT_COST).map_err(|_| AppError::Internal)?)
-        } else {
-            None
-        };
+        let password_hash = req
+            .password
+            .as_ref()
+            .map(|p| hash_password(p))
+            .transpose()?;
 
         // Calculate expiration (same for all shares)
-        let expires_at = req
-            .expires_in_days
-            .map(|days| Utc::now() + Duration::days(days as i64));
+        let expires_at = calculate_expiration(req.expires_in_days);
 
         // Process each file
         for file_id in req.file_ids {

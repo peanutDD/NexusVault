@@ -11,23 +11,16 @@
 //! 2. **业务逻辑分离**: 所有业务逻辑都在 `ApiTokenService` 中
 //! 3. **输入验证**: 使用 `validator` crate 进行请求验证
 
-use axum::extract::{Extension, Path};
+use axum::extract::{Path, State};
 use axum::response::Response;
 use serde_json::json;
-use sqlx::PgPool;
-use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::config::Config;
 use crate::extractors::AuthenticatedUser;
 use crate::models::api_token::{ApiTokenResponse, CreateApiTokenRequest};
 use crate::services::api_token::ApiTokenService;
 use crate::utils::{json_response, success_response, AppError};
-
-/// 创建 ApiTokenService 实例的辅助函数
-fn create_token_service(pool: PgPool) -> ApiTokenService {
-    ApiTokenService::new(pool)
-}
+use crate::AppState;
 
 /// 创建新的 API Token
 ///
@@ -54,12 +47,11 @@ fn create_token_service(pool: PgPool) -> ApiTokenService {
 ///
 /// **注意**: Token 只在创建时返回一次，请妥善保存。
 pub async fn create_token_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(_config): Extension<Arc<Config>>,
     axum::Json(req): axum::Json<CreateApiTokenRequest>,
 ) -> Result<Response, AppError> {
-    let token_service = create_token_service(pool);
+    let token_service = ApiTokenService::new(state.pool.clone());
 
     // 验证请求数据
     validator::Validate::validate(&req)
@@ -83,11 +75,10 @@ pub async fn create_token_handler(
 ///
 /// 返回用户创建的所有 API Token（不包含 token 值，仅元数据）。
 pub async fn list_tokens_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(_config): Extension<Arc<Config>>,
 ) -> Result<Response, AppError> {
-    let token_service = create_token_service(pool);
+    let token_service = ApiTokenService::new(state.pool.clone());
     let tokens = token_service.list_tokens(user_id).await?;
     Ok(json_response(json!({ "tokens": tokens })))
 }
@@ -96,12 +87,11 @@ pub async fn list_tokens_handler(
 ///
 /// 删除指定的 API Token，删除后该 token 将立即失效。
 pub async fn delete_token_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(_config): Extension<Arc<Config>>,
     Path(token_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let token_service = create_token_service(pool);
+    let token_service = ApiTokenService::new(state.pool.clone());
     token_service.delete_token(token_id, user_id).await?;
     Ok(success_response("Token deleted successfully"))
 }

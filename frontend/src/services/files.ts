@@ -1,7 +1,7 @@
 import api from './api';
 import { buildQueryParams } from '../utils/queryParams';
 import { downloadBlob } from '../utils/downloadBlob';
-import { ORIGIN } from '../config/env';
+import { API_BASE_URL } from '../config/env';
 import { CHUNKED_UPLOAD } from '../constants';
 
 export interface FileMetadata {
@@ -131,6 +131,14 @@ export const fileService = {
     await api.delete(`/api/files/upload/chunked/${uploadId}/abort`);
   },
 
+  /**
+   * 分块上传（支持大文件）
+   * 特性：
+   * - 并行上传多个块（提高速度）
+   * - 断点续传（已上传的块不会重复上传）
+   * - 指数退避重试
+   * - 实时进度回调
+   */
   async uploadFileChunked(
     file: globalThis.File,
     onProgress?: (percent: number) => void
@@ -142,6 +150,7 @@ export const fileService = {
       file.size
     );
 
+    // 获取已上传的块（支持断点续传）
     const refreshUploaded = async (): Promise<Set<number>> => {
       const s = new Set<number>();
       try {
@@ -154,35 +163,84 @@ export const fileService = {
     };
 
     let uploaded = await refreshUploaded();
+    let completedChunks = uploaded.size;
 
     const report = () => {
       if (onProgress) {
-        onProgress(Math.round((uploaded.size / total_parts) * 100));
+        onProgress(Math.round((completedChunks / total_parts) * 100));
       }
     };
 
+    // 初始报告（断点续传时显示已有进度）
+    report();
+
+    // 生成待上传的块列表
+    const pendingParts: number[] = [];
     for (let part = 1; part <= total_parts; part++) {
-      if (uploaded.has(part)) {
-        report();
-        continue;
+      if (!uploaded.has(part)) {
+        pendingParts.push(part);
       }
+    }
+
+    // 上传单个块（带重试）
+    const uploadChunk = async (part: number): Promise<void> => {
       const start = (part - 1) * chunk_size;
       const end = Math.min(part * chunk_size, file.size);
       const blob = file.slice(start, end);
+
       for (let attempt = 0; attempt < CHUNKED_UPLOAD.MAX_RETRIES; attempt++) {
         try {
           await this.chunkedUploadChunk(upload_id, part, blob);
-          uploaded.add(part);
+          completedChunks++;
           report();
-          break;
+          return;
         } catch (e) {
-          uploaded = await refreshUploaded();
-          if (uploaded.has(part)) {
+          // 检查是否已经上传成功（可能是网络问题导致响应丢失）
+          const currentUploaded = await refreshUploaded();
+          if (currentUploaded.has(part)) {
+            completedChunks++;
             report();
-            break;
+            return;
           }
-          if (attempt === 2) throw e;
+          // 最后一次重试失败则抛出错误
+          if (attempt === CHUNKED_UPLOAD.MAX_RETRIES - 1) throw e;
+          // 指数退避延迟
+          const delay = CHUNKED_UPLOAD.RETRY_DELAY_BASE * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
+      }
+    };
+
+    // 并行上传块（使用 Promise.allSettled 确保所有块都尝试上传）
+    const parallelLimit = CHUNKED_UPLOAD.PARALLEL_CHUNKS;
+    const chunks = [...pendingParts];
+    
+    while (chunks.length > 0) {
+      const batch = chunks.splice(0, parallelLimit);
+      const results = await Promise.allSettled(batch.map(uploadChunk));
+      
+      // 检查是否有失败的块
+      const failures = results.filter((r) => r.status === 'rejected');
+      if (failures.length > 0) {
+        // 抛出第一个错误
+        const firstFailure = failures[0] as PromiseRejectedResult;
+        throw firstFailure.reason;
+      }
+    }
+
+    // 完成前验证所有块都已上传
+    const finalStatus = await refreshUploaded();
+    const missingParts: number[] = [];
+    for (let part = 1; part <= total_parts; part++) {
+      if (!finalStatus.has(part)) {
+        missingParts.push(part);
+      }
+    }
+
+    if (missingParts.length > 0) {
+      // 重试上传缺失的块
+      for (const part of missingParts) {
+        await uploadChunk(part);
       }
     }
 
@@ -218,7 +276,15 @@ export const fileService = {
   },
 
   getPreviewUrl(fileId: string): string {
-    return `${ORIGIN.replace(/\/$/, '')}/api/files/${fileId}/preview`;
+    return `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/preview`;
+  },
+
+  /** 带鉴权的预览 blob，供缩略图/预览用（img/iframe 无法带 Authorization） */
+  async fetchPreviewBlob(fileId: string): Promise<Blob> {
+    const { data } = await api.get<Blob>(`/api/files/${fileId}/preview`, {
+      responseType: 'blob',
+    });
+    return data;
   },
 
   async getCategories(): Promise<string[]> {

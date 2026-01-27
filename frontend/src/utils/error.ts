@@ -56,7 +56,7 @@ export function getErrorDetails(err: unknown, fallback: string): ErrorDetails {
     }
     if (status === 413) {
       return {
-        message: '文件大小超过限制',
+        message: '文件或分块超过限制，单文件最大 100MB。请重启后端后重试。',
         code: 'FILE_TOO_LARGE',
       };
     }
@@ -78,11 +78,25 @@ export function getErrorDetails(err: unknown, fallback: string): ErrorDetails {
         code: 'SERVER_ERROR',
       };
     }
+    // 处理网络错误（无法连接到服务器）
+    if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+      return {
+        message: '无法连接到服务器，请确保后端服务正在运行（http://localhost:3000）',
+        code: 'NETWORK_ERROR',
+      };
+    }
     if (typeof err.message === 'string') {
       return { message: err.message };
     }
   }
   if (err instanceof Error) {
+    // 处理网络错误
+    if (err.message === 'Network Error' || err.message.includes('ERR_NETWORK')) {
+      return {
+        message: '无法连接到服务器，请确保后端服务正在运行（http://localhost:3000）',
+        code: 'NETWORK_ERROR',
+      };
+    }
     return { message: err.message };
   }
   return { message: fallback };

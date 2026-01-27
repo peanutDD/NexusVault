@@ -15,34 +15,21 @@
 //! 3. **统一认证**: 使用 `AuthenticatedUser` extractor 自动处理认证
 //! 4. **统一响应**: 使用 `utils::response` 中的辅助函数构建响应
 
-use axum::extract::{Extension, Multipart, Path, Query};
+use axum::extract::{Multipart, Path, Query, State};
 use axum::response::Response;
 use bytes::Bytes;
 use serde_json::json;
-use sqlx::PgPool;
 use std::collections::HashMap;
-use std::str::FromStr;
-use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::config::Config;
 use crate::extractors::AuthenticatedUser;
 use crate::models::file::{BatchDeleteRequest, BatchMoveRequest, FileListQuery};
 use crate::models::upload_session::{CompleteChunkedUploadRequest, InitChunkedUploadRequest};
 use crate::services::file::FileService;
-use crate::services::storage::StorageBackend;
-use crate::utils::{file_response, json_response, success_response, AppError};
-
-/// 创建 FileService 实例的辅助函数
-///
-/// 减少重复代码，统一服务创建逻辑
-fn create_file_service(
-    pool: PgPool,
-    storage: Arc<dyn StorageBackend>,
-    config: Arc<Config>,
-) -> FileService {
-    FileService::new(pool, storage, config)
-}
+use crate::utils::{
+    file_response, json_response, parse_part_number, parse_uuid_list, success_response, AppError,
+};
+use crate::AppState;
 
 /// 上传文件（普通上传）
 ///
@@ -63,13 +50,11 @@ fn create_file_service(
 /// }
 /// ```
 pub async fn upload_file_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
 
     // 解析 multipart 表单，提取文件数据
     let mut file_data: Option<(String, String, Vec<u8>)> = None;
@@ -140,13 +125,11 @@ pub async fn upload_file_handler(
 ///
 /// 与 skill 规范及前端 `FileListResponse` 一致，使用 `files` 字段。
 pub async fn list_files_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Query(query): Query<FileListQuery>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
 
     // 提取分页参数（在移动 query 之前）
     let page = query.page.unwrap_or(1);
@@ -166,13 +149,11 @@ pub async fn list_files_handler(
 ///
 /// 返回文件内容，设置 `Content-Disposition: attachment` 触发下载。
 pub async fn download_file_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
 
     // 验证文件所有权并获取文件
     let file = file_service.get_file(file_id, user_id).await?;
@@ -187,13 +168,11 @@ pub async fn download_file_handler(
 ///
 /// 返回文件内容，设置 `Content-Disposition: inline` 在浏览器中显示。
 pub async fn preview_file_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
 
     // 验证文件所有权并获取文件
     let file = file_service.get_file(file_id, user_id).await?;
@@ -206,13 +185,11 @@ pub async fn preview_file_handler(
 
 /// 删除文件
 pub async fn delete_file_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     file_service.delete_file(file_id, user_id).await?;
     Ok(success_response("File deleted successfully"))
 }
@@ -226,13 +203,11 @@ pub async fn delete_file_handler(
 /// }
 /// ```
 pub async fn batch_delete_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     axum::Json(req): axum::Json<BatchDeleteRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     let deleted = file_service.batch_delete(&req.ids, user_id).await?;
     Ok(json_response(json!({
         "deleted": deleted,
@@ -245,20 +220,17 @@ pub async fn batch_delete_handler(
 /// # 查询参数
 /// - `ids`: 逗号分隔的文件 ID 列表
 pub async fn batch_download_zip_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
 
     // 解析文件 ID 列表
     let ids_str = params
         .get("ids")
         .ok_or_else(|| AppError::Validation("Missing ids parameter".to_string()))?;
-    let ids: Result<Vec<Uuid>, _> = ids_str.split(',').map(Uuid::from_str).collect();
-    let ids = ids.map_err(|_| AppError::Validation("Invalid UUID format".to_string()))?;
+    let ids = parse_uuid_list(ids_str)?;
 
     // 生成 ZIP 文件
     let zip_data = file_service.batch_download_zip(&ids, user_id).await?;
@@ -272,12 +244,10 @@ pub async fn batch_download_zip_handler(
 ///
 /// 返回用户的存储使用量和配额信息。
 pub async fn storage_usage_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
 
     let (total_size, file_count) = file_service.get_storage_usage(user_id).await?;
     let quota = file_service.get_storage_quota(user_id).await?;
@@ -307,12 +277,10 @@ pub async fn storage_usage_handler(
 ///
 /// 返回用户所有文件的分类列表（去重）。
 pub async fn categories_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     let categories = file_service.list_categories(user_id).await?;
     Ok(json_response(json!({ "categories": categories })))
 }
@@ -327,13 +295,11 @@ pub async fn categories_handler(
 /// }
 /// ```
 pub async fn batch_move_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     axum::Json(req): axum::Json<BatchMoveRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     let moved = file_service.batch_move(user_id, req).await?;
     Ok(json_response(json!({
         "moved": moved,
@@ -358,13 +324,11 @@ pub async fn batch_move_handler(
 /// }
 /// ```
 pub async fn chunked_upload_init_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     axum::Json(req): axum::Json<InitChunkedUploadRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     let (upload_id, chunk_size, total_parts) =
         file_service.init_chunked_upload(user_id, req).await?;
     Ok(json_response(json!({
@@ -385,23 +349,16 @@ pub async fn chunked_upload_init_handler(
 /// # 请求体
 /// 分块的二进制数据
 pub async fn chunked_upload_chunk_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Path(upload_id): Path<Uuid>,
     Query(params): Query<HashMap<String, String>>,
     body: Bytes,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
 
     // 解析分块索引
-    let part = params
-        .get("part")
-        .and_then(|s| s.parse::<u32>().ok())
-        .ok_or_else(|| {
-            AppError::Validation("Missing or invalid 'part' query parameter".to_string())
-        })?;
+    let part = parse_part_number(&params)?;
 
     // 上传分块
     file_service
@@ -415,13 +372,11 @@ pub async fn chunked_upload_chunk_handler(
 ///
 /// 返回已上传的分块列表和总分块数，用于断点续传。
 pub async fn chunked_upload_status_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Path(upload_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     let (uploaded_parts, total_parts) = file_service
         .chunked_upload_status(upload_id, user_id)
         .await?;
@@ -436,14 +391,12 @@ pub async fn chunked_upload_status_handler(
 ///
 /// 合并所有分块，创建文件记录，清理临时文件。
 pub async fn chunked_upload_complete_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Path(upload_id): Path<Uuid>,
     axum::Json(req): axum::Json<CompleteChunkedUploadRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     let file = file_service
         .complete_chunked_upload(upload_id, user_id, req)
         .await?;
@@ -454,13 +407,11 @@ pub async fn chunked_upload_complete_handler(
 ///
 /// 删除上传会话和所有临时文件。
 pub async fn chunked_upload_abort_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
     Path(upload_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = create_file_service(pool, storage, config);
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     file_service
         .abort_chunked_upload(upload_id, user_id)
         .await?;

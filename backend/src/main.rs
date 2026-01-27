@@ -22,10 +22,13 @@ mod handlers;
 mod middleware;
 mod models;
 mod services;
+mod state;
 mod utils;
 
+pub use state::AppState;
+
 use axum::{
-    extract::{Extension, Request},
+    extract::Request,
     middleware::Next,
     response::Response,
     routing::get,
@@ -64,15 +67,18 @@ async fn main() -> anyhow::Result<()> {
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
-        .expect("Failed to run migrations");
+        .map_err(|e| anyhow::anyhow!("Failed to run migrations: {}", e))?;
 
     // Create storage once at startup (shared across requests)
     let storage = create_storage(config.clone())
         .await
-        .expect("Failed to create storage backend");
+        .map_err(|e| anyhow::anyhow!("Failed to create storage backend: {}", e))?;
+
+    // Build application state
+    let app_state = AppState::new(config.clone(), pool, storage);
 
     // Build application
-    let app = create_app(config.clone(), pool, storage).await;
+    let app = create_app(app_state, &config).await;
 
     let addr = format!("0.0.0.0:{}", config.port);
     tracing::info!("Server listening on {}", addr);
@@ -86,19 +92,14 @@ async fn main() -> anyhow::Result<()> {
 /// 创建并配置 Axum 应用
 ///
 /// # 参数
-/// - `config`: 应用配置
-/// - `pool`: 数据库连接池
-/// - `storage`: 存储后端
+/// - `app_state`: 应用共享状态
+/// - `config`: 应用配置（用于 CORS 配置）
 ///
 /// # 返回
 /// 配置完成的 Axum Router
-async fn create_app(
-    config: Arc<Config>,
-    pool: sqlx::PgPool,
-    storage: std::sync::Arc<dyn services::storage::StorageBackend>,
-) -> Router {
+async fn create_app(app_state: AppState, config: &Config) -> Router {
     // 配置 CORS
-    let cors = create_cors_layer(&config);
+    let cors = create_cors_layer(config);
 
     // 配置速率限制：每分钟 100 个请求
     let rate_limit_state = rate_limit::create_rate_limit_middleware(100, 60);
@@ -117,8 +118,11 @@ async fn create_app(
         // API 路由
         .nest("/api/auth", api::auth::create_router())
         .nest("/api/files", api::files::create_router())
+        .nest("/api/folders", api::folders::create_router())
         .nest("/api/shares", api::share::create_router())
         .nest("/api/tokens", api::api_token::create_router())
+        // 注入应用状态（使用 State<AppState> 替代多个 Extension）
+        .with_state(app_state)
         // 应用中间件（从外到内执行）
         .layer(axum::middleware::from_fn(move |req, next| {
             let state = rate_limit_state.clone();
@@ -126,10 +130,6 @@ async fn create_app(
         }))
         .layer(axum::middleware::from_fn(request_logger))
         .layer(middleware_stack)
-        // 注入共享状态（可在 handlers 和 extractors 中使用）
-        .layer(Extension(config))
-        .layer(Extension(pool))
-        .layer(Extension(storage))
 }
 
 /// 创建 CORS 中间件层

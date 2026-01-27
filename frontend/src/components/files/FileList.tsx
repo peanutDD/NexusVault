@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { fileService, type FileMetadata } from '../../services/files';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
 import { getErrorMessage } from '../../utils/error';
 import {
   getCacheKey,
@@ -17,9 +16,9 @@ import ErrorMessage from '../common/ErrorMessage';
 import ShareDialog from './ShareDialog';
 import BatchShareDialog from './BatchShareDialog';
 import BatchMoveDialog from './BatchMoveDialog';
-import FileRow from './FileRow';
+import FileCard from './FileCard';
 import FileListFilters from './FileListFilters';
-import { FileListSkeleton } from '../common/Skeleton';
+import { FileCardSkeleton } from '../common/Skeleton';
 import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
 
 export default function FileList() {
@@ -43,20 +42,16 @@ export default function FileList() {
 
   const { categories, loading: loadingCategories, refresh: refreshCategories } = useCategories();
   const limit = FILE_LIST.LIMIT;
-  const parentRef = useRef<HTMLDivElement | null>(null);
-  
+
   // Debounce search to reduce API calls
   const debouncedSearch = useDebounce(search, 300);
-  
-  // Request deduplication
-  const dedupedListFiles = useRequestDedup(fileService.listFiles.bind(fileService));
-  
-  const rowVirtualizer = useVirtualizer({
-    count: files.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => FILE_LIST.ROW_HEIGHT,
-    overscan: 5,
-  });
+
+  // 稳定引用，避免 .bind() 每次渲染新建函数 → dedupedListFiles 变 → loadFiles 变 → useEffect 无限循环
+  const listFilesStable = useCallback(
+    (query?: FileListQuery) => fileService.listFiles(query),
+    []
+  );
+  const dedupedListFiles = useRequestDedup(listFilesStable);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -96,7 +91,7 @@ export default function FileList() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, mimeType, category, dateFrom, dateTo, sizeMin, sizeMax, dedupedListFiles]);
+  }, [page, limit, debouncedSearch, mimeType, category, dateFrom, dateTo, sizeMin, sizeMax, dedupedListFiles]);
 
   useEffect(() => {
     loadFiles();
@@ -190,7 +185,10 @@ export default function FileList() {
       key: SHORTCUTS.SEARCH,
       handler: () => {
         // 通过全局变量访问搜索输入框（FileListFilters 中设置）
-        const searchInput = (window as any).__fileListSearchInput as HTMLInputElement | undefined;
+        const w = window as unknown as {
+          __fileListSearchInput?: HTMLInputElement;
+        };
+        const searchInput = w.__fileListSearchInput;
         searchInput?.focus();
         searchInput?.select();
       },
@@ -323,104 +321,109 @@ export default function FileList() {
       )}
 
       {loading ? (
-        <div className="bg-gray-800 dark:bg-gray-900 rounded-lg overflow-hidden transition-colors duration-200">
-          <FileListSkeleton count={5} />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <FileCardSkeleton count={12} />
         </div>
       ) : files.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          暂无文件，上传你的第一个文件吧
+        <div className="flex flex-col items-center justify-center rounded-xl bg-gray-800/50 py-16">
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-700/50">
+            <EmptyIcon />
+          </div>
+          <p className="text-lg font-medium text-gray-400">暂无文件</p>
+          <p className="mt-1 text-sm text-gray-500">上传你的第一个文件吧</p>
         </div>
       ) : (
         <>
-          <div className="bg-gray-800 dark:bg-gray-900 rounded-lg overflow-hidden shadow-lg transition-all duration-200">
-            <div
-              className="grid grid-cols-[auto_72px_1fr_80px_120px_100px_100px_auto] gap-0 items-center px-6 py-3 bg-gray-700 dark:bg-gray-800 text-left text-xs font-medium text-gray-300 dark:text-gray-400 uppercase tracking-wider transition-colors duration-200"
-              style={{ minWidth: 800 }}
-            >
-              <div>
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleSelectAll}
-                  className="rounded"
-                  aria-label="全选所有文件"
-                />
-              </div>
-              <div>缩略图</div>
-              <div>文件名</div>
-              <div>大小</div>
-              <div>类型</div>
-              <div>分类</div>
-              <div>上传时间</div>
-              <div className="text-right">操作</div>
-            </div>
-            <div
-              ref={parentRef}
-              className="overflow-auto divide-y divide-gray-700"
-              style={{ height: FILE_LIST.LIST_HEIGHT }}
-            >
-              <div
-                style={{
-                  height: `${rowVirtualizer.getTotalSize()}px`,
-                  width: '100%',
-                  position: 'relative',
-                }}
-              >
-                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const file = files[virtualRow.index];
-                  return (
-                    <div
-                      key={file.id}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      <FileRow
-                        file={file}
-                        isSelected={selectedFiles.has(file.id)}
-                        onSelect={handleSelect}
-                        onPreview={handlePreview}
-                        onShare={handleShare}
-                        onDownload={handleDownload}
-                        onDelete={handleDeleteRow}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          {/* 全选栏 */}
+          <div className="mb-4 flex items-center justify-between rounded-lg bg-gray-800/50 px-4 py-3">
+            <label className="flex items-center gap-2 text-sm text-gray-400">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
+                aria-label="全选所有文件"
+              />
+              全选
+            </label>
+            <span className="text-sm text-gray-500">
+              共 {total} 个文件
+            </span>
           </div>
 
+          {/* 文件卡片网格 */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {files.map((file) => (
+              <FileCard
+                key={file.id}
+                file={file}
+                isSelected={selectedFiles.has(file.id)}
+                onSelect={handleSelect}
+                onPreview={handlePreview}
+                onShare={handleShare}
+                onDownload={handleDownload}
+                onDelete={handleDeleteRow}
+              />
+            ))}
+          </div>
+
+          {/* 分页 */}
           {totalPages > 1 && (
-            <div className="mt-6 flex justify-center gap-2">
+            <div className="mt-8 flex items-center justify-center gap-3">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                <ChevronLeftIcon />
                 上一页
               </button>
-              <span className="px-4 py-2 text-gray-300">
-                第 {page} 页，共 {totalPages} 页
-              </span>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`h-9 w-9 rounded-lg text-sm font-medium transition-colors ${
+                        page === pageNum
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 下一页
+                <ChevronRightIcon />
               </button>
             </div>
           )}
-        </>
+        </> 
       )}
 
       {previewFile && (
-        <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
+        <FilePreview
+          key={previewFile.id}
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+        />
       )}
 
       {shareFile && (
@@ -460,5 +463,37 @@ export default function FileList() {
         />
       )}
     </div>
+  );
+}
+
+// 空状态图标
+function EmptyIcon() {
+  return (
+    <svg className="h-10 w-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+      />
+    </svg>
+  );
+}
+
+// 左箭头图标
+function ChevronLeftIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    </svg>
+  );
+}
+
+// 右箭头图标
+function ChevronRightIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
   );
 }

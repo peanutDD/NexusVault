@@ -68,23 +68,20 @@ export default function Skeleton({
 }
 
 /**
- * 文件列表项骨架屏
+ * 文件列表项骨架屏（表格行）
  */
-export function FileRowSkeleton() {
+function FileRowSkeleton() {
   return (
-    <div className="grid grid-cols-[auto_72px_1fr_80px_120px_100px_100px_auto] gap-0 items-center px-6 py-2">
-      <Skeleton variant="circular" width={20} height={20} />
-      <Skeleton variant="rectangular" width={72} height={72} className="rounded" />
-      <div className="flex flex-col gap-2">
-        <Skeleton variant="text" width="60%" height={16} />
-        <Skeleton variant="text" width="40%" height={14} />
-      </div>
-      <Skeleton variant="text" width="80%" height={16} />
-      <Skeleton variant="text" width="70%" height={16} />
-      <Skeleton variant="text" width="60%" height={16} />
-      <Skeleton variant="text" width="50%" height={16} />
-      <Skeleton variant="circular" width={32} height={32} />
-    </div>
+    <tr className="border-b border-gray-700/50">
+      <td className="px-3 py-2"><Skeleton variant="circular" width={18} height={18} /></td>
+      <td className="px-2 py-2"><Skeleton variant="rectangular" width={56} height={56} className="rounded" /></td>
+      <td className="px-3 py-2"><Skeleton variant="text" width="70%" height={16} /></td>
+      <td className="px-3 py-2"><Skeleton variant="text" width={48} height={14} /></td>
+      <td className="px-3 py-2"><Skeleton variant="text" width={64} height={14} /></td>
+      <td className="px-3 py-2"><Skeleton variant="text" width={40} height={14} /></td>
+      <td className="px-3 py-2"><Skeleton variant="text" width={72} height={14} /></td>
+      <td className="px-3 py-2"><Skeleton variant="text" width={120} height={14} /></td>
+    </tr>
   );
 }
 
@@ -93,10 +90,61 @@ export function FileRowSkeleton() {
  */
 export function FileListSkeleton({ count = 5 }: { count?: number }) {
   return (
-    <div className="space-y-2">
-      {Array.from({ length: count }).map((_, i) => (
-        <FileRowSkeleton key={i} />
-      ))}
+    <div className="min-w-[960px] overflow-hidden rounded-lg bg-gray-800 dark:bg-gray-900">
+      <table className="w-full table-fixed border-collapse">
+        <thead>
+          <tr className="border-b border-gray-700 bg-gray-700/80 dark:bg-gray-800/80">
+            <th className="w-12 px-3 py-3" /><th className="w-[72px] px-2 py-3" />
+            <th className="min-w-[180px] px-3 py-3" /><th className="w-20 px-3 py-3" />
+            <th className="w-28 px-3 py-3" /><th className="w-24 px-3 py-3" />
+            <th className="w-28 px-3 py-3" /><th className="w-48 px-3 py-3" />
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: count }).map((_, i) => (
+            <FileRowSkeleton key={i} />
+          ))}
+        </tbody>
+      </table>
     </div>
+  );
+}
+
+/**
+ * 文件卡片骨架屏（单个）
+ */
+function FileCardSkeletonItem() {
+  return (
+    <div className="rounded-xl bg-gray-800/80 p-3">
+      {/* 缩略图占位 */}
+      <Skeleton variant="rectangular" className="mb-3 aspect-square w-full rounded-lg" />
+      {/* 文件名 */}
+      <Skeleton variant="text" width="80%" height={16} className="mb-2" />
+      {/* 文件大小和类型 */}
+      <Skeleton variant="text" width="60%" height={12} className="mb-1" />
+      {/* 上传时间 */}
+      <Skeleton variant="text" width="40%" height={12} className="mb-3" />
+      {/* 操作按钮区域 */}
+      <div className="flex items-center justify-between border-t border-gray-700/50 pt-3">
+        <div className="flex gap-1">
+          <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
+          <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
+        </div>
+        <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 文件卡片网格骨架屏
+ */
+export function FileCardSkeleton({ count = 12 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <FileCardSkeletonItem key={i} />
+      ))}
+    </>
   );
 }

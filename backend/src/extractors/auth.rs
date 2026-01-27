@@ -6,8 +6,8 @@
 //!
 //! ```rust
 //! pub async fn handler(
+//!     State(state): State<AppState>,
 //!     AuthenticatedUser(user_id): AuthenticatedUser,
-//!     Extension(pool): Extension<PgPool>,
 //!     // ...
 //! ) -> Result<Response, AppError> {
 //!     // user_id 已经验证，可以直接使用
@@ -20,10 +20,9 @@ use axum::{
     http::{request::Parts, HeaderMap},
 };
 use sqlx::PgPool;
-use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{config::Config, utils::AppError};
+use crate::{config::Config, utils::AppError, AppState};
 
 /// 已认证的用户 ID
 ///
@@ -37,36 +36,17 @@ use crate::{config::Config, utils::AppError};
 pub struct AuthenticatedUser(pub Uuid);
 
 #[async_trait]
-impl<S> FromRequestParts<S> for AuthenticatedUser
-where
-    S: Send + Sync,
-{
+impl FromRequestParts<AppState> for AuthenticatedUser {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        // 从 Extension 中获取配置和数据库池
-        // 注意：这需要在路由中注册这些 Extension
-        let config = parts
-            .extensions
-            .get::<Arc<Config>>()
-            .ok_or_else(|| {
-                tracing::error!("Config not found in request extensions");
-                AppError::Internal
-            })?
-            .clone();
-
-        let pool = parts
-            .extensions
-            .get::<PgPool>()
-            .ok_or_else(|| {
-                tracing::error!("Database pool not found in request extensions");
-                AppError::Internal
-            })?
-            .clone();
-
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         // 从请求头中提取 Authorization token
         let headers = &parts.headers;
-        let user_id = extract_user_id_from_headers(headers, &config, &pool).await?;
+        let user_id =
+            extract_user_id_from_headers(headers, &state.config, &state.pool).await?;
 
         Ok(AuthenticatedUser(user_id))
     }

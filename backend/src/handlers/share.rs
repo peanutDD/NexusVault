@@ -7,25 +7,17 @@
 //! - 删除分享链接
 //! - 批量创建分享
 
-use axum::extract::{Extension, Path};
+use axum::extract::{Path, State};
 use axum::response::Response;
 use serde_json::json;
-use sqlx::PgPool;
-use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::config::Config;
 use crate::extractors::AuthenticatedUser;
 use crate::models::file::{AccessShareRequest, BatchShareRequest, CreateShareRequest};
 use crate::services::file::FileService;
 use crate::services::share::ShareService;
-use crate::services::storage::StorageBackend;
 use crate::utils::{file_response, json_response, success_response, AppError};
-
-/// 创建 ShareService 实例的辅助函数
-fn create_share_service(pool: PgPool) -> ShareService {
-    ShareService::new(pool)
-}
+use crate::AppState;
 
 /// 获取前端 URL（用于构建完整的分享链接）
 fn get_frontend_url() -> String {
@@ -44,13 +36,11 @@ fn get_frontend_url() -> String {
 /// }
 /// ```
 pub async fn create_share_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(_config): Extension<Arc<Config>>,
-    Extension(_storage): Extension<Arc<dyn StorageBackend>>,
     axum::Json(req): axum::Json<CreateShareRequest>,
 ) -> Result<Response, AppError> {
-    let share_service = create_share_service(pool);
+    let share_service = ShareService::new(state.pool.clone());
     let share = share_service.create_share(user_id, req).await?;
 
     // 构建完整的分享 URL
@@ -73,13 +63,11 @@ pub async fn create_share_handler(
 /// 验证分享 token 和密码（如果有），返回文件信息。
 /// 注意：此端点不返回文件内容，只返回文件元数据。
 pub async fn access_share_handler(
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
+    State(state): State<AppState>,
     Path(token): Path<String>,
     axum::Json(req): axum::Json<AccessShareRequest>,
 ) -> Result<Response, AppError> {
-    let share_service = create_share_service(pool.clone());
+    let share_service = ShareService::new(state.pool.clone());
 
     // 获取分享信息
     let share = share_service.get_share_by_token(&token).await?;
@@ -97,7 +85,7 @@ pub async fn access_share_handler(
     }
 
     // 获取文件信息
-    let file_service = FileService::new(pool, storage, config.clone());
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     let file = file_service.get_file(share.file_id, share.user_id).await?;
 
     // 增加下载计数
@@ -120,18 +108,16 @@ pub async fn access_share_handler(
 /// 验证分享 token，返回文件内容。
 /// 此端点会自动增加下载计数。
 pub async fn download_shared_file_handler(
-    Extension(pool): Extension<PgPool>,
-    Extension(config): Extension<Arc<Config>>,
-    Extension(storage): Extension<Arc<dyn StorageBackend>>,
+    State(state): State<AppState>,
     Path(token): Path<String>,
 ) -> Result<Response, AppError> {
-    let share_service = create_share_service(pool.clone());
+    let share_service = ShareService::new(state.pool.clone());
 
     // 获取分享信息（会自动验证过期和下载次数限制）
     let share = share_service.get_share_by_token(&token).await?;
 
     // 获取文件
-    let file_service = FileService::new(pool, storage, config.clone());
+    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
     let file = file_service.get_file(share.file_id, share.user_id).await?;
     let data = file_service.get_file_data(&file).await?;
 
@@ -145,12 +131,11 @@ pub async fn download_shared_file_handler(
 
 /// 删除分享链接
 pub async fn delete_share_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(_config): Extension<Arc<Config>>,
     Path(share_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let share_service = create_share_service(pool);
+    let share_service = ShareService::new(state.pool.clone());
     share_service.delete_share(share_id, user_id).await?;
     Ok(success_response("分享链接已删除"))
 }
@@ -167,12 +152,11 @@ pub async fn delete_share_handler(
 /// }
 /// ```
 pub async fn batch_create_share_handler(
+    State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
-    Extension(pool): Extension<PgPool>,
-    Extension(_config): Extension<Arc<Config>>,
     axum::Json(req): axum::Json<BatchShareRequest>,
 ) -> Result<Response, AppError> {
-    let share_service = create_share_service(pool);
+    let share_service = ShareService::new(state.pool.clone());
     let result = share_service.batch_create_share(user_id, req).await?;
 
     // 构建完整的分享 URL
