@@ -65,9 +65,12 @@ const FileListFilters = memo(function FileListFilters({
         >
           <option value="">所有类型</option>
           <option value="image/">图片</option>
+          <option value="video/">视频</option>
+          <option value="audio/">音频</option>
           <option value="application/pdf">PDF</option>
           <option value="text/">文本</option>
           <option value="application/zip">ZIP</option>
+          <option value="application/">应用/文档</option>
         </select>
         <select
           aria-label="按分类筛选"

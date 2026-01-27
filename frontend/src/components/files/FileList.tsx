@@ -626,7 +626,10 @@ export default function FileList() {
           <FilePreview
             key={previewFile.id}
             file={previewFile}
+            files={files}
+            currentIndex={files.findIndex(f => f.id === previewFile.id)}
             onClose={() => setPreviewFile(null)}
+            onNavigate={(file) => setPreviewFile(file)}
           />
         )}
 

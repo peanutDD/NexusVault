@@ -163,7 +163,15 @@ impl FileService {
             .as_deref()
             .filter(|s| !s.is_empty())
             .map(|s| format!("%{}%", s));
-        let mime_type_filter: Option<&str> = query.mime_type.as_deref().filter(|s| !s.is_empty());
+        // MIME type filter: support prefix matching (e.g., "image/" matches "image/png", "image/jpeg")
+        let mime_type_filter: Option<String> = query.mime_type.as_deref().filter(|s| !s.is_empty()).map(|s| {
+            if s.ends_with('/') {
+                format!("{}%", s) // Prefix match: "image/" -> "image/%"
+            } else {
+                s.to_string() // Exact match: "application/pdf"
+            }
+        });
+        let mime_type_is_prefix = query.mime_type.as_deref().map(|s| s.ends_with('/')).unwrap_or(false);
         let category_filter_uncategorized = query
             .category
             .as_deref()
@@ -220,9 +228,13 @@ impl FileService {
             param_index += 1;
         }
 
-        // MIME type filter
+        // MIME type filter (supports prefix matching with LIKE)
         if mime_type_filter.is_some() {
-            conditions.push(format!("mime_type = ${}", param_index));
+            if mime_type_is_prefix {
+                conditions.push(format!("mime_type LIKE ${}", param_index));
+            } else {
+                conditions.push(format!("mime_type = ${}", param_index));
+            }
             param_index += 1;
         }
 
@@ -314,7 +326,7 @@ impl FileService {
             query_builder = query_builder.bind(search_pattern);
         }
 
-        if let Some(mime_type) = mime_type_filter {
+        if let Some(ref mime_type) = mime_type_filter {
             query_builder = query_builder.bind(mime_type);
         }
 
@@ -360,7 +372,7 @@ impl FileService {
             count_builder = count_builder.bind(search_pattern);
         }
 
-        if let Some(mime_type) = mime_type_filter {
+        if let Some(ref mime_type) = mime_type_filter {
             count_builder = count_builder.bind(mime_type);
         }
 
