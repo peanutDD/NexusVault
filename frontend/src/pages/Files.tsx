@@ -1,10 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import PageLayout from '../components/layout/PageLayout';
-import UploadDialog from '../components/files/UploadDialog';
 import FileList from '../components/files/FileList';
 import { clearFileListCache } from '../utils/fileListCache';
+
+// 懒加载重型对话框组件
+const UploadDialog = lazy(() => import('../components/files/UploadDialog'));
 
 export default function Files() {
   const navigate = useNavigate();
@@ -37,12 +39,16 @@ export default function Files() {
         </button>
       </div>
 
-      {/* 上传对话框 */}
-      <UploadDialog
-        open={uploadDialogOpen}
-        onClose={() => setUploadDialogOpen(false)}
-        onUploadComplete={handleUploadComplete}
-      />
+      {/* 上传对话框 - 懒加载 */}
+      {uploadDialogOpen && (
+        <Suspense fallback={null}>
+          <UploadDialog
+            open={uploadDialogOpen}
+            onClose={() => setUploadDialogOpen(false)}
+            onUploadComplete={handleUploadComplete}
+          />
+        </Suspense>
+      )}
 
       {/* 文件列表 */}
       <FileList key={refreshKey} />

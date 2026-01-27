@@ -2,7 +2,7 @@
 //!
 //! 提供键盘快捷键功能，提升用户操作效率。
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 
 export interface KeyboardShortcut {
   /** 快捷键组合，如 'ctrl+k', 'escape', 'ctrl+shift+d' */
@@ -101,6 +101,8 @@ function matchesShortcut(
 /**
  * 键盘快捷键 Hook
  *
+ * 使用 ref 存储 shortcuts，避免 shortcuts 变化时重新注册事件监听器
+ *
  * @example
  * ```tsx
  * useKeyboardShortcuts([
@@ -123,24 +125,30 @@ function matchesShortcut(
  * ```
  */
 export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      // 使用 find 替代 for...of + break，语义更清晰
-      const matched = shortcuts.find((shortcut) => {
-        // 检查是否在输入框中（默认阻止）
-        if (shortcut.preventInInput !== false && isInputElement(e.target)) {
-          return false;
-        }
-        return matchesShortcut(e, parseShortcut(shortcut.key));
-      });
+  // 使用 ref 存储 shortcuts，避免依赖变化导致重新注册
+  const shortcutsRef = useRef(shortcuts);
+  
+  // 同步更新 ref
+  useEffect(() => {
+    shortcutsRef.current = shortcuts;
+  }, [shortcuts]);
 
-      if (matched) {
-        e.preventDefault();
-        matched.handler(e);
+  // 事件处理器不依赖 shortcuts，避免重复注册
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // 使用 find 替代 for...of + break，语义更清晰
+    const matched = shortcutsRef.current.find((shortcut) => {
+      // 检查是否在输入框中（默认阻止）
+      if (shortcut.preventInInput !== false && isInputElement(e.target)) {
+        return false;
       }
-    },
-    [shortcuts]
-  );
+      return matchesShortcut(e, parseShortcut(shortcut.key));
+    });
+
+    if (matched) {
+      e.preventDefault();
+      matched.handler(e);
+    }
+  }, []);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);

@@ -6,6 +6,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../services/auth';
 import { useAuthStore } from '../../store/authStore';
 import { getErrorMessage } from '../../utils/error';
+import {
+  AUTH_INPUT_CLASSES,
+  AUTH_LABEL_CLASSES,
+  AUTH_ERROR_CLASSES,
+  AUTH_ERROR_BOX_CLASSES,
+  AUTH_BUTTON_CLASSES,
+  AUTH_PAGE_CLASSES,
+  AUTH_CARD_CLASSES,
+  AUTH_TITLE_CLASSES,
+  AUTH_SUBTITLE_CLASSES,
+} from './styles';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -44,9 +55,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 dark:from-gray-950 dark:via-purple-950 dark:to-gray-950 transition-colors duration-300">
+    <div className={AUTH_PAGE_CLASSES}>
       <div className="max-w-md w-full mx-4 animate-fade-in">
-        <div className="bg-white/10 dark:bg-gray-900/80 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20 dark:border-gray-700/50 transition-all duration-300">
+        <div className={AUTH_CARD_CLASSES}>
           <div className="flex items-center justify-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
               <svg
@@ -65,47 +76,47 @@ export default function Login() {
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-center text-white dark:text-gray-100 mb-2 transition-colors duration-200">
+          <h1 className={AUTH_TITLE_CLASSES}>
             File Upload Download Server
           </h1>
-          <p className="text-center text-gray-300 dark:text-gray-400 mb-8 transition-colors duration-200">
+          <p className={AUTH_SUBTITLE_CLASSES}>
             Sign in to upload and manage your files
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+            <div className={AUTH_ERROR_BOX_CLASSES}>
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className={AUTH_LABEL_CLASSES}>
                 Email
               </label>
               <input
                 {...register('email')}
                 type="email"
-                className="w-full px-4 py-3 bg-white/10 dark:bg-gray-800/50 border border-white/20 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent transition-all duration-200"
+                className={AUTH_INPUT_CLASSES}
                 placeholder="your@email.com"
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-400">{errors.email.message}</p>
+                <p className={AUTH_ERROR_CLASSES}>{errors.email.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className={AUTH_LABEL_CLASSES}>
                 Password
               </label>
               <input
                 {...register('password')}
                 type="password"
-                className="w-full px-4 py-3 bg-white/10 dark:bg-gray-800/50 border border-white/20 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent transition-all duration-200"
+                className={AUTH_INPUT_CLASSES}
                 placeholder="••••••••"
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-red-400">
+                <p className={AUTH_ERROR_CLASSES}>
                   {errors.password.message}
                 </p>
               )}
@@ -114,7 +125,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-600 dark:to-pink-600 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-pink-600 dark:hover:from-purple-700 dark:hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-gray-900 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+              className={AUTH_BUTTON_CLASSES}
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

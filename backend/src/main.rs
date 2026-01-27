@@ -101,8 +101,8 @@ async fn create_app(app_state: AppState, config: &Config) -> Router {
     // 配置 CORS
     let cors = create_cors_layer(config);
 
-    // 配置速率限制：每分钟 100 个请求
-    let rate_limit_state = rate_limit::create_rate_limit_middleware(100, 60);
+    // 配置速率限制：每分钟 300 个请求（提高以支持缩略图批量加载）
+    let rate_limit_state = rate_limit::create_rate_limit_middleware(300, 60);
 
     // 构建中间件栈
     let middleware_stack = ServiceBuilder::new()

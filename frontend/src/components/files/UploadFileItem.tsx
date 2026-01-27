@@ -1,7 +1,8 @@
-import { memo, useState, useEffect, useMemo } from 'react';
+import { memo, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
-import { getMimeTypeColor } from '../../utils/mimeType';
+import { getMimeTypeInfo } from '../../utils/mimeType';
+import { createPortal } from 'react-dom';
 
 export interface UploadFile {
   id: string;
@@ -71,7 +72,7 @@ const UploadFileItem = memo(function UploadFileItem({
       : '';
 
   // 使用 useMemo 缓存图标颜色
-  const iconColor = useMemo(() => getMimeTypeColor(file.mimeType), [file.mimeType]);
+  const mimeTypeInfo = useMemo(() => getMimeTypeInfo(file.mimeType), [file.mimeType]);
 
   // 状态文字
   const renderStatusText = () => {
@@ -105,7 +106,7 @@ const UploadFileItem = memo(function UploadFileItem({
           </span>
         );
       case 'error':
-        return <span className="text-xs text-red-500">Upload failed</span>;
+        return <ErrorStatus error={file.error} />;
       default:
         return null;
     }
@@ -117,10 +118,12 @@ const UploadFileItem = memo(function UploadFileItem({
       <div className="flex items-center gap-3 p-3">
         {/* 文件图标 */}
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: `${iconColor}20` }}
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+            mimeTypeInfo.bgClass
+          )}
         >
-          <FileIcon color={iconColor} />
+          <FileIcon color={mimeTypeInfo.color} />
         </div>
 
         {/* 文件信息 */}
@@ -159,13 +162,9 @@ const UploadFileItem = memo(function UploadFileItem({
       {/* 进度条 - 贯穿底部 */}
       {(file.status === 'uploading' || file.status === 'success') && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#2A2A3C]">
+          {/* 动态宽度需要内联样式 */}
           <div
-            className={cn(
-              'h-full transition-all duration-300 ease-out',
-              file.status === 'success'
-                ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-                : 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-            )}
+            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300 ease-out"
             style={{ width: `${file.progress}%` }}
           />
         </div>
@@ -218,6 +217,176 @@ function TrashIcon() {
         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
       />
     </svg>
+  );
+}
+
+// 信息图标
+function InfoIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  );
+}
+
+// 错误详情 Tooltip
+function ErrorTooltip({ 
+  error, 
+  anchorRect,
+  onClose,
+  triggerRef,
+}: { 
+  error: string; 
+  anchorRect: DOMRect;
+  onClose: () => void;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭（排除触发按钮）
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      // 如果点击的是触发按钮，不处理（让按钮的 onClick 处理）
+      if (triggerRef.current?.contains(target)) {
+        return;
+      }
+      // 如果点击的是 tooltip 外部，关闭
+      if (tooltipRef.current && !tooltipRef.current.contains(target)) {
+        onClose();
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose, triggerRef]);
+
+  // 计算位置（显示在按钮上方）
+  const top = anchorRect.top - 8;
+
+  return createPortal(
+    // 动态定位需要内联样式
+    <div
+      ref={tooltipRef}
+      className="fixed z-[9999] w-64 -translate-y-full animate-in fade-in slide-in-from-bottom-2 duration-200"
+      style={{
+        left: Math.min(anchorRect.left - 100, window.innerWidth - 270),
+        top,
+      }}
+    >
+      {/* 主容器 - 渐变背景 */}
+      <div className="overflow-hidden rounded-sm bg-gradient-to-br from-[#1e1e2e] via-[#232334] to-[#1a1a28] shadow-lg ring-1 ring-white/5">
+        {/* 顶部装饰条 */}
+        <div className="h-0.5 bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500" />
+        
+        {/* 内容区 */}
+        <div className="p-3">
+          {/* 标题 */}
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-rose-400">
+              错误详情
+            </span>
+            <button
+              onClick={onClose}
+              className="flex h-5 w-5 items-center justify-center rounded text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300"
+              title="关闭"
+              aria-label="关闭"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* 错误内容 */}
+          <div className="max-h-32 overflow-y-auto">
+            <p className="whitespace-pre-line text-[11px] leading-relaxed text-gray-400">
+              {error}
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      {/* 小三角箭头 */}
+      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2">
+        <div className="h-3 w-3 rotate-45 bg-[#1a1a28] ring-1 ring-white/5" />
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// 错误状态组件
+function ErrorStatus({ error }: { error?: string }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // 切换显示/隐藏
+  const handleToggle = useCallback(() => {
+    if (showTooltip) {
+      setShowTooltip(false);
+    } else if (buttonRef.current) {
+      setAnchorRect(buttonRef.current.getBoundingClientRect());
+      setShowTooltip(true);
+    }
+  }, [showTooltip]);
+
+  const handleClose = useCallback(() => {
+    setShowTooltip(false);
+  }, []);
+
+  // 截取错误信息的第一行或前30个字符
+  const shortError = useMemo(() => {
+    if (!error) return '上传失败';
+    const firstLine = error.split('\n')[0];
+    return firstLine.length > 35 ? firstLine.slice(0, 35) + '...' : firstLine;
+  }, [error]);
+
+  const hasMoreDetails = error && (error.includes('\n') || error.length > 35);
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="truncate text-xs text-red-500">{shortError}</span>
+      {hasMoreDetails && (
+        <>
+          <button
+            ref={buttonRef}
+            type="button"
+            onClick={handleToggle}
+            className={cn(
+              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors",
+              showTooltip
+                ? "bg-red-500/40 text-red-300"
+                : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+            )}
+            title={showTooltip ? "关闭详情" : "查看详情"}
+          >
+            <InfoIcon />
+          </button>
+          {showTooltip && anchorRect && (
+            <ErrorTooltip 
+              error={error} 
+              anchorRect={anchorRect} 
+              onClose={handleClose}
+              triggerRef={buttonRef}
+            />
+          )}
+        </>
+      )}
+    </div>
   );
 }
 

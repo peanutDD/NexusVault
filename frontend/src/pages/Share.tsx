@@ -18,6 +18,19 @@ export default function Share() {
   } | null>(null);
   const [passwordRequired, setPasswordRequired] = useState(false);
 
+  // 回调函数优化 - 使用 useCallback 避免每次渲染创建新函数
+  const handlePasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+  }, []);
+
+  const handleCloseError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  const handleNavigateToLogin = useCallback(() => {
+    navigate('/login');
+  }, [navigate]);
+
   const requestAccess = useCallback(
     async (p?: string) => {
       if (!token) return;
@@ -98,7 +111,7 @@ export default function Share() {
         {error && (
           <ErrorMessage
             message={error}
-            onClose={() => setError(null)}
+            onClose={handleCloseError}
             type="error"
           />
         )}
@@ -112,7 +125,7 @@ export default function Share() {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 required
                 className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 placeholder="分享密码"
@@ -146,7 +159,7 @@ export default function Share() {
             </button>
 
             <button
-              onClick={() => navigate('/login')}
+              onClick={handleNavigateToLogin}
               className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
             >
               返回登录

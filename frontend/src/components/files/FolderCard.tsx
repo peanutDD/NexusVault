@@ -94,7 +94,7 @@ const FolderCard = memo(function FolderCard({
       {/* 选择框 */}
       <div
         className={cn(
-          'absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md transition-all',
+          'absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md transition-all cursor-pointer',
           isSelected
             ? 'bg-purple-500'
             : 'bg-black/40 opacity-0 group-hover:opacity-100'
@@ -104,13 +104,13 @@ const FolderCard = memo(function FolderCard({
           onSelect(folder.id);
         }}
       >
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onSelect(folder.id)}
-          className="h-4 w-4 cursor-pointer rounded border-0 bg-transparent text-white checked:bg-transparent focus:ring-0 focus:ring-offset-0"
-          aria-label={`选择 ${folder.name}`}
-        />
+        {isSelected ? (
+          <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        ) : (
+          <div className="h-4 w-4 rounded border-2 border-white/60" />
+        )}
       </div>
 
       {/* 文件夹图标 */}

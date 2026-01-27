@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { fileService } from '../../services/files';
 import { getErrorMessage } from '../../utils/error';
-import { validateFile, getMaxFileSizeGB } from '../../utils/uploadValidation';
+import { validateFile, getMaxFileSizeGB, getMaxBatchCount } from '../../utils/uploadValidation';
 import { UploadQueue } from '../../utils/uploadQueue';
 import { cn } from '../../utils/cn';
 import UploadFileItem, { type UploadFile } from './UploadFileItem';
@@ -40,26 +40,47 @@ export default function UploadDialog({
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
+  const maxBatchCount = getMaxBatchCount();
+  const [batchLimitWarning, setBatchLimitWarning] = useState('');
+
   // 添加文件到上传列表
   const addFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const newFiles: UploadFile[] = Array.from(files).map((file) => {
-      const validation = validateFile(file);
-      return {
-        id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        name: file.name,
-        size: file.size,
-        mimeType: file.type || 'application/octet-stream',
-        status: validation.ok ? 'pending' : 'error',
-        progress: 0,
-        error: validation.ok ? undefined : validation.error,
-        file: validation.ok ? file : undefined,
-      };
-    });
+    setBatchLimitWarning('');
 
-    setUploadFiles((prev) => [...prev, ...newFiles]);
-  }, []);
+    setUploadFiles((prev) => {
+      const remainingSlots = maxBatchCount - prev.length;
+      
+      if (remainingSlots <= 0) {
+        setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
+        return prev;
+      }
+
+      const filesToAdd = Array.from(files).slice(0, remainingSlots);
+      const skippedCount = files.length - filesToAdd.length;
+
+      if (skippedCount > 0) {
+        setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
+      }
+
+      const newFiles: UploadFile[] = filesToAdd.map((file) => {
+        const validation = validateFile(file);
+        return {
+          id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type || 'application/octet-stream',
+          status: validation.ok ? 'pending' : 'error',
+          progress: 0,
+          error: validation.ok ? undefined : validation.error,
+          file: validation.ok ? file : undefined,
+        };
+      });
+
+      return [...prev, ...newFiles];
+    });
+  }, [maxBatchCount]);
 
   // 开始上传所有 pending 文件
   const startUpload = useCallback(async () => {
@@ -151,22 +172,106 @@ export default function UploadDialog({
     setUploadFiles((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
+  // URL 上传 - 获取详细错误信息
+  const getUrlErrorMessage = useCallback((err: unknown, url: string): string => {
+    // URL 格式无效
+    if (err instanceof TypeError && err.message.includes('URL')) {
+      return `URL 格式无效: "${url}"。请输入完整的 URL，例如 https://example.com/file.jpg`;
+    }
+    
+    // fetch 错误
+    if (err instanceof TypeError) {
+      // CORS 或网络错误通常表现为 TypeError: Failed to fetch
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        return `无法访问该 URL。可能的原因：
+• 目标服务器不允许跨域请求 (CORS)
+• URL 地址不存在或无法访问
+• 网络连接问题`;
+      }
+      return `网络请求失败: ${err.message}`;
+    }
+    
+    // HTTP 错误
+    if (err instanceof Error) {
+      const httpMatch = err.message.match(/^HTTP (\d+)(?:\s*-\s*(.+))?$/);
+      if (httpMatch) {
+        const status = parseInt(httpMatch[1], 10);
+        const statusMessages: Record<number, string> = {
+          400: '请求无效',
+          401: '需要身份验证',
+          403: '访问被拒绝（无权限）',
+          404: '文件不存在',
+          405: '请求方法不允许',
+          408: '请求超时',
+          410: '资源已被删除',
+          429: '请求过于频繁',
+          500: '服务器内部错误',
+          502: '网关错误',
+          503: '服务暂时不可用',
+          504: '网关超时',
+        };
+        const statusText = statusMessages[status] || '请求失败';
+        return `下载失败 (HTTP ${status}): ${statusText}`;
+      }
+      return err.message;
+    }
+    
+    return 'URL 下载失败，请检查地址是否正确';
+  }, []);
+
   // URL 上传
   const handleUrlUpload = useCallback(async () => {
-    if (!urlInput.trim()) return;
+    const trimmedUrl = urlInput.trim();
+    if (!trimmedUrl) return;
 
     setUrlLoading(true);
     try {
-      const urlObj = new URL(urlInput);
+      // 验证 URL 格式
+      let urlObj: URL;
+      try {
+        urlObj = new URL(trimmedUrl);
+      } catch {
+        throw new TypeError(`Invalid URL: ${trimmedUrl}`);
+      }
+      
+      // 验证协议
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        throw new Error(`不支持的协议: ${urlObj.protocol}。仅支持 http:// 和 https://`);
+      }
+      
       const pathname = urlObj.pathname;
-      const filename = pathname.split('/').pop() || 'downloaded-file';
+      const filename = decodeURIComponent(pathname.split('/').pop() || 'downloaded-file');
 
-      const response = await fetch(urlInput);
+      // 使用 AbortController 设置超时
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+      
+      let response: Response;
+      try {
+        response = await fetch(trimmedUrl, { 
+          signal: controller.signal,
+          mode: 'cors',
+        });
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+          throw new Error('HTTP 408 - 请求超时（超过30秒）');
+        }
+        throw fetchErr;
+      }
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status} - ${response.statusText}`);
       }
 
       const blob = await response.blob();
+      
+      // 检查是否下载到有效内容
+      if (blob.size === 0) {
+        throw new Error('下载的文件为空');
+      }
+      
       const file = new File([blob], filename, { type: blob.type });
 
       const validation = validateFile(file);
@@ -186,18 +291,18 @@ export default function UploadDialog({
     } catch (err) {
       const errorFile: UploadFile = {
         id: `url-error-${Date.now()}`,
-        name: urlInput,
+        name: trimmedUrl.length > 50 ? trimmedUrl.slice(0, 50) + '...' : trimmedUrl,
         size: 0,
         mimeType: 'unknown',
         status: 'error',
         progress: 0,
-        error: getErrorMessage(err, 'URL 下载失败'),
+        error: getUrlErrorMessage(err, trimmedUrl),
       };
       setUploadFiles((prev) => [...prev, errorFile]);
     } finally {
       setUrlLoading(false);
     }
-  }, [urlInput]);
+  }, [urlInput, getUrlErrorMessage]);
 
   // 拖拽事件
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -225,6 +330,7 @@ export default function UploadDialog({
     if (!isUploadingRef.current) {
       setUploadFiles([]);
       setUrlInput('');
+      setBatchLimitWarning('');
       onClose();
     }
   }, [onClose]);
@@ -363,10 +469,20 @@ export default function UploadDialog({
           </div>
         </div>
 
+        {/* 批量限制警告 */}
+        {batchLimitWarning && (
+          <div className="mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+            {batchLimitWarning}
+          </div>
+        )}
+
         {/* 已上传文件列表 */}
         {uploadFiles.length > 0 && (
           <div className="mb-5">
-            <p className="mb-3 text-sm font-medium text-white">Uploaded Files</p>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-medium text-white">Uploaded Files</p>
+              <span className="text-xs text-gray-500">{uploadFiles.length} / {maxBatchCount}</span>
+            </div>
             <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
               {uploadFiles.map((file) => (
                 <UploadFileItem

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/auth';
@@ -6,10 +6,24 @@ import { fileService } from '../services/files';
 import { apiTokenService } from '../services/apiTokens';
 import type { ApiToken } from '../services/apiTokens';
 import { getErrorMessage } from '../utils/error';
-import { formatBytes } from '../utils/format';
-import { cn } from '../utils/cn';
 import ErrorMessage from '../components/common/ErrorMessage';
 import PageLayout from '../components/layout/PageLayout';
+import {
+  UserInfoSection,
+  StorageUsageSection,
+  PasswordChangeSection,
+  ApiTokenSection,
+} from '../components/settings';
+
+interface StorageUsage {
+  total_size: number;
+  file_count: number;
+  total_size_mb: number;
+  quota: number | null;
+  quota_mb: number | null;
+  usage_percent: number | null;
+  is_unlimited: boolean;
+}
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -18,15 +32,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [storageUsage, setStorageUsage] = useState<{
-    total_size: number;
-    file_count: number;
-    total_size_mb: number;
-    quota: number | null;
-    quota_mb: number | null;
-    usage_percent: number | null;
-    is_unlimited: boolean;
-  } | null>(null);
+  const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
 
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -35,15 +41,14 @@ export default function Settings() {
   });
 
   const [apiTokens, setApiTokens] = useState<ApiToken[]>([]);
-  // 合并 Token 相关状态为单一对象，减少 useState 调用
   const [tokenForm, setTokenForm] = useState({
     name: '',
     expires: '' as number | '',
     value: null as string | null,
     showValue: false,
   });
-  const progressBarRef = useRef<HTMLDivElement | null>(null);
 
+  // 初始化加载
   useEffect(() => {
     let mounted = true;
     Promise.all([
@@ -66,13 +71,6 @@ export default function Settings() {
     };
   }, []);
 
-  useEffect(() => {
-    const el = progressBarRef.current;
-    if (!el || !storageUsage?.usage_percent) return;
-    const pct = `${Math.min(storageUsage.usage_percent, 100)}%`;
-    el.style.setProperty('--storage-progress-pct', pct);
-  }, [storageUsage?.usage_percent]);
-
   const loadApiTokens = useCallback(async () => {
     try {
       const tokens = await apiTokenService.listTokens();
@@ -82,7 +80,8 @@ export default function Settings() {
     }
   }, []);
 
-  const handleCreateToken = async (e: React.FormEvent) => {
+  // Token 操作
+  const handleCreateToken = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -112,9 +111,9 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tokenForm.name, tokenForm.expires, loadApiTokens]);
 
-  const handleDeleteToken = async (tokenId: string) => {
+  const handleDeleteToken = useCallback(async (tokenId: string) => {
     if (!confirm('确定要删除此 API Token 吗？删除后将无法恢复。')) {
       return;
     }
@@ -129,14 +128,15 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadApiTokens]);
 
-  const copyTokenToClipboard = (token: string) => {
+  const copyTokenToClipboard = useCallback((token: string) => {
     navigator.clipboard.writeText(token);
     setSuccess('Token 已复制到剪贴板');
-  };
+  }, []);
 
-  const handleChangePassword = async (e: React.FormEvent) => {
+  // 密码修改
+  const handleChangePassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -168,12 +168,42 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [passwordForm]);
 
   const handleLogout = useCallback(() => {
     clearAuth();
     navigate('/login');
   }, [clearAuth, navigate]);
+
+  // 密码表单回调函数
+  const handleCurrentPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordForm((prev) => ({ ...prev, current_password: e.target.value }));
+  }, []);
+
+  const handleNewPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordForm((prev) => ({ ...prev, new_password: e.target.value }));
+  }, []);
+
+  const handleConfirmPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordForm((prev) => ({ ...prev, confirm_password: e.target.value }));
+  }, []);
+
+  // Token 表单回调函数
+  const handleTokenNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTokenForm((prev) => ({ ...prev, name: e.target.value }));
+  }, []);
+
+  const handleTokenExpiresChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTokenForm((prev) => ({ ...prev, expires: e.target.value ? Number(e.target.value) : '' }));
+  }, []);
+
+  const handleCloseTokenValue = useCallback(() => {
+    setTokenForm((prev) => ({ ...prev, showValue: false, value: null }));
+  }, []);
+
+  // 消息关闭回调
+  const handleCloseError = useCallback(() => setError(null), []);
+  const handleCloseSuccess = useCallback(() => setSuccess(null), []);
 
   return (
     <PageLayout
@@ -187,7 +217,7 @@ export default function Settings() {
         {error && (
           <ErrorMessage
             message={error}
-            onClose={() => setError(null)}
+            onClose={handleCloseError}
             type="error"
           />
         )}
@@ -195,313 +225,36 @@ export default function Settings() {
         {success && (
           <ErrorMessage
             message={success}
-            onClose={() => setSuccess(null)}
+            onClose={handleCloseSuccess}
             type="info"
           />
         )}
 
         <div className="space-y-6">
-          {/* 用户信息 */}
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">用户信息</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-400">用户名</label>
-                <p className="text-white">{user?.username}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-400">邮箱</label>
-                <p className="text-white">{user?.email}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-400">注册时间</label>
-                <p className="text-white">
-                  {user?.created_at
-                    ? new Date(user.created_at).toLocaleString('zh-CN')
-                    : '-'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* 存储使用情况 */}
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">存储使用情况</h2>
-            {storageUsage ? (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm text-gray-400">已使用存储</label>
-                    {storageUsage.usage_percent !== null && (
-                      <span
-                        className={cn(
-                          'text-sm font-medium',
-                          storageUsage.usage_percent >= 90 && 'text-red-400',
-                          storageUsage.usage_percent >= 75 &&
-                            storageUsage.usage_percent < 90 &&
-                            'text-yellow-400',
-                          storageUsage.usage_percent < 75 && 'text-green-400'
-                        )}
-                      >
-                        {storageUsage.usage_percent}%
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-white text-2xl font-bold">
-                    {formatBytes(storageUsage.total_size)}
-                  </p>
-                  <p className="text-gray-400 text-sm">
-                    ({storageUsage.total_size_mb} MB)
-                    {storageUsage.quota_mb !== null && (
-                      <span> / {storageUsage.quota_mb} MB</span>
-                    )}
-                  </p>
-                </div>
-
-                {storageUsage.quota !== null && storageUsage.usage_percent !== null && (
-                  <div>
-                    <div className="w-full bg-gray-700 rounded-full h-3 mb-2">
-                      <div
-                        ref={progressBarRef}
-                        className={cn(
-                          'storage-progress-fill h-3 rounded-full transition-all',
-                          storageUsage.usage_percent >= 90 && 'bg-red-500',
-                          storageUsage.usage_percent >= 75 &&
-                            storageUsage.usage_percent < 90 &&
-                            'bg-yellow-500',
-                          storageUsage.usage_percent < 75 && 'bg-green-500'
-                        )}
-                      />
-                    </div>
-                    {storageUsage.usage_percent >= 90 && (
-                      <p className="text-red-400 text-sm">
-                        ⚠️ 存储配额即将用尽，请及时清理文件
-                      </p>
-                    )}
-                    {storageUsage.usage_percent >= 75 &&
-                      storageUsage.usage_percent < 90 && (
-                        <p className="text-yellow-400 text-sm">
-                          ⚠️ 存储使用率较高，建议清理不需要的文件
-                        </p>
-                      )}
-                  </div>
-                )}
-
-                {storageUsage.is_unlimited && (
-                  <p className="text-gray-400 text-sm">存储配额：无限制</p>
-                )}
-
-                <div>
-                  <label className="text-sm text-gray-400">文件数量</label>
-                  <p className="text-white">{storageUsage.file_count} 个文件</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-gray-400">加载中...</p>
-            )}
-          </div>
-
-          {/* 修改密码 */}
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">修改密码</h2>
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div>
-                <label htmlFor="current-password" className="block text-sm font-medium text-gray-300 mb-2">
-                  当前密码
-                </label>
-                <input
-                  id="current-password"
-                  type="password"
-                  value={passwordForm.current_password}
-                  onChange={(e) =>
-                    setPasswordForm({
-                      ...passwordForm,
-                      current_password: e.target.value,
-                    })
-                  }
-                  required
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-              <div>
-                <label htmlFor="new-password" className="block text-sm font-medium text-gray-300 mb-2">
-                  新密码
-                </label>
-                <input
-                  id="new-password"
-                  type="password"
-                  value={passwordForm.new_password}
-                  onChange={(e) =>
-                    setPasswordForm({
-                      ...passwordForm,
-                      new_password: e.target.value,
-                    })
-                  }
-                  required
-                  minLength={8}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-                <p className="text-gray-400 text-xs mt-1">
-                  密码长度至少为 8 个字符
-                </p>
-              </div>
-              <div>
-                <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-300 mb-2">
-                  确认新密码
-                </label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  value={passwordForm.confirm_password}
-                  onChange={(e) =>
-                    setPasswordForm({
-                      ...passwordForm,
-                      confirm_password: e.target.value,
-                    })
-                  }
-                  required
-                  minLength={8}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? '修改中...' : '修改密码'}
-              </button>
-            </form>
-          </div>
-
-          {/* API Token 管理 */}
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">API Token 管理</h2>
-            <p className="text-gray-400 text-sm mb-4">
-              API Token 用于程序化访问，可以替代 JWT Token 进行身份验证。
-            </p>
-
-            {/* 创建新 Token */}
-            <div className="mb-6">
-              <h3 className="text-lg font-medium text-white mb-3">创建新 Token</h3>
-              <form onSubmit={handleCreateToken} className="space-y-4">
-                <div>
-                  <label htmlFor="new-token-name" className="block text-sm font-medium text-gray-300 mb-2">
-                    Token 名称
-                  </label>
-                  <input
-                    id="new-token-name"
-                    type="text"
-                    value={tokenForm.name}
-                    onChange={(e) => setTokenForm((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="例如：我的脚本、CI/CD 等"
-                    required
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="new-token-expires" className="block text-sm font-medium text-gray-300 mb-2">
-                    过期时间（天数，可选）
-                  </label>
-                  <input
-                    id="new-token-expires"
-                    type="number"
-                    value={tokenForm.expires}
-                    onChange={(e) =>
-                      setTokenForm((prev) => ({ ...prev, expires: e.target.value ? Number(e.target.value) : '' }))
-                    }
-                    min="1"
-                    placeholder="留空表示永不过期"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? '创建中...' : '创建 Token'}
-                </button>
-              </form>
-
-              {/* 显示新创建的 Token */}
-              {tokenForm.showValue && tokenForm.value && (
-                <div className="mt-4 p-4 bg-yellow-900/30 border border-yellow-600 rounded-lg">
-                  <p className="text-yellow-400 text-sm font-medium mb-2">
-                    ⚠️ 重要：请立即复制并保存此 Token，它只会显示一次！
-                  </p>
-                  <div className="flex items-center gap-2 mb-2">
-                    <code className="flex-1 px-3 py-2 bg-gray-900 rounded text-yellow-300 text-sm break-all">
-                      {tokenForm.value}
-                    </code>
-                    <button
-                      onClick={() => copyTokenToClipboard(tokenForm.value!)}
-                      className="px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
-                    >
-                      复制
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => setTokenForm((prev) => ({ ...prev, showValue: false, value: null }))}
-                    className="text-yellow-400 text-sm hover:text-yellow-300"
-                  >
-                    我已保存，关闭
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Token 列表 */}
-            <div>
-              <h3 className="text-lg font-medium text-white mb-3">现有 Tokens</h3>
-              {apiTokens.length === 0 ? (
-                <p className="text-gray-400 text-sm">暂无 API Token</p>
-              ) : (
-                <div className="space-y-3">
-                  {apiTokens.map((token) => (
-                    <div
-                      key={token.id}
-                      className="p-4 bg-gray-700/50 rounded-lg border border-gray-600"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <h4 className="text-white font-medium">{token.name}</h4>
-                          <div className="text-gray-400 text-sm mt-1 space-y-1">
-                            <p>
-                              创建时间:{' '}
-                              {new Date(token.created_at).toLocaleString('zh-CN')}
-                            </p>
-                            {token.last_used_at && (
-                              <p>
-                                最后使用:{' '}
-                                {new Date(token.last_used_at).toLocaleString('zh-CN')}
-                              </p>
-                            )}
-                            {token.expires_at && (
-                              <p>
-                                过期时间:{' '}
-                                {new Date(token.expires_at).toLocaleString('zh-CN')}
-                                {new Date(token.expires_at) < new Date() && (
-                                  <span className="text-red-400 ml-2">(已过期)</span>
-                                )}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleDeleteToken(token.id)}
-                          disabled={loading}
-                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm"
-                        >
-                          删除
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <UserInfoSection user={user} />
+          
+          <StorageUsageSection storageUsage={storageUsage} />
+          
+          <PasswordChangeSection
+            passwordForm={passwordForm}
+            loading={loading}
+            onCurrentPasswordChange={handleCurrentPasswordChange}
+            onNewPasswordChange={handleNewPasswordChange}
+            onConfirmPasswordChange={handleConfirmPasswordChange}
+            onSubmit={handleChangePassword}
+          />
+          
+          <ApiTokenSection
+            apiTokens={apiTokens}
+            tokenForm={tokenForm}
+            loading={loading}
+            onTokenNameChange={handleTokenNameChange}
+            onTokenExpiresChange={handleTokenExpiresChange}
+            onCreateToken={handleCreateToken}
+            onDeleteToken={handleDeleteToken}
+            onCopyToken={copyTokenToClipboard}
+            onCloseTokenValue={handleCloseTokenValue}
+          />
         </div>
       </div>
     </PageLayout>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fileService } from '../services/files';
 
 export function useCategories(): {
@@ -8,6 +8,9 @@ export function useCategories(): {
 } {
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // 使用 ref 标记是否已初始化，避免重复请求
+  const initializedRef = useRef(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -21,8 +24,12 @@ export function useCategories(): {
     }
   }, []);
 
+  // 初始化时加载一次，移除 refresh 依赖避免循环
   useEffect(() => {
-    refresh();
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      refresh();
+    }
   }, [refresh]);
 
   return { categories, loading, refresh };

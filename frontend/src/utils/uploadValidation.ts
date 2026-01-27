@@ -7,6 +7,9 @@
 const MAX_FILE_SIZE =
   Number(import.meta.env.VITE_MAX_FILE_SIZE) || 2 * 1024 * 1024 * 1024; // 2GB
 
+// 单次批量上传最大文件数量：默认 20
+const MAX_BATCH_COUNT = Number(import.meta.env.VITE_MAX_BATCH_COUNT) || 20;
+
 // 允许的 MIME 类型（*/* 表示允许所有）
 const ALLOWED_MIME_SPEC =
   import.meta.env.VITE_ALLOWED_MIME_TYPES || '*/*';
@@ -59,6 +62,10 @@ export function getMaxFileSizeMB(): number {
 
 export function getMaxFileSizeGB(): number {
   return MAX_FILE_SIZE / (1024 * 1024 * 1024);
+}
+
+export function getMaxBatchCount(): number {
+  return MAX_BATCH_COUNT;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
 import { folderService, type Folder } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
@@ -12,19 +12,24 @@ import { FILE_LIST } from '../../constants';
 import { useCategories } from '../../hooks/useCategories';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useRequestDedup } from '../../hooks/useRequestDedup';
-import FilePreview from './FilePreview';
 import ErrorMessage from '../common/ErrorMessage';
-import ShareDialog from './ShareDialog';
-import BatchShareDialog from './BatchShareDialog';
-import BatchMoveDialog from './BatchMoveDialog';
 import FileCard from './FileCard';
 import FolderCard from './FolderCard';
 import FolderBreadcrumb from './FolderBreadcrumb';
-import CreateFolderDialog from './CreateFolderDialog';
-import RenameFolderDialog from './RenameFolderDialog';
 import FileListFilters from './FileListFilters';
+import FileListPagination from './FileListPagination';
+import FileListBatchActions from './FileListBatchActions';
 import { FileCardSkeleton } from '../common/Skeleton';
 import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
+
+// 懒加载重型对话框组件
+const FilePreview = lazy(() => import('./FilePreview'));
+const ShareDialog = lazy(() => import('./ShareDialog'));
+const BatchShareDialog = lazy(() => import('./BatchShareDialog'));
+const BatchMoveDialog = lazy(() => import('./BatchMoveDialog'));
+const CreateFolderDialog = lazy(() => import('./CreateFolderDialog'));
+const RenameFolderDialog = lazy(() => import('./RenameFolderDialog'));
+const ConfirmDialog = lazy(() => import('../common/ConfirmDialog'));
 
 export default function FileList() {
   // 文件状态
@@ -53,6 +58,9 @@ export default function FileList() {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   
+  // 缓存 selectedFileIds，避免多次 Array.from 转换
+  const selectedFileIds = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
+  
   // 对话框状态
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
   const [shareFile, setShareFile] = useState<FileMetadata | null>(null);
@@ -60,6 +68,16 @@ export default function FileList() {
   const [showBatchMove, setShowBatchMove] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [renamingFolder, setRenamingFolder] = useState<Folder | null>(null);
+  
+  // 删除确认对话框状态
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'file' | 'folder' | 'batch';
+    id?: string;
+    name?: string;
+    fileCount?: number;
+    folderCount?: number;
+  } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const { categories, loading: loadingCategories, refresh: refreshCategories } = useCategories();
   const limit = FILE_LIST.LIMIT;
@@ -134,6 +152,44 @@ export default function FileList() {
     loadFiles();
   }, [loadFolders, loadFiles]);
 
+  // 预取下一页数据（用户体验优化）
+  useEffect(() => {
+    // 计算总页数（避免依赖尚未定义的 totalPages）
+    const computedTotalPages = Math.ceil(total / limit);
+    
+    // 仅在有下一页时预取
+    if (page >= computedTotalPages || loading || total === 0) return;
+    
+    const prefetchTimeout = setTimeout(() => {
+      const nextPageQuery: FileListQuery = {
+        page: page + 1,
+        limit,
+        search: debouncedSearch || undefined,
+        mime_type: mimeType || undefined,
+        category: category === '__uncategorized__' ? '' : (category || undefined),
+        folder_id: currentFolderId,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        size_min: sizeMin ? parseInt(sizeMin) * 1024 * 1024 : undefined,
+        size_max: sizeMax ? parseInt(sizeMax) * 1024 * 1024 : undefined,
+      };
+      
+      const cacheKey = getCacheKey(nextPageQuery as Record<string, unknown>);
+      // 仅在缓存不存在时预取
+      if (!getCachedFileList(cacheKey)) {
+        dedupedListFiles(nextPageQuery)
+          .then((response) => {
+            setCachedFileList(cacheKey, response.files, response.total);
+          })
+          .catch(() => {
+            // 预取失败忽略错误
+          });
+      }
+    }, 500); // 延迟 500ms 后预取，避免频繁请求
+    
+    return () => clearTimeout(prefetchTimeout);
+  }, [page, total, loading, limit, debouncedSearch, mimeType, category, currentFolderId, dateFrom, dateTo, sizeMin, sizeMax, dedupedListFiles]);
+
   // 导航到文件夹
   const navigateToFolder = useCallback((folderId: string | null) => {
     setCurrentFolderId(folderId);
@@ -142,41 +198,80 @@ export default function FileList() {
     setSelectedFolders(new Set());
   }, []);
 
-  // 文件删除
-  const handleDelete = useCallback(async (fileId: string) => {
-    if (!confirm('确定要删除此文件吗？')) return;
-    try {
-      await fileService.deleteFile(fileId);
-      clearFileListCache();
-      loadFiles();
-    } catch (err) {
-      alert(getErrorMessage(err, '删除失败'));
-    }
-  }, [loadFiles]);
+  // 文件删除 - 显示确认对话框
+  const handleDelete = useCallback((fileId: string) => {
+    const file = files.find(f => f.id === fileId);
+    setDeleteConfirm({
+      type: 'file',
+      id: fileId,
+      name: file?.original_filename || '文件',
+    });
+  }, [files]);
 
-  // 文件夹删除
-  const handleDeleteFolder = useCallback(async (folderId: string) => {
-    if (!confirm('确定要删除此文件夹吗？其中的文件将移至根目录。')) return;
-    try {
-      await folderService.delete(folderId);
-      loadFolders();
-    } catch (err) {
-      alert(getErrorMessage(err, '删除文件夹失败'));
-    }
-  }, [loadFolders]);
+  // 文件夹删除 - 显示确认对话框
+  const handleDeleteFolder = useCallback((folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    setDeleteConfirm({
+      type: 'folder',
+      id: folderId,
+      name: folder?.name || '文件夹',
+    });
+  }, [folders]);
 
-  // 批量删除文件
-  const handleBatchDelete = async () => {
-    if (selectedFiles.size === 0) return;
-    if (!confirm(`确定要删除选中的 ${selectedFiles.size} 个文件吗？`)) return;
+  // 批量删除 - 显示确认对话框
+  const handleBatchDelete = useCallback(() => {
+    const fileCount = selectedFiles.size;
+    const folderCount = selectedFolders.size;
+    if (fileCount === 0 && folderCount === 0) return;
+
+    setDeleteConfirm({
+      type: 'batch',
+      fileCount,
+      folderCount,
+    });
+  }, [selectedFiles.size, selectedFolders.size]);
+
+  // 执行删除操作
+  const executeDelete = useCallback(async () => {
+    if (!deleteConfirm) return;
+    
+    setDeleteLoading(true);
     try {
-      await fileService.batchDelete(selectedFileIds);
-      clearFileListCache();
-      loadFiles();
+      if (deleteConfirm.type === 'file' && deleteConfirm.id) {
+        await fileService.deleteFile(deleteConfirm.id);
+        clearFileListCache();
+        loadFiles();
+      } else if (deleteConfirm.type === 'folder' && deleteConfirm.id) {
+        await folderService.delete(deleteConfirm.id);
+        loadFolders();
+      } else if (deleteConfirm.type === 'batch') {
+        const promises: Promise<unknown>[] = [];
+        
+        if (selectedFiles.size > 0) {
+          promises.push(fileService.batchDelete(selectedFileIds));
+        }
+        
+        if (selectedFolders.size > 0) {
+          const folderIds = Array.from(selectedFolders);
+          promises.push(
+            Promise.all(folderIds.map(id => folderService.delete(id)))
+          );
+        }
+
+        await Promise.all(promises);
+        setSelectedFiles(new Set());
+        setSelectedFolders(new Set());
+        clearFileListCache();
+        loadFiles();
+        loadFolders();
+      }
+      setDeleteConfirm(null);
     } catch (err) {
-      alert(getErrorMessage(err, '批量删除失败'));
+      setError(getErrorMessage(err, '删除失败'));
+    } finally {
+      setDeleteLoading(false);
     }
-  };
+  }, [deleteConfirm, selectedFiles, selectedFolders, selectedFileIds, loadFiles, loadFolders]);
 
   // 批量下载
   const handleBatchDownload = async () => {
@@ -245,28 +340,29 @@ export default function FileList() {
     }
   }, [loadFiles, loadFolders]);
 
-  // 选择切换 - 使用三元表达式和 Set 方法简化
-  const toggleSelectFile = (fileId: string) => {
+  // 选择切换 - 使用 useCallback 优化，避免每次渲染创建新函数
+  const toggleSelectFile = useCallback((fileId: string) => {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
-      // 使用条件表达式替代 if-else
       next.has(fileId) ? next.delete(fileId) : next.add(fileId);
       return next;
     });
-  };
+  }, []);
 
-  const toggleSelectFolder = (folderId: string) => {
+  const toggleSelectFolder = useCallback((folderId: string) => {
     setSelectedFolders((prev) => {
       const next = new Set(prev);
       next.has(folderId) ? next.delete(folderId) : next.add(folderId);
       return next;
     });
-  };
+  }, []);
 
-  // 使用三元表达式替代 if-else
-  const toggleSelectAll = () => setSelectedFiles(
-    selectedFiles.size === files.length ? new Set() : new Set(files.map((f) => f.id))
-  );
+  // 使用 useCallback 优化
+  const toggleSelectAll = useCallback(() => {
+    setSelectedFiles((prev) =>
+      prev.size === files.length ? new Set() : new Set(files.map((f) => f.id))
+    );
+  }, [files]);
 
   // 计算值（使用 useMemo 缓存，避免重复计算）
   const totalPages = useMemo(() => Math.ceil(total / limit), [total, limit]);
@@ -274,29 +370,14 @@ export default function FileList() {
     () => files.length > 0 && selectedFiles.size === files.length,
     [files.length, selectedFiles.size]
   );
-  // 缓存 selectedFileIds，避免多次 Array.from 转换
-  const selectedFileIds = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
+  // 批量操作回调
+  const handleShowBatchMove = useCallback(() => setShowBatchMove(true), []);
+  const handleShowBatchShare = useCallback(() => setShowBatchShare(true), []);
+  const handlePageChange = useCallback((newPage: number) => setPage(newPage), []);
   
-  // 分页页码计算提取到 useMemo，避免渲染时重复计算
-  const pageNumbers = useMemo(() => {
-    const maxVisible = 5;
-    const count = Math.min(maxVisible, totalPages);
-    
-    if (totalPages <= maxVisible) {
-      return Array.from({ length: count }, (_, i) => i + 1);
-    }
-    if (page <= 3) {
-      return Array.from({ length: count }, (_, i) => i + 1);
-    }
-    if (page >= totalPages - 2) {
-      return Array.from({ length: count }, (_, i) => totalPages - maxVisible + i + 1);
-    }
-    return Array.from({ length: count }, (_, i) => page - 2 + i);
-  }, [page, totalPages]);
-  
-  // 事件处理器
-  const handleSelectFile = useCallback((id: string) => toggleSelectFile(id), []);
-  const handleSelectFolder = useCallback((id: string) => toggleSelectFolder(id), []);
+  // 事件处理器 - 直接使用 toggleSelectFile/toggleSelectFolder
+  const handleSelectFile = toggleSelectFile;
+  const handleSelectFolder = toggleSelectFolder;
   const handlePreview = useCallback((file: FileMetadata) => setPreviewFile(file), []);
   const handleShare = useCallback((file: FileMetadata) => setShareFile(file), []);
   const handleDeleteRow = useCallback((id: string) => handleDelete(id), [handleDelete]);
@@ -309,6 +390,42 @@ export default function FileList() {
     setSizeMin('');
     setSizeMax('');
     setCategory('');
+    setPage(1);
+  }, []);
+
+  // 筛选器回调函数 - 使用 useCallback 避免每次渲染创建新函数
+  const handleSearchChange = useCallback((v: string) => {
+    setSearch(v);
+    setPage(1);
+  }, []);
+
+  const handleMimeTypeChange = useCallback((v: string) => {
+    setMimeType(v);
+    setPage(1);
+  }, []);
+
+  const handleCategoryChange = useCallback((v: string) => {
+    setCategory(v);
+    setPage(1);
+  }, []);
+
+  const handleDateFromChange = useCallback((v: string) => {
+    setDateFrom(v);
+    setPage(1);
+  }, []);
+
+  const handleDateToChange = useCallback((v: string) => {
+    setDateTo(v);
+    setPage(1);
+  }, []);
+
+  const handleSizeMinChange = useCallback((v: string) => {
+    setSizeMin(v);
+    setPage(1);
+  }, []);
+
+  const handleSizeMaxChange = useCallback((v: string) => {
+    setSizeMax(v);
     setPage(1);
   }, []);
 
@@ -398,71 +515,25 @@ export default function FileList() {
         sizeMin={sizeMin}
         sizeMax={sizeMax}
         categories={categories}
-        onSearchChange={(v) => {
-          setSearch(v);
-          setPage(1);
-        }}
-        onMimeTypeChange={(v) => {
-          setMimeType(v);
-          setPage(1);
-        }}
-        onCategoryChange={(v) => {
-          setCategory(v);
-          setPage(1);
-        }}
-        onDateFromChange={(v) => {
-          setDateFrom(v);
-          setPage(1);
-        }}
-        onDateToChange={(v) => {
-          setDateTo(v);
-          setPage(1);
-        }}
-        onSizeMinChange={(v) => {
-          setSizeMin(v);
-          setPage(1);
-        }}
-        onSizeMaxChange={(v) => {
-          setSizeMax(v);
-          setPage(1);
-        }}
+        onSearchChange={handleSearchChange}
+        onMimeTypeChange={handleMimeTypeChange}
+        onCategoryChange={handleCategoryChange}
+        onDateFromChange={handleDateFromChange}
+        onDateToChange={handleDateToChange}
+        onSizeMinChange={handleSizeMinChange}
+        onSizeMaxChange={handleSizeMaxChange}
         onClearFilters={handleClearFilters}
       />
 
       {/* 批量操作栏 */}
-      {selectedFiles.size > 0 && (
-        <div className="mb-4 p-3 bg-purple-500/20 dark:bg-purple-600/20 border border-purple-500/50 dark:border-purple-600/50 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in transition-all duration-200">
-          <span className="text-purple-200 dark:text-purple-300 font-medium">
-            已选择 {selectedFiles.size} 个文件
-          </span>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowBatchMove(true)}
-              className="px-3 sm:px-4 py-2 bg-amber-600 dark:bg-amber-700 text-white rounded-lg hover:bg-amber-700 dark:hover:bg-amber-600 transition-all duration-200 text-sm"
-            >
-              批量移动
-            </button>
-            <button
-              onClick={() => setShowBatchShare(true)}
-              className="px-3 sm:px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 text-sm"
-            >
-              批量分享
-            </button>
-            <button
-              onClick={handleBatchDownload}
-              className="px-3 sm:px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200 text-sm"
-            >
-              批量下载 ZIP
-            </button>
-            <button
-              onClick={handleBatchDelete}
-              className="px-3 sm:px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-all duration-200 text-sm"
-            >
-              批量删除 (Ctrl+Shift+D)
-            </button>
-          </div>
-        </div>
-      )}
+      <FileListBatchActions
+        selectedFileCount={selectedFiles.size}
+        selectedFolderCount={selectedFolders.size}
+        onBatchMove={handleShowBatchMove}
+        onBatchShare={handleShowBatchShare}
+        onBatchDownload={handleBatchDownload}
+        onBatchDelete={handleBatchDelete}
+      />
 
       {error && (
         <ErrorMessage
@@ -541,107 +612,113 @@ export default function FileList() {
           </div>
 
           {/* 分页 */}
-          {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-3">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="flex items-center gap-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <ChevronLeftIcon />
-                上一页
-              </button>
-              <div className="flex items-center gap-1">
-                {pageNumbers.map((pageNum) => (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={`h-9 w-9 rounded-lg text-sm font-medium transition-colors ${
-                      page === pageNum
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="flex items-center gap-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                下一页
-                <ChevronRightIcon />
-              </button>
-            </div>
-          )}
+          <FileListPagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </> 
       )}
 
-      {/* 对话框 */}
-      {previewFile && (
-        <FilePreview
-          key={previewFile.id}
-          file={previewFile}
-          onClose={() => setPreviewFile(null)}
-        />
-      )}
+      {/* 对话框 - 懒加载 */}
+      <Suspense fallback={null}>
+        {previewFile && (
+          <FilePreview
+            key={previewFile.id}
+            file={previewFile}
+            onClose={() => setPreviewFile(null)}
+          />
+        )}
 
-      {shareFile && (
-        <ShareDialog
-          fileId={shareFile.id}
-          filename={shareFile.original_filename}
-          onClose={() => setShareFile(null)}
-        />
-      )}
+        {shareFile && (
+          <ShareDialog
+            fileId={shareFile.id}
+            filename={shareFile.original_filename}
+            onClose={() => setShareFile(null)}
+          />
+        )}
 
-      {showBatchShare && (
-        <BatchShareDialog
-          fileIds={selectedFileIds}
-          fileCount={selectedFiles.size}
-          onClose={() => setShowBatchShare(false)}
-          onShareCreated={() => {
-            setShowBatchShare(false);
-            setSelectedFiles(new Set());
-          }}
-        />
-      )}
+        {showBatchShare && (
+          <BatchShareDialog
+            fileIds={selectedFileIds}
+            fileCount={selectedFiles.size}
+            onClose={() => setShowBatchShare(false)}
+            onShareCreated={() => {
+              setShowBatchShare(false);
+              setSelectedFiles(new Set());
+            }}
+          />
+        )}
 
-      {showBatchMove && (
-        <BatchMoveDialog
-          fileIds={selectedFileIds}
-          fileCount={selectedFiles.size}
-          categories={categories}
-          loadingCategories={loadingCategories}
-          onClose={() => setShowBatchMove(false)}
-          onMoved={() => {
-            setShowBatchMove(false);
-            setSelectedFiles(new Set());
-            clearFileListCache();
-            loadFiles();
-            refreshCategories();
-          }}
-        />
-      )}
+        {showBatchMove && (
+          <BatchMoveDialog
+            fileIds={selectedFileIds}
+            fileCount={selectedFiles.size}
+            categories={categories}
+            loadingCategories={loadingCategories}
+            onClose={() => setShowBatchMove(false)}
+            onMoved={() => {
+              setShowBatchMove(false);
+              setSelectedFiles(new Set());
+              clearFileListCache();
+              loadFiles();
+              refreshCategories();
+            }}
+          />
+        )}
 
-      <CreateFolderDialog
-        open={showCreateFolder}
-        parentId={currentFolderId}
-        onClose={() => setShowCreateFolder(false)}
-        onCreated={() => {
-          loadFolders();
-        }}
-      />
+        {showCreateFolder && (
+          <CreateFolderDialog
+            open={showCreateFolder}
+            parentId={currentFolderId}
+            onClose={() => setShowCreateFolder(false)}
+            onCreated={() => {
+              loadFolders();
+            }}
+          />
+        )}
 
-      <RenameFolderDialog
-        open={!!renamingFolder}
-        folder={renamingFolder}
-        onClose={() => setRenamingFolder(null)}
-        onRenamed={() => {
-          loadFolders();
-        }}
-      />
+        {renamingFolder && (
+          <RenameFolderDialog
+            open={!!renamingFolder}
+            folder={renamingFolder}
+            onClose={() => setRenamingFolder(null)}
+            onRenamed={() => {
+              loadFolders();
+            }}
+          />
+        )}
+
+        {/* 删除确认对话框 */}
+        {deleteConfirm && (
+          <ConfirmDialog
+            open={!!deleteConfirm}
+            title={
+              deleteConfirm.type === 'batch'
+                ? '确认批量删除'
+                : deleteConfirm.type === 'folder'
+                  ? '确认删除文件夹'
+                  : '确认删除文件'
+            }
+            message={
+              deleteConfirm.type === 'batch'
+                ? `即将删除 ${[
+                    deleteConfirm.fileCount && `${deleteConfirm.fileCount} 个文件`,
+                    deleteConfirm.folderCount && `${deleteConfirm.folderCount} 个文件夹`,
+                  ].filter(Boolean).join(' 和 ')}。\n\n此操作不可撤销！`
+                : deleteConfirm.type === 'folder'
+                  ? `确定要删除文件夹「${deleteConfirm.name}」吗？\n\n文件夹内的所有内容也会被删除！`
+                  : `确定要删除文件「${deleteConfirm.name}」吗？\n\n此操作不可撤销。`
+            }
+            confirmText="删除"
+            cancelText="取消"
+            variant="danger"
+            loading={deleteLoading}
+            onConfirm={executeDelete}
+            onCancel={() => setDeleteConfirm(null)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }
@@ -656,22 +733,6 @@ function EmptyIcon() {
         strokeWidth={1.5}
         d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
       />
-    </svg>
-  );
-}
-
-function ChevronLeftIcon() {
-  return (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-    </svg>
-  );
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
   );
 }

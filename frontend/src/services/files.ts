@@ -4,6 +4,30 @@ import { downloadBlob } from '../utils/downloadBlob';
 import { API_BASE_URL } from '../config/env';
 import { CHUNKED_UPLOAD } from '../constants';
 
+// 预览请求并发限制器（最多 6 个并发请求）
+const previewQueue = {
+  running: 0,
+  maxConcurrent: 6,
+  queue: [] as Array<() => void>,
+  
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    // 等待有空位
+    if (this.running >= this.maxConcurrent) {
+      await new Promise<void>((resolve) => this.queue.push(resolve));
+    }
+    
+    this.running++;
+    try {
+      return await fn();
+    } finally {
+      this.running--;
+      // 释放下一个等待者
+      const next = this.queue.shift();
+      if (next) next();
+    }
+  }
+};
+
 export interface FileMetadata {
   id: string;
   filename: string;
@@ -288,10 +312,12 @@ export const fileService = {
 
   /** 带鉴权的预览 blob，供缩略图/预览用（img/iframe 无法带 Authorization） */
   async fetchPreviewBlob(fileId: string): Promise<Blob> {
-    const { data } = await api.get<Blob>(`/api/files/${fileId}/preview`, {
-      responseType: 'blob',
+    return previewQueue.run(async () => {
+      const { data } = await api.get<Blob>(`/api/files/${fileId}/preview`, {
+        responseType: 'blob',
+      });
+      return data;
     });
-    return data;
   },
 
   async getCategories(): Promise<string[]> {
