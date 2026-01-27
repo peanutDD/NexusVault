@@ -276,6 +276,13 @@ export default function FileList() {
       .sort((a, b) => a.order - b.order);
   }, [files, isGroupByType]);
 
+  // 预览导航用的文件列表（按当前显示顺序）
+  const displayFiles = useMemo(() => {
+    if (!isGroupByType || !groupedFiles) return files;
+    // 按分组顺序展开所有文件
+    return groupedFiles.flatMap(group => group.files);
+  }, [files, isGroupByType, groupedFiles]);
+
   // 文件删除 - 显示确认对话框
   const handleDelete = useCallback((fileId: string) => {
     const file = files.find(f => f.id === fileId);
@@ -730,8 +737,8 @@ export default function FileList() {
           <FilePreview
             key={previewFile.id}
             file={previewFile}
-            files={files}
-            currentIndex={files.findIndex(f => f.id === previewFile.id)}
+            files={displayFiles}
+            currentIndex={displayFiles.findIndex(f => f.id === previewFile.id)}
             onClose={() => setPreviewFile(null)}
             onNavigate={(file) => setPreviewFile(file)}
           />
