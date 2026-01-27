@@ -229,7 +229,7 @@ impl FolderService {
         .await?;
 
         if path.is_empty() {
-            return Err(AppError::NotFound("文件夹不存在".to_string()));
+            return Err(AppError::NotFound);
         }
 
         Ok(FolderPathResponse {
@@ -304,7 +304,7 @@ impl FolderService {
         .fetch_optional(&self.pool)
         .await?;
 
-        let current = current.ok_or_else(|| AppError::NotFound("文件夹不存在".to_string()))?;
+        let current = current.ok_or(AppError::NotFound)?;
 
         // 检查同级目录下是否已有同名文件夹
         let existing: Option<(Uuid,)> = if current.parent_id.is_some() {
@@ -381,7 +381,7 @@ impl FolderService {
         .fetch_optional(&self.pool)
         .await?;
 
-        let current = current.ok_or_else(|| AppError::NotFound("文件夹不存在".to_string()))?;
+        let current = current.ok_or(AppError::NotFound)?;
 
         // 如果目标父文件夹不为空，验证其存在且不是当前文件夹的子文件夹
         if let Some(new_parent_id) = req.parent_id {
