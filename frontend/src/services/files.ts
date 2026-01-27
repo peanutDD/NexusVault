@@ -11,6 +11,7 @@ export interface FileMetadata {
   file_size: number;
   mime_type: string;
   category: string | null;
+  folder_id: string | null;
   created_at: string;
 }
 
@@ -25,6 +26,7 @@ export interface FileListQuery {
   search?: string;
   mime_type?: string;
   category?: string;
+  folder_id?: string | null;
   date_from?: string;
   date_to?: string;
   size_min?: number;
@@ -40,6 +42,10 @@ export const fileService = {
       if (query.search != null) q.search = query.search;
       if (query.mime_type != null) q.mime_type = query.mime_type;
       if (query.category !== undefined) q.category = query.category;
+      // folder_id: null 表示根目录，传 "null" 字符串
+      if (query.folder_id !== undefined) {
+        q.folder_id = query.folder_id === null ? 'null' : query.folder_id;
+      }
       if (query.date_from != null) q.date_from = query.date_from;
       if (query.date_to != null) q.date_to = query.date_to;
       if (query.size_min != null) q.size_min = query.size_min;

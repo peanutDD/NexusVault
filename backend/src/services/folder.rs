@@ -60,37 +60,23 @@ impl FolderService {
 
         // 如果指定了父文件夹，验证其存在且属于该用户
         if let Some(parent_id) = req.parent_id {
-            let parent_exists: Option<(Uuid,)> =
-                sqlx::query_as("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-                    .bind(parent_id)
-                    .bind(user_id)
-                    .fetch_optional(&self.pool)
-                    .await?;
-
-            if parent_exists.is_none() {
-                return Err(AppError::Validation("父文件夹不存在".to_string()));
-            }
+            sqlx::query_as::<_, (Uuid,)>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
+                .bind(parent_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| AppError::Validation("父文件夹不存在".to_string()))?;
         }
 
-        // 检查同一父目录下是否已存在同名文件夹
-        let existing: Option<(Uuid,)> = if req.parent_id.is_some() {
-            sqlx::query_as(
-                "SELECT id FROM folders WHERE user_id = $1 AND parent_id = $2 AND name = $3",
-            )
-            .bind(user_id)
-            .bind(req.parent_id)
-            .bind(name)
-            .fetch_optional(&self.pool)
-            .await?
-        } else {
-            sqlx::query_as(
-                "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NULL AND name = $2",
-            )
-            .bind(user_id)
-            .bind(name)
-            .fetch_optional(&self.pool)
-            .await?
-        };
+        // 检查同一父目录下是否已存在同名文件夹（使用 IS NOT DISTINCT FROM 统一处理 NULL）
+        let existing: Option<(Uuid,)> = sqlx::query_as(
+            "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3",
+        )
+        .bind(user_id)
+        .bind(req.parent_id)
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await?;
 
         if existing.is_some() {
             return Err(AppError::Validation("同名文件夹已存在".to_string()));
@@ -394,7 +380,7 @@ impl FolderService {
                     .await?;
 
             if parent_exists.is_none() {
-                return Err(AppError::NotFound("目标文件夹不存在".to_string()));
+                return Err(AppError::Validation("目标文件夹不存在".to_string()));
             }
 
             // 检查目标文件夹是否是当前文件夹的子文件夹（防止循环）
@@ -487,7 +473,7 @@ impl FolderService {
                 .await?;
 
         if folder_exists.is_none() {
-            return Err(AppError::NotFound("文件夹不存在".to_string()));
+            return Err(AppError::NotFound);
         }
 
         // 获取所有需要删除的文件夹 ID（包括子文件夹）
@@ -557,7 +543,7 @@ impl FolderService {
                     .await?;
 
             if folder_exists.is_none() {
-                return Err(AppError::NotFound("目标文件夹不存在".to_string()));
+                return Err(AppError::Validation("目标文件夹不存在".to_string()));
             }
         }
 

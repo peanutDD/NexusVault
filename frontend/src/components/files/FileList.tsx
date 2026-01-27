@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
+import { folderService, type Folder } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
 import {
   getCacheKey,
@@ -17,16 +18,29 @@ import ShareDialog from './ShareDialog';
 import BatchShareDialog from './BatchShareDialog';
 import BatchMoveDialog from './BatchMoveDialog';
 import FileCard from './FileCard';
+import FolderCard from './FolderCard';
+import FolderBreadcrumb from './FolderBreadcrumb';
+import CreateFolderDialog from './CreateFolderDialog';
+import RenameFolderDialog from './RenameFolderDialog';
 import FileListFilters from './FileListFilters';
 import { FileCardSkeleton } from '../common/Skeleton';
 import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
 
 export default function FileList() {
+  // 文件状态
   const [files, setFiles] = useState<FileMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  
+  // 文件夹状态
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folderPath, setFolderPath] = useState<Folder[]>([]);
+  const [loadingFolders, setLoadingFolders] = useState(false);
+  
+  // 过滤器状态
   const [search, setSearch] = useState('');
   const [mimeType, setMimeType] = useState('');
   const [category, setCategory] = useState<string>('');
@@ -34,42 +48,63 @@ export default function FileList() {
   const [dateTo, setDateTo] = useState('');
   const [sizeMin, setSizeMin] = useState('');
   const [sizeMax, setSizeMax] = useState('');
+  
+  // 选择状态
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
+  
+  // 对话框状态
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
   const [shareFile, setShareFile] = useState<FileMetadata | null>(null);
   const [showBatchShare, setShowBatchShare] = useState(false);
   const [showBatchMove, setShowBatchMove] = useState(false);
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [renamingFolder, setRenamingFolder] = useState<Folder | null>(null);
 
   const { categories, loading: loadingCategories, refresh: refreshCategories } = useCategories();
   const limit = FILE_LIST.LIMIT;
 
-  // Debounce search to reduce API calls
   const debouncedSearch = useDebounce(search, 300);
 
-  // 稳定引用，避免 .bind() 每次渲染新建函数 → dedupedListFiles 变 → loadFiles 变 → useEffect 无限循环
   const listFilesStable = useCallback(
     (query?: FileListQuery) => fileService.listFiles(query),
     []
   );
   const dedupedListFiles = useRequestDedup(listFilesStable);
 
+  // 加载文件夹
+  const loadFolders = useCallback(async () => {
+    setLoadingFolders(true);
+    try {
+      const contents = await folderService.getContents(currentFolderId);
+      setFolders(contents.folders);
+      setFolderPath(contents.path);
+    } catch (err) {
+      console.error('Failed to load folders:', err);
+    } finally {
+      setLoadingFolders(false);
+    }
+  }, [currentFolderId]);
+
+  // 加载文件
   const loadFiles = useCallback(async () => {
     setLoading(true);
     setError(null);
     
-    const query = {
+    const query: FileListQuery = {
       page,
       limit,
       search: debouncedSearch || undefined,
       mime_type: mimeType || undefined,
       category: category === '__uncategorized__' ? '' : (category || undefined),
+      folder_id: currentFolderId,
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
       size_min: sizeMin ? parseInt(sizeMin) * 1024 * 1024 : undefined,
       size_max: sizeMax ? parseInt(sizeMax) * 1024 * 1024 : undefined,
     };
     
-    const cacheKey = getCacheKey(query);
+    const cacheKey = getCacheKey(query as Record<string, unknown>);
     const cached = getCachedFileList(cacheKey);
     
     if (cached) {
@@ -91,35 +126,59 @@ export default function FileList() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, debouncedSearch, mimeType, category, dateFrom, dateTo, sizeMin, sizeMax, dedupedListFiles]);
+  }, [page, limit, debouncedSearch, mimeType, category, currentFolderId, dateFrom, dateTo, sizeMin, sizeMax, dedupedListFiles]);
 
+  // 加载数据
   useEffect(() => {
+    loadFolders();
     loadFiles();
-  }, [loadFiles]);
+  }, [loadFolders, loadFiles]);
 
+  // 导航到文件夹
+  const navigateToFolder = useCallback((folderId: string | null) => {
+    setCurrentFolderId(folderId);
+    setPage(1);
+    setSelectedFiles(new Set());
+    setSelectedFolders(new Set());
+  }, []);
+
+  // 文件删除
   const handleDelete = useCallback(async (fileId: string) => {
     if (!confirm('确定要删除此文件吗？')) return;
     try {
       await fileService.deleteFile(fileId);
-      clearFileListCache(); // 清除缓存，强制刷新
+      clearFileListCache();
       loadFiles();
     } catch (err) {
       alert(getErrorMessage(err, '删除失败'));
     }
   }, [loadFiles]);
 
+  // 文件夹删除
+  const handleDeleteFolder = useCallback(async (folderId: string) => {
+    if (!confirm('确定要删除此文件夹吗？其中的文件将移至根目录。')) return;
+    try {
+      await folderService.delete(folderId);
+      loadFolders();
+    } catch (err) {
+      alert(getErrorMessage(err, '删除文件夹失败'));
+    }
+  }, [loadFolders]);
+
+  // 批量删除文件
   const handleBatchDelete = async () => {
     if (selectedFiles.size === 0) return;
     if (!confirm(`确定要删除选中的 ${selectedFiles.size} 个文件吗？`)) return;
     try {
       await fileService.batchDelete(Array.from(selectedFiles));
-      clearFileListCache(); // 清除缓存，强制刷新
+      clearFileListCache();
       loadFiles();
     } catch (err) {
       alert(getErrorMessage(err, '批量删除失败'));
     }
   };
 
+  // 批量下载
   const handleBatchDownload = async () => {
     if (selectedFiles.size === 0) return;
     try {
@@ -129,6 +188,7 @@ export default function FileList() {
     }
   };
 
+  // 下载文件
   const handleDownload = async (file: FileMetadata) => {
     try {
       await fileService.downloadFile(file.id, file.original_filename);
@@ -137,13 +197,74 @@ export default function FileList() {
     }
   };
 
-  const toggleSelect = (fileId: string) => {
+  // 拖拽：移动文件到文件夹
+  const handleDropOnFolder = useCallback(async (e: React.DragEvent, targetFolder: Folder) => {
+    const fileId = e.dataTransfer.getData('application/file-id');
+    const folderId = e.dataTransfer.getData('application/folder-id');
+    
+    if (fileId) {
+      // 移动文件
+      try {
+        await folderService.moveFilesToFolder([fileId], targetFolder.id);
+        clearFileListCache();
+        loadFiles();
+      } catch (err) {
+        alert(getErrorMessage(err, '移动文件失败'));
+      }
+    } else if (folderId && folderId !== targetFolder.id) {
+      // 移动文件夹
+      try {
+        await folderService.move(folderId, targetFolder.id);
+        loadFolders();
+      } catch (err) {
+        alert(getErrorMessage(err, '移动文件夹失败'));
+      }
+    }
+  }, [loadFiles, loadFolders]);
+
+  // 拖拽：移动到面包屑位置
+  const handleDropOnBreadcrumb = useCallback(async (e: React.DragEvent, targetFolderId: string | null) => {
+    const fileId = e.dataTransfer.getData('application/file-id');
+    const folderId = e.dataTransfer.getData('application/folder-id');
+    
+    if (fileId) {
+      try {
+        await folderService.moveFilesToFolder([fileId], targetFolderId);
+        clearFileListCache();
+        loadFiles();
+      } catch (err) {
+        alert(getErrorMessage(err, '移动文件失败'));
+      }
+    } else if (folderId && folderId !== targetFolderId) {
+      try {
+        await folderService.move(folderId, targetFolderId);
+        loadFolders();
+      } catch (err) {
+        alert(getErrorMessage(err, '移动文件夹失败'));
+      }
+    }
+  }, [loadFiles, loadFolders]);
+
+  // 选择切换
+  const toggleSelectFile = (fileId: string) => {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
       if (next.has(fileId)) {
         next.delete(fileId);
       } else {
         next.add(fileId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectFolder = (folderId: string) => {
+    setSelectedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
       }
       return next;
     });
@@ -157,18 +278,21 @@ export default function FileList() {
     }
   };
 
-  // Memoized computed values
+  // 计算值
   const totalPages = useMemo(() => Math.ceil(total / limit), [total, limit]);
-  const allSelected = useMemo(
+  const allFilesSelected = useMemo(
     () => files.length > 0 && selectedFiles.size === files.length,
     [files.length, selectedFiles.size]
   );
   
-  // Memoized handlers
-  const handleSelect = useCallback((id: string) => toggleSelect(id), []);
+  // 事件处理器
+  const handleSelectFile = useCallback((id: string) => toggleSelectFile(id), []);
+  const handleSelectFolder = useCallback((id: string) => toggleSelectFolder(id), []);
   const handlePreview = useCallback((file: FileMetadata) => setPreviewFile(file), []);
   const handleShare = useCallback((file: FileMetadata) => setShareFile(file), []);
   const handleDeleteRow = useCallback((id: string) => handleDelete(id), [handleDelete]);
+  const handleOpenFolder = useCallback((folder: Folder) => navigateToFolder(folder.id), [navigateToFolder]);
+  const handleRenameFolder = useCallback((folder: Folder) => setRenamingFolder(folder), []);
   
   const handleClearFilters = useCallback(() => {
     setDateFrom('');
@@ -179,12 +303,17 @@ export default function FileList() {
     setPage(1);
   }, []);
 
-  // 键盘快捷键支持
+  // 拖拽开始：设置文件 ID
+  const handleFileDragStart = useCallback((e: React.DragEvent, file: FileMetadata) => {
+    e.dataTransfer.setData('application/file-id', file.id);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  // 键盘快捷键
   useKeyboardShortcuts([
     {
       key: SHORTCUTS.SEARCH,
       handler: () => {
-        // 通过全局变量访问搜索输入框（FileListFilters 中设置）
         const w = window as unknown as {
           __fileListSearchInput?: HTMLInputElement;
         };
@@ -226,18 +355,41 @@ export default function FileList() {
       key: SHORTCUTS.ESCAPE,
       handler: () => {
         setSelectedFiles(new Set());
+        setSelectedFolders(new Set());
         setPreviewFile(null);
         setShareFile(null);
         setShowBatchShare(false);
         setShowBatchMove(false);
+        setShowCreateFolder(false);
+        setRenamingFolder(null);
       },
       description: '取消选择/关闭对话框',
       preventInInput: false,
     },
   ]);
 
+  const totalItems = folders.length + files.length;
+  const isLoading = loading || loadingFolders;
+
   return (
     <div>
+      {/* 面包屑导航 + 新建文件夹按钮 */}
+      <div className="mb-4 flex items-center justify-between">
+        <FolderBreadcrumb
+          path={folderPath}
+          onNavigate={navigateToFolder}
+          onDrop={handleDropOnBreadcrumb}
+        />
+        <button
+          type="button"
+          onClick={() => setShowCreateFolder(true)}
+          className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-500"
+        >
+          <PlusIcon />
+          新建文件夹
+        </button>
+      </div>
+
       <FileListFilters
         search={search}
         mimeType={mimeType}
@@ -278,6 +430,7 @@ export default function FileList() {
         onClearFilters={handleClearFilters}
       />
 
+      {/* 批量操作栏 */}
       {selectedFiles.size > 0 && (
         <div className="mb-4 p-3 bg-purple-500/20 dark:bg-purple-600/20 border border-purple-500/50 dark:border-purple-600/50 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in transition-all duration-200">
           <span className="text-purple-200 dark:text-purple-300 font-medium">
@@ -320,17 +473,21 @@ export default function FileList() {
         />
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           <FileCardSkeleton count={12} />
         </div>
-      ) : files.length === 0 ? (
+      ) : totalItems === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl bg-gray-800/50 py-16">
           <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-700/50">
             <EmptyIcon />
           </div>
-          <p className="text-lg font-medium text-gray-400">暂无文件</p>
-          <p className="mt-1 text-sm text-gray-500">上传你的第一个文件吧</p>
+          <p className="text-lg font-medium text-gray-400">
+            {currentFolderId ? '文件夹为空' : '暂无文件'}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            {currentFolderId ? '拖拽文件到此处或创建子文件夹' : '上传你的第一个文件吧'}
+          </p>
         </div>
       ) : (
         <>
@@ -339,30 +496,47 @@ export default function FileList() {
             <label className="flex items-center gap-2 text-sm text-gray-400">
               <input
                 type="checkbox"
-                checked={allSelected}
+                checked={allFilesSelected}
                 onChange={toggleSelectAll}
                 className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
                 aria-label="全选所有文件"
               />
-              全选
+              全选文件
             </label>
             <span className="text-sm text-gray-500">
-              共 {total} 个文件
+              {folders.length > 0 && `${folders.length} 个文件夹 · `}
+              {total} 个文件
             </span>
           </div>
 
-          {/* 文件卡片网格 */}
+          {/* 文件夹 + 文件卡片网格 */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {/* 文件夹 */}
+            {folders.map((folder) => (
+              <FolderCard
+                key={folder.id}
+                folder={folder}
+                isSelected={selectedFolders.has(folder.id)}
+                onSelect={handleSelectFolder}
+                onOpen={handleOpenFolder}
+                onRename={handleRenameFolder}
+                onDelete={handleDeleteFolder}
+                onDrop={handleDropOnFolder}
+              />
+            ))}
+            
+            {/* 文件 */}
             {files.map((file) => (
               <FileCard
                 key={file.id}
                 file={file}
                 isSelected={selectedFiles.has(file.id)}
-                onSelect={handleSelect}
+                onSelect={handleSelectFile}
                 onPreview={handlePreview}
                 onShare={handleShare}
                 onDownload={handleDownload}
                 onDelete={handleDeleteRow}
+                onDragStart={handleFileDragStart}
               />
             ))}
           </div>
@@ -418,6 +592,7 @@ export default function FileList() {
         </> 
       )}
 
+      {/* 对话框 */}
       {previewFile && (
         <FilePreview
           key={previewFile.id}
@@ -462,11 +637,29 @@ export default function FileList() {
           }}
         />
       )}
+
+      <CreateFolderDialog
+        open={showCreateFolder}
+        parentId={currentFolderId}
+        onClose={() => setShowCreateFolder(false)}
+        onCreated={() => {
+          loadFolders();
+        }}
+      />
+
+      <RenameFolderDialog
+        open={!!renamingFolder}
+        folder={renamingFolder}
+        onClose={() => setRenamingFolder(null)}
+        onRenamed={() => {
+          loadFolders();
+        }}
+      />
     </div>
   );
 }
 
-// 空状态图标
+// 图标组件
 function EmptyIcon() {
   return (
     <svg className="h-10 w-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -480,7 +673,6 @@ function EmptyIcon() {
   );
 }
 
-// 左箭头图标
 function ChevronLeftIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -489,11 +681,18 @@ function ChevronLeftIcon() {
   );
 }
 
-// 右箭头图标
 function ChevronRightIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
     </svg>
   );
 }

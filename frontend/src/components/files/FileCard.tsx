@@ -12,11 +12,12 @@ interface FileCardProps {
   onShare: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
   onDelete: (id: string) => void;
+  onDragStart?: (e: React.DragEvent, file: FileMetadata) => void;
 }
 
 /**
  * 文件卡片组件
- * 以缩略图形式展示文件信息
+ * 以缩略图形式展示文件信息，支持拖拽
  */
 const FileCard = memo(function FileCard({
   file,
@@ -26,6 +27,7 @@ const FileCard = memo(function FileCard({
   onShare,
   onDownload,
   onDelete,
+  onDragStart,
 }: FileCardProps) {
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('zh-CN', {
@@ -48,12 +50,20 @@ const FileCard = memo(function FileCard({
     return 'File';
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/file-id', file.id);
+    e.dataTransfer.effectAllowed = 'move';
+    onDragStart?.(e, file);
+  };
+
   return (
     <div
       className={cn(
         'group relative rounded-xl bg-gray-800/80 p-3 transition-all duration-200 hover:bg-gray-800 hover:shadow-lg hover:shadow-purple-500/10',
         isSelected && 'ring-2 ring-purple-500 bg-purple-500/10'
       )}
+      draggable
+      onDragStart={handleDragStart}
     >
       {/* 缩略图 */}
       <div

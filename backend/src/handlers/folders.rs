@@ -25,7 +25,7 @@ use crate::models::folder::{
     RenameFolderRequest,
 };
 use crate::services::folder::FolderService;
-use crate::utils::{json_response, success_response, AppError};
+use crate::utils::{json_response, AppError};
 use crate::AppState;
 
 /// 创建文件夹
@@ -201,10 +201,10 @@ pub async fn delete_folder_handler(
 ) -> Result<Response, AppError> {
     let folder_service = FolderService::new(state.pool.clone());
     let affected = folder_service.delete_folder(user_id, id).await?;
-    Ok(success_response(
-        "文件夹删除成功",
-        json!({ "affected_files": affected }),
-    ))
+    Ok(json_response(json!({
+        "message": "文件夹删除成功",
+        "affected_files": affected
+    })))
 }
 
 /// 移动文件夹
@@ -262,8 +262,8 @@ pub async fn move_files_to_folder_handler(
     let moved = folder_service
         .move_files_to_folder(user_id, req.file_ids, req.folder_id)
         .await?;
-    Ok(success_response(
-        "文件移动成功",
-        json!({ "moved": moved }),
-    ))
+    Ok(json_response(json!({
+        "message": "文件移动成功",
+        "moved": moved
+    })))
 }
