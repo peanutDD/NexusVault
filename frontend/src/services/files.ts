@@ -55,6 +55,8 @@ export interface FileListQuery {
   date_to?: string;
   size_min?: number;
   size_max?: number;
+  sort_by?: 'created_at' | 'filename' | 'file_size';
+  sort_order?: 'asc' | 'desc';
 }
 
 export const fileService = {

@@ -111,6 +111,10 @@ pub struct FileListQuery {
     pub size_min: Option<i64>,
     /// 文件大小最大值（字节）
     pub size_max: Option<i64>,
+    /// 排序字段：created_at（默认）、filename、file_size
+    pub sort_by: Option<String>,
+    /// 排序方向：desc（默认）、asc
+    pub sort_order: Option<String>,
 }
 
 impl FileListQuery {

@@ -3,6 +3,17 @@ import { fileService, type FileMetadata, type FileListQuery } from '../../servic
 import { folderService, type Folder } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
 import {
+  Image,
+  Film,
+  Video,
+  Music,
+  FileText,
+  FileCode,
+  Archive,
+  File,
+  Folder as FolderIcon,
+} from 'lucide-react';
+import {
   getCacheKey,
   getCachedFileList,
   setCachedFileList,
@@ -49,10 +60,10 @@ export default function FileList() {
   const [search, setSearch] = useState('');
   const [mimeType, setMimeType] = useState('');
   const [category, setCategory] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [sizeMin, setSizeMin] = useState('');
-  const [sizeMax, setSizeMax] = useState('');
+  const [sortBy, setSortBy] = useState<import('./FileListFilters').SortOption>(() => {
+    const saved = localStorage.getItem('fileListSortBy');
+    return (saved as import('./FileListFilters').SortOption) || 'created_at_desc';
+  });
   
   // 选择状态
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -104,6 +115,26 @@ export default function FileList() {
     }
   }, [currentFolderId]);
 
+  // 解析排序选项
+  const [sortField, sortOrder] = useMemo(() => {
+    // 按类型分组时，后端仍按时间排序，前端负责分组
+    if (sortBy === 'type_group') {
+      return ['created_at', 'desc'] as const;
+    }
+    // 特殊处理 created_at 和 file_size
+    if (sortBy.startsWith('created_at_')) {
+      return ['created_at', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
+    }
+    if (sortBy.startsWith('file_size_')) {
+      return ['file_size', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
+    }
+    if (sortBy.startsWith('filename_')) {
+      return ['filename', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
+    }
+    const [field, order] = sortBy.split('_') as [string, string];
+    return [field as 'created_at' | 'filename' | 'file_size', order as 'asc' | 'desc'] as const;
+  }, [sortBy]);
+
   // 加载文件
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -116,10 +147,8 @@ export default function FileList() {
       mime_type: mimeType || undefined,
       category: category === '__uncategorized__' ? '' : (category || undefined),
       folder_id: currentFolderId,
-      date_from: dateFrom || undefined,
-      date_to: dateTo || undefined,
-      size_min: sizeMin ? parseInt(sizeMin) * 1024 * 1024 : undefined,
-      size_max: sizeMax ? parseInt(sizeMax) * 1024 * 1024 : undefined,
+      sort_by: sortField,
+      sort_order: sortOrder,
     };
     
     const cacheKey = getCacheKey(query as Record<string, unknown>);
@@ -144,7 +173,7 @@ export default function FileList() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, debouncedSearch, mimeType, category, currentFolderId, dateFrom, dateTo, sizeMin, sizeMax, dedupedListFiles]);
+  }, [page, limit, debouncedSearch, mimeType, category, currentFolderId, sortField, sortOrder, dedupedListFiles]);
 
   // 加载数据
   useEffect(() => {
@@ -168,10 +197,8 @@ export default function FileList() {
         mime_type: mimeType || undefined,
         category: category === '__uncategorized__' ? '' : (category || undefined),
         folder_id: currentFolderId,
-        date_from: dateFrom || undefined,
-        date_to: dateTo || undefined,
-        size_min: sizeMin ? parseInt(sizeMin) * 1024 * 1024 : undefined,
-        size_max: sizeMax ? parseInt(sizeMax) * 1024 * 1024 : undefined,
+        sort_by: sortField,
+        sort_order: sortOrder,
       };
       
       const cacheKey = getCacheKey(nextPageQuery as Record<string, unknown>);
@@ -188,7 +215,7 @@ export default function FileList() {
     }, 500); // 延迟 500ms 后预取，避免频繁请求
     
     return () => clearTimeout(prefetchTimeout);
-  }, [page, total, loading, limit, debouncedSearch, mimeType, category, currentFolderId, dateFrom, dateTo, sizeMin, sizeMax, dedupedListFiles]);
+  }, [page, total, loading, limit, debouncedSearch, mimeType, category, currentFolderId, sortField, sortOrder, dedupedListFiles]);
 
   // 导航到文件夹
   const navigateToFolder = useCallback((folderId: string | null) => {
@@ -197,6 +224,57 @@ export default function FileList() {
     setSelectedFiles(new Set());
     setSelectedFolders(new Set());
   }, []);
+
+  // 按类型分组文件（仅当排序为 type_group 时）
+  const isGroupByType = sortBy === 'type_group';
+  
+  const groupedFiles = useMemo(() => {
+    if (!isGroupByType) return null;
+    
+    // Lucide 图标 + 彩色渐变效果
+    const typeLabels: Record<string, { label: string; icon: React.ReactNode; order: number }> = {
+      'image': { label: '图片', icon: <Image className="w-4 h-4 text-emerald-400" />, order: 1 },
+      'gif': { label: 'GIF', icon: <Film className="w-4 h-4 text-pink-400" />, order: 2 },
+      'video': { label: '视频', icon: <Video className="w-4 h-4 text-red-400" />, order: 3 },
+      'audio': { label: '音频', icon: <Music className="w-4 h-4 text-violet-400" />, order: 4 },
+      'application/pdf': { label: 'PDF', icon: <FileText className="w-4 h-4 text-orange-400" />, order: 5 },
+      'text': { label: '文本', icon: <FileCode className="w-4 h-4 text-cyan-400" />, order: 6 },
+      'application/zip': { label: '压缩包', icon: <Archive className="w-4 h-4 text-amber-400" />, order: 7 },
+      'application': { label: '文档', icon: <File className="w-4 h-4 text-blue-400" />, order: 8 },
+      'other': { label: '其他', icon: <File className="w-4 h-4 text-gray-400" />, order: 99 },
+    };
+    
+    const getTypeKey = (mime: string): string => {
+      if (mime === 'image/gif') return 'gif'; // GIF 单独分类
+      if (mime.startsWith('image/')) return 'image';
+      if (mime.startsWith('video/')) return 'video';
+      if (mime.startsWith('audio/')) return 'audio';
+      if (mime === 'application/pdf') return 'application/pdf';
+      if (mime.startsWith('text/')) return 'text';
+      if (mime === 'application/zip' || mime === 'application/x-zip-compressed') return 'application/zip';
+      if (mime.startsWith('application/')) return 'application';
+      return 'other';
+    };
+    
+    const groups = new Map<string, FileMetadata[]>();
+    
+    files.forEach((file) => {
+      const key = getTypeKey(file.mime_type);
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(file);
+    });
+    
+    // 按 order 排序
+    return Array.from(groups.entries())
+      .map(([key, groupFiles]) => ({
+        key,
+        ...typeLabels[key] || typeLabels.other,
+        files: groupFiles,
+      }))
+      .sort((a, b) => a.order - b.order);
+  }, [files, isGroupByType]);
 
   // 文件删除 - 显示确认对话框
   const handleDelete = useCallback((fileId: string) => {
@@ -384,15 +462,6 @@ export default function FileList() {
   const handleOpenFolder = useCallback((folder: Folder) => navigateToFolder(folder.id), [navigateToFolder]);
   const handleRenameFolder = useCallback((folder: Folder) => setRenamingFolder(folder), []);
   
-  const handleClearFilters = useCallback(() => {
-    setDateFrom('');
-    setDateTo('');
-    setSizeMin('');
-    setSizeMax('');
-    setCategory('');
-    setPage(1);
-  }, []);
-
   // 筛选器回调函数 - 使用 useCallback 避免每次渲染创建新函数
   const handleSearchChange = useCallback((v: string) => {
     setSearch(v);
@@ -409,24 +478,11 @@ export default function FileList() {
     setPage(1);
   }, []);
 
-  const handleDateFromChange = useCallback((v: string) => {
-    setDateFrom(v);
+  const handleSortChange = useCallback((v: import('./FileListFilters').SortOption) => {
+    clearFileListCache(); // 清除缓存确保获取最新排序结果
+    setSortBy(v);
     setPage(1);
-  }, []);
-
-  const handleDateToChange = useCallback((v: string) => {
-    setDateTo(v);
-    setPage(1);
-  }, []);
-
-  const handleSizeMinChange = useCallback((v: string) => {
-    setSizeMin(v);
-    setPage(1);
-  }, []);
-
-  const handleSizeMaxChange = useCallback((v: string) => {
-    setSizeMax(v);
-    setPage(1);
+    localStorage.setItem('fileListSortBy', v); // 持久化排序选项
   }, []);
 
   // 拖拽开始：设置文件 ID
@@ -510,19 +566,12 @@ export default function FileList() {
         search={search}
         mimeType={mimeType}
         category={category}
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        sizeMin={sizeMin}
-        sizeMax={sizeMax}
+        sortBy={sortBy}
         categories={categories}
         onSearchChange={handleSearchChange}
         onMimeTypeChange={handleMimeTypeChange}
         onCategoryChange={handleCategoryChange}
-        onDateFromChange={handleDateFromChange}
-        onDateToChange={handleDateToChange}
-        onSizeMinChange={handleSizeMinChange}
-        onSizeMaxChange={handleSizeMaxChange}
-        onClearFilters={handleClearFilters}
+        onSortChange={handleSortChange}
       />
 
       {/* 批量操作栏 */}
@@ -579,37 +628,92 @@ export default function FileList() {
             </span>
           </div>
 
-          {/* 文件夹 + 文件卡片网格 */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {/* 文件夹 */}
-            {folders.map((folder) => (
-              <FolderCard
-                key={folder.id}
-                folder={folder}
-                isSelected={selectedFolders.has(folder.id)}
-                onSelect={handleSelectFolder}
-                onOpen={handleOpenFolder}
-                onRename={handleRenameFolder}
-                onDelete={handleDeleteFolder}
-                onDrop={handleDropOnFolder}
-              />
-            ))}
-            
-            {/* 文件 */}
-            {files.map((file) => (
-              <FileCard
-                key={file.id}
-                file={file}
-                isSelected={selectedFiles.has(file.id)}
-                onSelect={handleSelectFile}
-                onPreview={handlePreview}
-                onShare={handleShare}
-                onDownload={handleDownload}
-                onDelete={handleDeleteRow}
-                onDragStart={handleFileDragStart}
-              />
-            ))}
-          </div>
+          {/* 文件区域 - 按类型分组或普通列表 */}
+          {isGroupByType && groupedFiles ? (
+            // 分组视图：文件夹单独一组 + 各类型文件分组
+            <div className="space-y-6">
+              {/* 文件夹分组 */}
+              {folders.length > 0 && (
+                <div>
+                  <div className="mb-3 flex items-center gap-2">
+                    <FolderIcon className="w-4 h-4 text-yellow-400" />
+                    <span className="text-sm font-medium text-gray-400">文件夹</span>
+                    <span className="text-xs text-gray-500">({folders.length})</span>
+                    <div className="flex-1 h-px bg-gray-700/50" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    {folders.map((folder) => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        isSelected={selectedFolders.has(folder.id)}
+                        onSelect={handleSelectFolder}
+                        onOpen={handleOpenFolder}
+                        onRename={handleRenameFolder}
+                        onDelete={handleDeleteFolder}
+                        onDrop={handleDropOnFolder}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* 各类型文件分组 */}
+              {groupedFiles.map((group) => (
+                <div key={group.key}>
+                  <div className="mb-3 flex items-center gap-2">
+                    {group.icon}
+                    <span className="text-sm font-medium text-gray-400">{group.label}</span>
+                    <span className="text-xs text-gray-500">({group.files.length})</span>
+                    <div className="flex-1 h-px bg-gray-700/50" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    {group.files.map((file) => (
+                      <FileCard
+                        key={file.id}
+                        file={file}
+                        isSelected={selectedFiles.has(file.id)}
+                        onSelect={handleSelectFile}
+                        onPreview={handlePreview}
+                        onShare={handleShare}
+                        onDownload={handleDownload}
+                        onDelete={handleDeleteRow}
+                        onDragStart={handleFileDragStart}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // 普通列表视图：文件夹和文件混合显示
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {folders.map((folder) => (
+                <FolderCard
+                  key={folder.id}
+                  folder={folder}
+                  isSelected={selectedFolders.has(folder.id)}
+                  onSelect={handleSelectFolder}
+                  onOpen={handleOpenFolder}
+                  onRename={handleRenameFolder}
+                  onDelete={handleDeleteFolder}
+                  onDrop={handleDropOnFolder}
+                />
+              ))}
+              {files.map((file) => (
+                <FileCard
+                  key={file.id}
+                  file={file}
+                  isSelected={selectedFiles.has(file.id)}
+                  onSelect={handleSelectFile}
+                  onPreview={handlePreview}
+                  onShare={handleShare}
+                  onDownload={handleDownload}
+                  onDelete={handleDeleteRow}
+                  onDragStart={handleFileDragStart}
+                />
+              ))}
+            </div>
+          )}
 
           {/* 分页 */}
           <FileListPagination

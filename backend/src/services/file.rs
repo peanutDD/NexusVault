@@ -300,10 +300,25 @@ impl FileService {
             format!("WHERE {}", conditions.join(" AND "))
         };
 
+        // 构建排序子句
+        let sort_column = match query.sort_by.as_deref() {
+            Some("filename") => "original_filename",
+            Some("file_size") => "file_size",
+            Some("created_at") | None => "created_at",
+            _ => "created_at", // 默认按创建时间
+        };
+        let sort_direction = match query.sort_order.as_deref() {
+            Some("asc") => "ASC",
+            Some("desc") | None => "DESC",
+            _ => "DESC", // 默认降序
+        };
+        let order_clause = format!("{} {}", sort_column, sort_direction);
+
         // Build query with dynamic WHERE clause. SELECT 需包含 File 全部字段，否则 FromRow 报 no column file_path
         let query_sql = format!(
-            "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, created_at, updated_at FROM files {} ORDER BY created_at DESC LIMIT ${} OFFSET ${}",
+            "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, created_at, updated_at FROM files {} ORDER BY {} LIMIT ${} OFFSET ${}",
             where_clause,
+            order_clause,
             param_index,
             param_index + 1
         );
