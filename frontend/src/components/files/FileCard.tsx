@@ -1,8 +1,9 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { formatFileSize } from '../../utils/format';
 import type { FileMetadata } from '../../services/files';
 import LazyThumbnail from './LazyThumbnail';
 import { cn } from '../../utils/cn';
+import { getMimeTypeLabel } from '../../utils/mimeType';
 
 interface FileCardProps {
   file: FileMetadata;
@@ -29,26 +30,17 @@ const FileCard = memo(function FileCard({
   onDelete,
   onDragStart,
 }: FileCardProps) {
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString('zh-CN', {
+  // 使用 useMemo 缓存格式化结果
+  const formattedDate = useMemo(() => {
+    return new Date(file.created_at).toLocaleString('zh-CN', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }, [file.created_at]);
 
-  const getMimeTypeLabel = (mime: string) => {
-    if (mime.startsWith('image/')) return 'Image';
-    if (mime.startsWith('video/')) return 'Video';
-    if (mime.startsWith('audio/')) return 'Audio';
-    if (mime === 'application/pdf') return 'PDF';
-    if (mime.includes('word') || mime.includes('document')) return 'Document';
-    if (mime.includes('excel') || mime.includes('spreadsheet')) return 'Spreadsheet';
-    if (mime.includes('zip') || mime.includes('rar')) return 'Archive';
-    if (mime.startsWith('text/')) return 'Text';
-    return 'File';
-  };
+  const mimeTypeLabel = useMemo(() => getMimeTypeLabel(file.mime_type), [file.mime_type]);
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/file-id', file.id);
@@ -124,11 +116,11 @@ const FileCard = memo(function FileCard({
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <span>{formatFileSize(file.file_size)}</span>
           <span className="h-1 w-1 rounded-full bg-gray-600" />
-          <span>{getMimeTypeLabel(file.mime_type)}</span>
+          <span>{mimeTypeLabel}</span>
         </div>
 
         {/* 上传时间 */}
-        <p className="text-xs text-gray-500">{formatDate(file.created_at)}</p>
+        <p className="text-xs text-gray-500">{formattedDate}</p>
       </div>
 
       {/* 操作按钮 */}

@@ -1,6 +1,7 @@
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useMemo } from 'react';
 import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
+import { getMimeTypeColor } from '../../utils/mimeType';
 
 export interface UploadFile {
   id: string;
@@ -22,42 +23,26 @@ interface UploadFileItemProps {
 
 /**
  * 计算上传剩余时间
+ * 使用 match 风格的条件返回
  */
 function calculateRemainingTime(
   uploadedBytes: number,
   totalBytes: number,
   elapsedMs: number
 ): string {
+  // Early return for edge cases
   if (uploadedBytes === 0 || elapsedMs === 0) return '';
 
   const bytesPerMs = uploadedBytes / elapsedMs;
   const remainingBytes = totalBytes - uploadedBytes;
-  const remainingMs = remainingBytes / bytesPerMs;
-  const remainingSec = Math.ceil(remainingMs / 1000);
+  const remainingSec = Math.ceil(remainingBytes / bytesPerMs / 1000);
 
-  if (remainingSec < 60) {
-    return `${remainingSec} sec left`;
-  }
-  if (remainingSec < 3600) {
-    const mins = Math.ceil(remainingSec / 60);
-    return `${mins} min left`;
-  }
-  const hours = Math.floor(remainingSec / 3600);
-  const mins = Math.ceil((remainingSec % 3600) / 60);
-  return `${hours}h ${mins}m left`;
-}
-
-/**
- * 获取文件类型图标颜色
- */
-function getFileIconColor(mimeType: string): string {
-  if (mimeType.startsWith('image/')) return '#6C5DD3';
-  if (mimeType.startsWith('video/')) return '#6C5DD3';
-  if (mimeType.startsWith('audio/')) return '#22C55E';
-  if (mimeType === 'application/pdf') return '#EF4444';
-  if (mimeType.includes('word') || mimeType.includes('document')) return '#3B82F6';
-  if (mimeType.includes('sheet') || mimeType.includes('excel')) return '#22C55E';
-  return '#6C5DD3';
+  // 使用三元表达式链替代多个 if
+  return remainingSec < 60
+    ? `${remainingSec} sec left`
+    : remainingSec < 3600
+      ? `${Math.ceil(remainingSec / 60)} min left`
+      : `${Math.floor(remainingSec / 3600)}h ${Math.ceil((remainingSec % 3600) / 60)}m left`;
 }
 
 /**
@@ -85,7 +70,8 @@ const UploadFileItem = memo(function UploadFileItem({
       ? calculateRemainingTime(uploadedBytes, file.size, elapsedMs)
       : '';
 
-  const iconColor = getFileIconColor(file.mimeType);
+  // 使用 useMemo 缓存图标颜色
+  const iconColor = useMemo(() => getMimeTypeColor(file.mimeType), [file.mimeType]);
 
   // 状态文字
   const renderStatusText = () => {

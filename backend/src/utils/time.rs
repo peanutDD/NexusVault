@@ -53,21 +53,17 @@ pub fn calculate_expiration<T: Into<i64>>(days: Option<T>) -> Option<DateTime<Ut
 pub fn parse_jwt_expiry(expiry_str: &str) -> usize {
     let now = Utc::now().timestamp() as usize;
 
-    if expiry_str.ends_with('h') {
-        let hours: usize = expiry_str
-            .trim_end_matches('h')
-            .parse()
-            .unwrap_or(24);
-        now + hours * 3600
-    } else if expiry_str.ends_with('d') {
-        let days: usize = expiry_str
-            .trim_end_matches('d')
-            .parse()
-            .unwrap_or(1);
-        now + days * 86400
-    } else {
-        // 默认 24 小时
-        now + 86400
+    // 使用 match 替代 if-else 链，更清晰地表达意图
+    match expiry_str.chars().last() {
+        Some('h') => {
+            let hours: usize = expiry_str.trim_end_matches('h').parse().unwrap_or(24);
+            now + hours * 3600
+        }
+        Some('d') => {
+            let days: usize = expiry_str.trim_end_matches('d').parse().unwrap_or(1);
+            now + days * 86400
+        }
+        _ => now + 86400, // 默认 24 小时
     }
 }
 

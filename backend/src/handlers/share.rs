@@ -40,7 +40,7 @@ pub async fn create_share_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<CreateShareRequest>,
 ) -> Result<Response, AppError> {
-    let share_service = ShareService::new(state.pool.clone());
+    let share_service = ShareService::from_state(&state);
     let share = share_service.create_share(user_id, req).await?;
 
     // 构建完整的分享 URL
@@ -67,7 +67,7 @@ pub async fn access_share_handler(
     Path(token): Path<String>,
     axum::Json(req): axum::Json<AccessShareRequest>,
 ) -> Result<Response, AppError> {
-    let share_service = ShareService::new(state.pool.clone());
+    let share_service = ShareService::from_state(&state);
 
     // 获取分享信息
     let share = share_service.get_share_by_token(&token).await?;
@@ -85,7 +85,7 @@ pub async fn access_share_handler(
     }
 
     // 获取文件信息
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     let file = file_service.get_file(share.file_id, share.user_id).await?;
 
     // 增加下载计数
@@ -111,13 +111,13 @@ pub async fn download_shared_file_handler(
     State(state): State<AppState>,
     Path(token): Path<String>,
 ) -> Result<Response, AppError> {
-    let share_service = ShareService::new(state.pool.clone());
+    let share_service = ShareService::from_state(&state);
 
     // 获取分享信息（会自动验证过期和下载次数限制）
     let share = share_service.get_share_by_token(&token).await?;
 
     // 获取文件
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     let file = file_service.get_file(share.file_id, share.user_id).await?;
     let data = file_service.get_file_data(&file).await?;
 
@@ -135,7 +135,7 @@ pub async fn delete_share_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(share_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let share_service = ShareService::new(state.pool.clone());
+    let share_service = ShareService::from_state(&state);
     share_service.delete_share(share_id, user_id).await?;
     Ok(success_response("分享链接已删除"))
 }
@@ -156,7 +156,7 @@ pub async fn batch_create_share_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchShareRequest>,
 ) -> Result<Response, AppError> {
-    let share_service = ShareService::new(state.pool.clone());
+    let share_service = ShareService::from_state(&state);
     let result = share_service.batch_create_share(user_id, req).await?;
 
     // 构建完整的分享 URL

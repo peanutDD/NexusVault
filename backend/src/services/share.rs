@@ -18,6 +18,11 @@ impl ShareService {
         Self { pool }
     }
 
+    /// 从 AppState 创建 ShareService（工厂方法）
+    pub fn from_state(state: &crate::AppState) -> Self {
+        Self::new(state.pool.clone())
+    }
+
     /// 生成分享令牌
     ///
     /// 使用 `utils::crypto::generate_random_token` 生成 32 字符的随机令牌。

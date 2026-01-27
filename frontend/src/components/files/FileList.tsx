@@ -170,7 +170,7 @@ export default function FileList() {
     if (selectedFiles.size === 0) return;
     if (!confirm(`确定要删除选中的 ${selectedFiles.size} 个文件吗？`)) return;
     try {
-      await fileService.batchDelete(Array.from(selectedFiles));
+      await fileService.batchDelete(selectedFileIds);
       clearFileListCache();
       loadFiles();
     } catch (err) {
@@ -182,7 +182,7 @@ export default function FileList() {
   const handleBatchDownload = async () => {
     if (selectedFiles.size === 0) return;
     try {
-      await fileService.downloadZip(Array.from(selectedFiles));
+      await fileService.downloadZip(selectedFileIds);
     } catch (err) {
       alert(getErrorMessage(err, '批量下载失败'));
     }
@@ -245,15 +245,12 @@ export default function FileList() {
     }
   }, [loadFiles, loadFolders]);
 
-  // 选择切换
+  // 选择切换 - 使用三元表达式和 Set 方法简化
   const toggleSelectFile = (fileId: string) => {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
-      if (next.has(fileId)) {
-        next.delete(fileId);
-      } else {
-        next.add(fileId);
-      }
+      // 使用条件表达式替代 if-else
+      next.has(fileId) ? next.delete(fileId) : next.add(fileId);
       return next;
     });
   };
@@ -261,29 +258,41 @@ export default function FileList() {
   const toggleSelectFolder = (folderId: string) => {
     setSelectedFolders((prev) => {
       const next = new Set(prev);
-      if (next.has(folderId)) {
-        next.delete(folderId);
-      } else {
-        next.add(folderId);
-      }
+      next.has(folderId) ? next.delete(folderId) : next.add(folderId);
       return next;
     });
   };
 
-  const toggleSelectAll = () => {
-    if (selectedFiles.size === files.length) {
-      setSelectedFiles(new Set());
-    } else {
-      setSelectedFiles(new Set(files.map((f) => f.id)));
-    }
-  };
+  // 使用三元表达式替代 if-else
+  const toggleSelectAll = () => setSelectedFiles(
+    selectedFiles.size === files.length ? new Set() : new Set(files.map((f) => f.id))
+  );
 
-  // 计算值
+  // 计算值（使用 useMemo 缓存，避免重复计算）
   const totalPages = useMemo(() => Math.ceil(total / limit), [total, limit]);
   const allFilesSelected = useMemo(
     () => files.length > 0 && selectedFiles.size === files.length,
     [files.length, selectedFiles.size]
   );
+  // 缓存 selectedFileIds，避免多次 Array.from 转换
+  const selectedFileIds = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
+  
+  // 分页页码计算提取到 useMemo，避免渲染时重复计算
+  const pageNumbers = useMemo(() => {
+    const maxVisible = 5;
+    const count = Math.min(maxVisible, totalPages);
+    
+    if (totalPages <= maxVisible) {
+      return Array.from({ length: count }, (_, i) => i + 1);
+    }
+    if (page <= 3) {
+      return Array.from({ length: count }, (_, i) => i + 1);
+    }
+    if (page >= totalPages - 2) {
+      return Array.from({ length: count }, (_, i) => totalPages - maxVisible + i + 1);
+    }
+    return Array.from({ length: count }, (_, i) => page - 2 + i);
+  }, [page, totalPages]);
   
   // 事件处理器
   const handleSelectFile = useCallback((id: string) => toggleSelectFile(id), []);
@@ -309,15 +318,12 @@ export default function FileList() {
     e.dataTransfer.effectAllowed = 'move';
   }, []);
 
-  // 键盘快捷键
+  // 键盘快捷键 - 使用短路运算和 early return 简化
   useKeyboardShortcuts([
     {
       key: SHORTCUTS.SEARCH,
       handler: () => {
-        const w = window as unknown as {
-          __fileListSearchInput?: HTMLInputElement;
-        };
-        const searchInput = w.__fileListSearchInput;
+        const searchInput = (window as { __fileListSearchInput?: HTMLInputElement }).__fileListSearchInput;
         searchInput?.focus();
         searchInput?.select();
       },
@@ -325,29 +331,22 @@ export default function FileList() {
     },
     {
       key: SHORTCUTS.SELECT_ALL,
-      handler: () => {
-        if (files.length > 0) {
-          toggleSelectAll();
-        }
-      },
+      // 使用短路运算替代 if
+      handler: () => files.length > 0 && toggleSelectAll(),
       description: '全选/取消全选',
     },
     {
       key: SHORTCUTS.BATCH_DELETE,
-      handler: () => {
-        if (selectedFiles.size > 0) {
-          handleBatchDelete();
-        }
-      },
+      // 使用短路运算替代 if
+      handler: () => selectedFiles.size > 0 && handleBatchDelete(),
       description: '批量删除选中文件',
     },
     {
       key: SHORTCUTS.DELETE,
       handler: () => {
-        if (selectedFiles.size === 1) {
-          const fileId = Array.from(selectedFiles)[0];
-          handleDelete(fileId);
-        }
+        // 使用 early return 替代嵌套 if
+        if (selectedFiles.size !== 1) return;
+        handleDelete(selectedFileIds[0]);
       },
       description: '删除选中的单个文件',
     },
@@ -553,31 +552,19 @@ export default function FileList() {
                 上一页
               </button>
               <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (page <= 3) {
-                    pageNum = i + 1;
-                  } else if (page >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = page - 2 + i;
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPage(pageNum)}
-                      className={`h-9 w-9 rounded-lg text-sm font-medium transition-colors ${
-                        page === pageNum
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+                {pageNumbers.map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className={`h-9 w-9 rounded-lg text-sm font-medium transition-colors ${
+                      page === pageNum
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
               </div>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -611,7 +598,7 @@ export default function FileList() {
 
       {showBatchShare && (
         <BatchShareDialog
-          fileIds={Array.from(selectedFiles)}
+          fileIds={selectedFileIds}
           fileCount={selectedFiles.size}
           onClose={() => setShowBatchShare(false)}
           onShareCreated={() => {
@@ -623,7 +610,7 @@ export default function FileList() {
 
       {showBatchMove && (
         <BatchMoveDialog
-          fileIds={Array.from(selectedFiles)}
+          fileIds={selectedFileIds}
           fileCount={selectedFiles.size}
           categories={categories}
           loadingCategories={loadingCategories}

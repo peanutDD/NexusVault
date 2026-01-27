@@ -125,19 +125,18 @@ function matchesShortcut(
 export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      for (const shortcut of shortcuts) {
-        const parsed = parseShortcut(shortcut.key);
-        
+      // 使用 find 替代 for...of + break，语义更清晰
+      const matched = shortcuts.find((shortcut) => {
         // 检查是否在输入框中（默认阻止）
         if (shortcut.preventInInput !== false && isInputElement(e.target)) {
-          continue;
+          return false;
         }
+        return matchesShortcut(e, parseShortcut(shortcut.key));
+      });
 
-        if (matchesShortcut(e, parsed)) {
-          e.preventDefault();
-          shortcut.handler(e);
-          break; // 只处理第一个匹配的快捷键
-        }
+      if (matched) {
+        e.preventDefault();
+        matched.handler(e);
       }
     },
     [shortcuts]

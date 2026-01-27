@@ -54,7 +54,7 @@ pub async fn upload_file_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
 
     // 解析 multipart 表单，提取文件数据
     let mut file_data: Option<(String, String, Vec<u8>)> = None;
@@ -129,7 +129,7 @@ pub async fn list_files_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Query(query): Query<FileListQuery>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
 
     // 提取分页参数（在移动 query 之前）
     let page = query.page.unwrap_or(1);
@@ -153,7 +153,7 @@ pub async fn download_file_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
 
     // 验证文件所有权并获取文件
     let file = file_service.get_file(file_id, user_id).await?;
@@ -172,7 +172,7 @@ pub async fn preview_file_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
 
     // 验证文件所有权并获取文件
     let file = file_service.get_file(file_id, user_id).await?;
@@ -189,7 +189,7 @@ pub async fn delete_file_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     file_service.delete_file(file_id, user_id).await?;
     Ok(success_response("File deleted successfully"))
 }
@@ -207,7 +207,7 @@ pub async fn batch_delete_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchDeleteRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     let deleted = file_service.batch_delete(&req.ids, user_id).await?;
     Ok(json_response(json!({
         "deleted": deleted,
@@ -224,7 +224,7 @@ pub async fn batch_download_zip_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
 
     // 解析文件 ID 列表
     let ids_str = params
@@ -247,7 +247,7 @@ pub async fn storage_usage_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
 
     let (total_size, file_count) = file_service.get_storage_usage(user_id).await?;
     let quota = file_service.get_storage_quota(user_id).await?;
@@ -280,7 +280,7 @@ pub async fn categories_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     let categories = file_service.list_categories(user_id).await?;
     Ok(json_response(json!({ "categories": categories })))
 }
@@ -299,7 +299,7 @@ pub async fn batch_move_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchMoveRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     let moved = file_service.batch_move(user_id, req).await?;
     Ok(json_response(json!({
         "moved": moved,
@@ -328,7 +328,7 @@ pub async fn chunked_upload_init_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<InitChunkedUploadRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     let (upload_id, chunk_size, total_parts) =
         file_service.init_chunked_upload(user_id, req).await?;
     Ok(json_response(json!({
@@ -355,7 +355,7 @@ pub async fn chunked_upload_chunk_handler(
     Query(params): Query<HashMap<String, String>>,
     body: Bytes,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
 
     // 解析分块索引
     let part = parse_part_number(&params)?;
@@ -376,7 +376,7 @@ pub async fn chunked_upload_status_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(upload_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     let (uploaded_parts, total_parts) = file_service
         .chunked_upload_status(upload_id, user_id)
         .await?;
@@ -396,7 +396,7 @@ pub async fn chunked_upload_complete_handler(
     Path(upload_id): Path<Uuid>,
     axum::Json(req): axum::Json<CompleteChunkedUploadRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     let file = file_service
         .complete_chunked_upload(upload_id, user_id, req)
         .await?;
@@ -411,7 +411,7 @@ pub async fn chunked_upload_abort_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(upload_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::new(state.pool.clone(), state.storage.clone(), state.config.clone());
+    let file_service = FileService::from_state(&state);
     file_service
         .abort_chunked_upload(upload_id, user_id)
         .await?;

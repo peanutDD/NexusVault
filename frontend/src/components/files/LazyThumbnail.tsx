@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fileService } from '../../services/files';
 import { cn } from '../../utils/cn';
+import { isImageType, isVideoType, isPdfType, isAudioType } from '../../utils/mimeType';
 
 interface LazyThumbnailProps {
   fileId: string;
@@ -8,11 +9,6 @@ interface LazyThumbnailProps {
   filename: string;
   className?: string;
 }
-
-const isImageType = (mime: string) => mime.startsWith('image/');
-const isVideoType = (mime: string) => mime.startsWith('video/');
-const isPdfType = (mime: string) => mime === 'application/pdf';
-const isAudioType = (mime: string) => mime.startsWith('audio/');
 
 function FileIcon({ className }: { className?: string }) {
   return (

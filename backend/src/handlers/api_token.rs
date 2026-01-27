@@ -51,7 +51,7 @@ pub async fn create_token_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<CreateApiTokenRequest>,
 ) -> Result<Response, AppError> {
-    let token_service = ApiTokenService::new(state.pool.clone());
+    let token_service = ApiTokenService::from_state(&state);
 
     // 验证请求数据
     validator::Validate::validate(&req)
@@ -78,7 +78,7 @@ pub async fn list_tokens_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> Result<Response, AppError> {
-    let token_service = ApiTokenService::new(state.pool.clone());
+    let token_service = ApiTokenService::from_state(&state);
     let tokens = token_service.list_tokens(user_id).await?;
     Ok(json_response(json!({ "tokens": tokens })))
 }
@@ -91,7 +91,7 @@ pub async fn delete_token_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(token_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let token_service = ApiTokenService::new(state.pool.clone());
+    let token_service = ApiTokenService::from_state(&state);
     token_service.delete_token(token_id, user_id).await?;
     Ok(success_response("Token deleted successfully"))
 }

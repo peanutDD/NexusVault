@@ -63,12 +63,24 @@ pub struct FileService {
 }
 
 impl FileService {
+    /// 创建新的 FileService 实例
     pub fn new(pool: PgPool, storage: Arc<dyn StorageBackend>, config: Arc<Config>) -> Self {
         Self {
             pool,
             storage,
             config,
         }
+    }
+
+    /// 从 AppState 创建 FileService（工厂方法）
+    ///
+    /// 简化 handler 中的 Service 创建，避免重复的 clone 调用。
+    pub fn from_state(state: &crate::AppState) -> Self {
+        Self::new(
+            state.pool.clone(),
+            state.storage.clone(),
+            state.config.clone(),
+        )
     }
 
     pub async fn create_file(
@@ -82,15 +94,15 @@ impl FileService {
         // Validate file size
         crate::utils::validate_file_size(file_size, self.config.max_file_size)?;
 
-        // Check storage quota
+        // Check storage quota（使用 query_scalar + flatten 简化嵌套 Option）
         let (current_usage, _) = self.get_storage_usage(user_id).await?;
-        let user: Option<(Option<i64>,)> =
-            sqlx::query_as("SELECT storage_quota FROM users WHERE id = $1")
-                .bind(user_id)
-                .fetch_optional(&self.pool)
-                .await?;
+        let quota = sqlx::query_scalar::<_, Option<i64>>("SELECT storage_quota FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?
+            .flatten();
 
-        if let Some((Some(quota),)) = user {
+        if let Some(quota) = quota {
             if current_usage + file_size as i64 > quota {
                 return Err(AppError::Validation(format!(
                     "存储配额不足。已使用: {} MB, 配额: {} MB, 需要: {} MB",
@@ -644,12 +656,15 @@ impl FileService {
             )));
         }
 
+        // 顺序读取所有分块（保持内存效率，避免同时加载所有分块）
         let mut data = Vec::with_capacity(s.total_size as usize);
-        for i in 1..=total_parts {
-            let path = Path::new(&s.temp_path).join(format!("part_{}", i - 1));
-            let chunk = tokio::fs::read(&path)
+        let base_path = Path::new(&s.temp_path);
+        
+        for part_idx in 0..total_parts {
+            let chunk_path = base_path.join(format!("part_{}", part_idx));
+            let chunk = tokio::fs::read(&chunk_path)
                 .await
-                .map_err(|e| AppError::File(format!("Failed to read chunk: {}", e)))?;
+                .map_err(|e| AppError::File(format!("读取分块 {} 失败: {}", part_idx, e)))?;
             data.extend_from_slice(&chunk);
         }
 

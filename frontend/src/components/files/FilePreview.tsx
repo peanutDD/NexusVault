@@ -3,6 +3,7 @@ import { fileService } from '../../services/files';
 import type { FileMetadata } from '../../services/files';
 import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
+import { getPreviewKind, getMimeTypeLabel } from '../../utils/mimeType';
 
 interface FilePreviewProps {
   file: FileMetadata | null;
@@ -15,19 +16,11 @@ export default function FilePreview({ file, onClose }: FilePreviewProps) {
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  const kind = useMemo(() => {
-    if (!file) return { supported: false, isImage: false, isPDF: false, isText: false, isVideo: false, isAudio: false };
-    const isImage = file.mime_type.startsWith('image/');
-    const isPDF = file.mime_type === 'application/pdf';
-    const isVideo = file.mime_type.startsWith('video/');
-    const isAudio = file.mime_type.startsWith('audio/');
-    const isText =
-      file.mime_type.startsWith('text/') ||
-      file.mime_type === 'application/json' ||
-      file.mime_type === 'application/xml' ||
-      file.mime_type === 'application/javascript';
-    return { supported: isImage || isPDF || isText || isVideo || isAudio, isImage, isPDF, isText, isVideo, isAudio };
-  }, [file]);
+  // 使用共享工具函数获取预览类型信息
+  const kind = useMemo(
+    () => (file ? getPreviewKind(file.mime_type) : getPreviewKind('')),
+    [file]
+  );
 
   const [loading, setLoading] = useState(() => (file ? kind.supported : false));
 
@@ -320,22 +313,6 @@ export default function FilePreview({ file, onClose }: FilePreviewProps) {
       </div>
     </div>
   );
-}
-
-function getMimeTypeLabel(mime: string): string {
-  if (mime.startsWith('image/')) {
-    const ext = mime.split('/')[1]?.toUpperCase();
-    return ext || 'Image';
-  }
-  if (mime.startsWith('video/')) return 'Video';
-  if (mime.startsWith('audio/')) return 'Audio';
-  if (mime === 'application/pdf') return 'PDF';
-  if (mime.includes('word') || mime.includes('document')) return 'Document';
-  if (mime.includes('excel') || mime.includes('spreadsheet')) return 'Spreadsheet';
-  if (mime.includes('zip') || mime.includes('rar')) return 'Archive';
-  if (mime.startsWith('text/')) return 'Text';
-  if (mime === 'application/json') return 'JSON';
-  return 'File';
 }
 
 function formatDate(dateStr: string): string {

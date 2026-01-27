@@ -36,21 +36,28 @@ export interface FileListQuery {
 export const fileService = {
   async listFiles(query?: FileListQuery): Promise<FileListResponse> {
     const q: Record<string, string | number | undefined | null> = {};
+    
     if (query) {
-      if (query.page != null) q.page = query.page;
-      if (query.limit != null) q.limit = query.limit;
-      if (query.search != null) q.search = query.search;
-      if (query.mime_type != null) q.mime_type = query.mime_type;
-      if (query.category !== undefined) q.category = query.category;
-      // folder_id: null 表示根目录，传 "null" 字符串
-      if (query.folder_id !== undefined) {
-        q.folder_id = query.folder_id === null ? 'null' : query.folder_id;
-      }
-      if (query.date_from != null) q.date_from = query.date_from;
-      if (query.date_to != null) q.date_to = query.date_to;
-      if (query.size_min != null) q.size_min = query.size_min;
-      if (query.size_max != null) q.size_max = query.size_max;
+      // 使用 Object.entries 替代多个 if 语句
+      // 特殊处理 folder_id（null 表示根目录）
+      const specialKeys = new Set(['folder_id', 'category']);
+      
+      Object.entries(query).forEach(([key, value]) => {
+        // folder_id 特殊处理：null 需要转为 "null" 字符串
+        if (key === 'folder_id' && value !== undefined) {
+          q[key] = value === null ? 'null' : value;
+        }
+        // category 允许空字符串
+        else if (key === 'category' && value !== undefined) {
+          q[key] = value;
+        }
+        // 其他字段：只添加非 null/undefined 的值
+        else if (!specialKeys.has(key) && value != null) {
+          q[key] = value;
+        }
+      });
     }
+    
     const params = buildQueryParams(q);
     const response = await api.get<FileListResponse>(
       `/api/files?${params.toString()}`
@@ -180,13 +187,11 @@ export const fileService = {
     // 初始报告（断点续传时显示已有进度）
     report();
 
-    // 生成待上传的块列表
-    const pendingParts: number[] = [];
-    for (let part = 1; part <= total_parts; part++) {
-      if (!uploaded.has(part)) {
-        pendingParts.push(part);
-      }
-    }
+    // 生成待上传的块列表（使用 filter 替代 for + if）
+    const pendingParts = Array.from(
+      { length: total_parts },
+      (_, i) => i + 1
+    ).filter((part) => !uploaded.has(part));
 
     // 上传单个块（带重试）
     const uploadChunk = async (part: number): Promise<void> => {
@@ -225,29 +230,25 @@ export const fileService = {
       const batch = chunks.splice(0, parallelLimit);
       const results = await Promise.allSettled(batch.map(uploadChunk));
       
-      // 检查是否有失败的块
-      const failures = results.filter((r) => r.status === 'rejected');
-      if (failures.length > 0) {
-        // 抛出第一个错误
-        const firstFailure = failures[0] as PromiseRejectedResult;
+      // 检查是否有失败的块（使用类型守卫替代类型断言）
+      const firstFailure = results.find(
+        (r): r is PromiseRejectedResult => r.status === 'rejected'
+      );
+      if (firstFailure) {
         throw firstFailure.reason;
       }
     }
 
-    // 完成前验证所有块都已上传
+    // 完成前验证所有块都已上传（使用 filter 替代 for + if）
     const finalStatus = await refreshUploaded();
-    const missingParts: number[] = [];
-    for (let part = 1; part <= total_parts; part++) {
-      if (!finalStatus.has(part)) {
-        missingParts.push(part);
-      }
-    }
+    const missingParts = Array.from(
+      { length: total_parts },
+      (_, i) => i + 1
+    ).filter((part) => !finalStatus.has(part));
 
-    if (missingParts.length > 0) {
-      // 重试上传缺失的块
-      for (const part of missingParts) {
-        await uploadChunk(part);
-      }
+    // 使用 for...of 上传缺失的块（需要顺序执行）
+    for (const part of missingParts) {
+      await uploadChunk(part);
     }
 
     return this.chunkedUploadComplete(upload_id, file.name, mimeType);

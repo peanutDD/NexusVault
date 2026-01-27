@@ -35,10 +35,13 @@ export default function Settings() {
   });
 
   const [apiTokens, setApiTokens] = useState<ApiToken[]>([]);
-  const [newTokenName, setNewTokenName] = useState('');
-  const [newTokenExpires, setNewTokenExpires] = useState<number | ''>('');
-  const [newTokenValue, setNewTokenValue] = useState<string | null>(null);
-  const [showNewToken, setShowNewToken] = useState(false);
+  // 合并 Token 相关状态为单一对象，减少 useState 调用
+  const [tokenForm, setTokenForm] = useState({
+    name: '',
+    expires: '' as number | '',
+    value: null as string | null,
+    showValue: false,
+  });
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -84,7 +87,7 @@ export default function Settings() {
     setError(null);
     setSuccess(null);
 
-    if (!newTokenName.trim()) {
+    if (!tokenForm.name.trim()) {
       setError('请输入 Token 名称');
       return;
     }
@@ -92,13 +95,16 @@ export default function Settings() {
     setLoading(true);
     try {
       const response = await apiTokenService.createToken({
-        name: newTokenName.trim(),
-        expires_in_days: newTokenExpires ? Number(newTokenExpires) : undefined,
+        name: tokenForm.name.trim(),
+        expires_in_days: tokenForm.expires ? Number(tokenForm.expires) : undefined,
       });
-      setNewTokenValue(response.token.token);
-      setShowNewToken(true);
-      setNewTokenName('');
-      setNewTokenExpires('');
+      setTokenForm((prev) => ({
+        ...prev,
+        value: response.token.token,
+        showValue: true,
+        name: '',
+        expires: '',
+      }));
       await loadApiTokens();
       setSuccess('API Token 创建成功！请立即复制并保存，此 Token 只会显示一次。');
     } catch (err) {
@@ -386,8 +392,8 @@ export default function Settings() {
                   <input
                     id="new-token-name"
                     type="text"
-                    value={newTokenName}
-                    onChange={(e) => setNewTokenName(e.target.value)}
+                    value={tokenForm.name}
+                    onChange={(e) => setTokenForm((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="例如：我的脚本、CI/CD 等"
                     required
                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -400,9 +406,9 @@ export default function Settings() {
                   <input
                     id="new-token-expires"
                     type="number"
-                    value={newTokenExpires}
+                    value={tokenForm.expires}
                     onChange={(e) =>
-                      setNewTokenExpires(e.target.value ? Number(e.target.value) : '')
+                      setTokenForm((prev) => ({ ...prev, expires: e.target.value ? Number(e.target.value) : '' }))
                     }
                     min="1"
                     placeholder="留空表示永不过期"
@@ -419,27 +425,24 @@ export default function Settings() {
               </form>
 
               {/* 显示新创建的 Token */}
-              {showNewToken && newTokenValue && (
+              {tokenForm.showValue && tokenForm.value && (
                 <div className="mt-4 p-4 bg-yellow-900/30 border border-yellow-600 rounded-lg">
                   <p className="text-yellow-400 text-sm font-medium mb-2">
                     ⚠️ 重要：请立即复制并保存此 Token，它只会显示一次！
                   </p>
                   <div className="flex items-center gap-2 mb-2">
                     <code className="flex-1 px-3 py-2 bg-gray-900 rounded text-yellow-300 text-sm break-all">
-                      {newTokenValue}
+                      {tokenForm.value}
                     </code>
                     <button
-                      onClick={() => copyTokenToClipboard(newTokenValue)}
+                      onClick={() => copyTokenToClipboard(tokenForm.value!)}
                       className="px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
                     >
                       复制
                     </button>
                   </div>
                   <button
-                    onClick={() => {
-                      setShowNewToken(false);
-                      setNewTokenValue(null);
-                    }}
+                    onClick={() => setTokenForm((prev) => ({ ...prev, showValue: false, value: null }))}
                     className="text-yellow-400 text-sm hover:text-yellow-300"
                   >
                     我已保存，关闭

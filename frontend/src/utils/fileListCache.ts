@@ -60,12 +60,10 @@ export function setCachedFileList(
 
 export function clearFileListCache(): void {
   try {
-    const keys = Object.keys(localStorage);
-    keys.forEach((key) => {
-      if (key.startsWith(CACHE_KEY_PREFIX)) {
-        localStorage.removeItem(key);
-      }
-    });
+    // 使用 filter + forEach 链式调用
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(CACHE_KEY_PREFIX))
+      .forEach((key) => localStorage.removeItem(key));
   } catch {
     // 忽略错误
   }

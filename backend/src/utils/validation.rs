@@ -63,8 +63,8 @@ pub fn validate_mime_type(mime_type: &str, allowed_types: &[String]) -> Result<(
     for allowed in allowed_types {
         let allowed_lower = allowed.to_lowercase().trim().to_string();
         
-        // 允许所有类型
-        if allowed_lower == "*/*" || allowed_lower == "*" {
+        // 允许所有类型（使用 matches! 宏简化多值比较）
+        if matches!(allowed_lower.as_str(), "*/*" | "*") {
             return Ok(());
         }
         

@@ -46,6 +46,11 @@ impl AuthService {
         Self { pool, config }
     }
 
+    /// 从 AppState 创建 AuthService（工厂方法）
+    pub fn from_state(state: &crate::AppState) -> Self {
+        Self::new(state.pool.clone(), (*state.config).clone())
+    }
+
     pub async fn register(&self, req: RegisterRequest) -> Result<UserResponse, AppError> {
         // Validate input manually
         if req.username.len() < 3 || req.username.len() > 50 {

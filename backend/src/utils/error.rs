@@ -114,15 +114,13 @@ impl IntoResponse for AppError {
                 )
             }
 
-            // 认证错误 - 401
+            // 认证错误 - 401（使用 match 模式替代 if-else 链）
             AppError::Auth(msg) => {
                 tracing::warn!("Authentication error: {}", msg);
-                let user_msg = if msg.contains("密码") {
-                    "用户名或密码错误"
-                } else if msg.contains("token") || msg.contains("Token") {
-                    "登录已过期，请重新登录"
-                } else {
-                    "认证失败，请检查登录信息"
+                let user_msg = match () {
+                    _ if msg.contains("密码") => "用户名或密码错误",
+                    _ if msg.to_lowercase().contains("token") => "登录已过期，请重新登录",
+                    _ => "认证失败，请检查登录信息",
                 };
                 (StatusCode::UNAUTHORIZED, "AUTH_ERROR", user_msg.to_string())
             }

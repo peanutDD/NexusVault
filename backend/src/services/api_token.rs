@@ -16,6 +16,11 @@ impl ApiTokenService {
         Self { pool }
     }
 
+    /// 从 AppState 创建 ApiTokenService（工厂方法）
+    pub fn from_state(state: &crate::AppState) -> Self {
+        Self::new(state.pool.clone())
+    }
+
     /// Generate a secure random token
     fn generate_token() -> String {
         use rand::Rng;

@@ -29,6 +29,11 @@ impl FolderService {
         Self { pool }
     }
 
+    /// 从 AppState 创建 FolderService（工厂方法）
+    pub fn from_state(state: &crate::AppState) -> Self {
+        Self::new(state.pool.clone())
+    }
+
     /// 创建文件夹
     ///
     /// # 参数
@@ -112,32 +117,19 @@ impl FolderService {
         user_id: Uuid,
         parent_id: Option<Uuid>,
     ) -> Result<Vec<FolderResponse>, AppError> {
-        let folders: Vec<Folder> = if parent_id.is_some() {
-            sqlx::query_as(
-                r#"
-                SELECT id, user_id, name, parent_id, created_at, updated_at
-                FROM folders
-                WHERE user_id = $1 AND parent_id = $2
-                ORDER BY name ASC
-                "#,
-            )
-            .bind(user_id)
-            .bind(parent_id)
-            .fetch_all(&self.pool)
-            .await?
-        } else {
-            sqlx::query_as(
-                r#"
-                SELECT id, user_id, name, parent_id, created_at, updated_at
-                FROM folders
-                WHERE user_id = $1 AND parent_id IS NULL
-                ORDER BY name ASC
-                "#,
-            )
-            .bind(user_id)
-            .fetch_all(&self.pool)
-            .await?
-        };
+        // 使用 IS NOT DISTINCT FROM 统一处理 NULL 和非 NULL 的 parent_id
+        let folders: Vec<Folder> = sqlx::query_as(
+            r#"
+            SELECT id, user_id, name, parent_id, created_at, updated_at
+            FROM folders
+            WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2
+            ORDER BY name ASC
+            "#,
+        )
+        .bind(user_id)
+        .bind(parent_id)
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(folders.into_iter().map(Into::into).collect())
     }
@@ -155,7 +147,7 @@ impl FolderService {
         user_id: Uuid,
         folder_id: Uuid,
     ) -> Result<FolderResponse, AppError> {
-        let folder: Option<Folder> = sqlx::query_as(
+        sqlx::query_as::<_, Folder>(
             r#"
             SELECT id, user_id, name, parent_id, created_at, updated_at
             FROM folders
@@ -165,12 +157,9 @@ impl FolderService {
         .bind(folder_id)
         .bind(user_id)
         .fetch_optional(&self.pool)
-        .await?;
-
-        match folder {
-            Some(f) => Ok(f.into()),
-            None => Err(AppError::NotFound),
-        }
+        .await?
+        .map(Into::into)
+        .ok_or(AppError::NotFound)
     }
 
     /// 获取文件夹路径（面包屑导航）
@@ -214,13 +203,11 @@ impl FolderService {
         .fetch_all(&self.pool)
         .await?;
 
-        if path.is_empty() {
-            return Err(AppError::NotFound);
-        }
-
-        Ok(FolderPathResponse {
-            path: path.into_iter().map(Into::into).collect(),
-        })
+        (!path.is_empty())
+            .then(|| FolderPathResponse {
+                path: path.into_iter().map(Into::into).collect(),
+            })
+            .ok_or(AppError::NotFound)
     }
 
     /// 获取文件夹内容（子文件夹 + 路径）
@@ -236,12 +223,14 @@ impl FolderService {
         user_id: Uuid,
         folder_id: Option<Uuid>,
     ) -> Result<FolderContentsResponse, AppError> {
-        let (current, path) = if let Some(fid) = folder_id {
-            let current = self.get_folder(user_id, fid).await?;
-            let path_resp = self.get_folder_path(user_id, fid).await?;
-            (Some(current), path_resp.path)
-        } else {
-            (None, vec![])
+        // 使用 match 替代 if-let-else，更清晰地处理两种情况
+        let (current, path) = match folder_id {
+            Some(fid) => {
+                let current = self.get_folder(user_id, fid).await?;
+                let path_resp = self.get_folder_path(user_id, fid).await?;
+                (Some(current), path_resp.path)
+            }
+            None => (None, vec![]),
         };
 
         let folders = self.list_folders(user_id, folder_id).await?;
@@ -282,37 +271,25 @@ impl FolderService {
         }
 
         // 获取当前文件夹信息
-        let current: Option<Folder> = sqlx::query_as(
+        let current = sqlx::query_as::<_, Folder>(
             "SELECT id, user_id, name, parent_id, created_at, updated_at FROM folders WHERE id = $1 AND user_id = $2",
         )
         .bind(folder_id)
         .bind(user_id)
         .fetch_optional(&self.pool)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+        // 检查同级目录下是否已有同名文件夹（使用 IS NOT DISTINCT FROM 统一处理）
+        let existing: Option<(Uuid,)> = sqlx::query_as(
+            "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3 AND id != $4",
+        )
+        .bind(user_id)
+        .bind(current.parent_id)
+        .bind(name)
+        .bind(folder_id)
+        .fetch_optional(&self.pool)
         .await?;
-
-        let current = current.ok_or(AppError::NotFound)?;
-
-        // 检查同级目录下是否已有同名文件夹
-        let existing: Option<(Uuid,)> = if current.parent_id.is_some() {
-            sqlx::query_as(
-                "SELECT id FROM folders WHERE user_id = $1 AND parent_id = $2 AND name = $3 AND id != $4",
-            )
-            .bind(user_id)
-            .bind(current.parent_id)
-            .bind(name)
-            .bind(folder_id)
-            .fetch_optional(&self.pool)
-            .await?
-        } else {
-            sqlx::query_as(
-                "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NULL AND name = $2 AND id != $3",
-            )
-            .bind(user_id)
-            .bind(name)
-            .bind(folder_id)
-            .fetch_optional(&self.pool)
-            .await?
-        };
 
         if existing.is_some() {
             return Err(AppError::Validation("同名文件夹已存在".to_string()));
@@ -359,29 +336,24 @@ impl FolderService {
         }
 
         // 获取当前文件夹信息
-        let current: Option<Folder> = sqlx::query_as(
+        let current = sqlx::query_as::<_, Folder>(
             "SELECT id, user_id, name, parent_id, created_at, updated_at FROM folders WHERE id = $1 AND user_id = $2",
         )
         .bind(folder_id)
         .bind(user_id)
         .fetch_optional(&self.pool)
-        .await?;
-
-        let current = current.ok_or(AppError::NotFound)?;
+        .await?
+        .ok_or(AppError::NotFound)?;
 
         // 如果目标父文件夹不为空，验证其存在且不是当前文件夹的子文件夹
         if let Some(new_parent_id) = req.parent_id {
             // 验证目标文件夹存在
-            let parent_exists: Option<(Uuid,)> =
-                sqlx::query_as("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-                    .bind(new_parent_id)
-                    .bind(user_id)
-                    .fetch_optional(&self.pool)
-                    .await?;
-
-            if parent_exists.is_none() {
-                return Err(AppError::Validation("目标文件夹不存在".to_string()));
-            }
+            sqlx::query_as::<_, (Uuid,)>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
+                .bind(new_parent_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| AppError::Validation("目标文件夹不存在".to_string()))?;
 
             // 检查目标文件夹是否是当前文件夹的子文件夹（防止循环）
             let is_descendant: Option<(i64,)> = sqlx::query_as(
@@ -407,27 +379,16 @@ impl FolderService {
             }
         }
 
-        // 检查目标位置是否已有同名文件夹
-        let existing: Option<(Uuid,)> = if req.parent_id.is_some() {
-            sqlx::query_as(
-                "SELECT id FROM folders WHERE user_id = $1 AND parent_id = $2 AND name = $3 AND id != $4",
-            )
-            .bind(user_id)
-            .bind(req.parent_id)
-            .bind(&current.name)
-            .bind(folder_id)
-            .fetch_optional(&self.pool)
-            .await?
-        } else {
-            sqlx::query_as(
-                "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NULL AND name = $2 AND id != $3",
-            )
-            .bind(user_id)
-            .bind(&current.name)
-            .bind(folder_id)
-            .fetch_optional(&self.pool)
-            .await?
-        };
+        // 检查目标位置是否已有同名文件夹（使用 IS NOT DISTINCT FROM 统一处理）
+        let existing: Option<(Uuid,)> = sqlx::query_as(
+            "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3 AND id != $4",
+        )
+        .bind(user_id)
+        .bind(req.parent_id)
+        .bind(&current.name)
+        .bind(folder_id)
+        .fetch_optional(&self.pool)
+        .await?;
 
         if existing.is_some() {
             return Err(AppError::Validation(
@@ -465,16 +426,12 @@ impl FolderService {
     /// - 删除的文件数量
     pub async fn delete_folder(&self, user_id: Uuid, folder_id: Uuid) -> Result<u64, AppError> {
         // 验证文件夹存在
-        let folder_exists: Option<(Uuid,)> =
-            sqlx::query_as("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-                .bind(folder_id)
-                .bind(user_id)
-                .fetch_optional(&self.pool)
-                .await?;
-
-        if folder_exists.is_none() {
-            return Err(AppError::NotFound);
-        }
+        sqlx::query_as::<_, (Uuid,)>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
+            .bind(folder_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(AppError::NotFound)?;
 
         // 获取所有需要删除的文件夹 ID（包括子文件夹）
         let folder_ids: Vec<(Uuid,)> = sqlx::query_as(
@@ -535,16 +492,12 @@ impl FolderService {
 
         // 如果目标文件夹不为空，验证其存在
         if let Some(fid) = folder_id {
-            let folder_exists: Option<(Uuid,)> =
-                sqlx::query_as("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-                    .bind(fid)
-                    .bind(user_id)
-                    .fetch_optional(&self.pool)
-                    .await?;
-
-            if folder_exists.is_none() {
-                return Err(AppError::Validation("目标文件夹不存在".to_string()));
-            }
+            sqlx::query_as::<_, (Uuid,)>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
+                .bind(fid)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| AppError::Validation("目标文件夹不存在".to_string()))?;
         }
 
         // 更新文件的 folder_id

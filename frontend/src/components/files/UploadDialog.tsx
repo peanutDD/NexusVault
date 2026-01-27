@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { fileService } from '../../services/files';
 import { getErrorMessage } from '../../utils/error';
 import { validateFile, getMaxFileSizeGB } from '../../utils/uploadValidation';
@@ -65,10 +65,11 @@ export default function UploadDialog({
   const startUpload = useCallback(async () => {
     if (isUploadingRef.current) return;
 
+    // 使用已计算的 uploadStats.pendingWithFile
     const pendingFiles = uploadFiles.filter((f) => f.status === 'pending' && f.file);
     if (pendingFiles.length === 0) {
-      const allSuccess = uploadFiles.every((f) => f.status === 'success');
-      if (allSuccess && uploadFiles.length > 0) {
+      const allSuccess = uploadFiles.length > 0 && uploadFiles.every((f) => f.status === 'success');
+      if (allSuccess) {
         onUploadComplete();
         onClose();
         setUploadFiles([]);
@@ -228,26 +229,37 @@ export default function UploadDialog({
     }
   }, [onClose]);
 
-  // 完成按钮点击
-  const handleAttach = useCallback(() => {
-    const pendingCount = uploadFiles.filter((f) => f.status === 'pending').length;
-    const uploadingCount = uploadFiles.filter((f) => f.status === 'uploading').length;
+  const maxGB = getMaxFileSizeGB();
+  
+  // 使用 useMemo + reduce 合并多个 filter/some 为单次遍历（放在 handleAttach 之前）
+  const uploadStats = useMemo(() => uploadFiles.reduce(
+    (acc, f) => {
+      if (f.status === 'pending') {
+        acc.pendingCount++;
+        if (f.file) acc.pendingWithFile.push(f);
+      }
+      if (f.status === 'uploading') acc.uploadingCount++;
+      if (f.status === 'success') acc.successCount++;
+      return acc;
+    },
+    { pendingCount: 0, uploadingCount: 0, successCount: 0, pendingWithFile: [] as UploadFile[] }
+  ), [uploadFiles]);
+  
+  const isUploading = uploadStats.uploadingCount > 0;
+  const hasPending = uploadStats.pendingCount > 0;
 
-    if (pendingCount > 0) {
+  // 完成按钮点击（使用 uploadStats 避免重复遍历）
+  const handleAttach = useCallback(() => {
+    if (hasPending) {
       startUpload();
-    } else if (uploadingCount === 0) {
-      const hasSuccess = uploadFiles.some((f) => f.status === 'success');
-      if (hasSuccess) {
+    } else if (!isUploading) {
+      if (uploadStats.successCount > 0) {
         onUploadComplete();
       }
       onClose();
       setUploadFiles([]);
     }
-  }, [uploadFiles, startUpload, onUploadComplete, onClose]);
-
-  const maxGB = getMaxFileSizeGB();
-  const isUploading = uploadFiles.some((f) => f.status === 'uploading');
-  const hasPending = uploadFiles.some((f) => f.status === 'pending');
+  }, [hasPending, isUploading, uploadStats.successCount, startUpload, onUploadComplete, onClose]);
 
   if (!open) return null;
 

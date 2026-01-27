@@ -54,7 +54,7 @@ pub async fn create_folder_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Json(req): Json<CreateFolderRequest>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let folder = folder_service.create_folder(user_id, req).await?;
     Ok(json_response(json!({ "folder": folder })))
 }
@@ -75,7 +75,7 @@ pub async fn list_folders_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Query(query): Query<FolderListQuery>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let folders = folder_service.list_folders(user_id, query.parent_id).await?;
     Ok(json_response(json!({ "folders": folders })))
 }
@@ -98,7 +98,7 @@ pub async fn get_folder_contents_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Query(query): Query<FolderListQuery>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let contents = folder_service
         .get_folder_contents(user_id, query.parent_id)
         .await?;
@@ -121,7 +121,7 @@ pub async fn get_folder_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let folder = folder_service.get_folder(user_id, id).await?;
     Ok(json_response(json!({ "folder": folder })))
 }
@@ -146,7 +146,7 @@ pub async fn get_folder_path_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let path = folder_service.get_folder_path(user_id, id).await?;
     Ok(json_response(json!(path)))
 }
@@ -175,7 +175,7 @@ pub async fn rename_folder_handler(
     Path(id): Path<Uuid>,
     Json(req): Json<RenameFolderRequest>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let folder = folder_service.rename_folder(user_id, id, req).await?;
     Ok(json_response(json!({ "folder": folder })))
 }
@@ -199,7 +199,7 @@ pub async fn delete_folder_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let affected = folder_service.delete_folder(user_id, id).await?;
     Ok(json_response(json!({
         "message": "文件夹删除成功",
@@ -231,7 +231,7 @@ pub async fn move_folder_handler(
     Path(id): Path<Uuid>,
     Json(req): Json<MoveFolderRequest>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let folder = folder_service.move_folder(user_id, id, req).await?;
     Ok(json_response(json!({ "folder": folder })))
 }
@@ -258,7 +258,7 @@ pub async fn move_files_to_folder_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Json(req): Json<BatchMoveToFolderRequest>,
 ) -> Result<Response, AppError> {
-    let folder_service = FolderService::new(state.pool.clone());
+    let folder_service = FolderService::from_state(&state);
     let moved = folder_service
         .move_files_to_folder(user_id, req.file_ids, req.folder_id)
         .await?;

@@ -79,24 +79,19 @@ pub fn create_rate_limit_middleware(max_requests: usize, window_seconds: u64) ->
 }
 
 fn get_client_ip(headers: &HeaderMap) -> String {
-    // Try X-Forwarded-For first (for proxies)
-    if let Some(forwarded) = headers.get("x-forwarded-for") {
-        if let Ok(forwarded_str) = forwarded.to_str() {
-            if let Some(ip) = forwarded_str.split(',').next() {
-                return ip.trim().to_string();
-            }
-        }
-    }
-
-    // Try X-Real-IP
-    if let Some(real_ip) = headers.get("x-real-ip") {
-        if let Ok(ip) = real_ip.to_str() {
-            return ip.to_string();
-        }
-    }
-
-    // Fallback to a default key (in production, you'd extract from connection)
-    "unknown".to_string()
+    // 使用 Option 链式调用替代嵌套 if-let
+    headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(|ip| ip.trim().to_string())
+        .or_else(|| {
+            headers
+                .get("x-real-ip")
+                .and_then(|h| h.to_str().ok())
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 pub async fn rate_limit_middleware(state: RateLimitState, req: Request, next: Next) -> Response {

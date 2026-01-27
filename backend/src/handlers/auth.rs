@@ -48,7 +48,7 @@ pub async fn register_handler(
     State(state): State<AppState>,
     axum::Json(req): axum::Json<RegisterRequest>,
 ) -> Result<Response, AppError> {
-    let auth_service = AuthService::new(state.pool.clone(), (*state.config).clone());
+    let auth_service = AuthService::from_state(&state);
 
     // 注册用户
     let user = auth_service.register(req).await?;
@@ -87,7 +87,7 @@ pub async fn login_handler(
     State(state): State<AppState>,
     axum::Json(req): axum::Json<LoginRequest>,
 ) -> Result<Response, AppError> {
-    let auth_service = AuthService::new(state.pool.clone(), (*state.config).clone());
+    let auth_service = AuthService::from_state(&state);
 
     // 验证凭据并生成 token
     let token = auth_service.login(req).await?;
@@ -109,7 +109,7 @@ pub async fn me_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> Result<Response, AppError> {
-    let auth_service = AuthService::new(state.pool.clone(), (*state.config).clone());
+    let auth_service = AuthService::from_state(&state);
     let user = auth_service.get_user(user_id).await?;
     Ok(json_response(json!({ "user": user })))
 }
@@ -128,7 +128,7 @@ pub async fn change_password_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<ChangePasswordRequest>,
 ) -> Result<Response, AppError> {
-    let auth_service = AuthService::new(state.pool.clone(), (*state.config).clone());
+    let auth_service = AuthService::from_state(&state);
 
     auth_service
         .change_password(user_id, req.current_password, req.new_password)
