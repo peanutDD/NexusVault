@@ -32,18 +32,18 @@ export const AUTH_ERROR_BOX_CLASSES = cn(
 
 // 主按钮样式
 export const AUTH_BUTTON_CLASSES = cn(
-  'w-full py-3 px-4',
-  'bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-600 dark:to-pink-600',
-  'text-white font-semibold rounded-lg',
-  'hover:from-purple-600 hover:to-pink-600 dark:hover:from-purple-700 dark:hover:to-pink-700',
-  'focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400',
-  'focus:ring-offset-2 focus:ring-offset-gray-900 dark:focus:ring-offset-gray-800',
+  'w-full py-3 px-4 rounded-xl font-semibold tracking-wide',
+  'bg-gradient-to-r from-emerald-500/85 via-cyan-500/85 to-sky-500/85',
+  'text-slate-950',
+  'hover:from-emerald-500 hover:via-cyan-500 hover:to-sky-500',
+  'focus:outline-none focus:ring-2 focus:ring-emerald-300/60',
+  'focus:ring-offset-2 focus:ring-offset-slate-950',
   'disabled:opacity-50 disabled:cursor-not-allowed',
   'transition-all duration-200',
   'transform hover:scale-[1.02] active:scale-[0.98]'
 );
 
-// 页面容器样式
+// 页面容器样式（与主页背景一致）
 export const AUTH_PAGE_CLASSES = cn(
   'min-h-screen flex items-center justify-center',
   'bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900',
@@ -51,23 +51,25 @@ export const AUTH_PAGE_CLASSES = cn(
   'transition-colors duration-300'
 );
 
-// 卡片容器样式
+// 卡片容器样式（贴近主页玻璃 + 霓虹边框）
 export const AUTH_CARD_CLASSES = cn(
-  'bg-white/10 dark:bg-gray-900/80',
-  'backdrop-blur-lg rounded-2xl shadow-2xl p-8',
-  'border border-white/20 dark:border-gray-700/50',
+  'relative overflow-hidden rounded-2xl',
+  'border border-emerald-300/15 bg-slate-950/40',
+  'shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_22px_80px_rgba(0,0,0,0.75)]',
+  'backdrop-blur-xl',
+  'p-8 sm:p-9',
   'transition-all duration-300'
 );
 
-// 标题样式
+// 标题样式（与主页品牌标题接近）
 export const AUTH_TITLE_CLASSES = cn(
-  'text-3xl font-bold text-center',
-  'text-white dark:text-gray-100',
-  'mb-2 transition-colors duration-200'
+  'text-2xl sm:text-3xl font-brand font-semibold text-center tracking-widest',
+  'text-slate-50',
+  'mb-3 transition-colors duration-200'
 );
 
 // 副标题样式
 export const AUTH_SUBTITLE_CLASSES = cn(
-  'text-center text-gray-300 dark:text-gray-400',
-  'mb-8 transition-colors duration-200'
+  'text-center text-slate-300',
+  'mb-8 transition-colors duration-200 text-sm sm:text-base'
 );
