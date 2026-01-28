@@ -42,14 +42,9 @@ impl FileService {
         }
 
         // 先用数据库聚合校验总大小（避免提前读入所有文件数据）
-        let (found_count, total_size): (i64, i64) = sqlx::query_as(
-            "SELECT COUNT(*)::BIGINT, COALESCE(SUM(file_size)::BIGINT, 0) \
-             FROM files WHERE user_id = $1 AND id = ANY($2)",
-        )
-        .bind(user_id)
-        .bind(&uniq_ids)
-        .fetch_one(&self.pool)
-        .await?;
+        let (found_count, total_size) = crate::repositories::files::FilesRepo::new(&self.pool)
+            .sum_size_for_ids(user_id, &uniq_ids)
+            .await?;
 
         if found_count <= 0 {
             return Err(AppError::Validation("没有可下载的文件".to_string()));
@@ -64,19 +59,32 @@ impl FileService {
             )));
         }
 
+        // 一次性把文件记录取出来，避免 N+1 查询
+        let files = crate::repositories::files::FilesRepo::new(&self.pool)
+            .get_files_by_ids(user_id, &uniq_ids)
+            .await?;
+        let mut file_by_id =
+            std::collections::HashMap::<Uuid, crate::models::file::File>::with_capacity(
+                files.len(),
+            );
+        for f in files {
+            file_by_id.insert(f.id, f);
+        }
+
         let mut buf = Vec::new();
         let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buf));
 
         for &id in &uniq_ids {
-            if let Ok(file) = self.get_file(id, user_id).await {
-                let data = self.get_file_data(&file).await?;
-                let options: zip::write::FileOptions<()> =
-                    zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
-                zip.start_file(&file.original_filename, options)
-                    .map_err(|e| AppError::File(format!("Failed to add file to zip: {}", e)))?;
-                zip.write_all(&data)
-                    .map_err(|e| AppError::File(format!("Failed to write file to zip: {}", e)))?;
-            }
+            let Some(file) = file_by_id.get(&id) else {
+                continue;
+            };
+            let data = self.get_file_data(file).await?;
+            let options: zip::write::FileOptions<()> =
+                zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
+            zip.start_file(&file.original_filename, options)
+                .map_err(|e| AppError::File(format!("Failed to add file to zip: {}", e)))?;
+            zip.write_all(&data)
+                .map_err(|e| AppError::File(format!("Failed to write file to zip: {}", e)))?;
         }
 
         zip.finish()
@@ -85,4 +93,3 @@ impl FileService {
         Ok(buf)
     }
 }
-

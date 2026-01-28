@@ -34,7 +34,6 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::config::Config;
-use crate::models::file::{File, FileResponse};
 use crate::services::storage::StorageBackend;
 use crate::utils::AppError;
 
@@ -120,38 +119,9 @@ impl FileService {
         Ok(())
     }
 
-    pub(super) async fn insert_file_record(
-        &self,
-        file_id: Uuid,
-        user_id: Uuid,
-        storage_filename: &str,
-        original_filename: &str,
-        file_path: &str,
-        file_size: u64,
-        mime_type: &str,
-    ) -> Result<FileResponse, AppError> {
-        let file = sqlx::query_as::<_, File>(
-            "INSERT INTO files (id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
-        )
-        .bind(file_id)
-        .bind(user_id)
-        .bind(storage_filename)
-        .bind(original_filename)
-        .bind(file_path)
-        .bind(file_size as i64)
-        .bind(mime_type)
-        .bind(&self.config.storage_backend)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(FileResponse::from(file))
-    }
-
     pub(super) fn chunked_temp_dir(&self, upload_id: Uuid) -> std::path::PathBuf {
         Path::new(&self.config.storage_path)
             .join(".chunked")
             .join(upload_id.to_string())
     }
 }
-

@@ -33,20 +33,18 @@ impl FileService {
 
         let path_str = temp_path.to_string_lossy().to_string();
         let expires = Utc::now() + chrono::Duration::hours(24);
-        sqlx::query(
-            "INSERT INTO upload_sessions (id, user_id, filename, mime_type, total_size, chunk_size, temp_path, expires_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-        )
-        .bind(upload_id)
-        .bind(user_id)
-        .bind(&req.filename)
-        .bind(&req.mime_type)
-        .bind(req.total_size as i64)
-        .bind(CHUNK_SIZE as i32)
-        .bind(&path_str)
-        .bind(expires)
-        .execute(&self.pool)
-        .await?;
+        crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
+            .insert_session(
+                upload_id,
+                user_id,
+                &req.filename,
+                &req.mime_type,
+                req.total_size,
+                CHUNK_SIZE as i32,
+                &path_str,
+                expires,
+            )
+            .await?;
 
         Ok((upload_id, CHUNK_SIZE, total_parts))
     }
@@ -56,16 +54,10 @@ impl FileService {
         upload_id: Uuid,
         user_id: Uuid,
     ) -> Result<UploadSession, AppError> {
-        let s = sqlx::query_as::<_, UploadSession>(
-            "SELECT id, user_id, filename, mime_type, total_size, chunk_size, temp_path,
-                    COALESCE(uploaded_parts, '{}') as uploaded_parts, created_at, expires_at
-             FROM upload_sessions WHERE id = $1 AND user_id = $2",
-        )
-        .bind(upload_id)
-        .bind(user_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(AppError::NotFound)?;
+        let s = crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
+            .get_session(upload_id, user_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
 
         if s.expires_at < Utc::now() {
             self.abort_chunked_upload(upload_id, user_id).await?;
@@ -108,17 +100,9 @@ impl FileService {
             .await
             .map_err(|e| AppError::Storage(format!("Failed to write chunk: {}", e)))?;
 
-        // uploaded_parts 并发安全：用 SQL 原子追加，避免“读-改-写”丢更新
-        sqlx::query(
-            "UPDATE upload_sessions
-             SET uploaded_parts = array_append(uploaded_parts, $1)
-             WHERE id = $2 AND user_id = $3 AND NOT ($1 = ANY(uploaded_parts))",
-        )
-        .bind(part)
-        .bind(upload_id)
-        .bind(user_id)
-        .execute(&self.pool)
-        .await?;
+        crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
+            .append_uploaded_part(upload_id, user_id, part)
+            .await?;
 
         Ok(())
     }
@@ -212,12 +196,9 @@ impl FileService {
         if temp_path.exists() {
             let _ = tokio::fs::remove_dir_all(&temp_path).await;
         }
-        sqlx::query("DELETE FROM upload_sessions WHERE id = $1 AND user_id = $2")
-            .bind(upload_id)
-            .bind(user_id)
-            .execute(&self.pool)
+        crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
+            .delete_session(upload_id, user_id)
             .await?;
         Ok(())
     }
 }
-

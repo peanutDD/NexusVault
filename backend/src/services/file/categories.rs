@@ -11,14 +11,9 @@ use super::FileService;
 impl FileService {
     /// List distinct categories for a user (excluding null/empty).
     pub async fn list_categories(&self, user_id: Uuid) -> Result<Vec<String>, AppError> {
-        let rows = sqlx::query_scalar::<_, String>(
-            "SELECT DISTINCT category FROM files WHERE user_id = $1 AND category IS NOT NULL AND TRIM(category) != '' ORDER BY category",
-        )
-        .bind(user_id)
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows)
+        crate::repositories::files::FilesRepo::new(&self.pool)
+            .list_categories(user_id)
+            .await
     }
 
     /// Batch move files to a category. Empty category = uncategorized (NULL).
@@ -32,17 +27,8 @@ impl FileService {
             }
         });
 
-        let result = sqlx::query(
-            "UPDATE files SET category = $1, updated_at = $2 WHERE user_id = $3 AND id = ANY($4)",
-        )
-        .bind(&category_value)
-        .bind(Utc::now())
-        .bind(user_id)
-        .bind(&req.ids)
-        .execute(&self.pool)
-        .await?;
-
-        Ok(result.rows_affected())
+        crate::repositories::files::FilesRepo::new(&self.pool)
+            .update_category(user_id, &req.ids, category_value.as_deref(), Utc::now())
+            .await
     }
 }
-

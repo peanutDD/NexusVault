@@ -21,6 +21,7 @@ mod extractors;
 mod handlers;
 mod middleware;
 mod models;
+mod repositories;
 mod services;
 mod state;
 mod utils;
@@ -28,20 +29,16 @@ mod utils;
 pub use state::AppState;
 
 use axum::{
-    error_handling::HandleErrorLayer,
-    extract::Request,
-    http::StatusCode,
-    middleware::Next,
-    response::Response,
-    routing::get,
-    Json,
-    Router,
+    error_handling::HandleErrorLayer, extract::Request, http::StatusCode, middleware::Next,
+    response::Response, routing::get, Json, Router,
 };
+use serde_json::json;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use serde_json::json;
 use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError, ServiceBuilder};
-use tower_http::{catch_panic::CatchPanicLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
+use tower_http::{
+    catch_panic::CatchPanicLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
+};
 // use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 // use std::net::IpAddr;
 
@@ -58,7 +55,11 @@ fn main() -> anyhow::Result<()> {
     let worker_threads = std::env::var("TOKIO_WORKER_THREADS")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or_else(|| std::thread::available_parallelism().map(|n| n.get()).unwrap_or(10));
+        .unwrap_or_else(|| {
+            std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(10)
+        });
 
     let max_blocking_threads = std::env::var("TOKIO_MAX_BLOCKING_THREADS")
         .ok()

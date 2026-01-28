@@ -27,4 +27,3 @@ pub async fn create_storage(config: Arc<Config>) -> Result<Arc<dyn StorageBacken
         ))),
     }
 }
-

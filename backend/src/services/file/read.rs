@@ -10,14 +10,10 @@ use super::FileService;
 
 impl FileService {
     pub async fn get_file(&self, file_id: Uuid, user_id: Uuid) -> Result<File, AppError> {
-        let file = sqlx::query_as::<_, File>("SELECT * FROM files WHERE id = $1 AND user_id = $2")
-            .bind(file_id)
-            .bind(user_id)
-            .fetch_optional(&self.pool)
+        crate::repositories::files::FilesRepo::new(&self.pool)
+            .get_file(file_id, user_id)
             .await?
-            .ok_or(AppError::NotFound)?;
-
-        Ok(file)
+            .ok_or(AppError::NotFound)
     }
 
     pub async fn get_file_data(&self, file: &File) -> Result<Vec<u8>, AppError> {
@@ -39,4 +35,3 @@ impl FileService {
             .await
     }
 }
-
