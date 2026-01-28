@@ -38,6 +38,115 @@ const getTypeKey = (mime: string): string => {
   return 'other';
 };
 
+function useFileFiltersAndSorting() {
+  const [search, setSearch] = useState('');
+  const [mimeType, setMimeType] = useState('');
+  const [sortBy, setSortBy] = useState<import('./FileListFilters').SortOption>(() => {
+    const saved = localStorage.getItem('fileListSortBy');
+    return (saved as import('./FileListFilters').SortOption) || 'created_at_desc';
+  });
+
+  const debouncedSearch = useDebounce(search, 300);
+
+  const [sortField, sortOrder] = useMemo(() => {
+    if (sortBy === 'type_group') {
+      return ['created_at', 'desc'] as const;
+    }
+    if (sortBy.startsWith('created_at_')) {
+      return ['created_at', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
+    }
+    if (sortBy.startsWith('file_size_')) {
+      return ['file_size', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
+    }
+    if (sortBy.startsWith('filename_')) {
+      return ['filename', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
+    }
+    const [field, order] = sortBy.split('_') as [string, string];
+    return [field as 'created_at' | 'filename' | 'file_size', order as 'asc' | 'desc'] as const;
+  }, [sortBy]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
+
+  const handleMimeTypeChange = useCallback((value: string) => {
+    setMimeType(value);
+  }, []);
+
+  const handleSortChange = useCallback((value: import('./FileListFilters').SortOption) => {
+    clearFileListCache();
+    setSortBy(value);
+    localStorage.setItem('fileListSortBy', value);
+  }, []);
+
+  return {
+    search,
+    mimeType,
+    sortBy,
+    debouncedSearch,
+    sortField,
+    sortOrder,
+    handleSearchChange,
+    handleMimeTypeChange,
+    handleSortChange,
+    setSearch,
+    setMimeType,
+    setSortBy,
+  };
+}
+
+function useSelectionState(files: FileMetadata[]) {
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
+
+  const selectedFileIds = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
+  const selectedFolderIds = useMemo(() => Array.from(selectedFolders), [selectedFolders]);
+
+  const toggleSelectFile = useCallback((fileId: string) => {
+    setSelectedFiles((prev) => {
+      const next = new Set(prev);
+      next.has(fileId) ? next.delete(fileId) : next.add(fileId);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectFolder = useCallback((folderId: string) => {
+    setSelectedFolders((prev) => {
+      const next = new Set(prev);
+      next.has(folderId) ? next.delete(folderId) : next.add(folderId);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedFiles.size === files.length) {
+      setSelectedFiles(new Set());
+      setSelectedFolders(new Set());
+    } else {
+      setSelectedFiles(new Set(files.map((f) => f.id)));
+      setSelectedFolders(new Set());
+    }
+  }, [files, selectedFiles.size]);
+
+  const allFilesSelected = useMemo(
+    () => files.length > 0 && selectedFiles.size === files.length,
+    [files.length, selectedFiles.size]
+  );
+
+  return {
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
+    toggleSelectFile,
+    toggleSelectFolder,
+    toggleSelectAll,
+    allFilesSelected,
+    setSelectedFiles,
+    setSelectedFolders,
+  };
+}
+
 export function useFileList() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -54,20 +163,34 @@ export function useFileList() {
   const [folderPath, setFolderPath] = useState<Folder[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(false);
 
-  // 过滤器状态
-  const [search, setSearch] = useState('');
-  const [mimeType, setMimeType] = useState('');
-  const [sortBy, setSortBy] = useState<import('./FileListFilters').SortOption>(() => {
-    const saved = localStorage.getItem('fileListSortBy');
-    return (saved as import('./FileListFilters').SortOption) || 'created_at_desc';
-  });
+  // 过滤器 + 排序
+  const {
+    search,
+    mimeType,
+    sortBy,
+    debouncedSearch,
+    sortField,
+    sortOrder,
+    handleSearchChange: baseHandleSearchChange,
+    handleMimeTypeChange: baseHandleMimeTypeChange,
+    handleSortChange: baseHandleSortChange,
+    setSearch,
+    setMimeType,
+  } = useFileFiltersAndSorting();
 
   // 选择状态
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
-
-  const selectedFileIds = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
-  const selectedFolderIds = useMemo(() => Array.from(selectedFolders), [selectedFolders]);
+  const {
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
+    toggleSelectFile,
+    toggleSelectFolder,
+    toggleSelectAll,
+    allFilesSelected,
+    setSelectedFiles,
+    setSelectedFolders,
+  } = useSelectionState(files);
 
   // 对话框状态
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
@@ -88,7 +211,6 @@ export function useFileList() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const limit = FILE_LIST.LIMIT;
-  const debouncedSearch = useDebounce(search, 300);
 
   const listFilesStable = useCallback(
     (query?: FileListQuery) => fileService.listFiles(query),
@@ -109,24 +231,6 @@ export function useFileList() {
       setLoadingFolders(false);
     }
   }, [currentFolderId]);
-
-  // 解析排序选项
-  const [sortField, sortOrder] = useMemo(() => {
-    if (sortBy === 'type_group') {
-      return ['created_at', 'desc'] as const;
-    }
-    if (sortBy.startsWith('created_at_')) {
-      return ['created_at', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
-    }
-    if (sortBy.startsWith('file_size_')) {
-      return ['file_size', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
-    }
-    if (sortBy.startsWith('filename_')) {
-      return ['filename', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
-    }
-    const [field, order] = sortBy.split('_') as [string, string];
-    return [field as 'created_at' | 'filename' | 'file_size', order as 'asc' | 'desc'] as const;
-  }, [sortBy]);
 
   // 加载文件
   const loadFiles = useCallback(async () => {
@@ -400,37 +504,7 @@ export function useFileList() {
     }
   }, [loadFiles, loadFolders]);
 
-  const toggleSelectFile = useCallback((fileId: string) => {
-    setSelectedFiles((prev) => {
-      const next = new Set(prev);
-      next.has(fileId) ? next.delete(fileId) : next.add(fileId);
-      return next;
-    });
-  }, []);
-
-  const toggleSelectFolder = useCallback((folderId: string) => {
-    setSelectedFolders((prev) => {
-      const next = new Set(prev);
-      next.has(folderId) ? next.delete(folderId) : next.add(folderId);
-      return next;
-    });
-  }, []);
-
-  const toggleSelectAll = useCallback(() => {
-    if (selectedFiles.size === files.length) {
-      setSelectedFiles(new Set());
-      setSelectedFolders(new Set());
-    } else {
-      setSelectedFiles(new Set(files.map((f) => f.id)));
-      setSelectedFolders(new Set());
-    }
-  }, [files, selectedFiles.size]);
-
   const totalPages = useMemo(() => Math.ceil(total / limit), [total, limit]);
-  const allFilesSelected = useMemo(
-    () => files.length > 0 && selectedFiles.size === files.length,
-    [files.length, selectedFiles.size]
-  );
 
   const handleShowBatchMove = useCallback(() => setShowBatchMove(true), []);
 
@@ -464,22 +538,20 @@ export function useFileList() {
   const handleOpenFolder = useCallback((folder: Folder) => navigateToFolder(folder.id), [navigateToFolder]);
   const handleRenameFolder = useCallback((folder: Folder) => setRenamingFolder(folder), []);
 
-  const handleSearchChange = useCallback((v: string) => {
-    setSearch(v);
+  const handleSearchChange = useCallback((value: string) => {
+    baseHandleSearchChange(value);
     setPage(1);
-  }, []);
+  }, [baseHandleSearchChange]);
 
-  const handleMimeTypeChange = useCallback((v: string) => {
-    setMimeType(v);
+  const handleMimeTypeChange = useCallback((value: string) => {
+    baseHandleMimeTypeChange(value);
     setPage(1);
-  }, []);
+  }, [baseHandleMimeTypeChange]);
 
-  const handleSortChange = useCallback((v: import('./FileListFilters').SortOption) => {
-    clearFileListCache();
-    setSortBy(v);
+  const handleSortChange = useCallback((value: import('./FileListFilters').SortOption) => {
+    baseHandleSortChange(value);
     setPage(1);
-    localStorage.setItem('fileListSortBy', v);
-  }, []);
+  }, [baseHandleSortChange]);
 
   const handleFileDragStart = useCallback((e: React.DragEvent, file: FileMetadata) => {
     e.dataTransfer.setData('application/file-id', file.id);
