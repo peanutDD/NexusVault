@@ -276,6 +276,34 @@
 
 位置：`src/main.rs`
 
+---
+
+### 15) 上传链路磁盘保护 + 早期熔断（防磁盘/内存雪崩）
+
+已落地：
+
+- **普通上传**：在写入临时文件过程中实时累计 `file_size`，一旦超过 `config.max_file_size` 立刻停止并删除临时文件（避免继续读入/写盘）。
+  - 位置：`src/handlers/files.rs`（`upload_file_handler`）
+- **分块写盘**：写 chunk 前 best-effort 检查 `temp_path` 所在盘剩余空间，保留 safety margin，空间不足直接返回错误。
+  - 位置：`src/services/file.rs`（`upload_chunk`）
+- **分块合并**：合并前 best-effort 检查剩余空间是否足以容纳最终文件，避免合并到一半磁盘写满。
+  - 位置：`src/services/file.rs`（`complete_chunked_upload`）
+
+依赖：
+
+- `fs2::available_space`（跨平台获取可用磁盘空间）
+
+---
+
+### 16) 分块 uploaded_parts 原子更新（并发安全）
+
+旧实现是“读 session → push part → sort → 整体写回数组”，高并发下可能出现丢更新。
+
+已落地：
+
+- 使用 SQL 原子追加：`array_append(uploaded_parts, $1)` 并加 `NOT ($1 = ANY(uploaded_parts))` 保护幂等
+  - 位置：`src/services/file.rs`（`upload_chunk`）
+
 ## 压测与观测建议（推荐后续补齐）
 
 - **指标**：

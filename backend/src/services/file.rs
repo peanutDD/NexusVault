@@ -761,18 +761,27 @@ impl FileService {
             )));
         }
 
+        // 磁盘空间保护（best-effort）：写分块前检查 temp_path 所在盘剩余空间
+        if let Ok(free) = fs2::available_space(&s.temp_path) {
+            let reserve = 32 * 1024 * 1024u64; // 32MiB safety margin
+            let need = data.len() as u64;
+            if free < need.saturating_add(reserve) {
+                return Err(AppError::Storage("磁盘空间不足，请稍后重试".to_string()));
+            }
+        }
+
         let path = Path::new(&s.temp_path).join(format!("part_{}", part - 1));
         tokio::fs::write(&path, &data)
             .await
             .map_err(|e| AppError::Storage(format!("Failed to write chunk: {}", e)))?;
 
-        let mut updated = s.uploaded_parts;
-        updated.push(part);
-        updated.sort_unstable();
+        // uploaded_parts 并发安全：用 SQL 原子追加，避免“读-改-写”丢更新
         sqlx::query(
-            "UPDATE upload_sessions SET uploaded_parts = $1 WHERE id = $2 AND user_id = $3",
+            "UPDATE upload_sessions \
+             SET uploaded_parts = array_append(uploaded_parts, $1) \
+             WHERE id = $2 AND user_id = $3 AND NOT ($1 = ANY(uploaded_parts))",
         )
-        .bind(&updated)
+        .bind(part)
         .bind(upload_id)
         .bind(user_id)
         .execute(&self.pool)
@@ -807,6 +816,15 @@ impl FileService {
                 s.uploaded_parts.len(),
                 total_parts
             )));
+        }
+
+        // 磁盘空间保护（best-effort）：合并前检查剩余空间是否足够容纳最终文件
+        if let Ok(free) = fs2::available_space(&s.temp_path) {
+            let reserve = 64 * 1024 * 1024u64; // 64MiB safety margin
+            let need = s.total_size.max(0) as u64;
+            if free < need.saturating_add(reserve) {
+                return Err(AppError::Storage("磁盘空间不足，无法完成合并".to_string()));
+            }
         }
 
         // 流式合并：避免把整个文件读入 Vec<u8>，高并发下防止 OOM

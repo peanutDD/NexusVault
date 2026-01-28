@@ -10,6 +10,37 @@ use axum::{
 };
 use serde::Serialize;
 use serde_json::json;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+
+fn ascii_filename_fallback(filename: &str) -> String {
+    // 仅保留一部分安全 ASCII 字符作为 fallback，避免 HeaderValue::from_str 失败
+    let mut out = String::with_capacity(filename.len().min(128));
+    for ch in filename.chars() {
+        if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_' | ' ') {
+            out.push(ch);
+        } else {
+            out.push('_');
+        }
+        if out.len() >= 128 {
+            break;
+        }
+    }
+    let trimmed = out.trim().to_string();
+    if trimmed.is_empty() {
+        "download".to_string()
+    } else {
+        trimmed
+    }
+}
+
+fn content_disposition_value(filename: &str, inline: bool) -> String {
+    let disposition_type = if inline { "inline" } else { "attachment" };
+    let ascii = ascii_filename_fallback(filename).replace('"', "_");
+    let encoded = utf8_percent_encode(filename, NON_ALPHANUMERIC).to_string();
+    format!(
+        "{disposition_type}; filename=\"{ascii}\"; filename*=UTF-8''{encoded}"
+    )
+}
 
 /// 构建标准的 JSON 成功响应
 ///
@@ -78,12 +109,8 @@ pub fn file_response(
     mime_type: &str,
     inline: bool,
 ) -> Result<Response, axum::http::Error> {
-    // 构建 Content-Disposition header
-    let disposition = if inline {
-        format!("inline; filename=\"{}\"", filename)
-    } else {
-        format!("attachment; filename=\"{}\"", filename)
-    };
+    // 构建 Content-Disposition header（RFC5987 filename* 支持 UTF-8）
+    let disposition = content_disposition_value(filename, inline);
 
     // 构建 headers
     let mut headers = HeaderMap::new();
@@ -96,6 +123,10 @@ pub fn file_response(
     headers.insert(
         header::CONTENT_DISPOSITION,
         HeaderValue::from_str(&disposition)?,
+    );
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
     );
 
     Ok((headers, data).into_response())
@@ -111,12 +142,8 @@ pub fn stream_file_response(
     inline: bool,
     content_length: Option<u64>,
 ) -> Result<Response, axum::http::Error> {
-    // 构建 Content-Disposition header
-    let disposition = if inline {
-        format!("inline; filename=\"{}\"", filename)
-    } else {
-        format!("attachment; filename=\"{}\"", filename)
-    };
+    // 构建 Content-Disposition header（RFC5987 filename* 支持 UTF-8）
+    let disposition = content_disposition_value(filename, inline);
 
     // 构建 headers
     let mut headers = HeaderMap::new();
@@ -129,6 +156,10 @@ pub fn stream_file_response(
     headers.insert(
         header::CONTENT_DISPOSITION,
         HeaderValue::from_str(&disposition)?,
+    );
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
     );
     if let Some(len) = content_length {
         headers.insert(

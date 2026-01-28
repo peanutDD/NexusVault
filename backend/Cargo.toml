@@ -10,6 +10,8 @@ axum = { version = "0.7", features = ["multipart", "json"] }
 bytes = "1.0"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
+tokio-stream = "0.1"
+async-stream = "0.3"
 tower = { version = "0.4", features = ["limit", "load-shed"] }
 tower-http = { version = "0.5", features = ["cors", "trace", "timeout", "limit", "catch-panic"] }
 
@@ -51,6 +53,11 @@ validator = { version = "0.18", features = ["derive"] }
 
 # Cache (bounded in-memory rate limit, etc.)
 moka = { version = "0.12", features = ["sync"] }
+
+# Filesystem space checks (prevent disk exhaustion)
+fs2 = "0.4"
+httpdate = "1.0"
+percent-encoding = "2.3"
 
 # Rate limiting - implemented as custom middleware
 
