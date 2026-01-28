@@ -1,0 +1,133 @@
+//! 普通上传（multipart/form-data）
+//!
+//! 目标：
+//! - 以流式方式读取 multipart，写入临时文件，避免大文件一次性进内存
+//! - 超过配置最大文件大小时尽早熔断
+
+use axum::extract::{Multipart, State};
+use axum::response::Response;
+use serde_json::json;
+use uuid::Uuid;
+
+use crate::extractors::AuthenticatedUser;
+use crate::services::file::FileService;
+use crate::utils::{json_response, AppError};
+use crate::AppState;
+
+/// 上传文件（普通上传）
+///
+/// 处理 multipart/form-data 格式的文件上传请求。
+///
+/// # 请求格式
+/// - Content-Type: `multipart/form-data`
+/// - Field name: `file`
+///
+/// # 响应
+/// ```json
+/// {
+///   "file": {
+///     "id": "...",
+///     "filename": "...",
+///     ...
+///   }
+/// }
+/// ```
+pub async fn upload_file_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    mut multipart: Multipart,
+) -> Result<Response, AppError> {
+    use tokio::io::AsyncWriteExt;
+
+    let file_service = FileService::from_state(&state);
+
+    // 解析 multipart 表单：以流式方式写入临时文件，避免把整个文件载入内存
+    let mut file_meta: Option<(String, String, u64, std::path::PathBuf)> = None;
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::File(format!("Failed to parse multipart: {}", e)))?
+    {
+        let name = field.name().unwrap_or("").to_string();
+
+        if name == "file" {
+            let filename = field
+                .file_name()
+                .ok_or_else(|| AppError::File("Missing filename".to_string()))?
+                .to_string();
+
+            let mime_type = field
+                .content_type()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "application/octet-stream".to_string());
+
+            // 临时文件路径
+            let tmp_dir = std::env::temp_dir().join("file-storage-backend");
+            tokio::fs::create_dir_all(&tmp_dir)
+                .await
+                .map_err(|e| AppError::Storage(format!("Failed to create temp dir: {}", e)))?;
+            let tmp_path = tmp_dir.join(format!("upload_{}", Uuid::new_v4()));
+
+            // 磁盘空间保护（best-effort）
+            if let Ok(free) = fs2::available_space(&tmp_dir) {
+                // 预留 16MiB 作为安全边界（日志/临时文件/元数据）
+                let reserve = 16 * 1024 * 1024u64;
+                if free.saturating_sub(reserve) == 0 {
+                    return Err(AppError::Storage("磁盘空间不足，请稍后重试".to_string()));
+                }
+            }
+
+            let mut out = tokio::fs::File::create(&tmp_path)
+                .await
+                .map_err(|e| AppError::Storage(format!("Failed to create temp file: {}", e)))?;
+
+            // 流式写入并统计大小
+            let mut file_size: u64 = 0;
+            let mut field = field;
+            while let Some(chunk) = field
+                .chunk()
+                .await
+                .map_err(|e| AppError::File(format!("Failed to read upload chunk: {}", e)))?
+            {
+                file_size = file_size.saturating_add(chunk.len() as u64);
+
+                // 早期熔断：超过配置最大值立刻停止（避免继续读入/写盘）
+                if file_size > state.config.max_file_size {
+                    let _ = tokio::fs::remove_file(&tmp_path).await;
+                    return Err(AppError::PayloadTooLarge(format!(
+                        "文件大小超过限制（{} bytes）",
+                        state.config.max_file_size
+                    )));
+                }
+
+                out.write_all(&chunk)
+                    .await
+                    .map_err(|e| AppError::Storage(format!("Failed to write temp file: {}", e)))?;
+            }
+            out.flush()
+                .await
+                .map_err(|e| AppError::Storage(format!("Failed to flush temp file: {}", e)))?;
+
+            file_meta = Some((filename, mime_type, file_size, tmp_path));
+            break;
+        }
+    }
+
+    let (original_filename, mime_type, file_size, tmp_path) =
+        file_meta.ok_or_else(|| AppError::File("No file provided".to_string()))?;
+
+    // 创建文件（优先走 from-path，避免大文件占用内存）
+    let file = match file_service
+        .create_file_from_path(user_id, original_filename, mime_type, file_size, &tmp_path)
+        .await
+    {
+        Ok(file) => file,
+        Err(e) => {
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+            return Err(e);
+        }
+    };
+
+    Ok(json_response(json!({ "file": file })))
+}
