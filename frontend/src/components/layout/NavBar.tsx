@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../../config/env';
 import ThemeToggle from '../common/ThemeToggle';
 import { cn } from '../../utils/cn';
-import { LogOut, Settings } from 'lucide-react';
+import { ArrowLeft, LogOut, Settings } from 'lucide-react';
 
 interface NavBarProps {
   title?: string;
@@ -39,9 +39,21 @@ export default function NavBar({
               <button
                 type="button"
                 onClick={() => navigate(backTo.path)}
-                className="shrink-0 text-slate-400 hover:text-emerald-200 transition-colors duration-200"
+                className={cn(
+                  'nav-btn inline-flex items-center justify-center rounded-md whitespace-nowrap',
+                  'nav-ui-fluid font-semibold tracking-wide text-slate-200',
+                  'bg-slate-900/40 border border-emerald-300/15',
+                  'hover:bg-slate-900/55 hover:border-emerald-300/30',
+                  'active:translate-y-px transition-all duration-200'
+                )}
+                aria-label={backTo.label}
+                title={backTo.label}
               >
-                ← {backTo.label}
+                <ArrowLeft
+                  className="nav-icon shrink-0 text-emerald-200/80"
+                  aria-hidden="true"
+                />
+                <span className="hidden sm:inline whitespace-nowrap">{backTo.label}</span>
               </button>
             )}
 
@@ -107,7 +119,7 @@ export default function NavBar({
                   )}
                 >
                   <Settings className="nav-icon shrink-0 text-emerald-200/80" aria-hidden="true" />
-                  <span className="hidden sm:inline whitespace-nowrap">设置</span>
+                  <span className="hidden sm:inline whitespace-nowrap">Settings</span>
                 </button>
               )}
 

@@ -1,4 +1,6 @@
 import { memo } from 'react';
+import { UserCircle2 } from 'lucide-react';
+import SettingsCard from './SettingsCard';
 
 interface User {
   username?: string;
@@ -12,27 +14,33 @@ interface UserInfoSectionProps {
 
 const UserInfoSection = memo(function UserInfoSection({ user }: UserInfoSectionProps) {
   return (
-    <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-      <h2 className="text-xl font-semibold text-white mb-4">用户信息</h2>
-      <div className="space-y-3">
-        <div>
-          <label className="text-sm text-gray-400">用户名</label>
-          <p className="text-white">{user?.username}</p>
+    <SettingsCard
+      id="profile"
+      title="账户信息"
+      description="查看你的基础信息。敏感操作建议开启更强的密码策略。"
+      icon={<UserCircle2 className="h-5 w-5" aria-hidden="true" />}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
+          <p className="text-xs tracking-wide text-slate-400">用户名</p>
+          <p className="mt-1 truncate text-sm font-semibold text-slate-100">
+            {user?.username ?? '-'}
+          </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-400">邮箱</label>
-          <p className="text-white">{user?.email}</p>
+        <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
+          <p className="text-xs tracking-wide text-slate-400">邮箱</p>
+          <p className="mt-1 truncate text-sm font-semibold text-slate-100">
+            {user?.email ?? '-'}
+          </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-400">注册时间</label>
-          <p className="text-white">
-            {user?.created_at
-              ? new Date(user.created_at).toLocaleString('zh-CN')
-              : '-'}
+        <div className="sm:col-span-2 rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
+          <p className="text-xs tracking-wide text-slate-400">注册时间</p>
+          <p className="mt-1 text-sm font-semibold text-slate-100">
+            {user?.created_at ? new Date(user.created_at).toLocaleString('zh-CN') : '-'}
           </p>
         </div>
       </div>
-    </div>
+    </SettingsCard>
   );
 });
 

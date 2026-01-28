@@ -1,4 +1,7 @@
 import { memo } from 'react';
+import { KeyRound } from 'lucide-react';
+import { cn } from '../../utils/cn';
+import SettingsCard from './SettingsCard';
 
 interface PasswordForm {
   current_password: string;
@@ -24,11 +27,18 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
   onSubmit,
 }: PasswordChangeSectionProps) {
   return (
-    <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-      <h2 className="text-xl font-semibold text-white mb-4">修改密码</h2>
+    <SettingsCard
+      id="security"
+      title="安全"
+      description="建议定期更换密码，并避免在多处复用同一密码。"
+      icon={<KeyRound className="h-5 w-5" aria-hidden="true" />}
+    >
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label htmlFor="current-password" className="block text-sm font-medium text-gray-300 mb-2">
+          <label
+            htmlFor="current-password"
+            className="block text-sm font-medium text-slate-200 mb-2"
+          >
             当前密码
           </label>
           <input
@@ -37,11 +47,19 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
             value={passwordForm.current_password}
             onChange={onCurrentPasswordChange}
             required
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className={cn(
+              'w-full rounded-xl px-4 py-2.5',
+              'bg-slate-950/40 border border-emerald-300/15',
+              'text-slate-100 placeholder:text-slate-500',
+              'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+            )}
           />
         </div>
         <div>
-          <label htmlFor="new-password" className="block text-sm font-medium text-gray-300 mb-2">
+          <label
+            htmlFor="new-password"
+            className="block text-sm font-medium text-slate-200 mb-2"
+          >
             新密码
           </label>
           <input
@@ -51,14 +69,20 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
             onChange={onNewPasswordChange}
             required
             minLength={8}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className={cn(
+              'w-full rounded-xl px-4 py-2.5',
+              'bg-slate-950/40 border border-emerald-300/15',
+              'text-slate-100 placeholder:text-slate-500',
+              'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+            )}
           />
-          <p className="text-gray-400 text-xs mt-1">
-            密码长度至少为 8 个字符
-          </p>
+          <p className="text-slate-400 text-xs mt-1">至少 8 个字符</p>
         </div>
         <div>
-          <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-300 mb-2">
+          <label
+            htmlFor="confirm-password"
+            className="block text-sm font-medium text-slate-200 mb-2"
+          >
             确认新密码
           </label>
           <input
@@ -68,18 +92,29 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
             onChange={onConfirmPasswordChange}
             required
             minLength={8}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className={cn(
+              'w-full rounded-xl px-4 py-2.5',
+              'bg-slate-950/40 border border-emerald-300/15',
+              'text-slate-100 placeholder:text-slate-500',
+              'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+            )}
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={cn(
+            'w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
+            'bg-gradient-to-r from-emerald-500/80 to-cyan-500/80',
+            'text-slate-950',
+            'hover:from-emerald-500 hover:to-cyan-500',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
         >
           {loading ? '修改中...' : '修改密码'}
         </button>
       </form>
-    </div>
+    </SettingsCard>
   );
 });
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
 import { folderService, type Folder } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
@@ -74,6 +75,8 @@ const RenameFolderDialog = lazy(() => import('./RenameFolderDialog'));
 const ConfirmDialog = lazy(() => import('../common/ConfirmDialog'));
 
 export default function FileList({ onOpenUpload }: FileListProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // 文件状态
   const [files, setFiles] = useState<FileMetadata[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +85,10 @@ export default function FileList({ onOpenUpload }: FileListProps) {
   const [total, setTotal] = useState(0);
   
   // 文件夹状态
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  // 用 URL 参数持久化当前文件夹，刷新/分享链接不会丢失上下文
+  // - `?folder=<uuid>`：进入某个文件夹
+  // - 无该参数：根目录（All Files）
+  const currentFolderId = searchParams.get('folder') || null;
   const [folders, setFolders] = useState<Folder[]>([]);
   const [folderPath, setFolderPath] = useState<Folder[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(false);
@@ -248,11 +254,22 @@ export default function FileList({ onOpenUpload }: FileListProps) {
 
   // 导航到文件夹
   const navigateToFolder = useCallback((folderId: string | null) => {
-    setCurrentFolderId(folderId);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (folderId) {
+          next.set('folder', folderId);
+        } else {
+          next.delete('folder');
+        }
+        return next;
+      },
+      { replace: false }
+    );
     setPage(1);
     setSelectedFiles(new Set());
     setSelectedFolders(new Set());
-  }, []);
+  }, [setSearchParams]);
 
   // 按类型分组文件（仅当排序为 type_group 时）
   const isGroupByType = sortBy === 'type_group';
