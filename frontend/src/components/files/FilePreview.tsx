@@ -24,6 +24,8 @@ export default function FilePreview({
   const [textContent, setTextContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
   
   // 请求 ID 用于处理竞态条件
   const requestIdRef = useRef(0);
@@ -157,6 +159,27 @@ export default function FilePreview({
 
   const { isImage, isPDF, isText, isVideo, isAudio, supported } = kind;
 
+  // 文件名展示：对于特别长的文件名做“中间省略”处理，保留开头和结尾，完整名称放在 title 中
+  const displayFilename = useMemo(() => {
+    const full = file.original_filename;
+    const MAX_LEN = 32;
+    if (full.length <= MAX_LEN) return full;
+
+    // 尝试保留扩展名
+    const match = full.match(/^(.*?)(\.[^.]+)?$/);
+    const namePart = match?.[1] ?? full;
+    const extPart = match?.[2] ?? '';
+
+    const budget = MAX_LEN - extPart.length - 1; // 预留 1 个字符给省略号
+    if (budget <= 0) {
+      return full.slice(0, MAX_LEN - 1) + '…';
+    }
+
+    const head = namePart.slice(0, Math.ceil(budget * 0.6));
+    const tail = namePart.slice(-Math.floor(budget * 0.4));
+    return `${head}…${tail}${extPart}`;
+  }, [file.original_filename]);
+
   const handleDownload = async () => {
     try {
       await fileService.downloadFile(file.id, file.original_filename);
@@ -164,6 +187,22 @@ export default function FilePreview({
       // 静默处理
     }
   };
+
+  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 3));
+  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5));
+  // 始终按顺时针方向累加旋转角度（不取模），保证视觉上每次都是继续顺时针
+  const handleRotate = () => setRotation((r) => r + 90);
+  const handleResetView = () => {
+    setZoom(1);
+    setRotation(0);
+  };
+
+  // 每次切换文件时重置视图状态
+  useEffect(() => {
+    setZoom(1);
+    setRotation(0);
+    setImageLoaded(false);
+  }, [file?.id]);
 
   return (
     <div
@@ -186,7 +225,7 @@ export default function FilePreview({
       {/* 网格纹理 */}
       <div className="preview-grid-pattern pointer-events-none absolute inset-0" />
 
-      {/* 左侧导航按钮 */}
+      {/* 左侧导航按钮（玻璃拟态圆钮） */}
       {files.length > 1 && (
         <button
           type="button"
@@ -198,11 +237,11 @@ export default function FilePreview({
           className={cn(
             'absolute left-4 top-1/2 z-20 -translate-y-1/2',
             'flex h-12 w-12 items-center justify-center rounded-full',
-            'bg-black/30 backdrop-blur-md',
-            'border border-white/10',
-            'text-white/70 transition-all duration-200',
-            canGoPrev 
-              ? 'hover:bg-black/50 hover:text-white hover:scale-110 hover:border-white/20 cursor-pointer' 
+            'bg-gradient-to-br from-white/10 via-white/5 to-transparent',
+            'backdrop-blur-xl border border-white/25 shadow-[0_18px_45px_rgba(15,23,42,0.75)]',
+            'text-white/80 transition-all duration-200',
+            canGoPrev
+              ? 'hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer'
               : 'opacity-30 cursor-not-allowed'
           )}
           aria-label="上一个文件"
@@ -213,7 +252,7 @@ export default function FilePreview({
         </button>
       )}
 
-      {/* 右侧导航按钮 */}
+      {/* 右侧导航按钮（保持垂直居中，玻璃拟态圆钮） */}
       {files.length > 1 && (
         <button
           type="button"
@@ -225,11 +264,11 @@ export default function FilePreview({
           className={cn(
             'absolute right-4 top-1/2 z-20 -translate-y-1/2',
             'flex h-12 w-12 items-center justify-center rounded-full',
-            'bg-black/30 backdrop-blur-md',
-            'border border-white/10',
-            'text-white/70 transition-all duration-200',
-            canGoNext 
-              ? 'hover:bg-black/50 hover:text-white hover:scale-110 hover:border-white/20 cursor-pointer' 
+            'bg-gradient-to-br from-white/10 via-white/5 to-transparent',
+            'backdrop-blur-xl border border-white/25 shadow-[0_18px_45px_rgba(15,23,42,0.75)]',
+            'text-white/80 transition-all duration-200',
+            canGoNext
+              ? 'hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer'
               : 'opacity-30 cursor-not-allowed'
           )}
           aria-label="下一个文件"
@@ -240,36 +279,86 @@ export default function FilePreview({
         </button>
       )}
 
-      {/* 顶部工具栏 */}
+      {/* 顶部工具栏（仅显示文件计数器，玻璃拟态胶囊） */}
       <div
-        className="relative z-10 flex shrink-0 items-center justify-between bg-gradient-to-b from-black/60 to-transparent px-4 py-3"
+        className="relative z-10 flex shrink-0 items-center justify-between bg-gradient-to-b from-black/70 via-black/40 to-transparent px-4 py-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" />
+        <div className="flex items-center gap-2" />
+
+        {/* 文件计数器：居中悬浮的小胶囊 */}
+        {files.length > 1 && (
+          <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10/80 px-3 py-1 text-[11px] text-white/80 shadow-[0_14px_35px_rgba(15,23,42,0.85)] backdrop-blur-xl">
+              {currentIndex + 1} / {files.length}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 右下角控制面板：关闭 / 下载 / 缩放 / 旋转 / 重置（单一玻璃拟态模块，垂直排布） */}
+      <div
+        className="absolute right-4 bottom-5 z-20"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex w-12 flex-col items-center gap-2 rounded-2xl border border-white/20 bg-white/10/85 px-1.5 py-3 shadow-[0_18px_45px_rgba(15,23,42,0.85)] backdrop-blur-xl">
+          {/* 关闭按钮（与左右导航按钮同风格） */}
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white/85 transition-colors hover:bg-black/70"
             aria-label="关闭"
           >
             <CloseIcon />
           </button>
-          {/* 文件计数器 */}
-          {files.length > 1 && (
-            <span className="text-sm text-white/50">
-              {currentIndex + 1} / {files.length}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
+
+          {/* 下载按钮（图标按钮） */}
           <button
             type="button"
             onClick={handleDownload}
-            className="flex h-10 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition-colors hover:bg-white/20"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/30"
+            aria-label="下载"
           >
             <DownloadIcon />
-            <span className="hidden sm:inline">下载</span>
           </button>
+
+          {/* 图片专用视图控制：仅在图片预览时显示 */}
+          {isImage && (
+            <>
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold text-white/85 hover:bg-white/10"
+                aria-label="放大"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold text-white/85 hover:bg-white/10"
+                aria-label="缩小"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                onClick={handleRotate}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold text-white/85 hover:bg-white/10"
+                aria-label="旋转 90 度"
+              >
+                ⤾
+              </button>
+              <button
+                type="button"
+                onClick={handleResetView}
+                className="mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white/80 hover:bg-white/10"
+              >
+                Reset
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -311,11 +400,16 @@ export default function FilePreview({
             {/* 图片预览 */}
             {isImage && blobUrl && (
               <div className="relative flex h-full w-full items-center justify-center pointer-events-none">
-                <div className={cn(
-                  'pointer-events-auto relative overflow-hidden rounded-lg transition-opacity duration-300',
-                  imageLoaded ? 'opacity-100' : 'opacity-0'
-                )}
-                onClick={(e) => e.stopPropagation()}
+                <div
+                  className={cn(
+                    'pointer-events-auto relative overflow-hidden rounded-lg transition-all duration-300',
+                    imageLoaded ? 'opacity-100' : 'opacity-0'
+                  )}
+                  style={{
+                    transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                    transformOrigin: 'center center',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <img
                     src={blobUrl}
@@ -433,25 +527,27 @@ export default function FilePreview({
         )}
       </div>
 
-      {/* 底部文件信息 */}
+      {/* 底部文件信息（简洁玻璃拟态卡片） */}
       <div
-        className="relative z-10 shrink-0 bg-gradient-to-t from-black/60 to-transparent px-4 py-4"
+        className="relative z-10 shrink-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-6 pt-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto max-w-2xl text-center">
-          <h2
-            id="preview-title"
-            className="truncate text-base font-medium text-white sm:text-lg"
-            title={file.original_filename}
-          >
-            {file.original_filename}
-          </h2>
-          <div className="file-meta-14px mt-1 flex items-center justify-center gap-3 text-white/50">
-            <span>{formatFileSize(file.file_size)}</span>
-            <span className="h-1 w-1 rounded-full bg-white/30" />
-            <span>{getMimeTypeLabel(file.mime_type)}</span>
-            <span className="h-1 w-1 rounded-full bg-white/30" />
-            <span>{formatDate(file.created_at)}</span>
+        <div className="mx-auto max-w-3xl">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-white/15 bg-white/10/85 px-4 py-3 text-center shadow-[0_18px_45px_rgba(15,23,42,0.85)] backdrop-blur-xl">
+            <h2
+              id="preview-title"
+              className="truncate text-sm font-semibold tracking-wide text-white sm:text-base"
+              title={file.original_filename}
+            >
+              {displayFilename}
+            </h2>
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-3 text-[11px] text-white/70">
+              <span>{formatFileSize(file.file_size)}</span>
+              <span className="h-1 w-1 rounded-full bg-white/35" />
+              <span>{getMimeTypeLabel(file.mime_type)}</span>
+              <span className="h-1 w-1 rounded-full bg-white/35" />
+              <span>{formatDate(file.created_at)}</span>
+            </div>
           </div>
         </div>
       </div>
