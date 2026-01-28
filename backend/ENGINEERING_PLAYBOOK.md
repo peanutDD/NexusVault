@@ -19,6 +19,29 @@
 
 ## 已落地的工程措施（对应代码）
 
+### 0) 代码结构升级：Handlers/Services/Repositories 解耦与模块化（重要）
+
+近期对“文件域（files）”做了一次结构性重构，核心目标是：
+
+- **Handlers 更薄**：只做 HTTP 层（参数解析、鉴权 extractor、响应构建、流式 body 拼装）。
+- **Services 更纯**：只做业务编排（校验、存储调用、跨步骤流程），**不直接写 SQL**。
+- **Repositories 专职数据访问**：集中管理 SQL/事务/动态查询构建（`sqlx::QueryBuilder`），减少散落 SQL 与 N+1。
+
+落地结构：
+
+- `src/handlers/files/`：按业务拆分（upload/list/delete/batch/chunked_upload/download/* 等）
+- `src/services/file/`：按业务能力拆分（upload/list/read/delete/batch_zip/quota/categories/chunked_upload）
+- `src/repositories/`：数据访问层（`files`/`users`/`upload_sessions`）
+
+带来的直接收益：
+
+- **可维护性**：单文件更小、职责更清晰，便于局部重构与单测。
+- **低耦合**：改 SQL 不影响 service，改业务流程不需要到处搜 SQL。
+- **性能**：容易发现并消灭 N+1（例如批量删除/批量 zip 的循环查询）。
+- **安全性**：动态 SQL 更推荐用 `QueryBuilder + push_bind`，避免手写 `$1/$2` 计数和字符串拼接风险。
+
+> 约定：后续新增数据库操作，优先加到 `src/repositories/*`，service 通过 repo 调用；仅在极少数需要跨 repo 事务且不便拆分时，才允许在 service 里直接写 SQL（并在注释说明原因）。
+
 ### 1) 路由级并发限制（快速背压）
 
 对热点端点加了 **ConcurrencyLimit + LoadShed**，过载时返回 **503**（`SERVICE_OVERLOADED`），避免：
@@ -47,7 +70,7 @@
 - 读取 multipart 的 `chunk()`，边读边写到临时文件
 - 再通过存储层的 `save_file_from_path` 保存到最终存储（Local/S3）
 
-位置：`src/handlers/files.rs`
+位置：`src/handlers/files/upload.rs`
 
 注意事项：
 
@@ -67,7 +90,7 @@
 - 校验合并后文件大小
 - 调用 `create_file_from_path` 写入最终存储并落库
 
-位置：`src/services/file.rs`（`complete_chunked_upload`）
+位置：`src/services/file/chunked_upload.rs`（`complete_chunked_upload`）
 
 ---
 
@@ -96,7 +119,10 @@
 - 在同一条查询里使用 `COUNT(*) OVER() AS total_count`
 - 只做一次 `fetch_all`
 
-位置：`src/services/file.rs`（`list_files`）
+位置：
+
+- `src/repositories/files.rs`（`FilesRepo::list_files`，`sqlx::QueryBuilder` 动态查询）
+- `src/services/file/list.rs`（`FileService::list_files` 业务层封装）
 
 备注：
 
@@ -123,7 +149,7 @@
 已落地：
 
 - 列表接口在事务内执行 `SET LOCAL statement_timeout = '3s'`（避免把配置污染到连接池的其它请求）
-  - 位置：`src/services/file.rs`（`list_files`）
+  - 位置：`src/repositories/files.rs`（`FilesRepo::list_files`）
 
 ---
 
@@ -140,8 +166,8 @@
 位置：
 
 - `src/services/storage.rs`（`StorageReadStream` / `open_read_stream`）
-- `src/services/file.rs`（`open_file_stream`）
-- `src/handlers/files.rs`（`download_file_handler` / `preview_file_handler`）
+- `src/services/file/read.rs`（`open_file_stream`）
+- `src/handlers/files/download/mod.rs`（入口 handler）
 - `src/utils/response.rs`（`stream_file_response`）
 
 ---
@@ -159,8 +185,8 @@
 位置：
 
 - `src/services/storage.rs`（`open_read_stream_range`）
-- `src/services/file.rs`（`open_file_stream_range`）
-- `src/handlers/files.rs`（`download_file_handler` / `preview_file_handler`）
+- `src/services/file/read.rs`（`open_file_stream_range`）
+- `src/handlers/files/download/*`（Range/ETag/If-Range/Multipart 等子模块）
 
 ---
 
@@ -204,8 +230,8 @@
 
 位置：
 
-- `src/handlers/files.rs`（`chunked_upload_chunk_handler`）
-- `src/services/file.rs`（`upload_chunk`）
+- `src/handlers/files/chunked_upload.rs`（`chunked_upload_chunk_handler`）
+- `src/services/file/chunked_upload.rs`（`upload_chunk`）
 
 ---
 
@@ -221,7 +247,7 @@
 已落地：
 
 - `create_file` / `create_file_from_path` 在落库失败时 best-effort 执行 `storage.delete_file(file_path)` 清理。
-  - 位置：`src/services/file.rs`
+  - 位置：`src/services/file/upload.rs`
 
 ---
 
@@ -283,11 +309,11 @@
 已落地：
 
 - **普通上传**：在写入临时文件过程中实时累计 `file_size`，一旦超过 `config.max_file_size` 立刻停止并删除临时文件（避免继续读入/写盘）。
-  - 位置：`src/handlers/files.rs`（`upload_file_handler`）
+  - 位置：`src/handlers/files/upload.rs`（`upload_file_handler`）
 - **分块写盘**：写 chunk 前 best-effort 检查 `temp_path` 所在盘剩余空间，保留 safety margin，空间不足直接返回错误。
-  - 位置：`src/services/file.rs`（`upload_chunk`）
+  - 位置：`src/services/file/chunked_upload.rs`（`upload_chunk`）
 - **分块合并**：合并前 best-effort 检查剩余空间是否足以容纳最终文件，避免合并到一半磁盘写满。
-  - 位置：`src/services/file.rs`（`complete_chunked_upload`）
+  - 位置：`src/services/file/chunked_upload.rs`（`complete_chunked_upload`）
 
 依赖：
 
@@ -302,7 +328,7 @@
 已落地：
 
 - 使用 SQL 原子追加：`array_append(uploaded_parts, $1)` 并加 `NOT ($1 = ANY(uploaded_parts))` 保护幂等
-  - 位置：`src/services/file.rs`（`upload_chunk`）
+  - 位置：`src/repositories/upload_sessions.rs`（`UploadSessionsRepo::append_uploaded_part`）
 
 ## 压测与观测建议（推荐后续补齐）
 
