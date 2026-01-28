@@ -29,6 +29,7 @@
 .fileListGlassScope .glass-btn {
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .fileListGlassScope .glass-panel::before,
@@ -48,6 +49,7 @@
     radial-gradient(90% 60% at 90% 10%, rgba(217, 70, 239, 0.10), transparent 62%),
     radial-gradient(80% 60% at 10% 95%, rgba(16, 185, 129, 0.08), transparent 60%);
   opacity: 0.55;
+  z-index: 0;
 }
 
 .fileListGlassScope .glass-panel::after,
@@ -71,6 +73,14 @@
       transparent 6px
     );
   opacity: 0.35;
+  z-index: 0;
+}
+
+/* 内容层抬高，避免细线条 SVG 被高光层“洗掉” */
+.fileListGlassScope .glass-panel > *,
+.fileListGlassScope .glass-panel-soft > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* 面板（用于：区域容器、批量操作栏、全选栏等） */
@@ -83,6 +93,13 @@
   box-shadow: var(--glass-shadow);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+}
+
+/* 顶部工具区：不应盖住全局导航栏（NavBar 为 z-50） */
+.fileListGlassScope .glass-panel.glass-panel-toolbar {
+  /* 下拉已改为 portal（挂到 body），无需 overflow: visible / 额外抬高层级 */
+  overflow: hidden;
+  z-index: auto;
 }
 
 .fileListGlassScope .glass-panel-soft {
@@ -165,6 +182,101 @@
   transform: translateY(-0.5px);
 }
 
+/* 单文件操作按钮：更“玻璃”，但不引入重 blur/纹理 */
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-share {
+  border-color: rgba(110, 231, 183, 0.22);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.05)),
+    radial-gradient(90% 70% at 15% 0%, rgba(16, 185, 129, 0.10), transparent 60%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 12px 30px rgba(16, 185, 129, 0.10);
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-share::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* 更明显的玻璃高光 + 绿光点缀 */
+  background:
+    radial-gradient(120% 70% at 20% 0%, rgba(255, 255, 255, 0.22), transparent 60%),
+    radial-gradient(90% 70% at 85% 20%, rgba(16, 185, 129, 0.18), transparent 62%);
+  opacity: 0.95;
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-share::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-share > svg {
+  position: relative;
+  z-index: 1;
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-share:hover {
+  border-color: rgba(110, 231, 183, 0.34);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)),
+    radial-gradient(90% 70% at 15% 0%, rgba(16, 185, 129, 0.14), transparent 60%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 14px 34px rgba(16, 185, 129, 0.14);
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-delete {
+  border-color: rgba(253, 164, 175, 0.24);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.05)),
+    radial-gradient(90% 70% at 15% 0%, rgba(244, 63, 94, 0.10), transparent 60%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 12px 30px rgba(244, 63, 94, 0.10);
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-delete::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* 更明显的玻璃高光 + 红光点缀 */
+  background:
+    radial-gradient(120% 70% at 20% 0%, rgba(255, 255, 255, 0.22), transparent 60%),
+    radial-gradient(90% 70% at 85% 20%, rgba(244, 63, 94, 0.18), transparent 62%);
+  opacity: 0.95;
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-delete::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-delete > svg {
+  position: relative;
+  z-index: 1;
+}
+
+.fileListGlassScope .glass-iconbtn.glass-iconbtn-delete:hover {
+  border-color: rgba(253, 164, 175, 0.36);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)),
+    radial-gradient(90% 70% at 15% 0%, rgba(244, 63, 94, 0.14), transparent 60%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 14px 34px rgba(244, 63, 94, 0.14);
+}
+
 /* 主按钮（用于：批量操作按钮、分页按钮等） */
 .fileListGlassScope .glass-btn {
   border-radius: 999px;
@@ -174,6 +286,75 @@
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+/* 顶部工具按钮：更小圆角、更强辨识度 */
+.fileListGlassScope .glass-btn.toolbarActionBtn {
+  border-radius: 8px;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.fileListGlassScope .glass-btn.toolbarActionBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+/* macOS 风格动作图标：彩色圆角方块底 + 高光 + 白色线条 */
+.fileListGlassScope .macActionIcon {
+  /* 图标整体略小于文字行高 */
+  width: 0.92rem;
+  height: 0.92rem;
+  border-radius: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex: 0 0 auto;
+  box-shadow:
+    0 7px 16px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+
+.fileListGlassScope .macActionIcon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 20% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(90% 70% at 85% 20%, rgba(255, 255, 255, 0.18), transparent 62%);
+  opacity: 0.55;
+}
+
+.fileListGlassScope .macActionIconGlyph {
+  width: 0.62rem;
+  height: 0.62rem;
+  color: rgba(255, 255, 255, 0.92);
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.22));
+}
+
+.fileListGlassScope .macActionIcon--selected {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.95), rgba(37, 99, 235, 0.95));
+}
+.fileListGlassScope .macActionIcon--move {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.95), rgba(37, 99, 235, 0.95));
+}
+.fileListGlassScope .macActionIcon--share {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.95), rgba(124, 58, 237, 0.95));
+}
+.fileListGlassScope .macActionIcon--download {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.95), rgba(5, 150, 105, 0.95));
+}
+.fileListGlassScope .macActionIcon--delete {
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.95), rgba(225, 29, 72, 0.95));
 }
 
 /* 性能关键：卡片/缩略图/按钮上的“颗粒纹理”会显著增加重绘成本，禁用它们 */

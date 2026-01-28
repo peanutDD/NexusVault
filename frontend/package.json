@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:analyze": "ANALYZE=true tsc -b && vite build",
+    "build:analyze": "ANALYZE=true tsc -b && ANALYZE=true vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -24,6 +24,7 @@
     "react-router-dom": "^7.12.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
+    "web-vitals": "^5.1.0",
     "zod": "^4.3.5",
     "zustand": "^5.0.10"
   },

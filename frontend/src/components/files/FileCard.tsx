@@ -140,7 +140,7 @@ const FileCard = memo(function FileCard({
           <button
             type="button"
             onClick={() => onShare(file)}
-            className="glass-iconbtn rounded-lg p-2 text-white/70 hover:text-emerald-300"
+            className="glass-iconbtn glass-iconbtn-share rounded-lg p-2 text-white/70 hover:text-emerald-300"
             title="分享"
           >
             <ShareIcon />
@@ -149,7 +149,7 @@ const FileCard = memo(function FileCard({
         <button
           type="button"
           onClick={() => onDelete(file.id)}
-          className="glass-iconbtn rounded-lg p-2 text-white/70 hover:text-rose-300"
+          className="glass-iconbtn glass-iconbtn-delete rounded-lg p-2 text-white/70 hover:text-rose-300"
           title="删除"
         >
           <TrashIcon />

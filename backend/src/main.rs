@@ -28,16 +28,20 @@ mod utils;
 pub use state::AppState;
 
 use axum::{
+    error_handling::HandleErrorLayer,
     extract::Request,
+    http::StatusCode,
     middleware::Next,
     response::Response,
     routing::get,
+    Json,
     Router,
 };
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tower::ServiceBuilder;
-use tower_http::{cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
+use serde_json::json;
+use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError, ServiceBuilder};
+use tower_http::{catch_panic::CatchPanicLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
 // use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 // use std::net::IpAddr;
 
@@ -45,9 +49,31 @@ use config::Config;
 use database::pool::create_pool;
 use middleware::rate_limit;
 use services::file::create_storage;
+use services::maintenance::spawn_upload_session_cleanup;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
+    // 允许通过环境变量调优 Tokio runtime（学习/压测非常有用）
+    // - TOKIO_WORKER_THREADS：CPU 密集型任务并发（默认=可用 CPU 核心数）
+    // - TOKIO_MAX_BLOCKING_THREADS：阻塞任务池上限（默认=512，影响 tokio::fs/CPU-heavy blocking）
+    let worker_threads = std::env::var("TOKIO_WORKER_THREADS")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or_else(|| std::thread::available_parallelism().map(|n| n.get()).unwrap_or(10));
+
+    let max_blocking_threads = std::env::var("TOKIO_MAX_BLOCKING_THREADS")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(512);
+
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .worker_threads(worker_threads)
+        .max_blocking_threads(max_blocking_threads)
+        .build()?
+        .block_on(async_main())
+}
+
+async fn async_main() -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -77,6 +103,9 @@ async fn main() -> anyhow::Result<()> {
     // Build application state
     let app_state = AppState::new(config.clone(), pool, storage);
 
+    // 后台维护任务：清理过期分块上传会话与临时目录（防止磁盘长期堆积）
+    spawn_upload_session_cleanup(app_state.pool.clone(), Duration::from_secs(300), 200);
+
     // Build application
     let app = create_app(app_state, &config).await;
 
@@ -84,9 +113,35 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Server listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        let _ = tokio::signal::ctrl_c().await;
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        use tokio::signal::unix::{signal, SignalKind};
+        if let Ok(mut sigterm) = signal(SignalKind::terminate()) {
+            sigterm.recv().await;
+        }
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    tracing::info!("Shutdown signal received");
 }
 
 /// 创建并配置 Axum 应用
@@ -102,10 +157,26 @@ async fn create_app(app_state: AppState, config: &Config) -> Router {
     let cors = create_cors_layer(config);
 
     // 配置速率限制：每分钟 300 个请求（提高以支持缩略图批量加载）
-    let rate_limit_state = rate_limit::create_rate_limit_middleware(300, 60);
+    // 增加 max_keys 上限，避免高并发/攻击场景下 key 无限增长导致内存膨胀
+    let rate_limit_state = rate_limit::create_rate_limit_middleware(300, 60, 20_000);
 
     // 构建中间件栈
     let middleware_stack = ServiceBuilder::new()
+        // 全局过载保护：限制 in-flight request 总数并快速拒绝，防止极端并发把进程拖死
+        .layer(HandleErrorLayer::new(|err: BoxError| async move {
+            tracing::warn!("global overload triggered: {}", err);
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({
+                    "error": "service overloaded",
+                    "message": "服务器繁忙，请稍后重试",
+                    "code": "SERVICE_OVERLOADED"
+                })),
+            )
+        }))
+        .layer(LoadShedLayer::new())
+        .layer(ConcurrencyLimitLayer::new(512))
+        .layer(CatchPanicLayer::new()) // 捕获 panic，避免因意外 panic 导致进程退出（panic=unwind 时尤为有用）
         .layer(TraceLayer::new_for_http()) // HTTP 请求追踪
         .layer(TimeoutLayer::new(Duration::from_secs(30))) // 30 秒超时
         .layer(cors) // CORS 支持

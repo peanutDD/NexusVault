@@ -8,3 +8,13 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// 可选：通过 `?vitals=1` 输出 Web Vitals（默认关闭，零侵入）
+try {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('vitals')) {
+    void import('./vitals').then((m) => m.reportVitals());
+  }
+} catch {
+  // no-op: 非浏览器环境/极端情况下忽略
+}

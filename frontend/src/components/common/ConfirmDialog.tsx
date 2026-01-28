@@ -69,6 +69,13 @@ export default function ConfirmDialog({
   const config = variantConfig[variant];
   const isGlass = appearance === 'glass';
 
+  const glassConfirmClass =
+    variant === 'danger'
+      ? 'border-rose-300/35 bg-rose-500/15 hover:bg-rose-500/20 shadow-[0_14px_40px_rgba(244,63,94,0.18)]'
+      : variant === 'warning'
+        ? 'border-amber-300/35 bg-amber-500/15 hover:bg-amber-500/20 shadow-[0_14px_40px_rgba(245,158,11,0.16)]'
+        : 'border-sky-300/35 bg-sky-500/15 hover:bg-sky-500/20 shadow-[0_14px_40px_rgba(56,189,248,0.16)]';
+
   // ESC 关闭
   useEffect(() => {
     if (!open) return;
@@ -100,7 +107,8 @@ export default function ConfirmDialog({
       <div
         className={cn(
           'absolute inset-0 animate-in fade-in duration-150',
-          isGlass ? 'bg-black/70' : 'bg-black/80'
+          // 玻璃拟态需要“看得见背景”，遮罩不要太黑
+          isGlass ? 'bg-black/35 backdrop-blur-sm' : 'bg-black/80'
         )}
         onClick={() => !loading && onCancel()}
       />
@@ -108,17 +116,17 @@ export default function ConfirmDialog({
       {/* 对话框 */}
       <div
         className={cn(
-          'relative w-full max-w-xs overflow-hidden rounded-lg shadow-2xl animate-in zoom-in-95 fade-in duration-150',
+          'relative w-full max-w-xs overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-150',
           isGlass
             ? [
-                'border border-white/15 bg-white/10 text-white',
-                'backdrop-blur-lg backdrop-saturate-150',
-                'ring-1 ring-white/10',
-                // 轻微高光（不依赖其它页面样式）
+                // 强化“玻璃感”：优先复用文件列表的玻璃拟态（在 Files 页里会生效）
+                'glass-panel rounded-2xl ring-1 ring-white/10',
+                // 兜底：如果不在 fileListGlassScope 环境，也要有玻璃感
+                'border border-white/20 bg-white/12 text-white backdrop-blur-2xl backdrop-saturate-150',
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
-                'before:bg-[radial-gradient(120%_70%_at_15%_0%,rgba(255,255,255,0.18),transparent_60%)]',
+                'before:bg-gradient-to-br before:from-white/25 before:via-fuchsia-400/10 before:to-transparent',
               ].join(' ')
-            : 'bg-[#1C1C28] ring-1 ring-white/10'
+            : 'rounded-lg bg-[#1C1C28] ring-1 ring-white/10'
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -163,7 +171,7 @@ export default function ConfirmDialog({
               className={cn(
                 'flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
                 isGlass
-                  ? 'border border-white/15 bg-white/10 text-white/80 hover:bg-white/15 hover:text-white'
+                  ? 'glass-btn text-white/85 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25'
                   : 'bg-[#2A2A3C] text-gray-300 hover:bg-[#3A3A4D] hover:text-white'
               )}
             >
@@ -175,9 +183,13 @@ export default function ConfirmDialog({
               onClick={onConfirm}
               disabled={loading}
               className={cn(
-                'flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-                config.buttonBg,
-                isGlass && 'shadow-[0_14px_40px_rgba(0,0,0,0.35)]',
+                'flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all disabled:cursor-not-allowed disabled:opacity-50',
+                isGlass
+                  ? cn(
+                      'glass-btn border text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                      glassConfirmClass
+                    )
+                  : cn(config.buttonBg, 'disabled:cursor-not-allowed disabled:opacity-50'),
                 'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >

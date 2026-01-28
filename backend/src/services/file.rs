@@ -38,6 +38,7 @@
 //! ```
 
 use chrono::Utc;
+use bytes::Bytes;
 use sqlx::PgPool;
 use std::path::Path;
 use std::sync::Arc;
@@ -49,12 +50,19 @@ use crate::{
     models::upload_session::{
         CompleteChunkedUploadRequest, InitChunkedUploadRequest, UploadSession,
     },
-    services::storage::{LocalStorage, S3Storage, StorageBackend},
+    services::storage::{LocalStorage, S3Storage, StorageBackend, StorageReadStream},
     utils::AppError,
 };
 
 /// 分块上传的块大小（5 MiB）
 pub const CHUNK_SIZE: u32 = 5 * 1024 * 1024;
+
+/// 批量下载 ZIP 的安全限制（硬限制）
+///
+/// 说明：当前实现会把每个文件内容与最终 ZIP 都放在内存里（Vec<u8>），
+/// 若不限制，容易导致内存暴涨/超时/服务不稳定。
+const MAX_BATCH_ZIP_FILES: usize = 200;
+const MAX_BATCH_ZIP_TOTAL_BYTES: i64 = 250 * 1024 * 1024; // 250 MiB
 
 pub struct FileService {
     pool: PgPool,
@@ -83,24 +91,24 @@ impl FileService {
         )
     }
 
-    pub async fn create_file(
+    async fn ensure_can_store(
         &self,
         user_id: Uuid,
-        original_filename: String,
-        mime_type: String,
+        mime_type: &str,
         file_size: u64,
-        data: Vec<u8>,
-    ) -> Result<FileResponse, AppError> {
+    ) -> Result<(), AppError> {
         // Validate file size
         crate::utils::validate_file_size(file_size, self.config.max_file_size)?;
 
         // Check storage quota（使用 query_scalar + flatten 简化嵌套 Option）
         let (current_usage, _) = self.get_storage_usage(user_id).await?;
-        let quota = sqlx::query_scalar::<_, Option<i64>>("SELECT storage_quota FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await?
-            .flatten();
+        let quota = sqlx::query_scalar::<_, Option<i64>>(
+            "SELECT storage_quota FROM users WHERE id = $1",
+        )
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .flatten();
 
         if let Some(quota) = quota {
             if current_usage + file_size as i64 > quota {
@@ -114,7 +122,48 @@ impl FileService {
         }
 
         // Validate mime type
-        crate::utils::validate_mime_type(&mime_type, &self.config.allowed_mime_types)?;
+        crate::utils::validate_mime_type(mime_type, &self.config.allowed_mime_types)?;
+
+        Ok(())
+    }
+
+    async fn insert_file_record(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+        storage_filename: &str,
+        original_filename: &str,
+        file_path: &str,
+        file_size: u64,
+        mime_type: &str,
+    ) -> Result<FileResponse, AppError> {
+        let file = sqlx::query_as::<_, File>(
+            "INSERT INTO files (id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+        )
+        .bind(file_id)
+        .bind(user_id)
+        .bind(storage_filename)
+        .bind(original_filename)
+        .bind(file_path)
+        .bind(file_size as i64)
+        .bind(mime_type)
+        .bind(&self.config.storage_backend)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(FileResponse::from(file))
+    }
+
+    pub async fn create_file(
+        &self,
+        user_id: Uuid,
+        original_filename: String,
+        mime_type: String,
+        file_size: u64,
+        data: Vec<u8>,
+    ) -> Result<FileResponse, AppError> {
+        self.ensure_can_store(user_id, &mime_type, file_size).await?;
 
         // Sanitize filename
         let sanitized_filename = crate::utils::validation::sanitize_filename(&original_filename)?;
@@ -127,23 +176,63 @@ impl FileService {
             .save_file(user_id, file_id, &storage_filename, &data)
             .await?;
 
-        // Save file metadata to database
-        let file = sqlx::query_as::<_, File>(
-            "INSERT INTO files (id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+        let inserted = self.insert_file_record(
+            file_id,
+            user_id,
+            &storage_filename,
+            &original_filename,
+            &file_path,
+            file_size,
+            &mime_type,
         )
-        .bind(file_id)
-        .bind(user_id)
-        .bind(&storage_filename)
-        .bind(&original_filename)
-        .bind(&file_path)
-        .bind(file_size as i64)
-        .bind(&mime_type)
-        .bind(&self.config.storage_backend)
-        .fetch_one(&self.pool)
-        .await?;
+        .await;
 
-        Ok(FileResponse::from(file))
+        // 若落库失败，尽量清理已写入的存储文件，避免产生“孤儿文件”占用空间
+        if inserted.is_err() {
+            let _ = self.storage.delete_file(&file_path).await;
+        }
+
+        inserted
+    }
+
+    pub async fn create_file_from_path(
+        &self,
+        user_id: Uuid,
+        original_filename: String,
+        mime_type: String,
+        file_size: u64,
+        source_path: &Path,
+    ) -> Result<FileResponse, AppError> {
+        self.ensure_can_store(user_id, &mime_type, file_size).await?;
+
+        // Sanitize filename
+        let sanitized_filename = crate::utils::validation::sanitize_filename(&original_filename)?;
+        let file_id = Uuid::new_v4();
+        let storage_filename = format!("{}_{}", file_id, sanitized_filename);
+
+        // Save file to storage without loading into memory
+        let file_path = self
+            .storage
+            .save_file_from_path(user_id, file_id, &storage_filename, source_path)
+            .await?;
+
+        let inserted = self.insert_file_record(
+            file_id,
+            user_id,
+            &storage_filename,
+            &original_filename,
+            &file_path,
+            file_size,
+            &mime_type,
+        )
+        .await;
+
+        // 若落库失败，尽量清理已写入的存储文件（此时 source_path 可能已被 move/删除）
+        if inserted.is_err() {
+            let _ = self.storage.delete_file(&file_path).await;
+        }
+
+        inserted
     }
 
     pub async fn list_files(
@@ -152,6 +241,7 @@ impl FileService {
         query: FileListQuery,
     ) -> Result<(Vec<FileResponse>, u64), AppError> {
         use chrono::{DateTime, NaiveDateTime, Utc};
+        use sqlx::Row;
 
         let page = query.page.unwrap_or(1);
         let limit = query.limit.unwrap_or(20).min(100);
@@ -314,15 +404,16 @@ impl FileService {
         };
         let order_clause = format!("{} {}", sort_column, sort_direction);
 
-        // Build query with dynamic WHERE clause. SELECT 需包含 File 全部字段，否则 FromRow 报 no column file_path
+        // Build query with dynamic WHERE clause.
+        // 使用 COUNT(*) OVER() 将 total 合并到同一条查询，避免额外的 COUNT(*) 查询压垮连接池。
         let query_sql = format!(
-            "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, created_at, updated_at FROM files {} ORDER BY {} LIMIT ${} OFFSET ${}",
+            "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, created_at, updated_at, COUNT(*) OVER() AS total_count \
+             FROM files {} ORDER BY {} LIMIT ${} OFFSET ${}",
             where_clause,
             order_clause,
             param_index,
             param_index + 1
         );
-        let count_sql = format!("SELECT COUNT(*) FROM files {}", where_clause);
 
         // Build query with bindings (using query for dynamic SQL)
         let mut query_builder = sqlx::query(&query_sql);
@@ -364,50 +455,23 @@ impl FileService {
         query_builder = query_builder.bind(limit as i64);
         query_builder = query_builder.bind(offset as i64);
 
-        let rows = query_builder.fetch_all(&self.pool).await?;
+        // 为列表查询设置更短的 statement_timeout，避免慢查询长时间占用连接导致雪崩。
+        // 使用 SET LOCAL（事务内生效），避免把设置“污染”到连接池中的其它请求。
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET LOCAL statement_timeout = '3s'")
+            .execute(&mut *tx)
+            .await?;
+
+        let rows = query_builder.fetch_all(&mut *tx).await?;
+        tx.commit().await?;
+        let total: i64 = rows
+            .first()
+            .and_then(|row| row.try_get::<i64, _>("total_count").ok())
+            .unwrap_or(0);
         let files: Vec<File> = rows
             .into_iter()
             .map(|row| sqlx::FromRow::from_row(&row).map_err(AppError::Database))
             .collect::<Result<Vec<_>, _>>()?;
-
-        // Build count query with bindings (using query_scalar for dynamic SQL)
-        let mut count_builder = sqlx::query_scalar::<_, i64>(&count_sql);
-        count_builder = count_builder.bind(user_id);
-
-        if let Some(ref cat) = category_filter_exact {
-            count_builder = count_builder.bind(cat);
-        }
-
-        // Bind folder_id if specified and not null
-        if let Some(Some(fid)) = &folder_id_filter {
-            count_builder = count_builder.bind(*fid);
-        }
-
-        if let Some(ref search_pattern) = search_pattern {
-            count_builder = count_builder.bind(search_pattern);
-        }
-
-        if let Some(ref mime_type) = mime_type_filter {
-            count_builder = count_builder.bind(mime_type);
-        }
-
-        if let Some(df) = date_from {
-            count_builder = count_builder.bind(df);
-        }
-
-        if let Some(dt) = date_to {
-            count_builder = count_builder.bind(dt);
-        }
-
-        if let Some(size_min) = query.size_min {
-            count_builder = count_builder.bind(size_min);
-        }
-
-        if let Some(size_max) = query.size_max {
-            count_builder = count_builder.bind(size_max);
-        }
-
-        let total: i64 = count_builder.fetch_one(&self.pool).await?;
 
         let responses: Vec<FileResponse> = files.into_iter().map(FileResponse::from).collect();
         Ok((responses, total as u64))
@@ -426,6 +490,21 @@ impl FileService {
 
     pub async fn get_file_data(&self, file: &File) -> Result<Vec<u8>, AppError> {
         self.storage.get_file(&file.file_path).await
+    }
+
+    pub async fn open_file_stream(&self, file: &File) -> Result<StorageReadStream, AppError> {
+        self.storage.open_read_stream(&file.file_path).await
+    }
+
+    pub async fn open_file_stream_range(
+        &self,
+        file: &File,
+        start: u64,
+        end_inclusive: u64,
+    ) -> Result<StorageReadStream, AppError> {
+        self.storage
+            .open_read_stream_range(&file.file_path, start, end_inclusive)
+            .await
     }
 
     pub async fn delete_file(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
@@ -460,14 +539,59 @@ impl FileService {
         ids: &[Uuid],
         user_id: Uuid,
     ) -> Result<Vec<u8>, AppError> {
+        use std::collections::HashSet;
         use std::io::Write;
         use zip::write::ZipWriter;
         use zip::CompressionMethod;
 
+        if ids.is_empty() {
+            return Err(AppError::Validation("请选择要下载的文件".to_string()));
+        }
+
+        // 去重（保持原顺序）
+        let mut seen = HashSet::<Uuid>::with_capacity(ids.len());
+        let mut uniq_ids = Vec::<Uuid>::with_capacity(ids.len());
+        for &id in ids {
+            if seen.insert(id) {
+                uniq_ids.push(id);
+            }
+        }
+
+        if uniq_ids.len() > MAX_BATCH_ZIP_FILES {
+            return Err(AppError::Validation(format!(
+                "单次批量下载最多 {} 个文件（当前 {}）",
+                MAX_BATCH_ZIP_FILES,
+                uniq_ids.len()
+            )));
+        }
+
+        // 先用数据库聚合校验总大小（避免提前读入所有文件数据）
+        let (found_count, total_size): (i64, i64) = sqlx::query_as(
+            "SELECT COUNT(*)::BIGINT, COALESCE(SUM(file_size)::BIGINT, 0) \
+             FROM files WHERE user_id = $1 AND id = ANY($2)",
+        )
+        .bind(user_id)
+        .bind(&uniq_ids)
+        .fetch_one(&self.pool)
+        .await?;
+
+        if found_count <= 0 {
+            return Err(AppError::Validation("没有可下载的文件".to_string()));
+        }
+
+        if total_size > MAX_BATCH_ZIP_TOTAL_BYTES {
+            let total_mb = (total_size as f64 / 1_048_576.0).ceil() as i64;
+            let limit_mb = (MAX_BATCH_ZIP_TOTAL_BYTES as f64 / 1_048_576.0).ceil() as i64;
+            return Err(AppError::Validation(format!(
+                "所选文件总大小约 {}MB，超过单次下载上限 {}MB，请缩小范围后重试",
+                total_mb, limit_mb
+            )));
+        }
+
         let mut buf = Vec::new();
         let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buf));
 
-        for &id in ids {
+        for &id in &uniq_ids {
             if let Ok(file) = self.get_file(id, user_id).await {
                 let data = self.get_file_data(&file).await?;
                 let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
@@ -622,7 +746,7 @@ impl FileService {
         upload_id: Uuid,
         user_id: Uuid,
         part_index: u32,
-        data: Vec<u8>,
+        data: Bytes,
     ) -> Result<(), AppError> {
         let s = self.get_upload_session(upload_id, user_id).await?;
         let part = part_index as i32;
@@ -673,6 +797,8 @@ impl FileService {
         user_id: Uuid,
         _req: CompleteChunkedUploadRequest,
     ) -> Result<FileResponse, AppError> {
+        use tokio::io::{AsyncWriteExt, copy};
+
         let s = self.get_upload_session(upload_id, user_id).await?;
         let total_parts = (s.total_size as u64).div_ceil(CHUNK_SIZE as u64) as u32;
         if s.uploaded_parts.len() != total_parts as usize {
@@ -683,29 +809,42 @@ impl FileService {
             )));
         }
 
-        // 顺序读取所有分块（保持内存效率，避免同时加载所有分块）
-        let mut data = Vec::with_capacity(s.total_size as usize);
+        // 流式合并：避免把整个文件读入 Vec<u8>，高并发下防止 OOM
         let base_path = Path::new(&s.temp_path);
-        
+        let merged_path = base_path.join("merged_upload");
+
+        let mut out = tokio::fs::File::create(&merged_path)
+            .await
+            .map_err(|e| AppError::Storage(format!("Failed to create merged file: {}", e)))?;
+
         for part_idx in 0..total_parts {
             let chunk_path = base_path.join(format!("part_{}", part_idx));
-            let chunk = tokio::fs::read(&chunk_path)
+            let mut input = tokio::fs::File::open(&chunk_path)
                 .await
                 .map_err(|e| AppError::File(format!("读取分块 {} 失败: {}", part_idx, e)))?;
-            data.extend_from_slice(&chunk);
+            copy(&mut input, &mut out)
+                .await
+                .map_err(|e| AppError::Storage(format!("Failed to merge chunks: {}", e)))?;
         }
+        out.flush()
+            .await
+            .map_err(|e| AppError::Storage(format!("Failed to flush merged file: {}", e)))?;
 
-        if data.len() != s.total_size as usize {
+        let merged_size = tokio::fs::metadata(&merged_path)
+            .await
+            .map_err(|e| AppError::Storage(format!("Failed to stat merged file: {}", e)))?
+            .len();
+        if merged_size != s.total_size as u64 {
             return Err(AppError::Validation("文件大小不匹配".to_string()));
         }
 
         let file = self
-            .create_file(
+            .create_file_from_path(
                 user_id,
                 s.filename.clone(),
                 s.mime_type.clone(),
                 s.total_size as u64,
-                data,
+                &merged_path,
             )
             .await?;
 
@@ -733,11 +872,18 @@ impl FileService {
 
 pub async fn create_storage(config: Arc<Config>) -> Result<Arc<dyn StorageBackend>, AppError> {
     match config.storage_backend.as_str() {
-        "local" => Ok(Arc::new(LocalStorage::new(config.storage_path.clone()))),
+        "local" => {
+            // 显式上转为 trait object，避免 match 分支类型推断不一致
+            let storage: Arc<dyn StorageBackend> =
+                Arc::new(LocalStorage::new(config.storage_path.clone()));
+            Ok(storage)
+        }
         "s3" => {
             let s3_storage =
                 S3Storage::new(config.aws_bucket.clone(), config.aws_region.clone()).await?;
-            Ok(Arc::new(s3_storage))
+            // 显式上转为 trait object，避免 match 分支类型推断不一致
+            let storage: Arc<dyn StorageBackend> = Arc::new(s3_storage);
+            Ok(storage)
         }
         _ => Err(AppError::Storage(format!(
             "Unknown storage backend: {}",

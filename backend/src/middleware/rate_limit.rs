@@ -7,75 +7,55 @@ use axum::{
 };
 use serde_json::json;
 use std::{
-    collections::HashMap,
+    sync::atomic::{AtomicU32, Ordering},
     sync::Arc,
-    time::{Duration, Instant},
+    time::Duration,
 };
-use tokio::sync::RwLock;
+use moka::sync::Cache;
 
 #[derive(Clone)]
 pub struct RateLimitState {
-    requests: Arc<RwLock<HashMap<String, Vec<Instant>>>>,
-    max_requests: usize,
+    /// 以“固定窗口 + TTL”实现的计数器：
+    /// - key：客户端标识（IP）
+    /// - value：窗口内请求计数
+    ///
+    /// 使用 Cache 的好处：
+    /// - **有容量上限**（max_capacity）：避免攻击/异常流量导致 key 无限增长
+    /// - **自动过期**（time_to_live）：窗口结束后自动清理，避免手写清理任务的锁竞争
+    counters: Cache<String, Arc<AtomicU32>>,
+    max_requests: u32,
     window_seconds: u64,
 }
 
 impl RateLimitState {
-    fn new(max_requests: usize, window_seconds: u64) -> Self {
+    fn new(max_requests: u32, window_seconds: u64, max_keys: u64) -> Self {
         Self {
-            requests: Arc::new(RwLock::new(HashMap::new())),
             max_requests,
             window_seconds,
+            counters: Cache::builder()
+                .max_capacity(max_keys)
+                .time_to_live(Duration::from_secs(window_seconds))
+                .build(),
         }
     }
 
     async fn check_rate_limit(&self, key: &str) -> bool {
-        let mut requests = self.requests.write().await;
-        let now = Instant::now();
-        let window_start = now - Duration::from_secs(self.window_seconds);
+        // 固定窗口：以“首次出现的瞬间”为窗口起点，TTL 到期自动清理
+        let counter = self
+            .counters
+            .get_with(key.to_string(), || Arc::new(AtomicU32::new(0)));
 
-        // Get or create entry for this key
-        let entry = requests.entry(key.to_string()).or_insert_with(Vec::new);
-
-        // Remove old requests outside the time window
-        entry.retain(|&time| time > window_start);
-
-        // Check if limit exceeded
-        if entry.len() >= self.max_requests {
-            return false;
-        }
-
-        // Add current request
-        entry.push(now);
-        true
-    }
-
-    async fn cleanup_old_entries(&self) {
-        let mut requests = self.requests.write().await;
-        let now = Instant::now();
-        let window_start = now - Duration::from_secs(self.window_seconds);
-
-        requests.retain(|_, times| {
-            times.retain(|&time| time > window_start);
-            !times.is_empty()
-        });
+        let current = counter.fetch_add(1, Ordering::Relaxed) + 1;
+        current <= self.max_requests
     }
 }
 
-pub fn create_rate_limit_middleware(max_requests: usize, window_seconds: u64) -> RateLimitState {
-    let state = RateLimitState::new(max_requests, window_seconds);
-
-    // Spawn cleanup task
-    let cleanup_state = state.clone();
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(60));
-        loop {
-            interval.tick().await;
-            cleanup_state.cleanup_old_entries().await;
-        }
-    });
-
-    state
+pub fn create_rate_limit_middleware(
+    max_requests: u32,
+    window_seconds: u64,
+    max_keys: u64,
+) -> RateLimitState {
+    RateLimitState::new(max_requests, window_seconds, max_keys)
 }
 
 fn get_client_ip(headers: &HeaderMap) -> String {

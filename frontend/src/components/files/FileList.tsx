@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense, type ReactNode } from 'react';
 import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
 import { folderService, type Folder } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
@@ -13,16 +13,16 @@ import {
   Archive,
   File,
   Folder as FolderIcon,
-  Upload,
-  FolderPlus,
+  FilePlus2,
 } from 'lucide-react';
+import { MacFolderIcon } from '../common/MacFolderIcon';
 import {
   getCacheKey,
   getCachedFileList,
   setCachedFileList,
   clearFileListCache,
 } from '../../utils/fileListCache';
-import { FILE_LIST } from '../../constants';
+import { BATCH_LIMITS, FILE_LIST } from '../../constants';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useRequestDedup } from '../../hooks/useRequestDedup';
 import ErrorMessage from '../common/ErrorMessage';
@@ -34,6 +34,31 @@ import FileListPagination from './FileListPagination';
 import FileListBatchActions from './FileListBatchActions';
 import { FileCardSkeleton } from '../common/Skeleton';
 import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
+
+// Lucide 图标 + 类型分组元数据（常量：避免在 useMemo 内反复创建 JSX）
+const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; order: number }> = {
+  image: { label: '图片', icon: <Image className="w-4 h-4 text-emerald-400" />, order: 1 },
+  gif: { label: 'GIF', icon: <Film className="w-4 h-4 text-pink-400" />, order: 2 },
+  video: { label: '视频', icon: <Video className="w-4 h-4 text-red-400" />, order: 3 },
+  audio: { label: '音频', icon: <Music className="w-4 h-4 text-violet-400" />, order: 4 },
+  'application/pdf': { label: 'PDF', icon: <FileText className="w-4 h-4 text-orange-400" />, order: 5 },
+  text: { label: '文本', icon: <FileCode className="w-4 h-4 text-cyan-400" />, order: 6 },
+  'application/zip': { label: '压缩包', icon: <Archive className="w-4 h-4 text-amber-400" />, order: 7 },
+  application: { label: '文档', icon: <File className="w-4 h-4 text-blue-400" />, order: 8 },
+  other: { label: '其他', icon: <File className="w-4 h-4 text-gray-400" />, order: 99 },
+};
+
+const getTypeKey = (mime: string): string => {
+  if (mime === 'image/gif') return 'gif'; // GIF 单独分类
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('audio/')) return 'audio';
+  if (mime === 'application/pdf') return 'application/pdf';
+  if (mime.startsWith('text/')) return 'text';
+  if (mime === 'application/zip' || mime === 'application/x-zip-compressed') return 'application/zip';
+  if (mime.startsWith('application/')) return 'application';
+  return 'other';
+};
 
 interface FileListProps {
   onOpenUpload?: () => void;
@@ -235,31 +260,6 @@ export default function FileList({ onOpenUpload }: FileListProps) {
   const groupedFiles = useMemo(() => {
     if (!isGroupByType) return null;
     
-    // Lucide 图标 + 彩色渐变效果
-    const typeLabels: Record<string, { label: string; icon: React.ReactNode; order: number }> = {
-      'image': { label: '图片', icon: <Image className="w-4 h-4 text-emerald-400" />, order: 1 },
-      'gif': { label: 'GIF', icon: <Film className="w-4 h-4 text-pink-400" />, order: 2 },
-      'video': { label: '视频', icon: <Video className="w-4 h-4 text-red-400" />, order: 3 },
-      'audio': { label: '音频', icon: <Music className="w-4 h-4 text-violet-400" />, order: 4 },
-      'application/pdf': { label: 'PDF', icon: <FileText className="w-4 h-4 text-orange-400" />, order: 5 },
-      'text': { label: '文本', icon: <FileCode className="w-4 h-4 text-cyan-400" />, order: 6 },
-      'application/zip': { label: '压缩包', icon: <Archive className="w-4 h-4 text-amber-400" />, order: 7 },
-      'application': { label: '文档', icon: <File className="w-4 h-4 text-blue-400" />, order: 8 },
-      'other': { label: '其他', icon: <File className="w-4 h-4 text-gray-400" />, order: 99 },
-    };
-    
-    const getTypeKey = (mime: string): string => {
-      if (mime === 'image/gif') return 'gif'; // GIF 单独分类
-      if (mime.startsWith('image/')) return 'image';
-      if (mime.startsWith('video/')) return 'video';
-      if (mime.startsWith('audio/')) return 'audio';
-      if (mime === 'application/pdf') return 'application/pdf';
-      if (mime.startsWith('text/')) return 'text';
-      if (mime === 'application/zip' || mime === 'application/x-zip-compressed') return 'application/zip';
-      if (mime.startsWith('application/')) return 'application';
-      return 'other';
-    };
-    
     const groups = new Map<string, FileMetadata[]>();
     
     files.forEach((file) => {
@@ -274,7 +274,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     return Array.from(groups.entries())
       .map(([key, groupFiles]) => ({
         key,
-        ...typeLabels[key] || typeLabels.other,
+        ...(FILE_TYPE_LABELS[key] ?? FILE_TYPE_LABELS.other),
         files: groupFiles,
       }))
       .sort((a, b) => a.order - b.order);
@@ -286,6 +286,15 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     // 按分组顺序展开所有文件
     return groupedFiles.flatMap(group => group.files);
   }, [files, isGroupByType, groupedFiles]);
+
+  // 预览导航：避免每次渲染都对 displayFiles 进行 findIndex O(n)
+  const displayFileIndexById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < displayFiles.length; i += 1) {
+      m.set(displayFiles[i]!.id, i);
+    }
+    return m;
+  }, [displayFiles]);
 
   // 文件删除 - 显示确认对话框
   const handleDelete = useCallback((fileId: string) => {
@@ -376,7 +385,14 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       }
       
       if (allFileIds.length === 0) {
-        alert('没有可下载的文件');
+        setError('没有可下载的文件');
+        return;
+      }
+
+      if (allFileIds.length > BATCH_LIMITS.MAX_DOWNLOAD_ZIP_FILES) {
+        setError(
+          `单次批量下载最多 ${BATCH_LIMITS.MAX_DOWNLOAD_ZIP_FILES} 个文件（当前 ${allFileIds.length}）。请缩小选择范围后重试。`
+        );
         return;
       }
       
@@ -594,52 +610,53 @@ export default function FileList({ onOpenUpload }: FileListProps) {
 
   return (
     <div className="fileListGlassScope space-y-4">
-      {/* 区域 1：路径 + 主操作 */}
-      <div className="glass-panel">
-        <div className="flex items-center justify-between gap-2 p-4">
-          <div className="min-w-0 flex-1">
+      {/* 顶部工具区（复刻截图布局） */}
+      <div className="glass-panel glass-panel-toolbar p-4">
+        <FileListFilters
+          layout="screenshot"
+          search={search}
+          mimeType={mimeType}
+          sortBy={sortBy}
+          onSearchChange={handleSearchChange}
+          onMimeTypeChange={handleMimeTypeChange}
+          onSortChange={handleSortChange}
+          actions={
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigateToFolder(null)}
+                className="glass-btn toolbarActionBtn flex items-center gap-2 px-4 py-2 text-sm text-white/90 hover:border-white/25"
+                aria-label="All Files"
+              >
+                <MacFolderIcon className="h-[0.95rem] w-[0.95rem]" />
+                <span>All Files</span>
+              </button>
+              {onOpenUpload && (
+                <button
+                  type="button"
+                  onClick={onOpenUpload}
+                  className="glass-btn toolbarActionBtn flex items-center gap-2 px-4 py-2 text-sm text-white/90 hover:border-white/25"
+                  aria-label="Add File"
+                >
+                  <FilePlus2 className="h-[0.95rem] w-[0.95rem] text-white/90" aria-hidden="true" />
+                  <span>Add File</span>
+                </button>
+              )}
+            </div>
+          }
+        />
+
+        {/* 路径（页面优化：保留可用性，弱化显示，不打断截图主布局） */}
+        {folderPath.length > 0 && (
+          <div className="mt-3">
             <FolderBreadcrumb
               path={folderPath}
               onNavigate={navigateToFolder}
               onDrop={handleDropOnBreadcrumb}
             />
           </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {onOpenUpload && (
-              <button
-                type="button"
-                onClick={onOpenUpload}
-                aria-label="上传文件"
-                className="cta-btn cta-btn-primary"
-              >
-                <Upload className="cta-icon text-emerald-100/95" />
-                <span className="hidden sm:inline">上传文件</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setShowCreateFolder(true)}
-              aria-label="新建文件夹"
-              className="cta-btn cta-btn-secondary"
-            >
-              <FolderPlus className="cta-icon text-emerald-200/90" />
-              <span className="hidden sm:inline">新建文件夹</span>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
-
-      {/* 区域 2：搜索 / 类型 / 排序 */}
-      <FileListFilters
-        search={search}
-        mimeType={mimeType}
-        sortBy={sortBy}
-        onSearchChange={handleSearchChange}
-        onMimeTypeChange={handleMimeTypeChange}
-        onSortChange={handleSortChange}
-      />
 
       {/* 批量操作栏 */}
       <FileListBatchActions
@@ -678,20 +695,22 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       ) : (
         <>
           {/* 全选栏 */}
-          <div className="glass-panel-soft mb-4 flex items-center justify-between px-4 py-3">
-            <label className="flex items-center gap-2 text-sm text-gray-400">
+          <div className="glass-panel-soft mb-4 flex items-center justify-between gap-4 px-4 py-3">
+            <label className="flex min-w-0 items-center gap-2 whitespace-nowrap text-sm text-gray-300">
               <input
                 type="checkbox"
                 checked={allFilesSelected}
                 onChange={toggleSelectAll}
-                className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
-                aria-label="全选所有文件"
+                className="h-4 w-4 rounded border-white/25 bg-white/5 text-purple-300 focus:ring-0 focus:ring-offset-0"
+                aria-label="All Files"
               />
-              全选文件
+              All Files
             </label>
-            <span className="text-sm text-gray-500">
-              {folders.length > 0 && `${folders.length} 个文件夹 · `}
-              {total} 个文件
+            <span className="min-w-0 truncate text-sm text-gray-400">
+              {selectedFiles.size + selectedFolders.size > 0 &&
+                `${selectedFiles.size + selectedFolders.size} selected · `}
+              {folders.length > 0 && `${folders.length} folders · `}
+              {total} files
             </span>
           </div>
 
@@ -798,7 +817,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             key={previewFile.id}
             file={previewFile}
             files={displayFiles}
-            currentIndex={displayFiles.findIndex(f => f.id === previewFile.id)}
+            currentIndex={displayFileIndexById.get(previewFile.id) ?? -1}
             onClose={() => setPreviewFile(null)}
             onNavigate={(file) => setPreviewFile(file)}
           />
@@ -873,7 +892,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         {deleteConfirm && (
           <ConfirmDialog
             open={!!deleteConfirm}
-            appearance={deleteConfirm.type === 'batch' ? 'glass' : 'default'}
+            appearance={deleteConfirm.type === 'file' ? 'glass' : 'default'}
             title={
               deleteConfirm.type === 'batch'
                 ? '确认批量删除'

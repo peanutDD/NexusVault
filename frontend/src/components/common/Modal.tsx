@@ -54,7 +54,7 @@ export default function Modal({
                 'backdrop-blur-xl backdrop-saturate-150',
                 // 轻微渐变高光（不依赖 FileListGlass.css）
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
-                'before:bg-[radial-gradient(120%_70%_at_15%_0%,rgba(255,255,255,0.22),transparent_60%),radial-gradient(90%_60%_at_90%_10%,rgba(217,70,239,0.12),transparent_62%)]',
+                'before:bg-gradient-to-br before:from-white/25 before:via-fuchsia-400/10 before:to-transparent',
               ].join(' ')
             : 'bg-gray-800 dark:bg-gray-900 rounded-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl transform transition-all duration-300 animate-fade-in',
           maxWidthClasses[maxWidth]

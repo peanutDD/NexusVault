@@ -64,7 +64,12 @@ src/
 
 ### 4.1 连接池
 
-- `database/pool.rs` 中 `create_pool` 使用 `PgPoolOptions`，配置了 `max_connections`、`min_connections`、`acquire_timeout`、`idle_timeout`、`max_lifetime`、`test_before_acquire`。✅
+- `database/pool.rs` 中 `create_pool` 使用 `PgPoolOptions`，配置了：
+  - `max_connections`、`min_connections`
+  - `acquire_timeout`（高并发下更快失败，避免请求长时间排队）
+  - `idle_timeout`、`max_lifetime`、`test_before_acquire`
+  - `after_connect` 设置 `statement_timeout`（防慢查询长时间占用连接）
+  ✅
 
 ### 4.2 查询模式
 
@@ -119,7 +124,10 @@ src/
 
 ## 8. 存储抽象 ✅
 
-- `services/storage.rs` 定义 `StorageBackend` trait（`async_trait`），`save_file`、`get_file`、`delete_file`。✅
+- `services/storage.rs` 定义 `StorageBackend` trait（`async_trait`），包含：
+  - `save_file`、`save_file_from_path`（避免大文件整段进内存）
+  - `get_file`、`delete_file`
+  ✅
 - `LocalStorage`、`S3Storage` 分别实现，使用 `tokio::fs` 与 AWS SDK。✅
 
 ---
@@ -149,7 +157,9 @@ src/
 ## 12. 文件上传 ✅
 
 - 使用 `axum::extract::Multipart`，按 field 解析，`AppError::File` 处理解析失败。✅
+- 普通上传采用**流式读取 chunk → 写入临时文件 → 从路径保存**，避免高并发下 `Vec<u8>` 造成 OOM。✅
 - 分块上传有 init/chunk/status/complete/abort 一套接口。✅
+- 分块上传 complete 阶段采用**流式合并到临时文件 → 从路径保存**，避免大文件合并 OOM。✅
 
 ---
 

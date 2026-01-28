@@ -58,7 +58,13 @@ export default function ShareDialog({
   };
 
   return (
-    <Modal title="分享文件" description={filename} onClose={onClose} maxWidth="sm">
+    <Modal
+      title="分享文件"
+      description={filename}
+      onClose={onClose}
+      maxWidth="sm"
+      variant="glass"
+    >
         {error && (
           <ErrorMessage
             message={error}
@@ -82,19 +88,21 @@ export default function ShareDialog({
                   aria-label="分享链接"
                   value={shareUrl}
                   readOnly
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                  className="flex-1 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/50"
                 />
                 <button
+                  type="button"
                   onClick={handleCopyUrl}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
                 >
                   复制
                 </button>
               </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+              className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
             >
               关闭
             </button>
@@ -112,7 +120,7 @@ export default function ShareDialog({
                   setFormData({ ...formData, password: e.target.value })
                 }
                 placeholder="留空则不设置密码"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
               />
             </div>
 
@@ -133,7 +141,7 @@ export default function ShareDialog({
                   })
                 }
                 placeholder="留空则永不过期"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
               />
             </div>
 
@@ -154,7 +162,7 @@ export default function ShareDialog({
                   })
                 }
                 placeholder="留空则不限制"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
               />
             </div>
 
@@ -162,14 +170,14 @@ export default function ShareDialog({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+                className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
               >
                 取消
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 rounded-lg bg-gradient-to-r from-purple-500/70 to-fuchsia-500/60 px-4 py-2 text-white shadow-[0_12px_35px_rgba(168,85,247,0.18)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? '创建中...' : '创建分享'}
               </button>

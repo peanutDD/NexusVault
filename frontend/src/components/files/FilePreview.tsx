@@ -64,17 +64,6 @@ export default function FilePreview({
 
   const [loading, setLoading] = useState(() => (file ? kind.supported : false));
 
-  // 文件变化时重置状态
-  useEffect(() => {
-    setBlobUrl(null);
-    setTextContent(null);
-    setError(null);
-    setImageLoaded(false);
-    if (file && kind.supported) {
-      setLoading(true);
-    }
-  }, [file?.id, kind.supported]);
-
   useEffect(() => {
     if (!file || !kind.supported) return;
     

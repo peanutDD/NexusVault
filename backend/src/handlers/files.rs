@@ -16,7 +16,8 @@
 //! 4. **统一响应**: 使用 `utils::response` 中的辅助函数构建响应
 
 use axum::extract::{Multipart, Path, Query, State};
-use axum::response::Response;
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
+use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use serde_json::json;
 use std::collections::HashMap;
@@ -26,8 +27,10 @@ use crate::extractors::AuthenticatedUser;
 use crate::models::file::{BatchDeleteRequest, BatchMoveRequest, FileListQuery};
 use crate::models::upload_session::{CompleteChunkedUploadRequest, InitChunkedUploadRequest};
 use crate::services::file::FileService;
+use crate::services::storage::StorageReadStream;
 use crate::utils::{
-    file_response, json_response, parse_part_number, parse_uuid_list, success_response, AppError,
+    file_response, json_response, parse_part_number, parse_uuid_list, stream_file_response,
+    success_response, AppError,
 };
 use crate::AppState;
 
@@ -54,10 +57,12 @@ pub async fn upload_file_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
+    use tokio::io::AsyncWriteExt;
+
     let file_service = FileService::from_state(&state);
 
-    // 解析 multipart 表单，提取文件数据
-    let mut file_data: Option<(String, String, Vec<u8>)> = None;
+    // 解析 multipart 表单：以流式方式写入临时文件，避免把整个文件载入内存
+    let mut file_meta: Option<(String, String, u64, std::path::PathBuf)> = None;
 
     while let Some(field) = multipart
         .next_field()
@@ -77,25 +82,53 @@ pub async fn upload_file_handler(
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "application/octet-stream".to_string());
 
-            let data = field
-                .bytes()
+            // 临时文件路径
+            let tmp_dir = std::env::temp_dir().join("file-storage-backend");
+            tokio::fs::create_dir_all(&tmp_dir)
                 .await
-                .map_err(|e| AppError::File(format!("Failed to read file: {}", e)))?;
+                .map_err(|e| AppError::Storage(format!("Failed to create temp dir: {}", e)))?;
+            let tmp_path = tmp_dir.join(format!("upload_{}", Uuid::new_v4()));
 
-            file_data = Some((filename, mime_type, data.to_vec()));
+            let mut out = tokio::fs::File::create(&tmp_path)
+                .await
+                .map_err(|e| AppError::Storage(format!("Failed to create temp file: {}", e)))?;
+
+            // 流式写入并统计大小
+            let mut file_size: u64 = 0;
+            let mut field = field;
+            while let Some(chunk) = field
+                .chunk()
+                .await
+                .map_err(|e| AppError::File(format!("Failed to read upload chunk: {}", e)))?
+            {
+                file_size = file_size.saturating_add(chunk.len() as u64);
+                out.write_all(&chunk)
+                    .await
+                    .map_err(|e| AppError::Storage(format!("Failed to write temp file: {}", e)))?;
+            }
+            out.flush()
+                .await
+                .map_err(|e| AppError::Storage(format!("Failed to flush temp file: {}", e)))?;
+
+            file_meta = Some((filename, mime_type, file_size, tmp_path));
             break;
         }
     }
 
-    let (original_filename, mime_type, data) =
-        file_data.ok_or_else(|| AppError::File("No file provided".to_string()))?;
+    let (original_filename, mime_type, file_size, tmp_path) =
+        file_meta.ok_or_else(|| AppError::File("No file provided".to_string()))?;
 
-    let file_size = data.len() as u64;
-
-    // 创建文件（业务逻辑在 FileService 中）
-    let file = file_service
-        .create_file(user_id, original_filename, mime_type, file_size, data)
-        .await?;
+    // 创建文件（优先走 from-path，避免大文件占用内存）
+    let file = match file_service
+        .create_file_from_path(user_id, original_filename, mime_type, file_size, &tmp_path)
+        .await
+    {
+        Ok(file) => file,
+        Err(e) => {
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+            return Err(e);
+        }
+    };
 
     Ok(json_response(json!({ "file": file })))
 }
@@ -151,17 +184,190 @@ pub async fn list_files_handler(
 pub async fn download_file_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
+    headers: HeaderMap,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
+    use axum::body::Body;
+    use tokio::io::{AsyncReadExt, AsyncSeekExt};
+    use tokio_util::io::ReaderStream;
+
     let file_service = FileService::from_state(&state);
 
     // 验证文件所有权并获取文件
     let file = file_service.get_file(file_id, user_id).await?;
-    let data = file_service.get_file_data(&file).await?;
 
-    // 构建文件下载响应（attachment 触发下载）
-    file_response(data, &file.original_filename, &file.mime_type, false)
-        .map_err(|_| AppError::Internal)
+    let total_size = file.file_size.max(0) as u64;
+    let etag = format!("W/\"{}-{}-{}\"", file.id, file.updated_at.timestamp(), total_size);
+
+    // 条件请求：If-None-Match（仅在非 Range 情况下返回 304）
+    let range_header = headers.get(header::RANGE).and_then(|v| v.to_str().ok());
+    let if_none_match = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok());
+    if range_header.is_none() && if_none_match == Some(etag.as_str()) {
+        let mut res = StatusCode::NOT_MODIFIED.into_response();
+        res.headers_mut().insert(
+            header::ETAG,
+            HeaderValue::from_str(&etag).map_err(|_| AppError::Internal)?,
+        );
+        res.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("private, max-age=0, must-revalidate"),
+        );
+        res.headers_mut().insert(
+            header::ACCEPT_RANGES,
+            HeaderValue::from_static("bytes"),
+        );
+        return Ok(res);
+    }
+
+    // 解析 Range（单区间）
+    let mut range: Option<(u64, u64)> = None;
+    if let Some(r) = range_header {
+        // 支持：
+        // - bytes=start-end
+        // - bytes=start-
+        // - bytes=-suffix
+        if let Some(rest) = r.strip_prefix("bytes=") {
+            if rest.contains(',') {
+                return Err(AppError::Validation("暂不支持多段 Range".to_string()));
+            }
+            let rest = rest.trim();
+            if let Some((a, b)) = rest.split_once('-') {
+                let a = a.trim();
+                let b = b.trim();
+                if total_size == 0 {
+                    return Err(AppError::Validation("空文件不支持 Range".to_string()));
+                }
+                if a.is_empty() {
+                    // -suffix
+                    let suffix: u64 = b.parse().map_err(|_| {
+                        AppError::Validation("无效的 Range（suffix）".to_string())
+                    })?;
+                    let len = suffix.min(total_size);
+                    range = Some((total_size - len, total_size - 1));
+                } else {
+                    let start: u64 = a.parse().map_err(|_| {
+                        AppError::Validation("无效的 Range（start）".to_string())
+                    })?;
+                    let end: u64 = if b.is_empty() {
+                        total_size - 1
+                    } else {
+                        b.parse()
+                            .map_err(|_| AppError::Validation("无效的 Range（end）".to_string()))?
+                    };
+                    range = Some((start, end));
+                }
+            }
+        }
+    }
+
+    if let Some((start, end)) = range {
+        if start >= total_size || start > end {
+            let mut res = StatusCode::RANGE_NOT_SATISFIABLE.into_response();
+            res.headers_mut().insert(
+                header::CONTENT_RANGE,
+                HeaderValue::from_str(&format!("bytes */{}", total_size))
+                    .map_err(|_| AppError::Internal)?,
+            );
+            res.headers_mut().insert(
+                header::ETAG,
+                HeaderValue::from_str(&etag).map_err(|_| AppError::Internal)?,
+            );
+            res.headers_mut().insert(
+                header::ACCEPT_RANGES,
+                HeaderValue::from_static("bytes"),
+            );
+            return Ok(res);
+        }
+
+        let end = end.min(total_size - 1);
+        let len = end - start + 1;
+
+        // S3 侧直接按 Range 拉取；Local 在 handler 内 seek + take
+        let stream = file_service
+            .open_file_stream_range(&file, start, end)
+            .await?;
+
+        let body = match stream {
+            StorageReadStream::Local(mut f) => {
+                f.seek(std::io::SeekFrom::Start(start))
+                    .await
+                    .map_err(|e| AppError::File(format!("Failed to seek file: {}", e)))?;
+                let reader = f.take(len);
+                Body::from_stream(ReaderStream::new(reader))
+            }
+            StorageReadStream::S3(s) => {
+                let reader = s.into_async_read();
+                Body::from_stream(ReaderStream::new(reader))
+            }
+        };
+
+        let mut res = stream_file_response(
+            body,
+            &file.original_filename,
+            &file.mime_type,
+            false,
+            Some(len),
+        )
+        .map_err(|_| AppError::Internal)?;
+        *res.status_mut() = StatusCode::PARTIAL_CONTENT;
+        res.headers_mut().insert(
+            header::CONTENT_RANGE,
+            HeaderValue::from_str(&format!("bytes {}-{}/{}", start, end, total_size))
+                .map_err(|_| AppError::Internal)?,
+        );
+        res.headers_mut().insert(
+            header::ETAG,
+            HeaderValue::from_str(&etag).map_err(|_| AppError::Internal)?,
+        );
+        res.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("private, max-age=0, must-revalidate"),
+        );
+        res.headers_mut().insert(
+            header::ACCEPT_RANGES,
+            HeaderValue::from_static("bytes"),
+        );
+        return Ok(res);
+    }
+
+    // 全量响应
+    let stream = file_service.open_file_stream(&file).await?;
+
+    let body = match stream {
+        StorageReadStream::Local(f) => Body::from_stream(ReaderStream::new(f)),
+        StorageReadStream::S3(s) => {
+            // AWS ByteStream 通常支持 into_async_read（若编译报错可改为 stream 适配）
+            let reader = s.into_async_read();
+            Body::from_stream(ReaderStream::new(reader))
+        }
+    };
+
+    let mut res = stream_file_response(
+        body,
+        &file.original_filename,
+        &file.mime_type,
+        false,
+        Some(file.file_size as u64),
+    )
+    .map_err(|_| AppError::Internal)
+    ?;
+
+    res.headers_mut().insert(
+        header::ETAG,
+        HeaderValue::from_str(&etag).map_err(|_| AppError::Internal)?,
+    );
+    res.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, max-age=0, must-revalidate"),
+    );
+    res.headers_mut().insert(
+        header::ACCEPT_RANGES,
+        HeaderValue::from_static("bytes"),
+    );
+
+    Ok(res)
 }
 
 /// 预览文件
@@ -170,17 +376,179 @@ pub async fn download_file_handler(
 pub async fn preview_file_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
+    headers: HeaderMap,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
+    use axum::body::Body;
+    use tokio::io::{AsyncReadExt, AsyncSeekExt};
+    use tokio_util::io::ReaderStream;
+
     let file_service = FileService::from_state(&state);
 
     // 验证文件所有权并获取文件
     let file = file_service.get_file(file_id, user_id).await?;
-    let data = file_service.get_file_data(&file).await?;
+    let total_size = file.file_size.max(0) as u64;
+    let etag = format!("W/\"{}-{}-{}\"", file.id, file.updated_at.timestamp(), total_size);
 
-    // 构建文件预览响应（inline 在浏览器中显示）
-    file_response(data, &file.original_filename, &file.mime_type, true)
-        .map_err(|_| AppError::Internal)
+    let range_header = headers.get(header::RANGE).and_then(|v| v.to_str().ok());
+    let if_none_match = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok());
+    if range_header.is_none() && if_none_match == Some(etag.as_str()) {
+        let mut res = StatusCode::NOT_MODIFIED.into_response();
+        res.headers_mut().insert(
+            header::ETAG,
+            HeaderValue::from_str(&etag).map_err(|_| AppError::Internal)?,
+        );
+        res.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("private, max-age=0, must-revalidate"),
+        );
+        res.headers_mut().insert(
+            header::ACCEPT_RANGES,
+            HeaderValue::from_static("bytes"),
+        );
+        return Ok(res);
+    }
+
+    let mut range: Option<(u64, u64)> = None;
+    if let Some(r) = range_header {
+        if let Some(rest) = r.strip_prefix("bytes=") {
+            if rest.contains(',') {
+                return Err(AppError::Validation("暂不支持多段 Range".to_string()));
+            }
+            let rest = rest.trim();
+            if let Some((a, b)) = rest.split_once('-') {
+                let a = a.trim();
+                let b = b.trim();
+                if total_size == 0 {
+                    return Err(AppError::Validation("空文件不支持 Range".to_string()));
+                }
+                if a.is_empty() {
+                    let suffix: u64 = b.parse().map_err(|_| {
+                        AppError::Validation("无效的 Range（suffix）".to_string())
+                    })?;
+                    let len = suffix.min(total_size);
+                    range = Some((total_size - len, total_size - 1));
+                } else {
+                    let start: u64 = a.parse().map_err(|_| {
+                        AppError::Validation("无效的 Range（start）".to_string())
+                    })?;
+                    let end: u64 = if b.is_empty() {
+                        total_size - 1
+                    } else {
+                        b.parse()
+                            .map_err(|_| AppError::Validation("无效的 Range（end）".to_string()))?
+                    };
+                    range = Some((start, end));
+                }
+            }
+        }
+    }
+
+    if let Some((start, end)) = range {
+        if start >= total_size || start > end {
+            let mut res = StatusCode::RANGE_NOT_SATISFIABLE.into_response();
+            res.headers_mut().insert(
+                header::CONTENT_RANGE,
+                HeaderValue::from_str(&format!("bytes */{}", total_size))
+                    .map_err(|_| AppError::Internal)?,
+            );
+            res.headers_mut().insert(
+                header::ETAG,
+                HeaderValue::from_str(&etag).map_err(|_| AppError::Internal)?,
+            );
+            res.headers_mut().insert(
+                header::ACCEPT_RANGES,
+                HeaderValue::from_static("bytes"),
+            );
+            return Ok(res);
+        }
+
+        let end = end.min(total_size - 1);
+        let len = end - start + 1;
+
+        let stream = file_service
+            .open_file_stream_range(&file, start, end)
+            .await?;
+
+        let body = match stream {
+            StorageReadStream::Local(mut f) => {
+                f.seek(std::io::SeekFrom::Start(start))
+                    .await
+                    .map_err(|e| AppError::File(format!("Failed to seek file: {}", e)))?;
+                let reader = f.take(len);
+                Body::from_stream(ReaderStream::new(reader))
+            }
+            StorageReadStream::S3(s) => {
+                let reader = s.into_async_read();
+                Body::from_stream(ReaderStream::new(reader))
+            }
+        };
+
+        let mut res = stream_file_response(
+            body,
+            &file.original_filename,
+            &file.mime_type,
+            true,
+            Some(len),
+        )
+        .map_err(|_| AppError::Internal)?;
+        *res.status_mut() = StatusCode::PARTIAL_CONTENT;
+        res.headers_mut().insert(
+            header::CONTENT_RANGE,
+            HeaderValue::from_str(&format!("bytes {}-{}/{}", start, end, total_size))
+                .map_err(|_| AppError::Internal)?,
+        );
+        res.headers_mut().insert(
+            header::ETAG,
+            HeaderValue::from_str(&etag).map_err(|_| AppError::Internal)?,
+        );
+        res.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("private, max-age=0, must-revalidate"),
+        );
+        res.headers_mut().insert(
+            header::ACCEPT_RANGES,
+            HeaderValue::from_static("bytes"),
+        );
+        return Ok(res);
+    }
+
+    let stream = file_service.open_file_stream(&file).await?;
+
+    let body = match stream {
+        StorageReadStream::Local(f) => Body::from_stream(ReaderStream::new(f)),
+        StorageReadStream::S3(s) => {
+            let reader = s.into_async_read();
+            Body::from_stream(ReaderStream::new(reader))
+        }
+    };
+
+    let mut res = stream_file_response(
+        body,
+        &file.original_filename,
+        &file.mime_type,
+        true,
+        Some(file.file_size as u64),
+    )
+    .map_err(|_| AppError::Internal)
+    ?;
+
+    res.headers_mut().insert(
+        header::ETAG,
+        HeaderValue::from_str(&etag).map_err(|_| AppError::Internal)?,
+    );
+    res.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, max-age=0, must-revalidate"),
+    );
+    res.headers_mut().insert(
+        header::ACCEPT_RANGES,
+        HeaderValue::from_static("bytes"),
+    );
+
+    Ok(res)
 }
 
 /// 删除文件
@@ -385,7 +753,7 @@ pub async fn chunked_upload_chunk_handler(
 
     // 上传分块
     file_service
-        .upload_chunk(upload_id, user_id, part, body.to_vec())
+        .upload_chunk(upload_id, user_id, part, body)
         .await?;
 
     Ok(json_response(json!({ "ok": true, "part": part })))

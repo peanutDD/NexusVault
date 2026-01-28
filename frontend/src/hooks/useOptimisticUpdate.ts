@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 /**
  * Optimistic update pattern: update UI immediately, rollback on error.
@@ -12,7 +12,9 @@ export function useOptimisticUpdate<T>(
   
   // 使用 ref 存储 updateFn，避免依赖变化
   const updateFnRef = useRef(updateFn);
-  updateFnRef.current = updateFn;
+  useEffect(() => {
+    updateFnRef.current = updateFn;
+  }, [updateFn]);
 
   const update = useCallback(
     async (optimistic: T, actual: Promise<T>) => {

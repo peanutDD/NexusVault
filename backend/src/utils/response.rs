@@ -3,6 +3,7 @@
 //! 提供统一的响应构建辅助函数，确保所有 API 响应格式一致。
 
 use axum::{
+    body::Body,
     http::{header, HeaderMap, HeaderValue},
     response::{IntoResponse, Response},
     Json,
@@ -98,6 +99,45 @@ pub fn file_response(
     );
 
     Ok((headers, data).into_response())
+}
+
+/// 构建“流式”文件响应（下载/预览），避免一次性读入内存。
+///
+/// - `content_length`：可选，若已知可设置，有利于客户端进度展示与缓存策略
+pub fn stream_file_response(
+    body: Body,
+    filename: &str,
+    mime_type: &str,
+    inline: bool,
+    content_length: Option<u64>,
+) -> Result<Response, axum::http::Error> {
+    // 构建 Content-Disposition header
+    let disposition = if inline {
+        format!("inline; filename=\"{}\"", filename)
+    } else {
+        format!("attachment; filename=\"{}\"", filename)
+    };
+
+    // 构建 headers
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_str(mime_type).unwrap_or_else(|_| {
+            HeaderValue::from_static("application/octet-stream")
+        }),
+    );
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_str(&disposition)?,
+    );
+    if let Some(len) = content_length {
+        headers.insert(
+            header::CONTENT_LENGTH,
+            HeaderValue::from_str(&len.to_string()).unwrap_or_else(|_| HeaderValue::from_static("0")),
+        );
+    }
+
+    Ok((headers, body).into_response())
 }
 
 /// 构建简单的成功消息响应

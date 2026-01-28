@@ -201,7 +201,7 @@ export const fileService = {
       return s;
     };
 
-    let uploaded = await refreshUploaded();
+    const uploaded = await refreshUploaded();
     let completedChunks = uploaded.size;
 
     const report = () => {

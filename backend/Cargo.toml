@@ -9,8 +9,9 @@ build = "build.rs"
 axum = { version = "0.7", features = ["multipart", "json"] }
 bytes = "1.0"
 tokio = { version = "1", features = ["full"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace", "timeout", "limit"] }
+tokio-util = { version = "0.7", features = ["io"] }
+tower = { version = "0.4", features = ["limit", "load-shed"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "timeout", "limit", "catch-panic"] }
 
 # Database
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
@@ -47,6 +48,9 @@ aws-config = "1.0"
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
 validator = { version = "0.18", features = ["derive"] }
+
+# Cache (bounded in-memory rate limit, etc.)
+moka = { version = "0.12", features = ["sync"] }
 
 # Rate limiting - implemented as custom middleware
 

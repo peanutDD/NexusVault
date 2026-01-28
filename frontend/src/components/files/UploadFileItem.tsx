@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { memo, useState, useEffect, useMemo, useRef, useCallback, useId } from 'react';
 import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
 import { getMimeTypeInfo } from '../../utils/mimeType';
@@ -21,6 +21,26 @@ interface UploadFileItemProps {
   file: UploadFile;
   onRemove: (id: string) => void;
   onRetry: (id: string) => void;
+}
+
+// 共享“每秒 tick”：避免多个上传项各自 setInterval
+type NowListener = (now: number) => void;
+let nowTimer: number | null = null;
+const nowListeners = new Set<NowListener>();
+
+function ensureNowTimer() {
+  if (nowTimer != null) return;
+  nowTimer = window.setInterval(() => {
+    const t = Date.now();
+    for (const l of nowListeners) l(t);
+  }, 1000);
+}
+
+function maybeStopNowTimer() {
+  if (nowTimer == null) return;
+  if (nowListeners.size > 0) return;
+  window.clearInterval(nowTimer);
+  nowTimer = null;
 }
 
 /**
@@ -56,13 +76,20 @@ const UploadFileItem = memo(function UploadFileItem({
   onRemove,
   onRetry,
 }: UploadFileItemProps) {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => (file.startTime ? file.startTime : 0));
 
   // 上传中时每秒更新一次
   useEffect(() => {
     if (file.status !== 'uploading') return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
+    if (typeof window === 'undefined') return;
+
+    const listener: NowListener = (t) => setNow(t);
+    nowListeners.add(listener);
+    ensureNowTimer();
+    return () => {
+      nowListeners.delete(listener);
+      maybeStopNowTimer();
+    };
   }, [file.status]);
 
   const elapsedMs = file.startTime ? now - file.startTime : 0;
@@ -249,10 +276,8 @@ function ErrorTooltip({
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const posClass = useMemo(
-    () => `uploadErrorTooltipPos_${Math.random().toString(36).slice(2, 10)}`,
-    []
-  );
+  const uid = useId().replace(/:/g, '');
+  const posClass = useMemo(() => `uploadErrorTooltipPos_${uid}`, [uid]);
 
   // 点击外部关闭（排除触发按钮）
   useEffect(() => {

@@ -10,6 +10,28 @@ interface LazyThumbnailProps {
   className?: string;
 }
 
+// 共享 IntersectionObserver：避免长列表里“每个缩略图一个 observer”造成额外开销
+type ObserveCallback = () => void;
+let sharedObserver: IntersectionObserver | null = null;
+const observeCallbacks = new Map<Element, ObserveCallback>();
+
+function getSharedObserver() {
+  if (sharedObserver) return sharedObserver;
+  if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return null;
+
+  sharedObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const cb = observeCallbacks.get(entry.target);
+        if (cb) cb();
+      }
+    },
+    { rootMargin: '80px', threshold: 0.01 }
+  );
+  return sharedObserver;
+}
+
 function FileIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -166,18 +188,25 @@ export default function LazyThumbnail({
   useEffect(() => {
     if (!isImageType(mimeType)) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting) return;
-        setLoading(true);
-        observer.disconnect();
-      },
-      { rootMargin: '80px', threshold: 0.01 }
-    );
-
+    const observer = getSharedObserver();
     const el = containerRef.current;
-    if (el) observer.observe(el);
-    return () => observer.disconnect();
+    if (!observer || !el) return;
+
+    observeCallbacks.set(el, () => {
+      setLoading(true);
+      observeCallbacks.delete(el);
+      observer.unobserve(el);
+    });
+
+    observer.observe(el);
+    return () => {
+      observeCallbacks.delete(el);
+      try {
+        observer.unobserve(el);
+      } catch {
+        // ignore
+      }
+    };
   }, [mimeType]);
 
   useEffect(() => {

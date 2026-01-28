@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Search } from 'lucide-react';
 import './FileListFilters.css';
 
@@ -11,6 +12,8 @@ interface FileListFiltersProps {
   onSearchChange: (v: string) => void;
   onMimeTypeChange: (v: string) => void;
   onSortChange: (v: SortOption) => void;
+  actions?: React.ReactNode;
+  layout?: 'inline' | 'screenshot';
 }
 
 const FileListFilters = memo(function FileListFilters({
@@ -20,11 +23,22 @@ const FileListFilters = memo(function FileListFilters({
   onSearchChange,
   onMimeTypeChange,
   onSortChange,
+  actions,
+  layout = 'inline',
 }: FileListFiltersProps) {
   const [typeOpen, setTypeOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const typeRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
+  const typeMenuRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  const [typeMenuPos, setTypeMenuPos] = useState<{ left: number; top: number; width: number } | null>(
+    null
+  );
+  const [sortMenuPos, setSortMenuPos] = useState<{ left: number; top: number; width: number } | null>(
+    null
+  );
 
   const typeOptions = useMemo(
     () => [
@@ -65,62 +79,235 @@ const FileListFilters = memo(function FileListFilters({
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
       const t = e.target as Node;
-      if (typeRef.current && !typeRef.current.contains(t)) setTypeOpen(false);
-      if (sortRef.current && !sortRef.current.contains(t)) setSortOpen(false);
+      const inTypeTrigger = typeRef.current?.contains(t) ?? false;
+      const inSortTrigger = sortRef.current?.contains(t) ?? false;
+      const inTypeMenu = typeMenuRef.current?.contains(t) ?? false;
+      const inSortMenu = sortMenuRef.current?.contains(t) ?? false;
+
+      if (!inTypeTrigger && !inTypeMenu) setTypeOpen(false);
+      if (!inSortTrigger && !inSortMenu) setSortOpen(false);
     };
     document.addEventListener('mousedown', onDocMouseDown);
     return () => document.removeEventListener('mousedown', onDocMouseDown);
   }, []);
 
+  const computeMenuPos = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - r.width - 8));
+    const top = Math.min(r.bottom + 8, window.innerHeight - 8);
+    const width = Math.max(160, r.width);
+    return { left, top, width };
+  };
+
+  const samePos = (
+    a: { left: number; top: number; width: number } | null,
+    b: { left: number; top: number; width: number } | null
+  ) => !!a && !!b && a.left === b.left && a.top === b.top && a.width === b.width;
+
+  useEffect(() => {
+    let rafId: number | null = null;
+    let disposed = false;
+
+    const update = () => {
+      if (disposed) return;
+      if (rafId != null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        if (disposed) return;
+
+        const nextTypePos =
+          typeOpen && typeRef.current ? computeMenuPos(typeRef.current) : null;
+        const nextSortPos =
+          sortOpen && sortRef.current ? computeMenuPos(sortRef.current) : null;
+
+        setTypeMenuPos((prev) => (samePos(prev, nextTypePos) ? prev : nextTypePos));
+        setSortMenuPos((prev) => (samePos(prev, nextSortPos) ? prev : nextSortPos));
+      });
+    };
+
+    update();
+    if (!typeOpen && !sortOpen) return;
+
+    window.addEventListener('resize', update);
+    // 捕获阶段监听滚动，覆盖所有滚动容器
+    window.addEventListener('scroll', update, { capture: true, passive: true });
+    return () => {
+      disposed = true;
+      if (rafId != null) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, { capture: true } as AddEventListenerOptions);
+    };
+  }, [typeOpen, sortOpen]);
+
+  // 避免 JSX inline style（遵循项目 lint 规则）
+  useEffect(() => {
+    if (!typeMenuRef.current || !typeMenuPos) return;
+    typeMenuRef.current.style.left = `${typeMenuPos.left}px`;
+    typeMenuRef.current.style.top = `${typeMenuPos.top}px`;
+    typeMenuRef.current.style.width = `${typeMenuPos.width}px`;
+  }, [typeMenuPos]);
+
+  useEffect(() => {
+    if (!sortMenuRef.current || !sortMenuPos) return;
+    sortMenuRef.current.style.left = `${sortMenuPos.left}px`;
+    sortMenuRef.current.style.top = `${sortMenuPos.top}px`;
+    sortMenuRef.current.style.width = `${sortMenuPos.width}px`;
+  }, [sortMenuPos]);
+
   return (
-    <div className="filtersGlass" role="search">
-      {/* Search */}
-      <div className="filtersSearchPill">
-        <Search className="filtersSearchIcon" aria-hidden="true" />
-        <input
-          ref={(el) => {
-            // 用于键盘快捷键聚焦
-            const w = window as unknown as { __fileListSearchInput?: HTMLInputElement };
-            w.__fileListSearchInput = el ?? undefined;
-          }}
-          type="text"
-          placeholder="Search files… (Ctrl+K)"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="filtersSearchInput"
-          aria-label="Search files"
-        />
+    <div
+      className={layout === 'screenshot' ? 'filtersGlass filtersGlassScreenshot' : 'filtersGlass'}
+      role="search"
+    >
+      <div className={layout === 'screenshot' ? 'filtersTopRow' : undefined}>
+        {/* Search */}
+        <div className="filtersSearchPill">
+          <Search className="filtersSearchIcon" aria-hidden="true" />
+          <input
+            ref={(el) => {
+              // 用于键盘快捷键聚焦
+              const w = window as unknown as { __fileListSearchInput?: HTMLInputElement };
+              w.__fileListSearchInput = el ?? undefined;
+            }}
+            type="text"
+            placeholder="Search files… (Ctrl+K)"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="filtersSearchInput"
+            aria-label="Search files"
+          />
+        </div>
+
+        {layout === 'screenshot' && (
+          <div className="filtersInlineFilters" aria-label="Filters">
+            <div className="filtersRow">
+              {/* Type dropdown card */}
+              <div ref={typeRef} className="filtersCard">
+                <button
+                  type="button"
+                  className="filtersCardHeader"
+                  onClick={() => {
+                    setTypeOpen((v) => !v);
+                    setSortOpen(false);
+                  }}
+                  aria-label="Type"
+                >
+                  <span className="filtersCardTitle">Type</span>
+                  <span className="filtersCardHeaderRight">
+                    <span className="filtersCardSelected" title={selectedTypeLabel}>
+                      {selectedTypeLabel}
+                    </span>
+                    <ChevronDown
+                      className={typeOpen ? 'filtersChevron filtersChevronOpen' : 'filtersChevron'}
+                      aria-hidden="true"
+                    />
+                  </span>
+                </button>
+              </div>
+
+              {/* Sort dropdown card */}
+              <div ref={sortRef} className="filtersCard">
+                <button
+                  type="button"
+                  className="filtersCardHeader"
+                  onClick={() => {
+                    setSortOpen((v) => !v);
+                    setTypeOpen(false);
+                  }}
+                  aria-label="Sort"
+                >
+                  <span className="filtersCardTitle">Sort</span>
+                  <span className="filtersCardHeaderRight">
+                    <span className="filtersCardSelected" title={selectedSortLabel}>
+                      {selectedSortLabel}
+                    </span>
+                    <ChevronDown
+                      className={sortOpen ? 'filtersChevron filtersChevronOpen' : 'filtersChevron'}
+                      aria-hidden="true"
+                    />
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {layout === 'screenshot' && actions && (
+          <div className="filtersActions" aria-label="Actions">
+            {actions}
+          </div>
+        )}
       </div>
 
-      <div className="filtersRow">
-        {/* Type dropdown card */}
-        <div ref={typeRef} className="filtersCard">
-          <button
-            type="button"
-            className="filtersCardHeader"
-            onClick={() => {
-              setTypeOpen((v) => !v);
-              setSortOpen(false);
-            }}
-            aria-label="Type"
-          >
-            <span className="filtersCardTitle">Type</span>
-            <span className="filtersCardHeaderRight">
-              <span className="filtersCardSelected" title={selectedTypeLabel}>
-                {selectedTypeLabel}
+      {layout !== 'screenshot' && (
+        <div>
+          <div className="filtersRow">
+          {/* Type dropdown card */}
+          <div ref={typeRef} className="filtersCard">
+            <button
+              type="button"
+              className="filtersCardHeader"
+              onClick={() => {
+                setTypeOpen((v) => !v);
+                setSortOpen(false);
+              }}
+              aria-label="Type"
+            >
+              <span className="filtersCardTitle">Type</span>
+              <span className="filtersCardHeaderRight">
+                <span className="filtersCardSelected" title={selectedTypeLabel}>
+                  {selectedTypeLabel}
+                </span>
+                <ChevronDown
+                  className={typeOpen ? 'filtersChevron filtersChevronOpen' : 'filtersChevron'}
+                  aria-hidden="true"
+                />
               </span>
-              <ChevronDown
-                className={typeOpen ? 'filtersChevron filtersChevronOpen' : 'filtersChevron'}
-                aria-hidden="true"
-              />
-            </span>
-          </button>
-          <div className={typeOpen ? 'filtersCardBody filtersCardBodyOpen' : 'filtersCardBody'}>
+            </button>
+          </div>
+
+          {/* Sort dropdown card */}
+          <div ref={sortRef} className="filtersCard">
+            <button
+              type="button"
+              className="filtersCardHeader"
+              onClick={() => {
+                setSortOpen((v) => !v);
+                setTypeOpen(false);
+              }}
+              aria-label="Sort"
+            >
+              <span className="filtersCardTitle">Sort</span>
+              <span className="filtersCardHeaderRight">
+                <span className="filtersCardSelected" title={selectedSortLabel}>
+                  {selectedSortLabel}
+                </span>
+                <ChevronDown
+                  className={sortOpen ? 'filtersChevron filtersChevronOpen' : 'filtersChevron'}
+                  aria-hidden="true"
+                />
+              </span>
+            </button>
+          </div>
+        </div>
+        </div>
+      )}
+
+      {typeOpen &&
+        typeMenuPos &&
+        createPortal(
+          <div
+            ref={typeMenuRef}
+            className="filtersDropdownPortal"
+            role="menu"
+            aria-label="Type options"
+          >
             <div className="filtersList">
               {typeOptions.map((opt) => (
                 <button
                   key={opt.label}
                   type="button"
+                  role="menuitem"
                   className={opt.value === mimeType ? 'filtersItem filtersItemSelected' : 'filtersItem'}
                   onClick={() => {
                     onMimeTypeChange(opt.value);
@@ -131,37 +318,25 @@ const FileListFilters = memo(function FileListFilters({
                 </button>
               ))}
             </div>
-          </div>
-        </div>
+          </div>,
+          document.body
+        )}
 
-        {/* Sort dropdown card */}
-        <div ref={sortRef} className="filtersCard">
-          <button
-            type="button"
-            className="filtersCardHeader"
-            onClick={() => {
-              setSortOpen((v) => !v);
-              setTypeOpen(false);
-            }}
-            aria-label="Sort"
+      {sortOpen &&
+        sortMenuPos &&
+        createPortal(
+          <div
+            ref={sortMenuRef}
+            className="filtersDropdownPortal"
+            role="menu"
+            aria-label="Sort options"
           >
-            <span className="filtersCardTitle">Sort</span>
-            <span className="filtersCardHeaderRight">
-              <span className="filtersCardSelected" title={selectedSortLabel}>
-                {selectedSortLabel}
-              </span>
-              <ChevronDown
-                className={sortOpen ? 'filtersChevron filtersChevronOpen' : 'filtersChevron'}
-                aria-hidden="true"
-              />
-            </span>
-          </button>
-          <div className={sortOpen ? 'filtersCardBody filtersCardBodyOpen' : 'filtersCardBody'}>
             <div className="filtersList">
               {sortOptions.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
+                  role="menuitem"
                   className={opt.value === sortBy ? 'filtersItem filtersItemSelected' : 'filtersItem'}
                   onClick={() => {
                     onSortChange(opt.value);
@@ -172,9 +347,9 @@ const FileListFilters = memo(function FileListFilters({
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 });

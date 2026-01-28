@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { folderService, type Folder } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
-import { Folder as FolderIcon, FolderOpen, Home, Check, AlertCircle, Loader2, MoveRight, Files, X } from 'lucide-react';
+import { Folder as FolderIcon, FolderOpen, Home, Check, Loader2, MoveRight, Files } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import Modal from '../common/Modal';
+import ErrorMessage from '../common/ErrorMessage';
 
 interface BatchMoveDialogProps {
   fileIds: string[];
@@ -106,157 +108,130 @@ export default function BatchMoveDialog({
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, loading]);
 
+  const handleSafeClose = () => {
+    if (!loading) onClose();
+  };
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-      onClick={() => !loading && onClose()}
+    <Modal
+      title="批量移动"
+      description={`已选择 ${selectionText}，请选择目标文件夹`}
+      onClose={handleSafeClose}
+      maxWidth="md"
+      variant="glass"
     >
-      <div
-        className="relative w-full max-w-md overflow-hidden rounded-lg bg-gray-950 shadow-2xl border border-cyan-500/30"
-        style={{ boxShadow: '0 0 40px rgba(6, 182, 212, 0.15), 0 0 80px rgba(236, 72, 153, 0.1)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 顶部霓虹边框 */}
-        <div className="h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-        
-        {/* 头部 */}
-        <div className="px-5 pt-5 pb-4 border-b border-cyan-500/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                <MoveRight className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-medium text-cyan-50">批量移动</h2>
-                <p className="flex items-center gap-1.5 text-sm text-cyan-400/70">
-                  <Files className="h-3.5 w-3.5" />
-                  已选择 {selectionText}
-                </p>
-              </div>
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={() => setError(null)}
+          type="error"
+        />
+      )}
+
+      {success && (
+        <ErrorMessage
+          message={success}
+          onClose={() => setSuccess(null)}
+          type="info"
+        />
+      )}
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white/85">
+            <MoveRight className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-sm text-white/80">
+              <Files className="h-4 w-4 text-white/70" aria-hidden="true" />
+              <span className="truncate">已选择 {selectionText}</span>
             </div>
-            <button
-              onClick={() => !loading && onClose()}
-              className="text-gray-500 hover:text-cyan-400 transition-colors"
-              title="关闭"
-              aria-label="关闭"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="mt-0.5 text-xs text-white/55">目标位置</div>
           </div>
         </div>
 
-        {/* 内容区 */}
-        <div className="px-5 py-4">
-          {/* 错误提示 */}
-          {error && (
-            <div className="mb-4 flex items-center gap-2 rounded bg-pink-500/10 px-3 py-2.5 text-sm text-pink-400 border border-pink-500/30">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* 成功提示 */}
-          {success && (
-            <div className="mb-4 flex items-center gap-2 rounded bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-400 border border-emerald-500/30">
-              <Check className="h-4 w-4 shrink-0" />
-              <span>{success}</span>
-            </div>
-          )}
-
-          {/* 文件夹列表 */}
-          <div className="space-y-2">
-            <label className="text-xs font-mono uppercase tracking-widest text-cyan-500/70">
-              // 目标位置
-            </label>
-            
-            {loadingFolders ? (
-              <div className="flex items-center justify-center py-8 text-cyan-400/50">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="ml-2 text-sm font-mono">LOADING...</span>
+        {loadingFolders ? (
+          <div className="flex items-center justify-center py-8 text-white/60">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <span className="ml-2 text-sm">加载文件夹…</span>
+          </div>
+        ) : (
+          <div className="max-h-60 overflow-y-auto rounded-xl border border-white/12 bg-white/5 p-1.5">
+            {/* 根目录选项 */}
+            <button
+              type="button"
+              onClick={() => setTargetFolderId('')}
+              disabled={loading}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors',
+                'border border-transparent',
+                targetFolderId === ''
+                  ? 'bg-white/10 text-white border-white/15'
+                  : 'text-white/75 hover:bg-white/8 hover:text-white'
+              )}
+            >
+              <div
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-lg border',
+                  targetFolderId === '' ? 'border-white/18 bg-white/10' : 'border-white/10 bg-white/5'
+                )}
+              >
+                <Home className="h-4 w-4 text-white/70" aria-hidden="true" />
               </div>
-            ) : (
-              <div className="max-h-60 space-y-1 overflow-y-auto rounded bg-gray-900/80 p-1.5 border border-cyan-500/20">
-                {/* 根目录选项 */}
-                <button
-                  type="button"
-                  onClick={() => setTargetFolderId('')}
-                  disabled={loading}
+              <div className="flex-1 min-w-0">
+                <div className="truncate text-sm">Root</div>
+              </div>
+              {targetFolderId === '' && <Check className="h-4 w-4 text-emerald-200/90" aria-hidden="true" />}
+            </button>
+
+            {/* 文件夹列表 */}
+            {availableFolders.map((folder) => (
+              <button
+                key={folder.id}
+                type="button"
+                onClick={() => setTargetFolderId(folder.id)}
+                disabled={loading}
+                className={cn(
+                  'mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors',
+                  'border border-transparent',
+                  targetFolderId === folder.id
+                    ? 'bg-white/10 text-white border-white/15'
+                    : 'text-white/75 hover:bg-white/8 hover:text-white'
+                )}
+              >
+                <div
                   className={cn(
-                    'flex w-full items-center gap-3 rounded px-3 py-2 text-left transition-all',
-                    targetFolderId === ''
-                      ? 'bg-cyan-500/15 text-cyan-300 shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]'
-                      : 'text-gray-400 hover:bg-cyan-500/5 hover:text-cyan-300'
+                    'flex h-8 w-8 items-center justify-center rounded-lg border',
+                    targetFolderId === folder.id ? 'border-white/18 bg-white/10' : 'border-white/10 bg-white/5'
                   )}
                 >
-                  <div className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded border transition-colors',
-                    targetFolderId === '' 
-                      ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' 
-                      : 'bg-gray-800 border-gray-700 text-gray-500'
-                  )}>
-                    <Home className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate text-sm font-mono">ROOT://</div>
-                  </div>
-                  {targetFolderId === '' && (
-                    <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+                  {targetFolderId === folder.id ? (
+                    <FolderOpen className="h-4 w-4 text-white/75" aria-hidden="true" />
+                  ) : (
+                    <FolderIcon className="h-4 w-4 text-white/55" aria-hidden="true" />
                   )}
-                </button>
-
-                {/* 文件夹列表 */}
-                {availableFolders.map((folder) => (
-                  <button
-                    key={folder.id}
-                    type="button"
-                    onClick={() => setTargetFolderId(folder.id)}
-                    disabled={loading}
-                    className={cn(
-                      'flex w-full items-center gap-3 rounded px-3 py-2 text-left transition-all',
-                      targetFolderId === folder.id
-                        ? 'bg-cyan-500/15 text-cyan-300 shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]'
-                        : 'text-gray-400 hover:bg-cyan-500/5 hover:text-cyan-300'
-                    )}
-                  >
-                    <div className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded border transition-colors',
-                      targetFolderId === folder.id 
-                        ? 'bg-pink-500/20 border-pink-500/50' 
-                        : 'bg-gray-800 border-gray-700'
-                    )}>
-                      {targetFolderId === folder.id ? (
-                        <FolderOpen className="h-4 w-4 text-pink-400" />
-                      ) : (
-                        <FolderIcon className="h-4 w-4 text-gray-500" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate text-sm">{folder.name}</div>
-                    </div>
-                    {targetFolderId === folder.id && (
-                      <div className="h-2 w-2 rounded-full bg-pink-400 shadow-[0_0_8px_rgba(236,72,153,0.8)]" />
-                    )}
-                  </button>
-                ))}
-
-                {availableFolders.length === 0 && (
-                  <div className="py-6 text-center text-sm text-gray-600 font-mono">
-                    NO_FOLDERS_FOUND
-                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate text-sm">{folder.name}</div>
+                </div>
+                {targetFolderId === folder.id && (
+                  <Check className="h-4 w-4 text-emerald-200/90" aria-hidden="true" />
                 )}
-              </div>
+              </button>
+            ))}
+
+            {availableFolders.length === 0 && (
+              <div className="py-6 text-center text-sm text-white/55">暂无可用文件夹</div>
             )}
           </div>
-        </div>
+        )}
 
-        {/* 底部按钮 */}
-        <div className="px-5 py-4 border-t border-cyan-500/20 flex gap-3">
+        <div className="flex gap-3 pt-1">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleSafeClose}
             disabled={loading}
-            className="flex-1 rounded bg-gradient-to-r from-rose-600 to-pink-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-rose-500 hover:to-pink-500 disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ boxShadow: loading ? 'none' : '0 0 20px rgba(244, 63, 94, 0.3)' }}
+            className="flex-1 rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
             取消
           </button>
@@ -264,28 +239,24 @@ export default function BatchMoveDialog({
             type="button"
             onClick={handleMove}
             disabled={loading || loadingFolders || !!success}
-            className="flex flex-1 items-center justify-center gap-2 rounded bg-gradient-to-r from-cyan-600 to-cyan-500 px-4 py-2 text-sm font-medium text-gray-950 transition-all hover:from-cyan-500 hover:to-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ boxShadow: loading || loadingFolders || success ? 'none' : '0 0 20px rgba(6, 182, 212, 0.4)' }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-400/15 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                MOVING...
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                移动中…
               </>
             ) : success ? (
               <>
-                <Check className="h-4 w-4" />
-                DONE
+                <Check className="h-4 w-4" aria-hidden="true" />
+                完成
               </>
             ) : (
-              'EXECUTE'
+              '执行移动'
             )}
           </button>
         </div>
-
-        {/* 底部霓虹边框 */}
-        <div className="h-px bg-gradient-to-r from-transparent via-pink-500 to-transparent" />
       </div>
-    </div>
+    </Modal>
   );
 }
