@@ -318,15 +318,16 @@ export default function FilePreview({
         {!loading && !error && supported && (
           <div
             className="flex h-[calc(100vh-180px)] w-full max-w-5xl items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
           >
             {/* 图片预览 */}
             {isImage && blobUrl && (
-              <div className="relative flex h-full w-full items-center justify-center">
+              <div className="relative flex h-full w-full items-center justify-center pointer-events-none">
                 <div className={cn(
-                  'relative overflow-hidden rounded-lg transition-opacity duration-300',
+                  'pointer-events-auto relative overflow-hidden rounded-lg transition-opacity duration-300',
                   imageLoaded ? 'opacity-100' : 'opacity-0'
-                )}>
+                )}
+                onClick={(e) => e.stopPropagation()}
+                >
                   <img
                     src={blobUrl}
                     alt={file.original_filename}
@@ -344,23 +345,29 @@ export default function FilePreview({
 
             {/* PDF 预览 */}
             {isPDF && blobUrl && (
-              <div className="h-full w-full overflow-hidden rounded-lg">
-                <iframe
-                  src={blobUrl}
-                  title={file.original_filename}
-                  className="h-full w-full border-0 bg-white"
-                />
+              <div className="flex h-full w-full items-center justify-center pointer-events-none">
+                <div
+                  className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,64rem)] overflow-hidden rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <iframe
+                    src={blobUrl}
+                    title={file.original_filename}
+                    className="h-full w-full border-0 bg-white"
+                  />
+                </div>
               </div>
             )}
 
             {/* 视频预览 */}
             {isVideo && blobUrl && (
-              <div className="flex h-full w-full items-center justify-center">
+              <div className="flex h-full w-full items-center justify-center pointer-events-none">
                 <video
                   src={blobUrl}
                   controls
                   autoPlay
-                  className="max-h-full max-w-full rounded-lg shadow-2xl"
+                  className="pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <track kind="captions" />
                   您的浏览器不支持视频播放
@@ -370,8 +377,11 @@ export default function FilePreview({
 
             {/* 音频预览 */}
             {isAudio && blobUrl && (
-              <div className="flex h-full w-full flex-col items-center justify-center">
-                <div className="flex flex-col items-center gap-6 rounded-2xl bg-white/5 px-12 py-10">
+              <div className="flex h-full w-full flex-col items-center justify-center pointer-events-none">
+                <div
+                  className="pointer-events-auto flex flex-col items-center gap-6 rounded-2xl bg-white/5 px-12 py-10"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex h-24 w-24 items-center justify-center rounded-full bg-purple-500/20">
                     <AudioIcon />
                   </div>
@@ -389,14 +399,19 @@ export default function FilePreview({
 
             {/* 文本预览 */}
             {isText && textContent !== null && (
-              <div className="h-full w-full overflow-hidden rounded-xl bg-gray-900/80 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-                  <span className="text-xs text-white/40">{file.mime_type}</span>
-                  <span className="text-xs text-white/40">{textContent.split('\n').length} 行</span>
+              <div className="flex h-full w-full items-center justify-center pointer-events-none">
+                <div
+                  className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,60rem)] overflow-hidden rounded-xl bg-gray-900/80 shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+                    <span className="text-xs text-white/40">{file.mime_type}</span>
+                    <span className="text-xs text-white/40">{textContent.split('\n').length} 行</span>
+                  </div>
+                  <pre className="h-[calc(100%-40px)] overflow-auto p-4 text-sm leading-relaxed text-gray-200 whitespace-pre-wrap font-mono">
+                    {textContent}
+                  </pre>
                 </div>
-                <pre className="h-[calc(100%-40px)] overflow-auto p-4 text-sm leading-relaxed text-gray-200 whitespace-pre-wrap font-mono">
-                  {textContent}
-                </pre>
               </div>
             )}
           </div>
@@ -406,9 +421,11 @@ export default function FilePreview({
         {!loading && !error && !supported && (
           <div
             className="flex h-[calc(100vh-180px)] w-full max-w-5xl items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/5 px-8 py-10 text-center">
+            <div
+              className="flex flex-col items-center gap-4 rounded-2xl bg-white/5 px-8 py-10 text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-purple-500/20">
                 <FileIcon />
               </div>
@@ -440,7 +457,7 @@ export default function FilePreview({
           >
             {file.original_filename}
           </h2>
-          <div className="mt-1 flex items-center justify-center gap-3 text-sm text-white/50">
+          <div className="file-meta-14px mt-1 flex items-center justify-center gap-3 text-white/50">
             <span>{formatFileSize(file.file_size)}</span>
             <span className="h-1 w-1 rounded-full bg-white/30" />
             <span>{getMimeTypeLabel(file.mime_type)}</span>

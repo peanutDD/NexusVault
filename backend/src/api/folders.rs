@@ -8,9 +8,10 @@ use axum::{
 };
 
 use crate::handlers::folders::{
-    create_folder_handler, delete_folder_handler, get_folder_contents_handler, get_folder_handler,
-    get_folder_path_handler, list_folders_handler, move_files_to_folder_handler,
-    move_folder_handler, rename_folder_handler,
+    create_folder_handler, delete_folder_handler, get_files_in_folders_handler,
+    get_folder_contents_handler, get_folder_handler, get_folder_path_handler,
+    list_folders_handler, move_files_to_folder_handler, move_folder_handler,
+    rename_folder_handler,
 };
 use crate::AppState;
 
@@ -30,12 +31,14 @@ use crate::AppState;
 ///
 /// ## 文件移动
 /// - `POST /move-files`: 批量移动文件到文件夹
+/// - `POST /files-in-folders`: 获取文件夹内所有文件 ID（递归）
 pub fn create_router() -> Router<AppState> {
     Router::new()
         .route("/", post(create_folder_handler))
         .route("/", get(list_folders_handler))
         .route("/contents", get(get_folder_contents_handler))
         .route("/move-files", post(move_files_to_folder_handler))
+        .route("/files-in-folders", post(get_files_in_folders_handler))
         .route("/:id", get(get_folder_handler))
         .route("/:id/path", get(get_folder_path_handler))
         .route("/:id", put(rename_folder_handler))

@@ -1,0 +1,213 @@
+.fileListGlassScope {
+  /* 基础色板（暗色玻璃拟态） */
+  /* 更“玻璃”：更强 blur、更亮边、更明显高光 */
+  /* 性能优化：降低透明/高光强度，减少合成压力 */
+  --glass-bg-a: rgba(255, 255, 255, 0.09);
+  --glass-bg-b: rgba(255, 255, 255, 0.035);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border-strong: rgba(255, 255, 255, 0.20);
+  --glass-text: rgba(255, 255, 255, 0.92);
+  --glass-text-muted: rgba(255, 255, 255, 0.65);
+  --glass-shadow: 0 22px 78px rgba(0, 0, 0, 0.48);
+  --glass-shadow-soft: 0 14px 48px rgba(0, 0, 0, 0.34);
+  --glass-radius: 18px;
+  --glass-radius-sm: 14px;
+  /* 过大的 blur 是列表卡顿的主要原因之一 */
+  --glass-blur: 14px;
+  --glass-sat: 125%;
+  --glass-hi: rgba(255, 255, 255, 0.16);
+  --glass-hi-soft: rgba(255, 255, 255, 0.10);
+}
+
+/* 公用：保证高光层不影响交互 */
+.fileListGlassScope .glass-panel,
+.fileListGlassScope .glass-panel-soft,
+.fileListGlassScope .glass-card,
+.fileListGlassScope .glass-thumb,
+.fileListGlassScope .glass-chip,
+.fileListGlassScope .glass-iconbtn,
+.fileListGlassScope .glass-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.fileListGlassScope .glass-panel::before,
+.fileListGlassScope .glass-panel-soft::before,
+.fileListGlassScope .glass-card::before,
+.fileListGlassScope .glass-thumb::before,
+.fileListGlassScope .glass-chip::before,
+.fileListGlassScope .glass-iconbtn::before,
+.fileListGlassScope .glass-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 玻璃反射高光（顶部更亮，边缘略有色泽） */
+  background:
+    radial-gradient(120% 70% at 15% 0%, var(--glass-hi), transparent 60%),
+    radial-gradient(90% 60% at 90% 10%, rgba(217, 70, 239, 0.10), transparent 62%),
+    radial-gradient(80% 60% at 10% 95%, rgba(16, 185, 129, 0.08), transparent 60%);
+  opacity: 0.55;
+}
+
+.fileListGlassScope .glass-panel::after,
+.fileListGlassScope .glass-panel-soft::after,
+.fileListGlassScope .glass-card::after,
+.fileListGlassScope .glass-thumb::after,
+.fileListGlassScope .glass-chip::after,
+.fileListGlassScope .glass-iconbtn::after,
+.fileListGlassScope .glass-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 细微“磨砂颗粒/雾面”质感（不使用图片，避免额外资源） */
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.018) 0px,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  opacity: 0.35;
+}
+
+/* 面板（用于：区域容器、批量操作栏、全选栏等） */
+.fileListGlassScope .glass-panel {
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.12), transparent 55%),
+    linear-gradient(135deg, var(--glass-bg-a), var(--glass-bg-b));
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+}
+
+.fileListGlassScope .glass-panel-soft {
+  border-radius: var(--glass-radius);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background:
+    radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.10), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
+  box-shadow:
+    var(--glass-shadow-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) - 5px)) saturate(var(--glass-sat));
+  backdrop-filter: blur(calc(var(--glass-blur) - 5px)) saturate(var(--glass-sat));
+}
+
+/* 卡片（用于：文件/文件夹卡片） */
+.fileListGlassScope .glass-card {
+  border-radius: var(--glass-radius);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(120% 100% at 10% 10%, rgba(255, 255, 255, 0.14), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  box-shadow:
+    0 18px 58px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  /* 性能关键：列表里卡片数量多，去掉 backdrop-filter 避免滚动卡顿 */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.fileListGlassScope .glass-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+}
+
+/* 缩略图容器 */
+.fileListGlassScope .glass-thumb {
+  border-radius: var(--glass-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background:
+    radial-gradient(110% 80% at 10% 0%, rgba(255, 255, 255, 0.12), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  /* 性能关键：缩略图容器同样数量多，去掉 blur */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* 芯片/面包屑按钮 */
+.fileListGlassScope .glass-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--glass-text-muted);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.fileListGlassScope .glass-chip:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--glass-text);
+}
+
+/* 图标按钮 */
+.fileListGlassScope .glass-iconbtn {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.fileListGlassScope .glass-iconbtn:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-0.5px);
+}
+
+/* 主按钮（用于：批量操作按钮、分页按钮等） */
+.fileListGlassScope .glass-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+/* 性能关键：卡片/缩略图/按钮上的“颗粒纹理”会显著增加重绘成本，禁用它们 */
+.fileListGlassScope .glass-card::before,
+.fileListGlassScope .glass-card::after,
+.fileListGlassScope .glass-thumb::before,
+.fileListGlassScope .glass-thumb::after,
+.fileListGlassScope .glass-chip::before,
+.fileListGlassScope .glass-chip::after,
+.fileListGlassScope .glass-iconbtn::before,
+.fileListGlassScope .glass-iconbtn::after,
+.fileListGlassScope .glass-btn::before,
+.fileListGlassScope .glass-btn::after {
+  content: none;
+}
+
+/* 小屏进一步降级：关掉面板 blur（移动端更容易卡） */
+@media (max-width: 40rem) {
+  .fileListGlassScope .glass-panel,
+  .fileListGlassScope .glass-panel-soft {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+.fileListGlassScope .glass-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.20);
+  transform: translateY(-0.5px);
+}
+
+.fileListGlassScope .glass-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+

@@ -21,8 +21,8 @@ use uuid::Uuid;
 
 use crate::extractors::AuthenticatedUser;
 use crate::models::folder::{
-    BatchMoveToFolderRequest, CreateFolderRequest, FolderListQuery, MoveFolderRequest,
-    RenameFolderRequest,
+    BatchMoveToFolderRequest, CreateFolderRequest, FolderListQuery, GetFilesInFoldersRequest,
+    MoveFolderRequest, RenameFolderRequest,
 };
 use crate::services::folder::FolderService;
 use crate::utils::{json_response, AppError};
@@ -266,4 +266,31 @@ pub async fn move_files_to_folder_handler(
         "message": "文件移动成功",
         "moved": moved
     })))
+}
+
+/// 获取文件夹内所有文件 ID（递归）
+///
+/// # 请求体
+/// ```json
+/// {
+///   "folder_ids": ["uuid1", "uuid2", ...]
+/// }
+/// ```
+///
+/// # 响应
+/// ```json
+/// {
+///   "file_ids": ["uuid1", "uuid2", ...]
+/// }
+/// ```
+pub async fn get_files_in_folders_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    Json(req): Json<GetFilesInFoldersRequest>,
+) -> Result<Response, AppError> {
+    let folder_service = FolderService::from_state(&state);
+    let file_ids = folder_service
+        .get_all_file_ids_in_folders(user_id, req.folder_ids)
+        .await?;
+    Ok(json_response(json!({ "file_ids": file_ids })))
 }

@@ -51,7 +51,7 @@ const FileCard = memo(function FileCard({
   return (
     <div
       className={cn(
-        'group relative rounded-xl bg-gray-800/80 p-3 transition-all duration-200 hover:bg-gray-800 hover:shadow-lg hover:shadow-purple-500/10',
+        'glass-card group relative p-3',
         isSelected && 'ring-2 ring-purple-500 bg-purple-500/10'
       )}
       draggable
@@ -59,7 +59,7 @@ const FileCard = memo(function FileCard({
     >
       {/* 缩略图 */}
       <div
-        className="relative mb-3 aspect-square cursor-pointer overflow-hidden rounded-lg bg-gray-700"
+        className="glass-thumb relative mb-3 aspect-square cursor-pointer overflow-hidden"
         onClick={() => onPreview(file)}
       >
         {/* 选择框 - 带背景，悬浮或选中时显示 */}
@@ -98,7 +98,7 @@ const FileCard = memo(function FileCard({
               onPreview(file);
             }}
             aria-label="预览"
-            className="rounded-full bg-white/20 p-3 backdrop-blur-sm transition-colors hover:bg-white/30"
+            className="glass-btn bg-white/12 rounded-full p-3 transition-colors hover:bg-white/20"
           >
             <EyeIcon />
           </button>
@@ -116,23 +116,23 @@ const FileCard = memo(function FileCard({
         </h3>
 
         {/* 文件大小和类型 */}
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="file-meta-14px flex items-center gap-2 text-gray-400">
           <span>{formatFileSize(file.file_size)}</span>
           <span className="h-1 w-1 rounded-full bg-gray-600" />
           <span>{mimeTypeLabel}</span>
         </div>
 
         {/* 上传时间 */}
-        <p className="text-xs text-gray-500">{formattedDate}</p>
+        <p className="file-meta-14px text-gray-500">{formattedDate}</p>
       </div>
 
       {/* 操作按钮 */}
-      <div className="mt-3 flex items-center justify-between border-t border-gray-700/50 pt-3">
+      <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
         <div className="flex gap-1">
           <button
             type="button"
             onClick={() => onDownload(file)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-700 hover:text-purple-400"
+            className="glass-iconbtn rounded-lg p-2 text-white/70 hover:text-purple-300"
             title="下载"
           >
             <DownloadIcon />
@@ -140,7 +140,7 @@ const FileCard = memo(function FileCard({
           <button
             type="button"
             onClick={() => onShare(file)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-700 hover:text-green-400"
+            className="glass-iconbtn rounded-lg p-2 text-white/70 hover:text-emerald-300"
             title="分享"
           >
             <ShareIcon />
@@ -149,7 +149,7 @@ const FileCard = memo(function FileCard({
         <button
           type="button"
           onClick={() => onDelete(file.id)}
-          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-700 hover:text-red-400"
+          className="glass-iconbtn rounded-lg p-2 text-white/70 hover:text-rose-300"
           title="删除"
         >
           <TrashIcon />

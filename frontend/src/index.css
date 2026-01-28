@@ -1,13 +1,31 @@
 @import "tailwindcss";
 
+:root {
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', sans-serif;
+  --font-display: 'Space Grotesk', Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+  --font-brand: 'Bebas Neue', 'Space Grotesk', Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-brand {
+  font-family: var(--font-brand);
 }
 
 code {
@@ -28,7 +46,7 @@ code {
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(0.625rem);
   }
   to {
     opacity: 1;
@@ -49,10 +67,10 @@ code {
 
 @keyframes shimmer {
   0% {
-    background-position: -1000px 0;
+    background-position: -62.5rem 0;
   }
   100% {
-    background-position: 1000px 0;
+    background-position: 62.5rem 0;
   }
 }
 
@@ -69,7 +87,7 @@ code {
 @keyframes slide-in-right {
   from {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateX(1.25rem);
   }
   to {
     opacity: 1;
@@ -98,18 +116,143 @@ html {
   scroll-behavior: smooth;
 }
 
+/* 全局流体字号基准（随视口连续变化，不是固定断点跳变） */
+html {
+  /* vw 驱动：rem 会随之缩放（全站 padding/margin 若用 rem，将随视口连续变化） */
+  font-size: clamp(0.875rem, 1.1vw + 0.5625rem, 1.25rem);
+}
+
+/* 导航栏专用：更明显的 vw 驱动流体字号（rem + vw） */
+.nav-title-fluid {
+  font-size: clamp(1.625rem, 2.2vw + 0.625rem, 2.875rem);
+  line-height: 1.05;
+}
+
+.nav-ui-fluid {
+  /* 右侧控件字体缩小一倍 */
+  /* 在上次基础上放大 1.5x（整体从 0.5x → 0.75x 体感） */
+  font-size: clamp(0.5625rem, 0.525vw + 0.3375rem, 0.75rem);
+}
+
+/* 导航栏右侧：用 rem 管控尺寸（随 html font-size 连续缩放） */
+.nav-panel {
+  /* 右侧控件整体缩小一倍 */
+  padding: clamp(0.3rem, 0.45vw, 0.525rem);
+  gap: clamp(0.2625rem, 0.375vw, 0.4875rem);
+}
+
+.nav-chip {
+  height: clamp(1.6875rem, 2.4vw, 2.0625rem);
+  padding-inline: clamp(0.6rem, 0.9vw, 0.75rem);
+  gap: clamp(0.3rem, 0.45vw, 0.4875rem);
+  white-space: nowrap;
+}
+
+.nav-btn {
+  height: clamp(1.6875rem, 2.4vw, 2.0625rem);
+  padding-inline: clamp(0.675rem, 1.05vw, 0.9rem);
+  gap: clamp(0.3rem, 0.45vw, 0.4875rem);
+  white-space: nowrap;
+}
+
+.nav-iconbtn {
+  width: clamp(1.6875rem, 2.4vw, 2.0625rem);
+  height: clamp(1.6875rem, 2.4vw, 2.0625rem);
+  padding: 0;
+}
+
+.nav-icon {
+  width: clamp(0.7125rem, 0.675vw, 0.825rem);
+  height: clamp(0.7125rem, 0.675vw, 0.825rem);
+}
+
+.nav-dot {
+  width: clamp(0.375rem, 0.375vw, 0.5625rem);
+  height: clamp(0.375rem, 0.375vw, 0.5625rem);
+}
+
+/* 文件列表/预览的元信息：最大不超过 14px（可随窗口变小继续变小） */
+.file-meta-14px {
+  font-size: clamp(0px, 1.1vw, 14px);
+  line-height: 1.25;
+}
+
+/* 文件列表页主操作按钮（上传 / 新建文件夹） */
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+
+  gap: clamp(0.35rem, 0.5vw, 0.6rem);
+  padding-inline: clamp(0.9rem, 1.2vw, 1.25rem);
+  padding-block: clamp(0.55rem, 0.8vw, 0.8rem);
+  border-radius: clamp(0.65rem, 0.9vw, 0.95rem);
+
+  font-size: clamp(0.8rem, 0.55vw + 0.6rem, 1rem);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+
+  transition: transform 200ms ease, filter 200ms ease, box-shadow 200ms ease,
+    border-color 200ms ease, background-color 200ms ease;
+}
+
+.cta-icon {
+  width: clamp(1rem, 0.9vw, 1.15rem);
+  height: clamp(1rem, 0.9vw, 1.15rem);
+}
+
+.cta-btn-primary {
+  color: rgba(248, 250, 252, 0.98);
+  border: 1px solid rgba(110, 231, 183, 0.45);
+  background-image: linear-gradient(
+    90deg,
+    rgba(16, 185, 129, 0.50),
+    rgba(16, 185, 129, 0.28),
+    rgba(217, 70, 239, 0.22)
+  );
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.12),
+    0 14px 40px rgba(16, 185, 129, 0.14);
+}
+
+.cta-btn-primary:hover {
+  border-color: rgba(110, 231, 183, 0.68);
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.18),
+    0 18px 55px rgba(16, 185, 129, 0.18);
+}
+
+.cta-btn-secondary {
+  color: rgba(226, 232, 240, 0.95);
+  border: 1px solid rgba(110, 231, 183, 0.28);
+  background-color: rgba(2, 6, 23, 0.32);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.cta-btn-secondary:hover {
+  border-color: rgba(110, 231, 183, 0.44);
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.10),
+    0 14px 40px rgba(16, 185, 129, 0.10);
+}
+
 /* 焦点可见性改进 */
 *:focus-visible {
-  outline: 2px solid theme('colors.purple.500');
-  outline-offset: 2px;
+  outline: 0.125rem solid theme('colors.purple.500');
+  outline-offset: 0.125rem;
 }
 
 /* 移动端触摸优化 */
 @media (hover: none) and (pointer: coarse) {
   button,
   a {
-    min-height: 44px;
-    min-width: 44px;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
   }
 }
 
@@ -117,7 +260,7 @@ html {
 .preview-grid-pattern {
   opacity: 0.02;
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-  background-size: 50px 50px;
+    linear-gradient(rgba(255, 255, 255, 0.1) 0.0625rem, transparent 0.0625rem),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0.0625rem, transparent 0.0625rem);
+  background-size: 3.125rem 3.125rem;
 }

@@ -20,7 +20,7 @@ export default function ErrorMessage({
   return (
     <div
       className={cn(
-        'mb-4 p-4 border rounded-lg flex items-start gap-3 animate-fade-in transition-all duration-200',
+        'mb-4 p-4 border rounded-[2px] flex items-start gap-3 animate-fade-in transition-all duration-200',
         typeClasses[type]
       )}
       role="alert"

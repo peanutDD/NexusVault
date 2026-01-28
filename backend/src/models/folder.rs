@@ -122,3 +122,10 @@ pub struct BatchMoveToFolderRequest {
     /// 目标文件夹 ID（null 表示移动到根目录）
     pub folder_id: Option<Uuid>,
 }
+
+/// 获取文件夹内所有文件请求
+#[derive(Debug, Deserialize)]
+pub struct GetFilesInFoldersRequest {
+    /// 文件夹 ID 列表
+    pub folder_ids: Vec<Uuid>,
+}

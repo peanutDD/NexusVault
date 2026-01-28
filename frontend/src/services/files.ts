@@ -284,7 +284,7 @@ export const fileService = {
     const response = await api.get<Blob>(`/api/files/${fileId}/download`, {
       responseType: 'blob',
     });
-    downloadBlob(new Blob([response.data]), filename);
+    downloadBlob(response.data, filename);
   },
 
   async deleteFile(fileId: string): Promise<void> {
@@ -300,12 +300,13 @@ export const fileService = {
   },
 
   async downloadZip(ids: string[]): Promise<void> {
-    const idsParam = ids.join(',');
-    const response = await api.get<Blob>(
-      `/api/files/download-zip?ids=${idsParam}`,
+    // 使用 POST 避免 ids 过多导致 URL 超长
+    const response = await api.post<Blob>(
+      '/api/files/download-zip',
+      { ids },
       { responseType: 'blob' }
     );
-    downloadBlob(new Blob([response.data]), 'files.zip');
+    downloadBlob(response.data, 'files.zip');
   },
 
   getPreviewUrl(fileId: string): string {

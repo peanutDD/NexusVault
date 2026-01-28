@@ -168,4 +168,40 @@ export const folderService = {
     );
     return response.data.moved;
   },
+
+  /**
+   * 获取文件夹内所有文件 ID（递归）
+   * @param folderIds 文件夹 ID 列表
+   * @returns 所有文件 ID 列表
+   */
+  async getFilesInFolders(folderIds: string[]): Promise<string[]> {
+    if (folderIds.length === 0) return [];
+    const response = await api.post<{ file_ids: string[] }>(
+      '/api/folders/files-in-folders',
+      { folder_ids: folderIds }
+    );
+    return response.data.file_ids;
+  },
+
+  /**
+   * 批量移动文件夹
+   * @param folderIds 文件夹 ID 列表
+   * @param targetFolderId 目标文件夹 ID（null 表示根目录）
+   * @returns 移动成功的数量
+   */
+  async moveFolders(
+    folderIds: string[],
+    targetFolderId: string | null
+  ): Promise<number> {
+    let moved = 0;
+    for (const folderId of folderIds) {
+      try {
+        await this.move(folderId, targetFolderId);
+        moved++;
+      } catch {
+        // 忽略单个失败，继续处理其他文件夹
+      }
+    }
+    return moved;
+  },
 };

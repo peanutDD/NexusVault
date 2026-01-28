@@ -240,6 +240,29 @@ pub async fn batch_download_zip_handler(
         .map_err(|_| AppError::Internal)
 }
 
+/// 批量下载文件（ZIP 格式）- POST 版本
+///
+/// 避免 GET 查询参数过长（文件过多时 URL 可能超限）。
+///
+/// # 请求体
+/// ```json
+/// { "ids": ["uuid1", "uuid2", "..."] }
+/// ```
+pub async fn batch_download_zip_post_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    axum::Json(req): axum::Json<BatchDeleteRequest>,
+) -> Result<Response, AppError> {
+    let file_service = FileService::from_state(&state);
+
+    // 生成 ZIP 文件
+    let zip_data = file_service.batch_download_zip(&req.ids, user_id).await?;
+
+    // 返回 ZIP 文件响应
+    file_response(zip_data, "files.zip", "application/zip", false)
+        .map_err(|_| AppError::Internal)
+}
+
 /// 获取存储使用情况
 ///
 /// 返回用户的存储使用量和配额信息。

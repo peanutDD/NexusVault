@@ -7,6 +7,7 @@ interface ModalProps {
   children: ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
   description?: string;
+  variant?: 'default' | 'glass';
 }
 
 const maxWidthClasses = {
@@ -22,6 +23,7 @@ export default function Modal({
   children,
   maxWidth = 'md',
   description,
+  variant = 'default',
 }: ModalProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -33,7 +35,10 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 dark:bg-black/90 flex items-center justify-center z-50 p-4 animate-fade-in"
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in',
+        variant === 'glass' ? 'bg-black/70' : 'bg-black/80 dark:bg-black/90'
+      )}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -41,7 +46,17 @@ export default function Modal({
     >
       <div
         className={cn(
-          'bg-gray-800 dark:bg-gray-900 rounded-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl transform transition-all duration-300 animate-fade-in',
+          variant === 'glass'
+            ? [
+                // 玻璃拟态：半透明 + 边框高光 + 模糊
+                'relative w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl',
+                'border border-white/15 bg-white/10 text-white',
+                'backdrop-blur-xl backdrop-saturate-150',
+                // 轻微渐变高光（不依赖 FileListGlass.css）
+                'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
+                'before:bg-[radial-gradient(120%_70%_at_15%_0%,rgba(255,255,255,0.22),transparent_60%),radial-gradient(90%_60%_at_90%_10%,rgba(217,70,239,0.12),transparent_62%)]',
+              ].join(' ')
+            : 'bg-gray-800 dark:bg-gray-900 rounded-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl transform transition-all duration-300 animate-fade-in',
           maxWidthClasses[maxWidth]
         )}
         onClick={(e) => e.stopPropagation()}
@@ -56,7 +71,12 @@ export default function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 dark:text-gray-500 hover:text-white dark:hover:text-gray-200 text-2xl leading-none transition-colors duration-200 rounded-full hover:bg-gray-700/50 dark:hover:bg-gray-800/50 w-8 h-8 flex items-center justify-center"
+            className={cn(
+              'text-2xl leading-none transition-colors duration-200 w-8 h-8 flex items-center justify-center rounded-full',
+              variant === 'glass'
+                ? 'text-white/70 hover:text-white hover:bg-white/10'
+                : 'text-gray-400 dark:text-gray-500 hover:text-white dark:hover:text-gray-200 hover:bg-gray-700/50 dark:hover:bg-gray-800/50'
+            )}
             aria-label="关闭"
           >
             ×

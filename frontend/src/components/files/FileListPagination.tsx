@@ -36,7 +36,7 @@ const FileListPagination = memo(function FileListPagination({
       <button
         onClick={() => onPageChange(Math.max(1, page - 1))}
         disabled={page === 1}
-        className="flex items-center gap-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="glass-btn flex items-center gap-1 px-4 py-2 text-sm"
       >
         <ChevronLeftIcon />
         上一页
@@ -47,10 +47,10 @@ const FileListPagination = memo(function FileListPagination({
             key={pageNum}
             onClick={() => onPageChange(pageNum)}
             className={cn(
-              "h-9 w-9 rounded-lg text-sm font-medium transition-colors",
+              "glass-btn h-9 w-9 text-sm font-medium transition-colors",
               page === pageNum
-                ? "bg-purple-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white"
+                ? "border-white/30 bg-white/14 text-white"
+                : "text-white/70 hover:text-white"
             )}
           >
             {pageNum}
@@ -60,7 +60,7 @@ const FileListPagination = memo(function FileListPagination({
       <button
         onClick={() => onPageChange(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
-        className="flex items-center gap-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="glass-btn flex items-center gap-1 px-4 py-2 text-sm"
       >
         下一页
         <ChevronRightIcon />

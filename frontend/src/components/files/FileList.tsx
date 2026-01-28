@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react
 import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
 import { folderService, type Folder } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
+import './FileListGlass.css';
 import {
   Image,
   Film,
@@ -12,6 +13,8 @@ import {
   Archive,
   File,
   Folder as FolderIcon,
+  Upload,
+  FolderPlus,
 } from 'lucide-react';
 import {
   getCacheKey,
@@ -20,7 +23,6 @@ import {
   clearFileListCache,
 } from '../../utils/fileListCache';
 import { FILE_LIST } from '../../constants';
-import { useCategories } from '../../hooks/useCategories';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useRequestDedup } from '../../hooks/useRequestDedup';
 import ErrorMessage from '../common/ErrorMessage';
@@ -33,6 +35,10 @@ import FileListBatchActions from './FileListBatchActions';
 import { FileCardSkeleton } from '../common/Skeleton';
 import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
 
+interface FileListProps {
+  onOpenUpload?: () => void;
+}
+
 // 懒加载重型对话框组件
 const FilePreview = lazy(() => import('./FilePreview'));
 const ShareDialog = lazy(() => import('./ShareDialog'));
@@ -42,7 +48,7 @@ const CreateFolderDialog = lazy(() => import('./CreateFolderDialog'));
 const RenameFolderDialog = lazy(() => import('./RenameFolderDialog'));
 const ConfirmDialog = lazy(() => import('../common/ConfirmDialog'));
 
-export default function FileList() {
+export default function FileList({ onOpenUpload }: FileListProps) {
   // 文件状态
   const [files, setFiles] = useState<FileMetadata[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +65,6 @@ export default function FileList() {
   // 过滤器状态
   const [search, setSearch] = useState('');
   const [mimeType, setMimeType] = useState('');
-  const [category, setCategory] = useState<string>('');
   const [sortBy, setSortBy] = useState<import('./FileListFilters').SortOption>(() => {
     const saved = localStorage.getItem('fileListSortBy');
     return (saved as import('./FileListFilters').SortOption) || 'created_at_desc';
@@ -69,13 +74,15 @@ export default function FileList() {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   
-  // 缓存 selectedFileIds，避免多次 Array.from 转换
+  // 缓存 selectedFileIds 和 selectedFolderIds，避免多次 Array.from 转换
   const selectedFileIds = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
+  const selectedFolderIds = useMemo(() => Array.from(selectedFolders), [selectedFolders]);
   
   // 对话框状态
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
   const [shareFile, setShareFile] = useState<FileMetadata | null>(null);
   const [showBatchShare, setShowBatchShare] = useState(false);
+  const [batchShareFileIds, setBatchShareFileIds] = useState<string[]>([]);
   const [showBatchMove, setShowBatchMove] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [renamingFolder, setRenamingFolder] = useState<Folder | null>(null);
@@ -90,7 +97,6 @@ export default function FileList() {
   } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const { categories, loading: loadingCategories, refresh: refreshCategories } = useCategories();
   const limit = FILE_LIST.LIMIT;
 
   const debouncedSearch = useDebounce(search, 300);
@@ -145,7 +151,6 @@ export default function FileList() {
       limit,
       search: debouncedSearch || undefined,
       mime_type: mimeType || undefined,
-      category: category === '__uncategorized__' ? '' : (category || undefined),
       folder_id: currentFolderId,
       sort_by: sortField,
       sort_order: sortOrder,
@@ -173,7 +178,7 @@ export default function FileList() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, debouncedSearch, mimeType, category, currentFolderId, sortField, sortOrder, dedupedListFiles]);
+  }, [page, limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles]);
 
   // 加载数据
   useEffect(() => {
@@ -195,7 +200,6 @@ export default function FileList() {
         limit,
         search: debouncedSearch || undefined,
         mime_type: mimeType || undefined,
-        category: category === '__uncategorized__' ? '' : (category || undefined),
         folder_id: currentFolderId,
         sort_by: sortField,
         sort_order: sortOrder,
@@ -215,7 +219,7 @@ export default function FileList() {
     }, 500); // 延迟 500ms 后预取，避免频繁请求
     
     return () => clearTimeout(prefetchTimeout);
-  }, [page, total, loading, limit, debouncedSearch, mimeType, category, currentFolderId, sortField, sortOrder, dedupedListFiles]);
+  }, [page, total, loading, limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles]);
 
   // 导航到文件夹
   const navigateToFolder = useCallback((folderId: string | null) => {
@@ -358,11 +362,25 @@ export default function FileList() {
     }
   }, [deleteConfirm, selectedFiles, selectedFolders, selectedFileIds, loadFiles, loadFolders]);
 
-  // 批量下载
+  // 批量下载（支持文件夹）
   const handleBatchDownload = async () => {
-    if (selectedFiles.size === 0) return;
+    if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
     try {
-      await fileService.downloadZip(selectedFileIds);
+      // 获取所有要下载的文件 ID
+      let allFileIds = [...selectedFileIds];
+      
+      // 如果有文件夹被选中，递归获取文件夹内的文件
+      if (selectedFolders.size > 0) {
+        const folderFileIds = await folderService.getFilesInFolders(selectedFolderIds);
+        allFileIds = [...new Set([...allFileIds, ...folderFileIds])];
+      }
+      
+      if (allFileIds.length === 0) {
+        alert('没有可下载的文件');
+        return;
+      }
+      
+      await fileService.downloadZip(allFileIds);
     } catch (err) {
       alert(getErrorMessage(err, '批量下载失败'));
     }
@@ -444,10 +462,16 @@ export default function FileList() {
 
   // 使用 useCallback 优化
   const toggleSelectAll = useCallback(() => {
-    setSelectedFiles((prev) =>
-      prev.size === files.length ? new Set() : new Set(files.map((f) => f.id))
-    );
-  }, [files]);
+    if (selectedFiles.size === files.length) {
+      // 取消全选：清空文件和文件夹选择
+      setSelectedFiles(new Set());
+      setSelectedFolders(new Set());
+    } else {
+      // 全选：选中所有文件，清空文件夹选择
+      setSelectedFiles(new Set(files.map((f) => f.id)));
+      setSelectedFolders(new Set());
+    }
+  }, [files, selectedFiles.size]);
 
   // 计算值（使用 useMemo 缓存，避免重复计算）
   const totalPages = useMemo(() => Math.ceil(total / limit), [total, limit]);
@@ -457,7 +481,29 @@ export default function FileList() {
   );
   // 批量操作回调
   const handleShowBatchMove = useCallback(() => setShowBatchMove(true), []);
-  const handleShowBatchShare = useCallback(() => setShowBatchShare(true), []);
+  const handleShowBatchShare = useCallback(async () => {
+    if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
+    
+    try {
+      let allFileIds = [...selectedFileIds];
+      
+      // 如果有文件夹被选中，递归获取文件夹内的文件
+      if (selectedFolders.size > 0) {
+        const folderFileIds = await folderService.getFilesInFolders(selectedFolderIds);
+        allFileIds = [...new Set([...allFileIds, ...folderFileIds])];
+      }
+      
+      if (allFileIds.length === 0) {
+        alert('没有可分享的文件');
+        return;
+      }
+      
+      setBatchShareFileIds(allFileIds);
+      setShowBatchShare(true);
+    } catch (err) {
+      alert(getErrorMessage(err, '获取文件列表失败'));
+    }
+  }, [selectedFiles.size, selectedFolders.size, selectedFileIds, selectedFolderIds]);
   const handlePageChange = useCallback((newPage: number) => setPage(newPage), []);
   
   // 事件处理器 - 直接使用 toggleSelectFile/toggleSelectFolder
@@ -480,10 +526,6 @@ export default function FileList() {
     setPage(1);
   }, []);
 
-  const handleCategoryChange = useCallback((v: string) => {
-    setCategory(v);
-    setPage(1);
-  }, []);
 
   const handleSortChange = useCallback((v: import('./FileListFilters').SortOption) => {
     clearFileListCache(); // 清除缓存确保获取最新排序结果
@@ -551,33 +593,51 @@ export default function FileList() {
   const isLoading = loading || loadingFolders;
 
   return (
-    <div>
-      {/* 面包屑导航 + 新建文件夹按钮 */}
-      <div className="mb-4 flex items-center justify-between">
-        <FolderBreadcrumb
-          path={folderPath}
-          onNavigate={navigateToFolder}
-          onDrop={handleDropOnBreadcrumb}
-        />
-        <button
-          type="button"
-          onClick={() => setShowCreateFolder(true)}
-          className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-500"
-        >
-          <PlusIcon />
-          新建文件夹
-        </button>
+    <div className="fileListGlassScope space-y-4">
+      {/* 区域 1：路径 + 主操作 */}
+      <div className="glass-panel">
+        <div className="flex items-center justify-between gap-2 p-4">
+          <div className="min-w-0 flex-1">
+            <FolderBreadcrumb
+              path={folderPath}
+              onNavigate={navigateToFolder}
+              onDrop={handleDropOnBreadcrumb}
+            />
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            {onOpenUpload && (
+              <button
+                type="button"
+                onClick={onOpenUpload}
+                aria-label="上传文件"
+                className="cta-btn cta-btn-primary"
+              >
+                <Upload className="cta-icon text-emerald-100/95" />
+                <span className="hidden sm:inline">上传文件</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowCreateFolder(true)}
+              aria-label="新建文件夹"
+              className="cta-btn cta-btn-secondary"
+            >
+              <FolderPlus className="cta-icon text-emerald-200/90" />
+              <span className="hidden sm:inline">新建文件夹</span>
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* 区域 2：搜索 / 类型 / 排序 */}
       <FileListFilters
         search={search}
         mimeType={mimeType}
-        category={category}
         sortBy={sortBy}
-        categories={categories}
         onSearchChange={handleSearchChange}
         onMimeTypeChange={handleMimeTypeChange}
-        onCategoryChange={handleCategoryChange}
         onSortChange={handleSortChange}
       />
 
@@ -604,8 +664,8 @@ export default function FileList() {
           <FileCardSkeleton count={12} />
         </div>
       ) : totalItems === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl bg-gray-800/50 py-16">
-          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-700/50">
+        <div className="glass-panel-soft flex flex-col items-center justify-center py-16">
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
             <EmptyIcon />
           </div>
           <p className="text-lg font-medium text-gray-400">
@@ -618,7 +678,7 @@ export default function FileList() {
       ) : (
         <>
           {/* 全选栏 */}
-          <div className="mb-4 flex items-center justify-between rounded-lg bg-gray-800/50 px-4 py-3">
+          <div className="glass-panel-soft mb-4 flex items-center justify-between px-4 py-3">
             <label className="flex items-center gap-2 text-sm text-gray-400">
               <input
                 type="checkbox"
@@ -646,7 +706,7 @@ export default function FileList() {
                     <FolderIcon className="w-4 h-4 text-yellow-400" />
                     <span className="text-sm font-medium text-gray-400">文件夹</span>
                     <span className="text-xs text-gray-500">({folders.length})</span>
-                    <div className="flex-1 h-px bg-gray-700/50" />
+                    <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                     {folders.map((folder) => (
@@ -671,7 +731,7 @@ export default function FileList() {
                     {group.icon}
                     <span className="text-sm font-medium text-gray-400">{group.label}</span>
                     <span className="text-xs text-gray-500">({group.files.length})</span>
-                    <div className="flex-1 h-px bg-gray-700/50" />
+                    <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                     {group.files.map((file) => (
@@ -752,14 +812,19 @@ export default function FileList() {
           />
         )}
 
-        {showBatchShare && (
+        {showBatchShare && batchShareFileIds.length > 0 && (
           <BatchShareDialog
-            fileIds={selectedFileIds}
-            fileCount={selectedFiles.size}
-            onClose={() => setShowBatchShare(false)}
+            fileIds={batchShareFileIds}
+            fileCount={batchShareFileIds.length}
+            onClose={() => {
+              setShowBatchShare(false);
+              setBatchShareFileIds([]);
+            }}
             onShareCreated={() => {
               setShowBatchShare(false);
+              setBatchShareFileIds([]);
               setSelectedFiles(new Set());
+              setSelectedFolders(new Set());
             }}
           />
         )}
@@ -767,16 +832,17 @@ export default function FileList() {
         {showBatchMove && (
           <BatchMoveDialog
             fileIds={selectedFileIds}
+            folderIds={selectedFolderIds}
             fileCount={selectedFiles.size}
-            categories={categories}
-            loadingCategories={loadingCategories}
+            folderCount={selectedFolders.size}
             onClose={() => setShowBatchMove(false)}
             onMoved={() => {
               setShowBatchMove(false);
               setSelectedFiles(new Set());
+              setSelectedFolders(new Set());
               clearFileListCache();
               loadFiles();
-              refreshCategories();
+              loadFolders();
             }}
           />
         )}
@@ -807,6 +873,7 @@ export default function FileList() {
         {deleteConfirm && (
           <ConfirmDialog
             open={!!deleteConfirm}
+            appearance={deleteConfirm.type === 'batch' ? 'glass' : 'default'}
             title={
               deleteConfirm.type === 'batch'
                 ? '确认批量删除'
@@ -851,10 +918,4 @@ function EmptyIcon() {
   );
 }
 
-function PlusIcon() {
-  return (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-    </svg>
-  );
-}
+// PlusIcon 已废弃：改用 lucide 的 FolderPlus/Upload

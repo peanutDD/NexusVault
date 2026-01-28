@@ -10,7 +10,8 @@ use axum::{
 use tower_http::limit::RequestBodyLimitLayer;
 
 use crate::handlers::files::{
-    batch_delete_handler, batch_download_zip_handler, batch_move_handler, categories_handler,
+    batch_delete_handler, batch_download_zip_handler, batch_download_zip_post_handler,
+    batch_move_handler, categories_handler,
     chunked_upload_abort_handler, chunked_upload_chunk_handler, chunked_upload_complete_handler,
     chunked_upload_init_handler, chunked_upload_status_handler, delete_file_handler,
     download_file_handler, list_files_handler, preview_file_handler, storage_usage_handler,
@@ -80,7 +81,10 @@ pub fn create_router() -> Router<AppState> {
         .route("/categories", get(categories_handler))
         .route("/batch-delete", post(batch_delete_handler))
         .route("/batch-move", post(batch_move_handler))
-        .route("/download-zip", get(batch_download_zip_handler))
+        .route(
+            "/download-zip",
+            get(batch_download_zip_handler).post(batch_download_zip_post_handler),
+        )
         .route("/:id/download", get(download_file_handler))
         .route("/:id/preview", get(preview_file_handler))
         .route("/:id", delete(delete_file_handler))

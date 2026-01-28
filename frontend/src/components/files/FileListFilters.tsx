@@ -1,91 +1,179 @@
-import { memo } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, Search } from 'lucide-react';
+import './FileListFilters.css';
 
 export type SortOption = 'created_at_desc' | 'created_at_asc' | 'filename_asc' | 'filename_desc' | 'file_size_desc' | 'file_size_asc' | 'type_group';
 
 interface FileListFiltersProps {
   search: string;
   mimeType: string;
-  category: string;
   sortBy: SortOption;
-  categories: string[];
   onSearchChange: (v: string) => void;
   onMimeTypeChange: (v: string) => void;
-  onCategoryChange: (v: string) => void;
   onSortChange: (v: SortOption) => void;
 }
 
 const FileListFilters = memo(function FileListFilters({
   search,
   mimeType,
-  category,
   sortBy,
-  categories,
   onSearchChange,
   onMimeTypeChange,
-  onCategoryChange,
   onSortChange,
 }: FileListFiltersProps) {
+  const [typeOpen, setTypeOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const typeRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  const typeOptions = useMemo(
+    () => [
+      { label: 'All Types', value: '' },
+      { label: 'Images', value: 'image/' },
+      { label: 'Videos', value: 'video/' },
+      { label: 'Audio', value: 'audio/' },
+      { label: 'PDF', value: 'application/pdf' },
+      { label: 'Text', value: 'text/' },
+      { label: 'ZIP', value: 'application/zip' },
+      { label: 'Apps/Docs', value: 'application/' },
+    ],
+    []
+  );
+
+  const sortOptions = useMemo(
+    () => [
+      { label: 'Newest Upload', value: 'created_at_desc' as const },
+      { label: 'Oldest Upload', value: 'created_at_asc' as const },
+      { label: 'Filename A–Z', value: 'filename_asc' as const },
+      { label: 'Filename Z–A', value: 'filename_desc' as const },
+      { label: 'File Size ↓', value: 'file_size_desc' as const },
+      { label: 'File Size ↑', value: 'file_size_asc' as const },
+      { label: 'Group by Type', value: 'type_group' as const },
+    ],
+    []
+  );
+
+  const selectedTypeLabel = useMemo(() => {
+    return typeOptions.find((o) => o.value === mimeType)?.label ?? 'All Types';
+  }, [mimeType, typeOptions]);
+
+  const selectedSortLabel = useMemo(() => {
+    return sortOptions.find((o) => o.value === sortBy)?.label ?? 'Newest Upload';
+  }, [sortBy, sortOptions]);
+
+  // 点击外部关闭
+  useEffect(() => {
+    const onDocMouseDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (typeRef.current && !typeRef.current.contains(t)) setTypeOpen(false);
+      if (sortRef.current && !sortRef.current.contains(t)) setSortOpen(false);
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, []);
+
   return (
-    <div className="mb-6">
-      <div className="flex gap-3 flex-wrap items-center">
+    <div className="filtersGlass" role="search">
+      {/* Search */}
+      <div className="filtersSearchPill">
+        <Search className="filtersSearchIcon" aria-hidden="true" />
         <input
           ref={(el) => {
             // 用于键盘快捷键聚焦
-            const w = window as unknown as {
-              __fileListSearchInput?: HTMLInputElement;
-            };
+            const w = window as unknown as { __fileListSearchInput?: HTMLInputElement };
             w.__fileListSearchInput = el ?? undefined;
           }}
           type="text"
-          placeholder="搜索文件... (Ctrl+K)"
+          placeholder="Search files… (Ctrl+K)"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="flex-1 min-w-48 px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
-          aria-label="搜索文件"
+          className="filtersSearchInput"
+          aria-label="Search files"
         />
-        <select
-          value={mimeType}
-          onChange={(e) => onMimeTypeChange(e.target.value)}
-          className="px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
-          aria-label="按文件类型筛选"
-        >
-          <option value="">所有类型</option>
-          <option value="image/">图片</option>
-          <option value="video/">视频</option>
-          <option value="audio/">音频</option>
-          <option value="application/pdf">PDF</option>
-          <option value="text/">文本</option>
-          <option value="application/zip">ZIP</option>
-          <option value="application/">应用/文档</option>
-        </select>
-        <select
-          aria-label="按分类筛选"
-          value={category}
-          onChange={(e) => onCategoryChange(e.target.value)}
-          className="px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
-        >
-          <option value="">全部分类</option>
-          <option value="__uncategorized__">未分类</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="排序方式"
-          value={sortBy}
-          onChange={(e) => onSortChange(e.target.value as SortOption)}
-          className="px-4 py-2 bg-gray-800 dark:bg-gray-900 border border-gray-700 dark:border-gray-600 rounded-lg text-white dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-all duration-200"
-        >
-          <option value="created_at_desc">最新上传</option>
-          <option value="created_at_asc">最早上传</option>
-          <option value="filename_asc">文件名 A-Z</option>
-          <option value="filename_desc">文件名 Z-A</option>
-          <option value="file_size_desc">文件大小 ↓</option>
-          <option value="file_size_asc">文件大小 ↑</option>
-          <option value="type_group">按类型分组</option>
-        </select>
+      </div>
+
+      <div className="filtersRow">
+        {/* Type dropdown card */}
+        <div ref={typeRef} className="filtersCard">
+          <button
+            type="button"
+            className="filtersCardHeader"
+            onClick={() => {
+              setTypeOpen((v) => !v);
+              setSortOpen(false);
+            }}
+            aria-label="Type"
+          >
+            <span className="filtersCardTitle">Type</span>
+            <span className="filtersCardHeaderRight">
+              <span className="filtersCardSelected" title={selectedTypeLabel}>
+                {selectedTypeLabel}
+              </span>
+              <ChevronDown
+                className={typeOpen ? 'filtersChevron filtersChevronOpen' : 'filtersChevron'}
+                aria-hidden="true"
+              />
+            </span>
+          </button>
+          <div className={typeOpen ? 'filtersCardBody filtersCardBodyOpen' : 'filtersCardBody'}>
+            <div className="filtersList">
+              {typeOptions.map((opt) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  className={opt.value === mimeType ? 'filtersItem filtersItemSelected' : 'filtersItem'}
+                  onClick={() => {
+                    onMimeTypeChange(opt.value);
+                    setTypeOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Sort dropdown card */}
+        <div ref={sortRef} className="filtersCard">
+          <button
+            type="button"
+            className="filtersCardHeader"
+            onClick={() => {
+              setSortOpen((v) => !v);
+              setTypeOpen(false);
+            }}
+            aria-label="Sort"
+          >
+            <span className="filtersCardTitle">Sort</span>
+            <span className="filtersCardHeaderRight">
+              <span className="filtersCardSelected" title={selectedSortLabel}>
+                {selectedSortLabel}
+              </span>
+              <ChevronDown
+                className={sortOpen ? 'filtersChevron filtersChevronOpen' : 'filtersChevron'}
+                aria-hidden="true"
+              />
+            </span>
+          </button>
+          <div className={sortOpen ? 'filtersCardBody filtersCardBodyOpen' : 'filtersCardBody'}>
+            <div className="filtersList">
+              {sortOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={opt.value === sortBy ? 'filtersItem filtersItemSelected' : 'filtersItem'}
+                  onClick={() => {
+                    onSortChange(opt.value);
+                    setSortOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

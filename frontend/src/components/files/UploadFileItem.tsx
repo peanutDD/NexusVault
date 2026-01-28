@@ -3,6 +3,7 @@ import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
 import { getMimeTypeInfo } from '../../utils/mimeType';
 import { createPortal } from 'react-dom';
+import './UploadFileItem.css';
 
 export interface UploadFile {
   id: string;
@@ -162,10 +163,11 @@ const UploadFileItem = memo(function UploadFileItem({
       {/* 进度条 - 贯穿底部 */}
       {(file.status === 'uploading' || file.status === 'success') && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#2A2A3C]">
-          {/* 动态宽度需要内联样式 */}
-          <div
-            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300 ease-out"
-            style={{ width: `${file.progress}%` }}
+          <progress
+            className="uploadProgress"
+            value={Math.max(0, Math.min(100, file.progress))}
+            max={100}
+            aria-label="Upload progress"
           />
         </div>
       )}
@@ -247,6 +249,10 @@ function ErrorTooltip({
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const posClass = useMemo(
+    () => `uploadErrorTooltipPos_${Math.random().toString(36).slice(2, 10)}`,
+    []
+  );
 
   // 点击外部关闭（排除触发按钮）
   useEffect(() => {
@@ -275,16 +281,26 @@ function ErrorTooltip({
 
   // 计算位置（显示在按钮上方）
   const top = anchorRect.top - 8;
+  const left = Math.min(anchorRect.left - 100, window.innerWidth - 270);
+
+  // 避免 inline style：动态生成 CSS 规则写入 <style>
+  useEffect(() => {
+    const styleEl = document.createElement('style');
+    styleEl.setAttribute('data-upload-tooltip-style', posClass);
+    styleEl.textContent = `.${posClass}{left:${left}px;top:${top}px;}`;
+    document.head.appendChild(styleEl);
+    return () => {
+      styleEl.remove();
+    };
+  }, [left, top, posClass]);
 
   return createPortal(
-    // 动态定位需要内联样式
     <div
       ref={tooltipRef}
-      className="fixed z-[9999] w-64 -translate-y-full animate-in fade-in slide-in-from-bottom-2 duration-200"
-      style={{
-        left: Math.min(anchorRect.left - 100, window.innerWidth - 270),
-        top,
-      }}
+      className={cn(
+        'fixed z-[9999] w-64 -translate-y-full animate-in fade-in slide-in-from-bottom-2 duration-200',
+        posClass
+      )}
     >
       {/* 主容器 - 渐变背景 */}
       <div className="overflow-hidden rounded-sm bg-gradient-to-br from-[#1e1e2e] via-[#232334] to-[#1a1a28] shadow-lg ring-1 ring-white/5">

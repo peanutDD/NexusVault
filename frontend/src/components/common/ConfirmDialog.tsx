@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { cn } from '../../utils/cn';
 
 export type ConfirmVariant = 'danger' | 'warning' | 'info';
+export type ConfirmAppearance = 'default' | 'glass';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -10,6 +11,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   variant?: ConfirmVariant;
+  appearance?: ConfirmAppearance;
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
@@ -58,12 +60,14 @@ export default function ConfirmDialog({
   confirmText = '确认',
   cancelText = '取消',
   variant = 'danger',
+  appearance = 'default',
   onConfirm,
   onCancel,
   loading = false,
 }: ConfirmDialogProps) {
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const config = variantConfig[variant];
+  const isGlass = appearance === 'glass';
 
   // ESC 关闭
   useEffect(() => {
@@ -94,13 +98,28 @@ export default function ConfirmDialog({
     >
       {/* 背景遮罩 */}
       <div
-        className="absolute inset-0 bg-black/80 animate-in fade-in duration-150"
+        className={cn(
+          'absolute inset-0 animate-in fade-in duration-150',
+          isGlass ? 'bg-black/70' : 'bg-black/80'
+        )}
         onClick={() => !loading && onCancel()}
       />
 
       {/* 对话框 */}
       <div
-        className="relative w-full max-w-xs overflow-hidden rounded-lg bg-[#1C1C28] shadow-2xl ring-1 ring-white/10 animate-in zoom-in-95 fade-in duration-150"
+        className={cn(
+          'relative w-full max-w-xs overflow-hidden rounded-lg shadow-2xl animate-in zoom-in-95 fade-in duration-150',
+          isGlass
+            ? [
+                'border border-white/15 bg-white/10 text-white',
+                'backdrop-blur-lg backdrop-saturate-150',
+                'ring-1 ring-white/10',
+                // 轻微高光（不依赖其它页面样式）
+                'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
+                'before:bg-[radial-gradient(120%_70%_at_15%_0%,rgba(255,255,255,0.18),transparent_60%)]',
+              ].join(' ')
+            : 'bg-[#1C1C28] ring-1 ring-white/10'
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 顶部渐变光晕 */}
@@ -141,7 +160,12 @@ export default function ConfirmDialog({
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="flex-1 rounded-lg bg-[#2A2A3C] px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-[#3A3A4D] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className={cn(
+                'flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                isGlass
+                  ? 'border border-white/15 bg-white/10 text-white/80 hover:bg-white/15 hover:text-white'
+                  : 'bg-[#2A2A3C] text-gray-300 hover:bg-[#3A3A4D] hover:text-white'
+              )}
             >
               {cancelText}
             </button>
@@ -153,6 +177,7 @@ export default function ConfirmDialog({
               className={cn(
                 'flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
                 config.buttonBg,
+                isGlass && 'shadow-[0_14px_40px_rgba(0,0,0,0.35)]',
                 'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >

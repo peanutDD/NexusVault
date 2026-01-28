@@ -28,7 +28,10 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
   };
 
   return (
-    <nav className="flex items-center gap-1 text-sm" aria-label="面包屑导航">
+    <nav
+      className="flex items-center justify-start gap-1 overflow-x-auto whitespace-nowrap text-sm"
+      aria-label="面包屑导航"
+    >
       {/* 根目录 */}
       <button
         type="button"
@@ -36,8 +39,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, null)}
         className={cn(
-          'flex items-center gap-1 rounded-md px-2 py-1 text-gray-400 transition-colors',
-          'hover:bg-gray-800 hover:text-white',
+          'glass-chip flex items-center gap-1 px-2 py-1 transition-colors whitespace-nowrap',
           path.length === 0 && 'text-white font-medium'
         )}
       >
@@ -47,7 +49,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
 
       {/* 路径项 */}
       {path.map((folder, index) => (
-        <div key={folder.id} className="flex items-center">
+        <div key={folder.id} className="flex shrink-0 items-center">
           <ChevronIcon className="h-4 w-4 text-gray-600" />
           <button
             type="button"
@@ -55,8 +57,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, folder.id)}
             className={cn(
-              'rounded-md px-2 py-1 text-gray-400 transition-colors',
-              'hover:bg-gray-800 hover:text-white',
+              'glass-chip px-2 py-1 transition-colors whitespace-nowrap',
               index === path.length - 1 && 'text-white font-medium'
             )}
           >

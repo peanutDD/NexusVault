@@ -68,6 +68,7 @@ export default function BatchShareDialog({
       description={`将为 ${fileCount} 个文件创建分享链接`}
       onClose={onClose}
       maxWidth="lg"
+      variant="glass"
     >
         {error && (
           <ErrorMessage
@@ -104,14 +105,15 @@ export default function BatchShareDialog({
                       readOnly
                       title={`分享链接 ${index + 1}`}
                       placeholder="分享链接"
-                      className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                      className="flex-1 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/50"
                     />
                     <button
+                      type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(url);
                         alert('链接已复制');
                       }}
-                      className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                      className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white transition-colors hover:bg-white/15"
                     >
                       复制
                     </button>
@@ -119,20 +121,22 @@ export default function BatchShareDialog({
                 ))}
               </div>
               <button
+                type="button"
                 onClick={handleCopyAllUrls}
-                className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
               >
                 复制所有链接
               </button>
             </div>
             {failedCount > 0 && (
-              <p className="text-yellow-400 text-sm">
+              <p className="text-amber-300 text-sm">
                 ⚠️ {failedCount} 个文件分享失败（可能已存在分享链接或文件不存在）
               </p>
             )}
             <button
+              type="button"
               onClick={onClose}
-              className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+              className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
             >
               关闭
             </button>
@@ -150,7 +154,7 @@ export default function BatchShareDialog({
                   setFormData({ ...formData, password: e.target.value })
                 }
                 placeholder="留空则不设置密码"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
               />
             </div>
 
@@ -171,7 +175,7 @@ export default function BatchShareDialog({
                   })
                 }
                 placeholder="留空则永不过期"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
               />
             </div>
 
@@ -192,7 +196,7 @@ export default function BatchShareDialog({
                   })
                 }
                 placeholder="留空则不限制"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
               />
             </div>
 
@@ -200,14 +204,14 @@ export default function BatchShareDialog({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+                className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
               >
                 取消
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 rounded-lg bg-gradient-to-r from-purple-500/70 to-fuchsia-500/60 px-4 py-2 text-white shadow-[0_12px_35px_rgba(168,85,247,0.18)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? '创建中...' : '批量创建分享'}
               </button>

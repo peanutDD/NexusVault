@@ -512,4 +512,58 @@ impl FolderService {
 
         Ok(result.rows_affected())
     }
+
+    /// 获取文件夹内所有文件 ID（递归）
+    ///
+    /// # 参数
+    /// - `user_id`: 用户 ID
+    /// - `folder_ids`: 文件夹 ID 列表
+    ///
+    /// # 返回
+    /// - 所有文件 ID 列表
+    pub async fn get_all_file_ids_in_folders(
+        &self,
+        user_id: Uuid,
+        folder_ids: Vec<Uuid>,
+    ) -> Result<Vec<Uuid>, AppError> {
+        if folder_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // 递归获取所有子文件夹 ID
+        let all_folder_ids: Vec<(Uuid,)> = sqlx::query_as(
+            r#"
+            WITH RECURSIVE all_folders AS (
+                -- 起点：传入的文件夹
+                SELECT id FROM folders WHERE id = ANY($1) AND user_id = $2
+                UNION ALL
+                -- 递归：获取所有子文件夹
+                SELECT f.id FROM folders f
+                INNER JOIN all_folders af ON f.parent_id = af.id
+            )
+            SELECT id FROM all_folders
+            "#,
+        )
+        .bind(&folder_ids)
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let all_folder_ids: Vec<Uuid> = all_folder_ids.into_iter().map(|(id,)| id).collect();
+
+        if all_folder_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // 获取这些文件夹内的所有文件 ID
+        let file_ids: Vec<(Uuid,)> = sqlx::query_as(
+            "SELECT id FROM files WHERE folder_id = ANY($1) AND user_id = $2",
+        )
+        .bind(&all_folder_ids)
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(file_ids.into_iter().map(|(id,)| id).collect())
+    }
 }

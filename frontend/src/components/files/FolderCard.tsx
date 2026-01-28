@@ -78,8 +78,7 @@ const FolderCard = memo(function FolderCard({
   return (
     <div
       className={cn(
-        'group relative rounded-xl bg-gray-800/80 p-3 transition-all duration-200 cursor-pointer',
-        'hover:bg-gray-800 hover:shadow-lg hover:shadow-purple-500/10',
+        'glass-card group relative cursor-pointer p-3',
         isSelected && 'ring-2 ring-purple-500 bg-purple-500/10',
         isDragOver && 'ring-2 ring-blue-500 bg-blue-500/10'
       )}
@@ -114,8 +113,8 @@ const FolderCard = memo(function FolderCard({
       </div>
 
       {/* 文件夹图标 */}
-      <div className="mb-3 flex aspect-square items-center justify-center rounded-lg bg-amber-500/20">
-        <FolderIcon className="h-12 w-12 text-amber-400" />
+      <div className="glass-thumb mb-3 flex aspect-square items-center justify-center">
+        <FolderIcon className="h-12 w-12 text-amber-300" />
       </div>
 
       {/* 文件夹名称 */}
@@ -133,10 +132,10 @@ const FolderCard = memo(function FolderCard({
             className="fixed inset-0 z-20"
             onClick={() => setShowMenu(false)}
           />
-          <div className="absolute right-0 top-full z-30 mt-1 w-32 rounded-lg bg-gray-900 py-1 shadow-xl">
+          <div className="glass-panel-soft absolute right-0 top-full z-30 mt-2 w-36 py-1">
             <button
               type="button"
-              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800"
+              className="w-full px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowMenu(false);
@@ -147,7 +146,7 @@ const FolderCard = memo(function FolderCard({
             </button>
             <button
               type="button"
-              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800"
+              className="w-full px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowMenu(false);
@@ -158,7 +157,7 @@ const FolderCard = memo(function FolderCard({
             </button>
             <button
               type="button"
-              className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-gray-800"
+              className="w-full px-3 py-2 text-left text-sm text-rose-300 hover:bg-white/10"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowMenu(false);

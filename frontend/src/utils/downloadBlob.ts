@@ -10,11 +10,16 @@ export function downloadBlob(blob: Blob, filename: string): void {
   try {
     link.href = url;
     link.download = filename;
+    link.rel = 'noopener';
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
   } finally {
-    // 确保无论是否出错都释放 URL
     link.remove();
-    URL.revokeObjectURL(url);
+    // 注意：某些浏览器在 click 后立刻 revoke 会导致下载失败/0B 文件
+    // 延迟释放，兼顾稳定性与避免内存泄漏
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 30_000);
   }
 }

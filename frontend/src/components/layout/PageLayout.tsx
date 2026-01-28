@@ -29,7 +29,7 @@ export default function PageLayout({
         extra={navExtra}
         showSettings={showSettings}
       />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pt-24 sm:pt-32 animate-fade-in">
         {children}
       </main>
     </div>

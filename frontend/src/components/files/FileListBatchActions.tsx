@@ -29,40 +29,35 @@ const FileListBatchActions = memo(function FileListBatchActions({
   };
 
   return (
-    <div className="mb-4 p-3 bg-purple-500/20 dark:bg-purple-600/20 border border-purple-500/50 dark:border-purple-600/50 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in transition-all duration-200">
-      <span className="text-purple-200 dark:text-purple-300 font-medium">
+    <div className="glass-panel mb-4 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in transition-all duration-200">
+      <span className="text-white/85 font-medium">
         已选择 {getSelectionText()}
       </span>
       <div className="flex flex-wrap gap-2">
-        {/* 只有选中文件时才显示移动按钮 */}
-        {selectedFileCount > 0 && (
-          <button
-            onClick={onBatchMove}
-            className="px-3 sm:px-4 py-2 bg-amber-600 dark:bg-amber-700 text-white rounded-lg hover:bg-amber-700 dark:hover:bg-amber-600 transition-all duration-200 text-sm"
-          >
-            批量移动
-          </button>
-        )}
-        {/* 分享和下载只对文件有效 */}
-        {selectedFileCount > 0 && selectedFolderCount === 0 && (
-          <>
-            <button
-              onClick={onBatchShare}
-              className="px-3 sm:px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 text-sm"
-            >
-              批量分享
-            </button>
-            <button
-              onClick={onBatchDownload}
-              className="px-3 sm:px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200 text-sm"
-            >
-              批量下载 ZIP
-            </button>
-          </>
-        )}
+        {/* 批量移动 - 文件和文件夹都支持 */}
+        <button
+          onClick={onBatchMove}
+          className="glass-btn px-3 sm:px-4 py-2 text-sm hover:border-white/25"
+        >
+          批量移动
+        </button>
+        {/* 批量分享 - 文件和文件夹都支持（文件夹会递归获取内部文件） */}
+        <button
+          onClick={onBatchShare}
+          className="glass-btn px-3 sm:px-4 py-2 text-sm hover:border-white/25"
+        >
+          批量分享
+        </button>
+        {/* 批量下载 - 文件和文件夹都支持（文件夹会递归获取内部文件） */}
+        <button
+          onClick={onBatchDownload}
+          className="glass-btn px-3 sm:px-4 py-2 text-sm hover:border-white/25"
+        >
+          批量下载 ZIP
+        </button>
         <button
           onClick={onBatchDelete}
-          className="px-3 sm:px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-all duration-200 text-sm"
+          className="glass-btn px-3 sm:px-4 py-2 text-sm hover:border-white/25"
         >
           批量删除
         </button>

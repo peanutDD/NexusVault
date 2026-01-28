@@ -91,7 +91,7 @@ export default function Share() {
 
   if (loading && !passwordRequired) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center px-4">
         <div className="text-center">
           <span
             className="w-12 h-12 border-4 border-gray-600 border-t-purple-400 rounded-full animate-spin block mx-auto mb-4"
@@ -105,8 +105,8 @@ export default function Share() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
-        <h1 className="text-2xl font-bold text-white mb-6">文件分享</h1>
+      <div className="bg-gray-800 rounded-lg max-w-md w-full p-4 sm:p-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">文件分享</h1>
 
         {error && (
           <ErrorMessage
@@ -142,7 +142,7 @@ export default function Share() {
         ) : fileInfo ? (
           <div className="space-y-4">
             <div className="bg-gray-700 rounded-lg p-4">
-              <h2 className="text-lg font-semibold text-white mb-2">
+              <h2 className="text-base sm:text-lg font-semibold text-white mb-2">
                 {fileInfo.filename}
               </h2>
               <div className="text-sm text-gray-300 space-y-1">
