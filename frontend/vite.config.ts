@@ -1,12 +1,43 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import compression from 'vite-plugin-compression';
+import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/api\/files\?/,
+            handler: 'NetworkFirst',
+            method: 'GET',
+            options: {
+              cacheName: 'file-list-cache',
+              expiration: { maxEntries: 128, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 10,
+            },
+          },
+          {
+            urlPattern: /\/api\/folders(\/contents)?(\?|$)/,
+            handler: 'NetworkFirst',
+            method: 'GET',
+            options: {
+              cacheName: 'folders-cache',
+              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 10,
+            },
+          },
+        ],
+      },
+    }),
     // Gzip 压缩
     compression({
       algorithm: 'gzip',
