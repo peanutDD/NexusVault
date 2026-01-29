@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { cn } from '../../utils/cn';
 
 export type ConfirmVariant = 'danger' | 'warning' | 'info';
@@ -7,7 +7,7 @@ export type ConfirmAppearance = 'default' | 'glass';
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  message: string;
+  message: ReactNode;
   confirmText?: string;
   cancelText?: string;
   variant?: ConfirmVariant;
@@ -95,9 +95,14 @@ export default function ConfirmDialog({
 
   if (!open) return null;
 
+  const isSciFi = isGlass && variant === 'danger';
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center p-4',
+        isSciFi && 'confirm-dialog-sci-fi'
+      )}
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="confirm-title"
@@ -107,8 +112,8 @@ export default function ConfirmDialog({
       <div
         className={cn(
           'absolute inset-0 animate-in fade-in duration-150',
-          // 玻璃拟态需要“看得见背景”，遮罩不要太黑
-          isGlass ? 'bg-black/35 backdrop-blur-sm' : 'bg-black/80'
+          isGlass ? 'bg-black/35 backdrop-blur-sm' : 'bg-black/80',
+          isSciFi && 'confirm-dialog-sci-fi-backdrop'
         )}
         onClick={() => !loading && onCancel()}
       />
@@ -119,51 +124,81 @@ export default function ConfirmDialog({
           'relative w-full max-w-xs overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-150',
           isGlass
             ? [
-                // 强化“玻璃感”：优先复用文件列表的玻璃拟态（在 Files 页里会生效）
                 'glass-panel rounded-2xl ring-1 ring-white/10',
-                // 兜底：如果不在 fileListGlassScope 环境，也要有玻璃感
                 'border border-white/20 bg-white/12 text-white backdrop-blur-2xl backdrop-saturate-150',
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
                 'before:bg-gradient-to-br before:from-white/25 before:via-fuchsia-400/10 before:to-transparent',
-              ].join(' ')
+                isSciFi && 'confirm-dialog-sci-fi-panel',
+              ].filter(Boolean).join(' ')
             : 'rounded-lg bg-[#1C1C28] ring-1 ring-white/10'
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 顶部渐变光晕 */}
-        <div className={cn(
-          'absolute inset-x-0 top-0 h-24 bg-gradient-to-b pointer-events-none',
-          config.accentColor
-        )} />
+        {/* 科幻风：顶部红/青渐变光带（凹槽上缘高光） */}
+        {isSciFi && (
+          <div
+            className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-gradient-to-r from-cyan-500/0 via-rose-500/60 to-cyan-500/0 pointer-events-none"
+            aria-hidden
+          />
+        )}
+        {/* 科幻风：微弱网格纹理 */}
+        {isSciFi && (
+          <div
+            className="confirm-dialog-sci-fi-grid absolute inset-0 rounded-2xl pointer-events-none"
+            aria-hidden
+          />
+        )}
 
-        <div className="relative p-5">
-          {/* 图标 + 标题 行 */}
-          <div className="flex items-center gap-3 mb-3">
-            <div className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-              config.iconBg,
-              config.iconColor
-            )}>
+        <div className="relative">
+          {/* 凹槽头部：贴顶、内凹、内容在槽内不溢出 */}
+          <div
+            className={cn(
+              'confirm-dialog-groove flex items-center gap-2.5 rounded-t-2xl border-b px-4 py-2.5 min-h-0 overflow-hidden',
+              isSciFi
+                ? 'confirm-dialog-groove-sci-fi border-white/15'
+                : 'bg-black/25 border-white/10 shadow-[inset_0_2px_10px_rgba(0,0,0,0.4)]'
+            )}
+          >
+            <div
+              className={cn(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                config.iconBg,
+                config.iconColor,
+                isSciFi && 'confirm-dialog-sci-fi-icon'
+              )}
+            >
               {config.icon}
             </div>
             <h3
               id="confirm-title"
-              className="text-base font-medium text-white"
+              className={cn(
+                'min-w-0 flex-1 truncate text-sm font-semibold text-white',
+                isSciFi && 'tracking-wide drop-shadow-[0_0_12px_rgba(244,63,94,0.25)]'
+              )}
             >
               {title}
             </h3>
           </div>
 
-          {/* 消息 */}
-          <p
-            id="confirm-message"
-            className="text-sm text-gray-400 whitespace-pre-line mb-5 leading-relaxed"
-          >
-            {message}
-          </p>
+          {/* 正文：消息，长文件名换行、不超宽 */}
+          <div className="px-4 pb-4">
+            <p
+              id="confirm-message"
+              className={cn(
+                'max-w-full py-3 text-xs leading-relaxed break-words whitespace-pre-line',
+                isSciFi ? 'text-white/70' : 'text-gray-400'
+              )}
+            >
+              {message}
+            </p>
 
-          {/* 按钮 */}
-          <div className="flex gap-2">
+          {/* 操作区：上边框区分 */}
+          <div
+            className={cn(
+              'flex gap-2 pt-3 border-t',
+              isSciFi ? 'border-white/15' : 'border-white/10'
+            )}
+          >
             <button
               type="button"
               onClick={onCancel}
@@ -172,7 +207,8 @@ export default function ConfirmDialog({
                 'flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
                 isGlass
                   ? 'glass-btn text-white/85 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25'
-                  : 'bg-[#2A2A3C] text-gray-300 hover:bg-[#3A3A4D] hover:text-white'
+                  : 'bg-[#2A2A3C] text-gray-300 hover:bg-[#3A3A4D] hover:text-white',
+                isSciFi && 'border border-white/20 hover:border-cyan-400/40 hover:bg-cyan-500/10'
               )}
             >
               {cancelText}
@@ -187,7 +223,8 @@ export default function ConfirmDialog({
                 isGlass
                   ? cn(
                       'glass-btn border text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
-                      glassConfirmClass
+                      glassConfirmClass,
+                      isSciFi && 'confirm-dialog-sci-fi-confirm'
                     )
                   : cn(config.buttonBg, 'disabled:cursor-not-allowed disabled:opacity-50'),
                 'disabled:cursor-not-allowed disabled:opacity-50'
@@ -205,6 +242,7 @@ export default function ConfirmDialog({
                 confirmText
               )}
             </button>
+          </div>
           </div>
         </div>
       </div>

@@ -320,7 +320,7 @@
   overscroll-behavior: contain;
 
   /* 仅在展开时应用视觉样式 */
-  border-radius: clamp(1.2rem, 2.0vw, 1.8rem);
+  border-radius: clamp(0.6rem, 1.0vw, 0.9rem);
   border: 1px solid rgba(255, 255, 255, 0.20);
   /* 保持原来的“玻璃”透明度（更亮、更透） */
   background:
@@ -332,8 +332,8 @@
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
 
-  /* 更紧凑：减少容器内边距 */
-  padding: clamp(0.4rem, 0.6vw, 0.55rem);
+  /* 更紧凑：减少容器内边距（0.75 倍） */
+  padding: clamp(0.3rem, 0.45vw, 0.41rem);
 }
 
 /* Portal 下拉：挂到 body，彻底避免任何容器裁剪 */
@@ -341,11 +341,11 @@
   position: fixed;
   /* 需要高于页面内容，但必须低于 NavBar（z-50）与 Modal（z-50） */
   z-index: 45;
-  max-height: min(70vh, 24rem);
+  max-height: min(52.5vh, 18rem);
   overflow-y: auto;
   overscroll-behavior: contain;
 
-  border-radius: clamp(1.2rem, 2.0vw, 1.8rem);
+  border-radius: clamp(0.6rem, 1.0vw, 0.9rem);
   border: 1px solid rgba(255, 255, 255, 0.20);
   background:
     radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.14), transparent 62%),
@@ -355,11 +355,11 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.20);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
-  padding: clamp(0.4rem, 0.6vw, 0.55rem);
+  padding: clamp(0.3rem, 0.45vw, 0.41rem);
 }
 
 .filtersDropdownPortal::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .filtersDropdownPortal::-webkit-scrollbar-track {
@@ -391,11 +391,11 @@
 
 .filtersList {
   margin-top: 0;
-  padding-bottom: clamp(0.15rem, 0.25vw, 0.25rem);
+  padding-bottom: clamp(0.11rem, 0.19vw, 0.19rem);
   display: flex;
   flex-direction: column;
-  /* 更紧凑：减少项间距 */
-  gap: clamp(0.22rem, 0.45vw, 0.35rem);
+  /* 更紧凑：减少项间距（0.75 倍） */
+  gap: clamp(0.17rem, 0.34vw, 0.26rem);
 }
 
 .filtersItem {
@@ -403,25 +403,28 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  /* 更紧凑：减小点击项高度/内边距，但仍可点 */
-  padding: clamp(0.28rem, 0.35vw, 0.34rem) clamp(0.45rem, 0.55vw, 0.55rem);
-  border-radius: clamp(0.7rem, 1.0vw, 0.95rem);
-  color: rgba(255, 255, 255, 0.88);
-  /* 更紧凑：下拉字体更小 */
-  font-size: clamp(0.78rem, 0.42vw + 0.55rem, 0.88rem);
+  /* 更紧凑：减小点击项高度/内边距（0.75 倍），但仍可点 */
+  padding: clamp(0.21rem, 0.26vw, 0.26rem) clamp(0.34rem, 0.41vw, 0.41rem);
+  border-radius: clamp(0.5rem, 0.7vw, 0.65rem);
+  color: rgba(255, 255, 255, 0.85);
+  /* 更紧凑：下拉字体（0.75 倍） */
+  font-size: clamp(0.59rem, 0.32vw + 0.41rem, 0.66rem);
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.15;
-  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
 .filtersItem:hover {
   background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .filtersItemSelected {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(217, 70, 239, 0.12));
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
 }
 
 /* NOTE: 避免重复的空 media block（已移除） */

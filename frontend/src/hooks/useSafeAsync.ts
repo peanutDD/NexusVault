@@ -29,6 +29,7 @@ export function useSafeAsync<T>(
     };
   }, []);
 
+  // deps 由调用方传入（与 useEffect 一致），故意使用动态依赖数组
   const mutate = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -45,6 +46,7 @@ export function useSafeAsync<T>(
     } finally {
       if (mounted.current) setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps from caller, same as useEffect
   }, deps);
 
   return { data, error, loading, mutate, setData, setError };

@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import { MacActionIcon } from '../common/MacActionIcon';
 
 interface FileListBatchActionsProps {
   selectedFileCount: number;
@@ -34,50 +33,45 @@ const FileListBatchActions = memo(function FileListBatchActions({
   };
 
   return (
-    <div className="glass-panel mb-4 flex items-center justify-between gap-4 px-4 py-3 animate-fade-in transition-all duration-200">
-      <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10">
-          <MacActionIcon variant="selected" />
-        </span>
-        <span className="min-w-0 text-white/85 font-medium truncate">
+    <div className="batch-actions-bar glass-panel mb-4 flex items-center justify-between gap-3 px-3 py-2 animate-fade-in transition-all duration-200">
+      <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+        <i className="bi bi-check-circle-fill shrink-0 text-base text-white/90" aria-hidden />
+        <span className="min-w-0 truncate text-xs font-medium text-white/85">
           Already selected {getSelectionText()}
         </span>
       </div>
 
-      <div className="flex min-w-0 items-center justify-end gap-2 overflow-x-auto whitespace-nowrap">
-        {/* 批量移动 - 文件和文件夹都支持 */}
+      <div className="flex min-w-0 items-center justify-end gap-1.5 overflow-x-auto whitespace-nowrap">
         <button
           type="button"
           onClick={onBatchMove}
-          className="glass-btn inline-flex items-center gap-2 px-4 py-2 text-sm hover:border-white/25"
+          className="glass-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs hover:border-white/25"
         >
-          <MacActionIcon variant="move" />
+          <i className="bi bi-arrow-left-right text-white/90" aria-hidden />
           Batch Move
         </button>
-        {/* 批量分享 - 文件和文件夹都支持（文件夹会递归获取内部文件） */}
         <button
           type="button"
           onClick={onBatchShare}
-          className="glass-btn inline-flex items-center gap-2 px-4 py-2 text-sm hover:border-white/25"
+          className="glass-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs hover:border-white/25"
         >
-          <MacActionIcon variant="share" />
+          <i className="bi bi-share-fill text-white/90" aria-hidden />
           Batch Share
         </button>
-        {/* 批量下载 - 文件和文件夹都支持（文件夹会递归获取内部文件） */}
         <button
           type="button"
           onClick={onBatchDownload}
-          className="glass-btn inline-flex items-center gap-2 px-4 py-2 text-sm hover:border-white/25"
+          className="glass-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs hover:border-white/25"
         >
-          <MacActionIcon variant="download" />
+          <i className="bi bi-download text-white/90" aria-hidden />
           Batch Download ZIP
         </button>
         <button
           type="button"
           onClick={onBatchDelete}
-          className="glass-btn inline-flex items-center gap-2 px-4 py-2 text-sm hover:border-white/25"
+          className="glass-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs hover:border-white/25"
         >
-          <MacActionIcon variant="delete" />
+          <i className="bi bi-trash-fill text-white/90" aria-hidden />
           Batch Delete
         </button>
       </div>

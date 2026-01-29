@@ -1,4 +1,5 @@
 import NavBar from './NavBar';
+import BottomBar from './BottomBar';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -20,7 +21,7 @@ export default function PageLayout({
   showSettings,
 }: PageLayoutProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 dark:from-gray-950 dark:via-purple-950 dark:to-gray-950 transition-colors duration-300">
+    <div className="flex flex-col bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 dark:from-gray-950 dark:via-purple-950 dark:to-gray-950 transition-colors duration-300">
       <NavBar
         title={title}
         backTo={backTo}
@@ -29,9 +30,10 @@ export default function PageLayout({
         extra={navExtra}
         showSettings={showSettings}
       />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pt-24 sm:pt-32 animate-fade-in">
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pt-24 sm:pt-32 animate-fade-in">
         {children}
       </main>
+      <BottomBar />
     </div>
   );
 }

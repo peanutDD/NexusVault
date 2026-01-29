@@ -1,6 +1,5 @@
 import { memo } from 'react';
 import { cn } from '../../utils/cn';
-import { ArrowRightLeft, CheckCircle2, Download, Share2, Trash2 } from 'lucide-react';
 
 type MacActionVariant = 'selected' | 'move' | 'share' | 'download' | 'delete';
 
@@ -8,30 +7,24 @@ interface MacActionIconProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant: MacActionVariant;
 }
 
+const BOOTSTRAP_ICON: Record<MacActionVariant, string> = {
+  selected: 'bi-check-circle-fill',
+  move: 'bi-arrow-left-right',
+  share: 'bi-share-fill',
+  download: 'bi-download',
+  delete: 'bi-trash-fill',
+};
+
 /**
- * macOS 风格动作图标（更接近：彩色圆角方块底 + 高光 + 白色线条）
- * 说明：不使用系统资源；glyph 使用 lucide 线框保证清晰与一致。
+ * macOS 风格动作图标（彩色圆角方块底 + 高光），图标来自 Bootstrap Icons。
+ * @see https://icons.getbootstrap.com/
  */
 export const MacActionIcon = memo(function MacActionIcon({
   variant,
   className,
   ...props
 }: MacActionIconProps) {
-  const Icon = (() => {
-    switch (variant) {
-      case 'move':
-        return ArrowRightLeft;
-      case 'share':
-        return Share2;
-      case 'download':
-        return Download;
-      case 'delete':
-        return Trash2;
-      case 'selected':
-      default:
-        return CheckCircle2;
-    }
-  })();
+  const biClass = BOOTSTRAP_ICON[variant];
 
   return (
     <span
@@ -39,7 +32,7 @@ export const MacActionIcon = memo(function MacActionIcon({
       aria-hidden="true"
       {...props}
     >
-      <Icon className="macActionIconGlyph" aria-hidden="true" />
+      <i className={cn('macActionIconGlyph', 'bi', biClass)} aria-hidden="true" />
     </span>
   );
 });

@@ -17,6 +17,10 @@
   --glass-sat: 125%;
   --glass-hi: rgba(255, 255, 255, 0.16);
   --glass-hi-soft: rgba(255, 255, 255, 0.10);
+  /* 科技感增强：霓虹色 */
+  --tech-glow-purple: rgba(168, 85, 247, 0.4);
+  --tech-glow-cyan: rgba(34, 211, 238, 0.4);
+  --tech-glow-green: rgba(16, 185, 129, 0.4);
 }
 
 /* 公用：保证高光层不影响交互 */
@@ -32,7 +36,7 @@
   isolation: isolate;
 }
 
-.fileListGlassScope .glass-panel::before,
+/* 注意：glass-panel::before 已用于扫描线，这里只处理其他元素 */
 .fileListGlassScope .glass-panel-soft::before,
 .fileListGlassScope .glass-card::before,
 .fileListGlassScope .glass-thumb::before,
@@ -43,11 +47,14 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* 玻璃反射高光（顶部更亮，边缘略有色泽） */
+  /* 玻璃反射高光（顶部更亮，边缘略有色泽）+ 科技感霓虹 */
   background:
     radial-gradient(120% 70% at 15% 0%, var(--glass-hi), transparent 60%),
     radial-gradient(90% 60% at 90% 10%, rgba(217, 70, 239, 0.10), transparent 62%),
-    radial-gradient(80% 60% at 10% 95%, rgba(16, 185, 129, 0.08), transparent 60%);
+    radial-gradient(80% 60% at 10% 95%, rgba(16, 185, 129, 0.08), transparent 60%),
+    /* 科技感边缘光晕 */
+    linear-gradient(0deg, transparent 0%, rgba(168, 85, 247, 0.08) 50%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, rgba(34, 211, 238, 0.08) 50%, transparent 100%);
   opacity: 0.55;
   z-index: 0;
 }
@@ -88,11 +95,66 @@
   border-radius: var(--glass-radius);
   border: 1px solid var(--glass-border);
   background:
+    /* 科技感网格背景 */
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(168, 85, 247, 0.03) 2px,
+      rgba(168, 85, 247, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(34, 211, 238, 0.03) 2px,
+      rgba(34, 211, 238, 0.03) 4px
+    ),
     radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.12), transparent 55%),
     linear-gradient(135deg, var(--glass-bg-a), var(--glass-bg-b));
-  box-shadow: var(--glass-shadow);
+  box-shadow: 
+    var(--glass-shadow),
+    /* 科技感外发光 */
+    0 0 20px rgba(168, 85, 247, 0.15),
+    0 0 40px rgba(34, 211, 238, 0.1);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  position: relative;
+  overflow: hidden;
+}
+
+/* 科技感扫描线动画 */
+@keyframes techScan {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.fileListGlassScope .glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(168, 85, 247, 0.6),
+    rgba(34, 211, 238, 0.6),
+    transparent
+  );
+  animation: techScan 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
 }
 
 /* 顶部工具区：不应盖住全局导航栏（NavBar 为 z-50） */
@@ -110,7 +172,9 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
   box-shadow:
     var(--glass-shadow-soft),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    /* 科技感微光 */
+    0 0 15px rgba(34, 211, 238, 0.1);
   -webkit-backdrop-filter: blur(calc(var(--glass-blur) - 5px)) saturate(var(--glass-sat));
   backdrop-filter: blur(calc(var(--glass-blur) - 5px)) saturate(var(--glass-sat));
 }
@@ -124,17 +188,62 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
   box-shadow:
     0 18px 58px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    /* 科技感微光 */
+    0 0 15px rgba(168, 85, 247, 0.1);
   /* 性能关键：列表里卡片数量多，去掉 backdrop-filter 避免滚动卡顿 */
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  position: relative;
+}
+
+/* 卡片科技感边框光晕 */
+.fileListGlassScope .glass-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--glass-radius);
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(168, 85, 247, 0.3),
+    rgba(34, 211, 238, 0.3),
+    rgba(16, 185, 129, 0.3),
+    rgba(168, 85, 247, 0.3)
+  );
+  background-size: 200% 200%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .fileListGlassScope .glass-card:hover {
   transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+  box-shadow: 
+    0 22px 70px rgba(0, 0, 0, 0.42),
+    0 0 25px rgba(168, 85, 247, 0.2),
+    0 0 40px rgba(34, 211, 238, 0.15);
+}
+
+.fileListGlassScope .glass-card:hover::after {
+  opacity: 1;
+  animation: techBorderGlow 2s ease-in-out infinite;
+}
+
+@keyframes techBorderGlow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* 缩略图容器 */
@@ -303,58 +412,54 @@
   border-color: rgba(255, 255, 255, 0.26);
 }
 
-/* macOS 风格动作图标：彩色圆角方块底 + 高光 + 白色线条 */
-.fileListGlassScope .macActionIcon {
-  /* 图标整体略小于文字行高 */
-  width: 0.92rem;
-  height: 0.92rem;
-  border-radius: 0.3rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  flex: 0 0 auto;
-  box-shadow:
-    0 7px 16px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  overflow: hidden;
-}
-
-.fileListGlassScope .macActionIcon::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+/* 上传按钮高亮样式：柔和的紫色调 + 保持玻璃质感 */
+.fileListGlassScope .glass-btn.uploadBtnHighlight {
   background:
-    radial-gradient(120% 70% at 20% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
-    radial-gradient(90% 70% at 85% 20%, rgba(255, 255, 255, 0.18), transparent 62%);
-  opacity: 0.55;
+    radial-gradient(120% 90% at 15% 0%, rgba(168, 85, 247, 0.25), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 8px 32px rgba(168, 85, 247, 0.2),
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-.fileListGlassScope .macActionIconGlyph {
-  width: 0.62rem;
-  height: 0.62rem;
-  color: rgba(255, 255, 255, 0.92);
-  position: relative;
-  z-index: 1;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.22));
+.fileListGlassScope .glass-btn.uploadBtnHighlight:hover {
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(168, 85, 247, 0.32), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.15));
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow:
+    0 12px 40px rgba(168, 85, 247, 0.25),
+    0 6px 20px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
-.fileListGlassScope .macActionIcon--selected {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.95), rgba(37, 99, 235, 0.95));
+/* All Files 按钮高亮样式：柔和的蓝绿色调 + 保持玻璃质感 */
+.fileListGlassScope .glass-btn.allFilesBtnHighlight {
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(16, 185, 129, 0.25), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 8px 32px rgba(16, 185, 129, 0.2),
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
-.fileListGlassScope .macActionIcon--move {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.95), rgba(37, 99, 235, 0.95));
-}
-.fileListGlassScope .macActionIcon--share {
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.95), rgba(124, 58, 237, 0.95));
-}
-.fileListGlassScope .macActionIcon--download {
-  background: linear-gradient(135deg, rgba(52, 211, 153, 0.95), rgba(5, 150, 105, 0.95));
-}
-.fileListGlassScope .macActionIcon--delete {
-  background: linear-gradient(135deg, rgba(251, 113, 133, 0.95), rgba(225, 29, 72, 0.95));
+
+.fileListGlassScope .glass-btn.allFilesBtnHighlight:hover {
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(16, 185, 129, 0.32), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.15));
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow:
+    0 12px 40px rgba(16, 185, 129, 0.25),
+    0 6px 20px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 /* 性能关键：卡片/缩略图/按钮上的“颗粒纹理”会显著增加重绘成本，禁用它们 */

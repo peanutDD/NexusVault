@@ -1,5 +1,15 @@
 import axios from 'axios';
 
+/** 是否为请求被取消/中止（刷新、导航、同 key 后发请求取消前一个等），不应作为用户可见错误展示 */
+export function isRequestCanceled(err: unknown): boolean {
+  if (axios.isAxiosError(err)) {
+    if (err.code === 'ERR_CANCELED') return true;
+    if (typeof err.message === 'string' && err.message.toLowerCase() === 'canceled') return true;
+  }
+  if (err instanceof Error && err.name === 'AbortError') return true;
+  return false;
+}
+
 export interface ErrorDetails {
   message: string;
   code?: string;
@@ -84,6 +94,10 @@ export function getErrorDetails(err: unknown, fallback: string): ErrorDetails {
         message: '无法连接到服务器，请确保后端服务正在运行（http://localhost:3000）',
         code: 'NETWORK_ERROR',
       };
+    }
+    // 请求被取消（刷新、导航、后发请求取消前一个等），不向用户展示
+    if (err.code === 'ERR_CANCELED' || (typeof err.message === 'string' && err.message.toLowerCase() === 'canceled')) {
+      return { message: '', code: 'CANCELED' };
     }
     if (typeof err.message === 'string') {
       return { message: err.message };

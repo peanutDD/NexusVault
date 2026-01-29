@@ -2,29 +2,18 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
 import { folderService, type Folder } from '../../services/folders';
-import { getErrorMessage } from '../../utils/error';
+import { getErrorMessage, isRequestCanceled } from '../../utils/error';
 import {
   getCacheKey,
   getCachedFileList,
   setCachedFileList,
   clearFileListCache,
 } from '../../utils/fileListCache';
-import { BATCH_LIMITS, FILE_LIST } from '../../constants';
+import { BATCH_LIMITS, FILE_LIST, MIME_FILTER_FOLDERS } from '../../constants';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useRequestDedup } from '../../hooks/useRequestDedup';
 import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
-import type { ReactNode } from 'react';
-const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; order: number }> = {
-  image: { label: '图片', icon: null, order: 1 },
-  gif: { label: 'GIF', icon: null, order: 2 },
-  video: { label: '视频', icon: null, order: 3 },
-  audio: { label: '音频', icon: null, order: 4 },
-  'application/pdf': { label: 'PDF', icon: null, order: 5 },
-  text: { label: '文本', icon: null, order: 6 },
-  'application/zip': { label: '压缩包', icon: null, order: 7 },
-  application: { label: '文档', icon: null, order: 8 },
-  other: { label: '其他', icon: null, order: 99 },
-};
+import { FILE_TYPE_LABELS } from './fileTypeLabels';
 
 const getTypeKey = (mime: string): string => {
   if (mime === 'image/gif') return 'gif';
@@ -105,7 +94,8 @@ function useSelectionState(files: FileMetadata[]) {
   const toggleSelectFile = useCallback((fileId: string) => {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
-      next.has(fileId) ? next.delete(fileId) : next.add(fileId);
+      if (next.has(fileId)) next.delete(fileId);
+      else next.add(fileId);
       return next;
     });
   }, []);
@@ -113,7 +103,8 @@ function useSelectionState(files: FileMetadata[]) {
   const toggleSelectFolder = useCallback((folderId: string) => {
     setSelectedFolders((prev) => {
       const next = new Set(prev);
-      next.has(folderId) ? next.delete(folderId) : next.add(folderId);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
       return next;
     });
   }, []);
@@ -150,11 +141,12 @@ function useSelectionState(files: FileMetadata[]) {
 export function useFileList() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // 文件状态
+  // 文件状态（无限滚动：files 为已加载的累加列表，loadedPageCount 为已加载页数）
   const [files, setFiles] = useState<FileMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const [loadedPageCount, setLoadedPageCount] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [total, setTotal] = useState(0);
 
   // 文件夹状态
@@ -174,8 +166,6 @@ export function useFileList() {
     handleSearchChange: baseHandleSearchChange,
     handleMimeTypeChange: baseHandleMimeTypeChange,
     handleSortChange: baseHandleSortChange,
-    setSearch,
-    setMimeType,
   } = useFileFiltersAndSorting();
 
   // 选择状态
@@ -232,13 +222,23 @@ export function useFileList() {
     }
   }, [currentFolderId]);
 
-  // 加载文件
+  // 加载文件（仅第一页，用于初始加载或筛选变更）
   const loadFiles = useCallback(async () => {
     setLoading(true);
     setError(null);
 
+    // 「仅文件夹」筛选：不请求文件列表，只展示文件夹
+    if (mimeType === MIME_FILTER_FOLDERS) {
+      setFiles([]);
+      setTotal(0);
+      setLoadedPageCount(1);
+      setSelectedFiles(new Set());
+      setLoading(false);
+      return;
+    }
+
     const query: FileListQuery = {
-      page,
+      page: 1,
       limit,
       search: debouncedSearch || undefined,
       mime_type: mimeType || undefined,
@@ -253,6 +253,7 @@ export function useFileList() {
     if (cached) {
       setFiles(cached.files);
       setTotal(cached.total);
+      setLoadedPageCount(1);
       setSelectedFiles(new Set());
       setLoading(false);
       return;
@@ -262,51 +263,63 @@ export function useFileList() {
       const response = await dedupedListFiles(query);
       setFiles(response.files);
       setTotal(response.total);
+      setLoadedPageCount(1);
       setSelectedFiles(new Set());
       setCachedFileList(cacheKey, response.files, response.total);
     } catch (err) {
+      if (isRequestCanceled(err)) return;
       setError(getErrorMessage(err, 'Failed to load files'));
     } finally {
       setLoading(false);
     }
-  }, [page, limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles]);
+  }, [limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles, setSelectedFiles]);
 
-  // 初始化加载 / 依赖变更时重新加载
+  const totalPages = useMemo(() => Math.ceil(total / limit), [total, limit]);
+  const hasMore = loadedPageCount < totalPages && total > 0;
+
+  // 加载更多（无限滚动）
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loadingMore || loading) return;
+    const nextPage = loadedPageCount + 1;
+
+    const query: FileListQuery = {
+      page: nextPage,
+      limit,
+      search: debouncedSearch || undefined,
+      mime_type: mimeType || undefined,
+      folder_id: currentFolderId,
+      sort_by: sortField,
+      sort_order: sortOrder,
+    };
+
+    const cacheKey = getCacheKey(query as Record<string, unknown>);
+    const cached = getCachedFileList(cacheKey);
+
+    setLoadingMore(true);
+    try {
+      if (cached) {
+        setFiles((prev) => [...prev, ...cached.files]);
+        setLoadedPageCount(nextPage);
+        return;
+      }
+      const response = await dedupedListFiles(query);
+      setFiles((prev) => [...prev, ...response.files]);
+      setLoadedPageCount(nextPage);
+      setCachedFileList(cacheKey, response.files, response.total);
+    } catch (err) {
+      if (isRequestCanceled(err)) return;
+      setError(getErrorMessage(err, 'Failed to load more'));
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, loading, loadedPageCount, limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles]);
+
+  // 初始化加载 / 依赖变更时重新加载（始终加载第 1 页）
   useEffect(() => {
     loadFolders();
     loadFiles();
+    // loadFiles 内部会设置 setLoadedPageCount(1)，无需在此处设置
   }, [loadFolders, loadFiles]);
-
-  // 预取下一页
-  useEffect(() => {
-    const computedTotalPages = Math.ceil(total / limit);
-    if (page >= computedTotalPages || loading || total === 0) return;
-
-    const prefetchTimeout = setTimeout(() => {
-      const nextPageQuery: FileListQuery = {
-        page: page + 1,
-        limit,
-        search: debouncedSearch || undefined,
-        mime_type: mimeType || undefined,
-        folder_id: currentFolderId,
-        sort_by: sortField,
-        sort_order: sortOrder,
-      };
-
-      const cacheKey = getCacheKey(nextPageQuery as Record<string, unknown>);
-      if (!getCachedFileList(cacheKey)) {
-        dedupedListFiles(nextPageQuery)
-          .then((response) => {
-            setCachedFileList(cacheKey, response.files, response.total);
-          })
-          .catch(() => {
-            // ignore prefetch errors
-          });
-      }
-    }, 500);
-
-    return () => clearTimeout(prefetchTimeout);
-  }, [page, total, loading, limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles]);
 
   const navigateToFolder = useCallback((folderId: string | null) => {
     setSearchParams(
@@ -321,10 +334,10 @@ export function useFileList() {
       },
       { replace: false }
     );
-    setPage(1);
+    setLoadedPageCount(1);
     setSelectedFiles(new Set());
     setSelectedFolders(new Set());
-  }, [setSearchParams]);
+  }, [setSearchParams, setSelectedFiles, setSelectedFolders]);
 
   const isGroupByType = sortBy === 'type_group';
 
@@ -348,6 +361,12 @@ export function useFileList() {
       }))
       .sort((a, b) => a.order - b.order);
   }, [files, isGroupByType]);
+
+  /** 按类型筛选时隐藏文件夹：仅「全部」或「仅文件夹」时展示文件夹 */
+  const displayFolders = useMemo(
+    () => (mimeType === '' || mimeType === MIME_FILTER_FOLDERS ? folders : []),
+    [mimeType, folders]
+  );
 
   const displayFiles = useMemo(() => {
     if (!isGroupByType || !groupedFiles) return files;
@@ -422,7 +441,7 @@ export function useFileList() {
     } finally {
       setDeleteLoading(false);
     }
-  }, [deleteConfirm, selectedFiles, selectedFolders, selectedFileIds, loadFiles, loadFolders]);
+  }, [deleteConfirm, selectedFiles, selectedFolders, selectedFileIds, setSelectedFiles, setSelectedFolders, loadFiles, loadFolders]);
 
   const handleBatchDownload = async () => {
     if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
@@ -504,8 +523,6 @@ export function useFileList() {
     }
   }, [loadFiles, loadFolders]);
 
-  const totalPages = useMemo(() => Math.ceil(total / limit), [total, limit]);
-
   const handleShowBatchMove = useCallback(() => setShowBatchMove(true), []);
 
   const handleShowBatchShare = useCallback(async () => {
@@ -531,7 +548,6 @@ export function useFileList() {
     }
   }, [selectedFiles.size, selectedFolders.size, selectedFileIds, selectedFolderIds]);
 
-  const handlePageChange = useCallback((newPage: number) => setPage(newPage), []);
 
   const handleSelectFile = toggleSelectFile;
   const handleSelectFolder = toggleSelectFolder;
@@ -540,17 +556,18 @@ export function useFileList() {
 
   const handleSearchChange = useCallback((value: string) => {
     baseHandleSearchChange(value);
-    setPage(1);
+    setLoadedPageCount(1);
   }, [baseHandleSearchChange]);
 
   const handleMimeTypeChange = useCallback((value: string) => {
     baseHandleMimeTypeChange(value);
-    setPage(1);
+    setLoadedPageCount(1);
   }, [baseHandleMimeTypeChange]);
 
   const handleSortChange = useCallback((value: import('./FileListFilters').SortOption) => {
     baseHandleSortChange(value);
-    setPage(1);
+    // sortField/sortOrder 变化会触发 useEffect 重新调用 loadFiles
+    // loadFiles 内部会设置 setLoadedPageCount(1)，无需在此处设置
   }, [baseHandleSortChange]);
 
   const handleFileDragStart = useCallback((e: React.DragEvent, file: FileMetadata) => {
@@ -603,7 +620,7 @@ export function useFileList() {
     },
   ]);
 
-  const totalItems = folders.length + files.length;
+  const totalItems = displayFolders.length + (mimeType === MIME_FILTER_FOLDERS ? 0 : files.length);
   const isLoading = loading || loadingFolders;
 
   return {
@@ -627,10 +644,14 @@ export function useFileList() {
     totalItems,
     isGroupByType,
     groupedFiles,
+    displayFolders,
     displayFiles,
     displayFileIndexById,
     totalPages,
-    page,
+    page: loadedPageCount,
+    hasMore,
+    loadingMore,
+    loadMore,
     allFilesSelected,
 
     // 过滤与排序
@@ -645,9 +666,9 @@ export function useFileList() {
     handleOpenFolder,
     handleRenameFolder,
     navigateToFolder,
-    handlePageChange,
 
     // 文件操作
+    handleDelete,
     handleDownload,
     handleBatchDownload,
     handleBatchDelete,

@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import './FileListGlass.css';
-import { Folder as FolderIcon, FilePlus2 } from 'lucide-react';
-import { MacFolderIcon } from '../common/MacFolderIcon';
+import { Folder as FolderIcon, FolderOpen, UploadCloud } from 'lucide-react';
 import ErrorMessage from '../common/ErrorMessage';
 import FileGrid from './FileGrid';
+import VirtualizedFileGrid from './VirtualizedFileGrid';
 import FolderGrid from './FolderGrid';
+import { FILE_LIST } from '../../constants';
 import FolderBreadcrumb from './FolderBreadcrumb';
 import FileListFilters from './FileListFilters';
 import FileListPagination from './FileListPagination';
@@ -25,10 +26,56 @@ const CreateFolderDialog = lazy(() => import('./CreateFolderDialog'));
 const RenameFolderDialog = lazy(() => import('./RenameFolderDialog'));
 const ConfirmDialog = lazy(() => import('../common/ConfirmDialog'));
 
+/** 删除确认文案中显示的文件/文件夹名：过长时中间省略，最多约 19 字 */
+function truncateNameForConfirm(name: string, maxLen = 19): string {
+  if (!name || name.length <= maxLen) return name;
+  const extMatch = name.match(/\.[^.]+$/);
+  const ext = extMatch ? extMatch[0] : '';
+  const base = name.slice(0, name.length - ext.length);
+  const budget = maxLen - ext.length - 1;
+  if (budget <= 0) return name.slice(0, maxLen - 1) + '…';
+  const head = base.slice(0, Math.ceil(budget / 2));
+  const tail = base.slice(-Math.floor(budget / 2));
+  return `${head}…${tail}${ext}`;
+}
+
+/** 无限滚动哨兵：进入视口时触发 onLoadMore */
+function InfiniteScrollSentinel({
+  hasMore,
+  loadingMore,
+  onLoadMore,
+}: {
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
+}) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!hasMore || loadingMore) return;
+
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting) onLoadMore();
+      },
+      { rootMargin: '200px', threshold: 0 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, onLoadMore]);
+
+  if (!hasMore) return null;
+  return <div ref={sentinelRef} className="h-1 w-full" aria-hidden />;
+}
+
 export default function FileList({ onOpenUpload }: FileListProps) {
   const {
     files,
-    folders,
     folderPath,
     search,
     mimeType,
@@ -44,10 +91,14 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     totalItems,
     isGroupByType,
     groupedFiles,
+    displayFolders,
     displayFiles,
     displayFileIndexById,
     totalPages,
     page,
+    hasMore,
+    loadingMore,
+    loadMore,
     allFilesSelected,
     handleSearchChange,
     handleMimeTypeChange,
@@ -58,7 +109,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     handleOpenFolder,
     handleRenameFolder,
     navigateToFolder,
-    handlePageChange,
+    handleDelete,
     handleDownload,
     handleBatchDownload,
     handleBatchDelete,
@@ -100,25 +151,31 @@ export default function FileList({ onOpenUpload }: FileListProps) {
           onMimeTypeChange={handleMimeTypeChange}
           onSortChange={handleSortChange}
           actions={
-            <div className="flex items-center gap-3">
+            <div className="flex flex-nowrap items-center gap-[clamp(0.5rem,1.2vw,0.75rem)]">
               <button
                 type="button"
                 onClick={() => navigateToFolder(null)}
-                className="glass-btn toolbarActionBtn flex items-center gap-2 px-4 py-2 text-sm text-white/90 hover:border-white/25"
+                className="glass-btn toolbarActionBtn allFilesBtnHighlight flex items-center font-semibold text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0 px-[clamp(0.75rem,1.8vw,1.25rem)] py-[clamp(0.5rem,1.2vw,0.625rem)] text-[clamp(0.75rem,1.4vw,0.875rem)] gap-[clamp(0.35rem,0.8vw,0.5rem)]"
                 aria-label="All Files"
               >
-                <MacFolderIcon className="h-[0.95rem] w-[0.95rem]" />
+                <FolderOpen
+                  className="text-white shrink-0 w-[clamp(0.85rem,1.8vw,1.1rem)] h-[clamp(0.85rem,1.8vw,1.1rem)]"
+                  aria-hidden="true"
+                />
                 <span>All Files</span>
               </button>
               {onOpenUpload && (
                 <button
                   type="button"
                   onClick={onOpenUpload}
-                  className="glass-btn toolbarActionBtn flex items-center gap-2 px-4 py-2 text-sm text-white/90 hover:border-white/25"
-                  aria-label="Add File"
+                  className="glass-btn toolbarActionBtn uploadBtnHighlight flex items-center font-semibold text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0 px-[clamp(0.75rem,1.8vw,1.25rem)] py-[clamp(0.5rem,1.2vw,0.625rem)] text-[clamp(0.75rem,1.4vw,0.875rem)] gap-[clamp(0.35rem,0.8vw,0.5rem)]"
+                  aria-label="Upload File"
                 >
-                  <FilePlus2 className="h-[0.95rem] w-[0.95rem] text-white/90" aria-hidden="true" />
-                  <span>Add File</span>
+                  <UploadCloud
+                    className="text-white shrink-0 w-[clamp(0.85rem,1.8vw,1.1rem)] h-[clamp(0.85rem,1.8vw,1.1rem)]"
+                    aria-hidden="true"
+                  />
+                  <span>Upload File</span>
                 </button>
               )}
             </div>
@@ -188,7 +245,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             <span className="min-w-0 truncate text-sm text-gray-400">
               {selectedFiles.size + selectedFolders.size > 0 &&
                 `${selectedFiles.size + selectedFolders.size} selected · `}
-              {folders.length > 0 && `${folders.length} folders · `}
+              {displayFolders.length > 0 && `${displayFolders.length} folders · `}
               {files.length} files
             </span>
           </div>
@@ -198,16 +255,18 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             // 分组视图：文件夹单独一组 + 各类型文件分组
             <div className="space-y-6">
               {/* 文件夹分组 */}
-              {folders.length > 0 && (
+              {displayFolders.length > 0 && (
                 <div>
-                  <div className="mb-3 flex items-center gap-2">
-                    <FolderIcon className="w-4 h-4 text-yellow-400" />
+                  <div className="mb-3 flex items-center gap-3">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400" aria-hidden>
+                      <FolderIcon className="h-4 w-4" strokeWidth={2} />
+                    </span>
                     <span className="text-sm font-medium text-gray-400">文件夹</span>
-                    <span className="text-xs text-gray-500">({folders.length})</span>
+                    <span className="text-xs text-gray-500">({displayFolders.length})</span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <FolderGrid
-                    folders={folders}
+                    folders={displayFolders}
                     selectedFolders={selectedFolders}
                     onSelect={handleSelectFolder}
                     onOpen={handleOpenFolder}
@@ -219,31 +278,32 @@ export default function FileList({ onOpenUpload }: FileListProps) {
               )}
               {/* 各类型文件分组 */}
               {groupedFiles.map((group) => (
-                <div key={group.key}>
-                  <div className="mb-3 flex items-center gap-2">
+                <div key={`group-${group.key}-${sortBy}`}>
+                  <div className="mb-3 flex items-center gap-3">
                     {group.icon}
                     <span className="text-sm font-medium text-gray-400">{group.label}</span>
                     <span className="text-xs text-gray-500">({group.files.length})</span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <FileGrid
+                    key={`group-grid-${group.key}-${sortBy}`}
                     files={group.files}
                     selectedFiles={selectedFiles}
                     onSelect={handleSelectFile}
                     onPreview={setPreviewFile}
                     onShare={setShareFile}
                     onDownload={handleDownload}
-                    onDelete={handleBatchDelete}
+                    onDelete={handleDelete}
                     onDragStart={handleFileDragStart}
                   />
                 </div>
               ))}
             </div>
           ) : (
-            // 普通列表视图：文件夹和文件顺序展示（各自内部管理网格布局）
+            // 普通列表视图：文件夹和文件顺序展示；文件过多时用虚拟列表（基于窗口滚动，视口即浏览器窗口）
             <div className="space-y-4">
               <FolderGrid
-                folders={folders}
+                folders={displayFolders}
                 selectedFolders={selectedFolders}
                 onSelect={handleSelectFolder}
                 onOpen={handleOpenFolder}
@@ -251,24 +311,42 @@ export default function FileList({ onOpenUpload }: FileListProps) {
                 onDelete={() => {}}
                 onDrop={handleDropOnFolder}
               />
-              <FileGrid
-                files={files}
-                selectedFiles={selectedFiles}
-                onSelect={handleSelectFile}
-                onPreview={setPreviewFile}
-                onShare={setShareFile}
-                onDownload={handleDownload}
-                onDelete={handleBatchDelete}
-                onDragStart={handleFileDragStart}
-              />
+              {files.length > FILE_LIST.VIRTUAL_THRESHOLD ? (
+                <VirtualizedFileGrid
+                  key={`virtual-${sortBy}-${currentFolderId || 'root'}`}
+                  files={files}
+                  selectedFiles={selectedFiles}
+                  onSelect={handleSelectFile}
+                  onPreview={setPreviewFile}
+                  onShare={setShareFile}
+                  onDownload={handleDownload}
+                  onDelete={handleDelete}
+                  onDragStart={handleFileDragStart}
+                />
+              ) : (
+                <FileGrid
+                  key={`grid-${sortBy}-${currentFolderId || 'root'}`}
+                  files={files}
+                  selectedFiles={selectedFiles}
+                  onSelect={handleSelectFile}
+                  onPreview={setPreviewFile}
+                  onShare={setShareFile}
+                  onDownload={handleDownload}
+                  onDelete={handleDelete}
+                  onDragStart={handleFileDragStart}
+                />
+              )}
             </div>
           )}
 
-          {/* 分页 */}
+          {/* 分页 / 无限滚动：已加载 x/y 页 + 加载更多，滚动到底部自动加载 */}
+          <InfiniteScrollSentinel hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
           <FileListPagination
             page={page}
             totalPages={totalPages}
-            onPageChange={handlePageChange}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={loadMore}
           />
         </> 
       )}
@@ -348,7 +426,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         {deleteConfirm && (
           <ConfirmDialog
             open={!!deleteConfirm}
-            appearance={deleteConfirm.type === 'file' ? 'glass' : 'default'}
+            appearance="glass"
             title={
               deleteConfirm.type === 'batch'
                 ? '确认批量删除'
@@ -357,14 +435,32 @@ export default function FileList({ onOpenUpload }: FileListProps) {
                   : '确认删除文件'
             }
             message={
-              deleteConfirm.type === 'batch'
-                ? `即将删除 ${[
+              deleteConfirm.type === 'batch' ? (
+                <>
+                  <span className="text-white/80">即将删除 {[
                     deleteConfirm.fileCount && `${deleteConfirm.fileCount} 个文件`,
                     deleteConfirm.folderCount && `${deleteConfirm.folderCount} 个文件夹`,
-                  ].filter(Boolean).join(' 和 ')}。\n\n此操作不可撤销！`
-                : deleteConfirm.type === 'folder'
-                  ? `确定要删除文件夹「${deleteConfirm.name}」吗？\n\n文件夹内的所有内容也会被删除！`
-                  : `确定要删除文件「${deleteConfirm.name}」吗？\n\n此操作不可撤销。`
+                  ].filter(Boolean).join(' 和 ')}。</span>
+                  <br /><br />
+                  <span className="text-amber-400 text-xs font-medium">此操作不可撤销！</span>
+                </>
+              ) : deleteConfirm.type === 'folder' ? (
+                <>
+                  <span className="text-white/75 text-xs">确定要删除文件夹「</span>
+                  <span className="text-rose-300 text-sm font-semibold">{truncateNameForConfirm(deleteConfirm.name ?? '')}</span>
+                  <span className="text-white/75 text-xs">」吗？</span>
+                  <br /><br />
+                  <span className="text-amber-400/90 text-xs">文件夹内的所有内容也会被删除！</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-white/75 text-xs">确定要删除文件「</span>
+                  <span className="text-rose-300 text-sm font-semibold">{truncateNameForConfirm(deleteConfirm.name ?? '')}</span>
+                  <span className="text-white/75 text-xs">」吗？</span>
+                  <br /><br />
+                  <span className="text-amber-400/90 text-xs">此操作不可撤销。</span>
+                </>
+              )
             }
             confirmText="删除"
             cancelText="取消"

@@ -1,4 +1,4 @@
-import api from './api';
+import api, { limitedApi } from './api';
 import { buildQueryParams } from '../utils/queryParams';
 import { downloadBlob } from '../utils/downloadBlob';
 import { API_BASE_URL } from '../config/env';
@@ -85,7 +85,8 @@ export const fileService = {
     }
     
     const params = buildQueryParams(q);
-    const response = await api.get<FileListResponse>(
+    // 使用 limitedApi 限制并发，降低后端压力
+    const response = await limitedApi.get<FileListResponse>(
       `/api/files?${params.toString()}`
     );
     return response.data;

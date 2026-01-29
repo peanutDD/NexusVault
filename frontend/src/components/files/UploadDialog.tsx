@@ -427,7 +427,7 @@ export default function UploadDialog({
             Drag and drop your files
           </p>
           <p className="mb-5 text-xs text-gray-500">
-            Max. File size: {maxGB > 1 ? `${maxGB} GB` : `${Math.round(maxGB * 1024)} MB`}
+            Max. File size: {(maxGB > 1) ? `${maxGB} GB` : `${Math.round(maxGB * 1024)} MB`}
           </p>
 
           <button

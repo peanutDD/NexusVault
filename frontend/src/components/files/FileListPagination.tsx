@@ -2,21 +2,34 @@ import { memo, useMemo } from 'react';
 import { cn } from '../../utils/cn';
 
 interface FileListPaginationProps {
+  /** 当前已加载页数（无限滚动）或当前页码（传统分页） */
   page: number;
   totalPages: number;
-  onPageChange: (page: number) => void;
+  /** 传统分页：点击页码/上一页/下一页时调用 */
+  onPageChange?: (page: number) => void;
+  /** 无限滚动：是否有更多页 */
+  hasMore?: boolean;
+  /** 无限滚动：是否正在加载更多 */
+  loadingMore?: boolean;
+  /** 无限滚动：加载下一页 */
+  onLoadMore?: () => void;
 }
 
 const FileListPagination = memo(function FileListPagination({
   page,
   totalPages,
   onPageChange,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: FileListPaginationProps) {
-  // 分页页码计算
+  const isInfinite = typeof onLoadMore === 'function';
+
+  // 传统分页：页码 + 上一页 / 下一页（Hooks 必须在 early return 之前）
   const pageNumbers = useMemo(() => {
     const maxVisible = 5;
     const count = Math.min(maxVisible, totalPages);
-    
+
     if (totalPages <= maxVisible) {
       return Array.from({ length: count }, (_, i) => i + 1);
     }
@@ -29,12 +42,46 @@ const FileListPagination = memo(function FileListPagination({
     return Array.from({ length: count }, (_, i) => page - 2 + i);
   }, [page, totalPages]);
 
+  // 无限滚动：仅显示「已加载 x / y 页」+ 加载更多
+  if (isInfinite) {
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="mt-8 flex flex-col items-center justify-center gap-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-400">
+            已加载 {page} / {totalPages} 页
+          </span>
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={!hasMore || loadingMore}
+            className="glass-btn flex items-center gap-1 px-4 py-2 text-sm disabled:opacity-50"
+          >
+            {loadingMore ? (
+              <>
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                加载中…
+              </>
+            ) : (
+              <>
+                加载更多
+                <ChevronRightIcon />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (totalPages <= 1) return null;
 
   return (
     <div className="mt-8 flex items-center justify-center gap-3">
       <button
-        onClick={() => onPageChange(Math.max(1, page - 1))}
+        type="button"
+        onClick={() => onPageChange?.(Math.max(1, page - 1))}
         disabled={page === 1}
         className="glass-btn flex items-center gap-1 px-4 py-2 text-sm"
       >
@@ -45,12 +92,13 @@ const FileListPagination = memo(function FileListPagination({
         {pageNumbers.map((pageNum) => (
           <button
             key={pageNum}
-            onClick={() => onPageChange(pageNum)}
+            type="button"
+            onClick={() => onPageChange?.(pageNum)}
             className={cn(
-              "glass-btn h-9 w-9 text-sm font-medium transition-colors",
+              'glass-btn h-9 w-9 text-sm font-medium transition-colors',
               page === pageNum
-                ? "border-white/30 bg-white/14 text-white"
-                : "text-white/70 hover:text-white"
+                ? 'border-white/30 bg-white/14 text-white'
+                : 'text-white/70 hover:text-white'
             )}
           >
             {pageNum}
@@ -58,7 +106,8 @@ const FileListPagination = memo(function FileListPagination({
         ))}
       </div>
       <button
-        onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+        type="button"
+        onClick={() => onPageChange?.(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
         className="glass-btn flex items-center gap-1 px-4 py-2 text-sm"
       >

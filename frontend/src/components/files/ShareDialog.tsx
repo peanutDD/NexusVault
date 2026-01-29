@@ -60,11 +60,22 @@ export default function ShareDialog({
   return (
     <Modal
       title="分享文件"
-      description={filename}
+      description="为这个文件创建分享链接"
       onClose={onClose}
       maxWidth="sm"
       variant="glass"
     >
+        {/* 文件名（单独一行，带截断与完整 tooltip，避免撑坏容器） */}
+        <div className="mb-3">
+          <div className="text-xs text-gray-400 mb-1">文件</div>
+          <div
+            className="max-w-full truncate rounded-md bg-white/5 px-3 py-1.5 text-xs text-gray-100"
+            title={filename}
+          >
+            {filename}
+          </div>
+        </div>
+
         {error && (
           <ErrorMessage
             message={error}

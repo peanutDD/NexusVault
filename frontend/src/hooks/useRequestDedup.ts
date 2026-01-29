@@ -12,10 +12,11 @@ export function useRequestDedup<T, Args extends unknown[]>(
 ): (...args: Args) => Promise<T> {
   const inFlight = useRef<Map<string, Promise<T>>>(new Map());
 
-  // 组件卸载时清理 Map
+  // 组件卸载时清理 Map（清理时使用 effect 内捕获的引用）
   useEffect(() => {
+    const map = inFlight.current;
     return () => {
-      inFlight.current.clear();
+      map.clear();
     };
   }, []);
 

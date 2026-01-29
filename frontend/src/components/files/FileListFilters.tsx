@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search } from 'lucide-react';
+import { MIME_FILTER_FOLDERS } from '../../constants';
 import './FileListFilters.css';
 
 export type SortOption = 'created_at_desc' | 'created_at_asc' | 'filename_asc' | 'filename_desc' | 'file_size_desc' | 'file_size_asc' | 'type_group';
@@ -43,6 +44,7 @@ const FileListFilters = memo(function FileListFilters({
   const typeOptions = useMemo(
     () => [
       { label: 'All Types', value: '' },
+      { label: 'Folders', value: MIME_FILTER_FOLDERS },
       { label: 'Images', value: 'image/' },
       { label: 'Videos', value: 'video/' },
       { label: 'Audio', value: 'audio/' },
@@ -93,9 +95,10 @@ const FileListFilters = memo(function FileListFilters({
 
   const computeMenuPos = (el: HTMLElement) => {
     const r = el.getBoundingClientRect();
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - r.width - 8));
+    const w = Math.max(120, r.width * 0.75);
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
     const top = Math.min(r.bottom + 8, window.innerHeight - 8);
-    const width = Math.max(160, r.width);
+    const width = w;
     return { left, top, width };
   };
 

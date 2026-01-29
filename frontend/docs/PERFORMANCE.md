@@ -606,6 +606,19 @@ export function downloadBlob(blob: Blob, filename: string): void {
 
 ---
 
+### 缩略图 Blob URL 累积导致内存偏高（已修复）
+
+**原因简述**：文件列表未做虚拟滚动，一页最多渲染约 100 个卡片。每个图片类文件会通过 `LazyThumbnail` 请求预览 blob 并 `URL.createObjectURL`。进入视口时加载、离开视口后组件仍挂载，**blob URL 一直不释放**，滚动整页后会同时存在几十个 blob，内存持续升高。
+
+**已做修复**（`components/files/LazyThumbnail.tsx`）：
+
+1. **离开视口即释放**：用 `IntersectionObserver` 监听缩略图容器，当 `isIntersecting === false`（离开视口约 50px）时 `setBlobUrl(null)` 并 `URL.revokeObjectURL`，只保留当前视口附近缩略图的 blob。
+2. **再次进入视口可重新加载**：`blobUrl` 被清空后，依赖 `[mimeType, blobUrl]` 的“进入视口”观察会重新注册，滚回时再次请求并显示缩略图。
+
+**其他可能占内存的点**：预览/下载用的 blob 与 `downloadBlob` 的 URL 释放逻辑已按上文处理；`backdrop-blur` 会多占 GPU/合成层，列表区已对卡片关闭 blur，仅顶部栏/预览等保留。
+
+---
+
 ## 六、Hook 优化
 
 ### 问题 P009: useKeyboardShortcuts 事件监听器重复注册
