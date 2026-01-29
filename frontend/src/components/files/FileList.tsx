@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import './FileListGlass.css';
-import { Folder as FolderIcon, FolderOpen, UploadCloud } from 'lucide-react';
+import { FolderPlus, UploadCloud } from 'lucide-react';
 import ErrorMessage from '../common/ErrorMessage';
 import FileGrid from './FileGrid';
 import VirtualizedFileGrid from './VirtualizedFileGrid';
@@ -118,6 +118,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     handleFileDragStart,
     handleDropOnFolder,
     handleDropOnBreadcrumb,
+    addFolderToList,
     previewFile,
     setPreviewFile,
     shareFile,
@@ -140,8 +141,19 @@ export default function FileList({ onOpenUpload }: FileListProps) {
 
   return (
     <div className="fileListGlassScope space-y-4">
-      {/* 顶部工具区（复刻截图布局） */}
-      <div className="glass-panel glass-panel-toolbar p-4">
+      {/* 面包屑：进入文件夹后置顶、左对齐 */}
+      {folderPath.length > 0 && (
+        <div className="flex justify-start">
+          <FolderBreadcrumb
+            path={folderPath}
+            onNavigate={navigateToFolder}
+            onDrop={handleDropOnBreadcrumb}
+          />
+        </div>
+      )}
+
+      {/* 顶部工具区（复刻截图布局，整体缩放到 0.75） */}
+      <div className="glass-panel glass-panel-toolbar fileListToolbarScale75 p-3">
         <FileListFilters
           layout="screenshot"
           search={search}
@@ -151,47 +163,39 @@ export default function FileList({ onOpenUpload }: FileListProps) {
           onMimeTypeChange={handleMimeTypeChange}
           onSortChange={handleSortChange}
           actions={
-            <div className="flex flex-nowrap items-center gap-[clamp(0.5rem,1.2vw,0.75rem)]">
+            <div className="flex flex-nowrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCreateFolder(true)}
+                className="glass-btn toolbarActionBtn font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                aria-label="新建文件夹"
+              >
+                <FolderPlus className="shrink-0 h-[0.75rem] w-[0.75rem]" aria-hidden="true" />
+                <span>新建文件夹</span>
+              </button>
               <button
                 type="button"
                 onClick={() => navigateToFolder(null)}
-                className="glass-btn toolbarActionBtn allFilesBtnHighlight flex items-center font-semibold text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0 px-[clamp(0.75rem,1.8vw,1.25rem)] py-[clamp(0.5rem,1.2vw,0.625rem)] text-[clamp(0.75rem,1.4vw,0.875rem)] gap-[clamp(0.35rem,0.8vw,0.5rem)]"
+                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="All Files"
               >
-                <FolderOpen
-                  className="text-white shrink-0 w-[clamp(0.85rem,1.8vw,1.1rem)] h-[clamp(0.85rem,1.8vw,1.1rem)]"
-                  aria-hidden="true"
-                />
+                <i className="bi bi-folder2-open shrink-0 text-[0.75rem]" aria-hidden />
                 <span>All Files</span>
               </button>
               {onOpenUpload && (
                 <button
                   type="button"
                   onClick={onOpenUpload}
-                  className="glass-btn toolbarActionBtn uploadBtnHighlight flex items-center font-semibold text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0 px-[clamp(0.75rem,1.8vw,1.25rem)] py-[clamp(0.5rem,1.2vw,0.625rem)] text-[clamp(0.75rem,1.4vw,0.875rem)] gap-[clamp(0.35rem,0.8vw,0.5rem)]"
+                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                   aria-label="Upload File"
                 >
-                  <UploadCloud
-                    className="text-white shrink-0 w-[clamp(0.85rem,1.8vw,1.1rem)] h-[clamp(0.85rem,1.8vw,1.1rem)]"
-                    aria-hidden="true"
-                  />
+                  <UploadCloud className="shrink-0 h-[0.75rem] w-[0.75rem]" aria-hidden="true" />
                   <span>Upload File</span>
                 </button>
               )}
             </div>
           }
         />
-
-        {/* 路径（页面优化：保留可用性，弱化显示，不打断截图主布局） */}
-        {folderPath.length > 0 && (
-          <div className="mt-3">
-            <FolderBreadcrumb
-              path={folderPath}
-              onNavigate={navigateToFolder}
-              onDrop={handleDropOnBreadcrumb}
-            />
-          </div>
-        )}
       </div>
 
       {/* 批量操作栏 */}
@@ -230,21 +234,42 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         </div>
       ) : (
         <>
-          {/* 全选栏 */}
+          {/* 全选栏：字体与导航栏标题一致，勾选框与文字同高 */}
           <div className="glass-panel-soft mb-4 flex items-center justify-between gap-4 px-4 py-3">
-            <label className="flex min-w-0 items-center gap-2 whitespace-nowrap text-sm text-gray-300">
-              <input
-                type="checkbox"
-                checked={allFilesSelected}
-                onChange={toggleSelectAll}
-                className="h-4 w-4 rounded border-white/25 bg-white/5 text-purple-300 focus:ring-0 focus:ring-offset-0"
-                aria-label="All Files"
-              />
-              All Files
-            </label>
-            <span className="min-w-0 truncate text-sm text-gray-400">
-              {selectedFiles.size + selectedFolders.size > 0 &&
-                `${selectedFiles.size + selectedFolders.size} selected · `}
+            <div className="flex shrink-0 items-center gap-3">
+              <label className="font-brand flex cursor-pointer items-center gap-2 whitespace-nowrap font-normal tracking-widest text-gray-300 text-[0.625rem] leading-none">
+                <input
+                  type="checkbox"
+                  checked={allFilesSelected}
+                  onChange={toggleSelectAll}
+                  aria-label="All Files"
+                  className="sr-only"
+                />
+                <span
+                  aria-hidden
+                  className={`
+                    inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center rounded-md
+                    border transition-all duration-200
+                    ${allFilesSelected
+                      ? 'border-white/30 bg-white/15 text-white'
+                      : 'border-white/15 bg-white/5 text-transparent hover:border-white/25 hover:bg-white/10'
+                    }
+                  `}
+                >
+                  {allFilesSelected ? (
+                    <i className="bi bi-check-lg text-[0.625rem] font-bold leading-none" aria-hidden />
+                  ) : null}
+                </span>
+                <span className="select-none">All Files</span>
+              </label>
+              {selectedFiles.size + selectedFolders.size > 0 && (
+                <span className="font-brand font-normal tracking-widest text-[0.625rem] leading-none text-yellow-400">
+                  {selectedFiles.size + selectedFolders.size} selected
+                </span>
+              )}
+            </div>
+            <span className="font-brand min-w-0 truncate font-normal tracking-widest text-gray-400 text-[0.625rem] leading-none">
+              total:{' '}
               {displayFolders.length > 0 && `${displayFolders.length} folders · `}
               {files.length} files
             </span>
@@ -258,8 +283,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
               {displayFolders.length > 0 && (
                 <div>
                   <div className="mb-3 flex items-center gap-3">
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400" aria-hidden>
-                      <FolderIcon className="h-4 w-4" strokeWidth={2} />
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
+                      <i className="bi bi-folder2" aria-hidden />
                     </span>
                     <span className="text-sm font-medium text-gray-400">文件夹</span>
                     <span className="text-xs text-gray-500">({displayFolders.length})</span>
@@ -405,8 +430,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             open={showCreateFolder}
             parentId={currentFolderId}
             onClose={() => setShowCreateFolder(false)}
-            onCreated={() => {
+            onCreated={(folder) => {
               setShowCreateFolder(false);
+              addFolderToList(folder);
             }}
           />
         )}

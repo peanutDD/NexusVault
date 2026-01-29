@@ -222,6 +222,20 @@ export function useFileList() {
     }
   }, [currentFolderId]);
 
+  // 创建文件夹后立即加入当前列表（乐观更新，无需 refetch）
+  const addFolderToList = useCallback(
+    (folder: Folder) => {
+      const viewingParent = currentFolderId ?? null;
+      const folderParent = folder.parent_id ?? null;
+      if (viewingParent !== folderParent) return;
+      setFolders((prev) => {
+        if (prev.some((f) => f.id === folder.id)) return prev;
+        return [...prev, folder].sort((a, b) => a.name.localeCompare(b.name));
+      });
+    },
+    [currentFolderId]
+  );
+
   // 加载文件（仅第一页，用于初始加载或筛选变更）
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -677,6 +691,8 @@ export function useFileList() {
     handleFileDragStart,
     handleDropOnFolder,
     handleDropOnBreadcrumb,
+    loadFolders,
+    addFolderToList,
 
     // 对话框状态与操作
     previewFile,

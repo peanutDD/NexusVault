@@ -378,9 +378,9 @@ export default function UploadDialog({
         className="w-full max-w-md animate-fade-in rounded-2xl bg-[#1C1C28] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 标题栏 */}
+        {/* 标题栏：与导航栏标题字体一致 */}
         <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Upload Files</h2>
+          <h2 className="font-brand text-lg font-normal tracking-widest text-white">Upload Files</h2>
           <button
             type="button"
             onClick={handleClose}
@@ -391,7 +391,7 @@ export default function UploadDialog({
             <CloseIcon />
           </button>
         </div>
-        <p className="mb-5 text-sm text-gray-500">Uploaded project attachments</p>
+        <p className="font-brand mb-5 text-sm font-normal tracking-widest text-gray-500">Uploaded project attachments</p>
 
         {/* 拖拽区域 */}
         <div
@@ -423,17 +423,17 @@ export default function UploadDialog({
             <FileDocIcon />
           </div>
 
-          <p className="mb-1 text-sm font-medium text-white">
+          <p className="font-brand mb-1 text-sm font-normal tracking-widest text-white">
             Drag and drop your files
           </p>
-          <p className="mb-5 text-xs text-gray-500">
+          <p className="font-brand mb-5 text-xs font-normal tracking-widest text-gray-500">
             Max. File size: {(maxGB > 1) ? `${maxGB} GB` : `${Math.round(maxGB * 1024)} MB`}
           </p>
 
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="rounded-lg bg-[#2A2A3C] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#3A3A4D]"
+            className="font-brand rounded-lg bg-[#2A2A3C] px-5 py-2.5 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#3A3A4D]"
           >
             Select files
           </button>
@@ -441,7 +441,7 @@ export default function UploadDialog({
 
         {/* URL 上传 */}
         <div className="mb-5">
-          <p className="mb-2 text-sm text-gray-500">Or upload from URL</p>
+          <p className="font-brand mb-2 text-sm font-normal tracking-widest text-gray-500">Or upload from URL</p>
           <div className="flex gap-2">
             <input
               type="url"
@@ -449,7 +449,7 @@ export default function UploadDialog({
               onChange={(e) => setUrlInput(e.target.value)}
               placeholder="Add file URL"
               className={cn(
-                'flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm text-white placeholder-gray-600 transition-colors focus:outline-none',
+                'font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-white placeholder-gray-600 transition-colors focus:outline-none',
                 urlInput.trim()
                   ? 'border-[#6C5DD3]'
                   : 'border-[#2A2A3C] focus:border-[#6C5DD3]'
@@ -462,7 +462,7 @@ export default function UploadDialog({
               type="button"
               onClick={handleUrlUpload}
               disabled={!urlInput.trim() || urlLoading}
-              className="rounded-lg bg-[#6C5DD3] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
+              className="font-brand rounded-lg bg-[#6C5DD3] px-5 py-2.5 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {urlLoading ? '...' : 'Upload'}
             </button>
@@ -471,7 +471,7 @@ export default function UploadDialog({
 
         {/* 批量限制警告 */}
         {batchLimitWarning && (
-          <div className="mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+          <div className="font-brand mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
             {batchLimitWarning}
           </div>
         )}
@@ -480,8 +480,8 @@ export default function UploadDialog({
         {uploadFiles.length > 0 && (
           <div className="mb-5">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-medium text-white">Uploaded Files</p>
-              <span className="text-xs text-gray-500">{uploadFiles.length} / {maxBatchCount}</span>
+              <p className="font-brand text-sm font-normal tracking-widest text-white">Uploaded Files</p>
+              <span className="font-brand text-xs font-normal tracking-widest text-gray-500">{uploadFiles.length} / {maxBatchCount}</span>
             </div>
             <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
               {uploadFiles.map((file) => (
@@ -502,7 +502,7 @@ export default function UploadDialog({
             type="button"
             onClick={handleClose}
             disabled={isUploading}
-            className="flex-1 rounded-full bg-[#2A2A3C] py-3 text-sm font-medium text-white transition-colors hover:bg-[#3A3A4D] disabled:cursor-not-allowed disabled:opacity-50"
+            className="font-brand flex-1 rounded-full bg-[#2A2A3C] py-3 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#3A3A4D] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -510,7 +510,7 @@ export default function UploadDialog({
             type="button"
             onClick={handleAttach}
             disabled={uploadFiles.length === 0 || isUploading}
-            className="flex-1 rounded-full bg-[#6C5DD3] py-3 text-sm font-medium text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
+            className="font-brand flex-1 rounded-full bg-[#6C5DD3] py-3 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isUploading
               ? 'Uploading...'

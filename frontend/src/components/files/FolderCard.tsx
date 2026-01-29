@@ -90,31 +90,32 @@ const FolderCard = memo(function FolderCard({
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
     >
-      {/* 选择框 */}
+      {/* 选择框 - 纯色紫圈 + 外圈水晶，选中闪动（固定尺寸避免切换时位移） */}
       <div
-        className={cn(
-          'absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md transition-all cursor-pointer',
-          isSelected
-            ? 'bg-purple-500'
-            : 'bg-black/40 opacity-0 group-hover:opacity-100'
-        )}
+        className="absolute left-2 top-2 z-10 flex h-5 w-5 cursor-pointer items-center justify-center transition-all"
         onClick={(e) => {
           e.stopPropagation();
           onSelect(folder.id);
         }}
       >
         {isSelected ? (
-          <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
+          <div className="card-checkbox-outer-crystal card-checkbox-selected flex h-5 w-5 items-center justify-center rounded-full">
+            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-500">
+              <svg className="h-3 w-3 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
         ) : (
-          <div className="h-4 w-4 rounded border-2 border-white/60" />
+          <div className="flex h-4 w-4 items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100">
+            <div className="h-3 w-3 rounded-full border-2 border-white/60" />
+          </div>
         )}
       </div>
 
       {/* 文件夹图标 */}
       <div className="glass-thumb mb-3 flex aspect-square items-center justify-center">
-        <FolderIcon className="h-12 w-12 text-amber-300" />
+        <i className="bi bi-folder2 text-5xl text-white/90" aria-hidden />
       </div>
 
       {/* 文件夹名称 */}
@@ -172,14 +173,5 @@ const FolderCard = memo(function FolderCard({
     </div>
   );
 });
-
-// 文件夹图标
-function FolderIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z" />
-    </svg>
-  );
-}
 
 export default FolderCard;

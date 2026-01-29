@@ -157,11 +157,26 @@
   z-index: 2;
 }
 
-/* 顶部工具区：不应盖住全局导航栏（NavBar 为 z-50） */
+/* 顶部工具区：与导航栏一致（nav-ui-fluid 风格） */
 .fileListGlassScope .glass-panel.glass-panel-toolbar {
+  font-family: var(--font-sans);
+  letter-spacing: 0.025em;
   /* 下拉已改为 portal（挂到 body），无需 overflow: visible / 额外抬高层级 */
   overflow: hidden;
   z-index: auto;
+}
+
+/* 搜索框那一行整体缩放到 0.75，保持居中和右对齐 */
+.fileListGlassScope .glass-panel-toolbar.fileListToolbarScale75 {
+  display: flex;
+  align-items: center;
+  overflow: visible;
+}
+.fileListGlassScope .glass-panel-toolbar.fileListToolbarScale75 > * {
+  width: 133.333%;
+  transform: scale(0.75);
+  transform-origin: left center;
+  margin-right: -33.333%;
 }
 
 .fileListGlassScope .glass-panel-soft {
@@ -397,8 +412,13 @@
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-/* 顶部工具按钮：更小圆角、更强辨识度 */
+/* 顶部工具按钮：与搜索框/Type·Sort 同高，更小圆角、更强辨识度 */
 .fileListGlassScope .glass-btn.toolbarActionBtn {
+  height: clamp(2.2rem, 2.5vw, 2.55rem);
+  min-height: clamp(2.2rem, 2.5vw, 2.55rem);
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
   border-radius: 8px;
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.10);
@@ -460,6 +480,41 @@
     0 6px 20px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
+}
+
+/* 卡片勾选框：外圈水晶效果 */
+.fileListGlassScope .card-checkbox-outer-crystal {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* 卡片勾选框选中态：闪动（光晕） */
+@keyframes card-checkbox-flash {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.15),
+      0 0 0 1px rgba(255, 255, 255, 0.12),
+      0 0 8px rgba(168, 85, 247, 0.35);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+      0 0 0 1px rgba(255, 255, 255, 0.2),
+      0 0 14px 1px rgba(168, 85, 247, 0.5);
+  }
+}
+
+.fileListGlassScope .card-checkbox-selected {
+  animation: card-checkbox-flash 1.2s ease-in-out infinite;
 }
 
 /* 性能关键：卡片/缩略图/按钮上的“颗粒纹理”会显著增加重绘成本，禁用它们 */

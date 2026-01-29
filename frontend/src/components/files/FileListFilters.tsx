@@ -58,13 +58,13 @@ const FileListFilters = memo(function FileListFilters({
 
   const sortOptions = useMemo(
     () => [
+      { label: 'Group by Type', value: 'type_group' as const },
       { label: 'Newest Upload', value: 'created_at_desc' as const },
       { label: 'Oldest Upload', value: 'created_at_asc' as const },
       { label: 'Filename A–Z', value: 'filename_asc' as const },
       { label: 'Filename Z–A', value: 'filename_desc' as const },
       { label: 'File Size ↓', value: 'file_size_desc' as const },
       { label: 'File Size ↑', value: 'file_size_asc' as const },
-      { label: 'Group by Type', value: 'type_group' as const },
     ],
     []
   );
@@ -93,13 +93,14 @@ const FileListFilters = memo(function FileListFilters({
     return () => document.removeEventListener('mousedown', onDocMouseDown);
   }, []);
 
-  const computeMenuPos = (el: HTMLElement) => {
+  /** 下拉框位置：可指定宽度来源（与 Sort 组件同宽时传 sortRef） */
+  const computeMenuPos = (el: HTMLElement, widthFrom?: HTMLElement | null) => {
     const r = el.getBoundingClientRect();
-    const w = Math.max(120, r.width * 0.75);
+    const source = widthFrom ?? el;
+    const w = Math.max(120, source.getBoundingClientRect().width);
     const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
     const top = Math.min(r.bottom + 8, window.innerHeight - 8);
-    const width = w;
-    return { left, top, width };
+    return { left, top, width: w };
   };
 
   const samePos = (
@@ -119,7 +120,9 @@ const FileListFilters = memo(function FileListFilters({
         if (disposed) return;
 
         const nextTypePos =
-          typeOpen && typeRef.current ? computeMenuPos(typeRef.current) : null;
+          typeOpen && typeRef.current
+            ? computeMenuPos(typeRef.current, sortRef.current)
+            : null;
         const nextSortPos =
           sortOpen && sortRef.current ? computeMenuPos(sortRef.current) : null;
 

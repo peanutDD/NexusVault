@@ -62,106 +62,119 @@ export default function BatchShareDialog({
     }
   };
 
+  const inputClass =
+    'w-full rounded-lg border border-[#2A2A3C] bg-transparent px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:border-[#6C5DD3] focus:outline-none';
+
   return (
     <Modal
       title="批量分享文件"
-      description={`将为 ${fileCount} 个文件创建分享链接`}
+      description={undefined}
       onClose={onClose}
-      maxWidth="lg"
-      variant="glass"
+      maxWidth="sm"
+      variant="upload"
     >
-        {error && (
-          <ErrorMessage
-            message={error}
-            onClose={() => setError(null)}
-            type="error"
-          />
-        )}
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={() => setError(null)}
+          type="error"
+        />
+      )}
 
-        {success && (
-          <ErrorMessage
-            message={success}
-            onClose={() => setSuccess(null)}
-            type="info"
-          />
-        )}
+      {success && (
+        <ErrorMessage
+          message={success}
+          onClose={() => setSuccess(null)}
+          type="info"
+        />
+      )}
 
-        {shareUrls.length > 0 ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                分享链接 ({shareUrls.length} 个)
-              </label>
-              <div className="max-h-60 overflow-y-auto space-y-2 mb-2">
-                {shareUrls.map((url, index) => (
-                  <div key={index} className="flex gap-2">
-                    <label htmlFor={`share-url-${index}`} className="sr-only">
-                      分享链接 {index + 1}
-                    </label>
-                    <input
-                      id={`share-url-${index}`}
-                      type="text"
-                      value={url}
-                      readOnly
-                      title={`分享链接 ${index + 1}`}
-                      placeholder="分享链接"
-                      className="flex-1 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(url);
-                        alert('链接已复制');
-                      }}
-                      className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white transition-colors hover:bg-white/15"
-                    >
-                      复制
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={handleCopyAllUrls}
-                className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
-              >
-                复制所有链接
-              </button>
+      {shareUrls.length > 0 ? (
+        <div className="space-y-3">
+          {/* 结果摘要：与上传弹窗主题一致 */}
+          <div className="rounded-lg border border-[#3A3A4D] bg-[#2A2A3C] px-3 py-2">
+            <p className="text-[0.65rem] uppercase tracking-wider text-gray-500">分享链接</p>
+            <p className="mt-0.5 font-brand text-sm font-normal tracking-wide text-white">
+              <span className="font-semibold text-[#9B8FE8]">{shareUrls.length} 个链接</span>
+            </p>
+          </div>
+
+          {/* 复制链接 */}
+          <div>
+            <p className="mb-1.5 text-[0.65rem] uppercase tracking-wider text-gray-500">复制链接</p>
+            <div className="max-h-44 overflow-y-auto rounded-lg border border-[#3A3A4D] bg-[#2A2A3C] py-1">
+              {shareUrls.map((url, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2.5 px-2.5 py-1.5"
+                >
+                  <input
+                    id={`share-url-${index}`}
+                    type="text"
+                    value={url}
+                    readOnly
+                    title={`分享链接 ${index + 1}`}
+                    className="min-w-0 flex-1 rounded border border-[#3A3A4D] bg-[#1C1C28] px-2 py-1 text-xs text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(url);
+                      alert('链接已复制');
+                    }}
+                    className="shrink-0 rounded-lg bg-[#2A2A3C] px-2 py-1 text-xs text-white transition-colors hover:bg-[#3A3A4D]"
+                  >
+                    复制
+                  </button>
+                </div>
+              ))}
             </div>
-            {failedCount > 0 && (
-              <p className="text-amber-300 text-sm">
-                ⚠️ {failedCount} 个文件分享失败（可能已存在分享链接或文件不存在）
-              </p>
-            )}
+            <button
+              type="button"
+              onClick={handleCopyAllUrls}
+              className="mt-2 w-full rounded-lg bg-[#6C5DD3] py-2 text-xs font-medium text-white transition-colors hover:bg-[#7C6DE3]"
+            >
+              复制所有链接
+            </button>
+          </div>
+
+          {failedCount > 0 && (
+            <p className="rounded-lg border border-[#3A3A4D] bg-amber-500/10 px-3 py-1.5 text-xs text-amber-400">
+              ⚠ {failedCount} 个文件分享失败
+            </p>
+          )}
+
+          <div className="flex gap-2 pt-0.5">
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
+              className="flex-1 rounded-lg bg-[#2A2A3C] py-2 text-xs font-medium text-white transition-colors hover:bg-[#3A3A4D]"
             >
               关闭
             </button>
           </div>
-        ) : (
-          <form onSubmit={handleCreateShare} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                密码保护（可选，所有文件使用相同密码）
-              </label>
+        </div>
+      ) : (
+        <form onSubmit={handleCreateShare} className="space-y-3">
+          {/* 将创建分享：与上传弹窗主题一致 */}
+          <div className="rounded-lg border border-[#3A3A4D] bg-[#2A2A3C] px-3 py-2">
+            <p className="text-[0.65rem] uppercase tracking-wider text-gray-500">将创建分享</p>
+            <p className="mt-0.5 font-brand text-sm font-normal tracking-wide text-white">
+              <span className="font-semibold text-[#9B8FE8]">{fileCount} 个文件</span>
+            </p>
+          </div>
+
+          {/* 可选设置 */}
+          <div>
+            <p className="mb-1.5 text-[0.65rem] uppercase tracking-wider text-gray-500">可选设置</p>
+            <div className="rounded-lg border border-[#3A3A4D] bg-[#2A2A3C] p-2.5 space-y-2">
               <input
                 type="password"
                 value={formData.password || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                placeholder="留空则不设置密码"
-                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="密码保护（可选）"
+                className={inputClass}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                过期时间（可选，天数）
-              </label>
               <input
                 type="number"
                 min="1"
@@ -169,20 +182,12 @@ export default function BatchShareDialog({
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    expires_in_days: e.target.value
-                      ? parseInt(e.target.value)
-                      : undefined,
+                    expires_in_days: e.target.value ? parseInt(e.target.value) : undefined,
                   })
                 }
-                placeholder="留空则永不过期"
-                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+                placeholder="过期天数（可选，留空永不过期）"
+                className={inputClass}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                最大下载次数（可选）
-              </label>
               <input
                 type="number"
                 min="1"
@@ -190,34 +195,34 @@ export default function BatchShareDialog({
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    max_downloads: e.target.value
-                      ? parseInt(e.target.value)
-                      : undefined,
+                    max_downloads: e.target.value ? parseInt(e.target.value) : undefined,
                   })
                 }
-                placeholder="留空则不限制"
-                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+                placeholder="最大下载次数（可选，留空不限制）"
+                className={inputClass}
               />
             </div>
+          </div>
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
-              >
-                取消
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 rounded-lg bg-gradient-to-r from-purple-500/70 to-fuchsia-500/60 px-4 py-2 text-white shadow-[0_12px_35px_rgba(168,85,247,0.18)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? '创建中...' : '批量创建分享'}
-              </button>
-            </div>
-          </form>
-        )}
+          {/* 按钮行：与上传弹窗一致 */}
+          <div className="flex gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg bg-[#2A2A3C] py-2 text-xs font-medium text-white transition-colors hover:bg-[#3A3A4D]"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#6C5DD3] py-2 text-xs font-medium text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? '创建中…' : '创建分享'}
+            </button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }
