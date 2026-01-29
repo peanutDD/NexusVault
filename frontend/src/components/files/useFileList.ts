@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
 import { folderService, type Folder } from '../../services/folders';
@@ -201,6 +201,8 @@ export function useFileList() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const limit = FILE_LIST.LIMIT;
+  const fileListCacheKeyRef = useRef<string>('');
+  const [isRevalidating, setIsRevalidating] = useState(false);
 
   const listFilesStable = useCallback(
     (query?: FileListQuery) => fileService.listFiles(query),
@@ -236,9 +238,8 @@ export function useFileList() {
     [currentFolderId]
   );
 
-  // 加载文件（仅第一页，用于初始加载或筛选变更）
+  // 加载文件（仅第一页）：stale-while-revalidate — 有缓存先展示，后台 revalidate 后更新
   const loadFiles = useCallback(async () => {
-    setLoading(true);
     setError(null);
 
     // 「仅文件夹」筛选：不请求文件列表，只展示文件夹
@@ -248,6 +249,7 @@ export function useFileList() {
       setLoadedPageCount(1);
       setSelectedFiles(new Set());
       setLoading(false);
+      setIsRevalidating(false);
       return;
     }
 
@@ -262,6 +264,7 @@ export function useFileList() {
     };
 
     const cacheKey = getCacheKey(query as Record<string, unknown>);
+    fileListCacheKeyRef.current = cacheKey;
     const cached = getCachedFileList(cacheKey);
 
     if (cached) {
@@ -270,11 +273,28 @@ export function useFileList() {
       setLoadedPageCount(1);
       setSelectedFiles(new Set());
       setLoading(false);
+      setIsRevalidating(true);
+      dedupedListFiles(query)
+        .then((response) => {
+          if (fileListCacheKeyRef.current !== cacheKey) return;
+          setFiles(response.files);
+          setTotal(response.total);
+          setLoadedPageCount(1);
+          setCachedFileList(cacheKey, response.files, response.total);
+        })
+        .catch(() => {
+          // 后台 revalidate 失败不覆盖已有缓存展示，静默忽略
+        })
+        .finally(() => {
+          if (fileListCacheKeyRef.current === cacheKey) setIsRevalidating(false);
+        });
       return;
     }
 
+    setLoading(true);
     try {
       const response = await dedupedListFiles(query);
+      if (fileListCacheKeyRef.current !== cacheKey) return;
       setFiles(response.files);
       setTotal(response.total);
       setLoadedPageCount(1);
@@ -643,6 +663,7 @@ export function useFileList() {
   const isLoading = loading || loadingFolders;
 
   return {
+    isRevalidating,
     // 状态
     files,
     folders,

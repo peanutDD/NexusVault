@@ -90,6 +90,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     error,
     setError,
     isLoading,
+    isRevalidating,
     totalItems,
     isGroupByType,
     groupedFiles,
@@ -244,6 +245,11 @@ export default function FileList({ onOpenUpload }: FileListProps) {
           {/* 全选栏：字体与导航栏标题一致，勾选框与文字同高 */}
           <div className="glass-panel-soft mb-4 flex items-center justify-between gap-4 px-4 py-3">
             <div className="flex shrink-0 items-center gap-3">
+              {isRevalidating && (
+                <span className="text-[0.65rem] text-gray-500" aria-live="polite">
+                  更新中…
+                </span>
+              )}
               <label className="font-brand flex cursor-pointer items-center gap-2 whitespace-nowrap font-normal tracking-widest text-gray-300 text-[0.625rem] leading-none">
                 <input
                   type="checkbox"
