@@ -539,6 +539,11 @@ export function useFileList() {
 
   const handleShowBatchMove = useCallback(() => setShowBatchMove(true), []);
 
+  const clearSelection = useCallback(() => {
+    setSelectedFiles(new Set());
+    setSelectedFolders(new Set());
+  }, [setSelectedFiles, setSelectedFolders]);
+
   const handleShowBatchShare = useCallback(async () => {
     if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
 
@@ -692,6 +697,8 @@ export function useFileList() {
     handleDropOnFolder,
     handleDropOnBreadcrumb,
     loadFolders,
+    loadFiles,
+    clearSelection,
     addFolderToList,
 
     // 对话框状态与操作

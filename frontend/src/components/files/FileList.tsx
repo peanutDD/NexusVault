@@ -12,6 +12,8 @@ import FileListPagination from './FileListPagination';
 import FileListBatchActions from './FileListBatchActions';
 import { FileCardSkeleton } from '../common/Skeleton';
 import { useFileList } from './useFileList';
+import { clearFileListCache } from '../../utils/fileListCache';
+import { useThrottledCallback } from '../../hooks/useThrottledCallback';
 
 interface FileListProps {
   onOpenUpload?: () => void;
@@ -118,6 +120,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     handleFileDragStart,
     handleDropOnFolder,
     handleDropOnBreadcrumb,
+    loadFiles,
+    loadFolders,
+    clearSelection,
     addFolderToList,
     previewFile,
     setPreviewFile,
@@ -138,6 +143,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     executeDelete,
     setDeleteConfirm,
   } = useFileList();
+
+  const throttledLoadMore = useThrottledCallback(loadMore, 400);
 
   return (
     <div className="fileListGlassScope space-y-4">
@@ -365,13 +372,13 @@ export default function FileList({ onOpenUpload }: FileListProps) {
           )}
 
           {/* 分页 / 无限滚动：已加载 x/y 页 + 加载更多，滚动到底部自动加载 */}
-          <InfiniteScrollSentinel hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+          <InfiniteScrollSentinel hasMore={hasMore} loadingMore={loadingMore} onLoadMore={throttledLoadMore} />
           <FileListPagination
             page={page}
             totalPages={totalPages}
             hasMore={hasMore}
             loadingMore={loadingMore}
-            onLoadMore={loadMore}
+            onLoadMore={throttledLoadMore}
           />
         </> 
       )}
@@ -421,6 +428,10 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             onClose={() => setShowBatchMove(false)}
             onMoved={() => {
               setShowBatchMove(false);
+              clearSelection();
+              clearFileListCache();
+              loadFiles();
+              loadFolders();
             }}
           />
         )}

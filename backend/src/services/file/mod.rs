@@ -17,6 +17,7 @@
 //!
 //! 因此这里按“业务能力”拆成多个子模块文件，并保持对外 `FileService` API 不变。
 
+mod batch_get;
 mod batch_zip;
 mod categories;
 mod chunked_upload;

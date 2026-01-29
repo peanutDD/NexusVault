@@ -57,7 +57,7 @@ pub struct File {
 /// 文件响应
 ///
 /// 返回给客户端的文件信息（隐藏内部存储路径等敏感信息）。
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct FileResponse {
     pub id: Uuid,
     pub filename: String,
@@ -152,4 +152,11 @@ pub struct BatchMoveRequest {
     pub ids: Vec<Uuid>,
     /// 目标分类（空字符串或 null 表示取消分类）
     pub category: Option<String>,
+}
+
+/// 批量按 ID 查询请求（用于按 ids 批量查详情）
+#[derive(Debug, Deserialize)]
+pub struct BatchGetRequest {
+    /// 要查询的文件 ID 列表
+    pub ids: Vec<Uuid>,
 }

@@ -38,7 +38,7 @@ mod upload;
 
 pub use batch::{
     batch_delete_handler, batch_download_zip_handler, batch_download_zip_post_handler,
-    batch_move_handler,
+    batch_get_handler, batch_move_handler,
 };
 pub use categories::categories_handler;
 pub use chunked_upload::{

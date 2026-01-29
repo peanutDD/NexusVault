@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { retry } from '../utils/retry';
 import { REQUEST } from '../constants';
 import { globalRequestLimiter } from '../utils/requestLimiter';
+import { createDedupAdapter, type AxiosAdapter } from '../utils/globalRequestDedup';
 
 // 避免每个请求都同步读 localStorage（高频预览/上传场景会放大开销）
 let tokenCache: string | null | undefined = undefined;
@@ -62,6 +63,12 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// 全局请求去重 + TTL 内复用：相同请求 5 秒内不重复发送，复用缓存或飞行中 Promise
+const defaultAdapter = api.defaults.adapter;
+if (defaultAdapter) {
+  api.defaults.adapter = createDedupAdapter(defaultAdapter as AxiosAdapter);
+}
 
 // 请求拦截：鉴权 + 请求取消（GET 同 key 取消前一个）
 api.interceptors.request.use(

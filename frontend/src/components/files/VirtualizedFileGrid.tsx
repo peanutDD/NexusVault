@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useMemo } from 'react';
 import type { FileMetadata } from '../../services/files';
 import FileCard from './FileCard';
 import { FILE_LIST } from '../../constants';
+import { useThrottledCallback } from '../../hooks/useThrottledCallback';
 
 /** 根据窗口宽度估算网格列数（与 Tailwind grid-cols-2 … xl:grid-cols-6 一致） */
 function getColumnsFromWidth(width: number): number {
@@ -51,39 +52,48 @@ export default function VirtualizedFileGrid({
     typeof window !== 'undefined' ? window.innerHeight : 800
   );
 
+  const throttledSetColumns = useThrottledCallback(
+    () => setColumns(getColumnsFromWidth(window.innerWidth)),
+    150
+  );
   useEffect(() => {
-    const onResize = () => setColumns(getColumnsFromWidth(window.innerWidth));
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+    window.addEventListener('resize', throttledSetColumns);
+    return () => window.removeEventListener('resize', throttledSetColumns);
+  }, [throttledSetColumns]);
 
   useEffect(() => {
     const update = () => {
       const el = containerRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      // 容器相对视口的顶部：负值表示容器顶部在视口上方（已向上滚过）
       setContainerTop(rect.top);
-      // 容器在视口内的可见高度
       const viewportBottom = window.innerHeight;
       const visibleTop = Math.max(0, rect.top);
       const visibleBottom = Math.min(viewportBottom, rect.bottom);
       setVisibleHeight(Math.max(0, visibleBottom - visibleTop));
     };
 
-    // 使用 requestAnimationFrame 确保在布局完成后更新
     const rafId = requestAnimationFrame(() => {
       update();
-      // 再延迟一次确保完全渲染
       requestAnimationFrame(update);
     });
-    
+
+    let lastResize = 0;
+    const RESIZE_THROTTLE_MS = 150;
+    const onResize = () => {
+      const now = Date.now();
+      if (now - lastResize >= RESIZE_THROTTLE_MS) {
+        lastResize = now;
+        update();
+      }
+    };
+
     window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
+    window.addEventListener('resize', onResize);
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
+      window.removeEventListener('resize', onResize);
     };
   }, [files.length, columns]);
 

@@ -1,6 +1,7 @@
 //! 批量操作
 //!
 //! - 批量删除
+//! - 批量按 ID 查详情
 //! - 批量移动到分类
 //! - 批量打包下载（ZIP）
 
@@ -10,10 +11,29 @@ use serde_json::json;
 use std::collections::HashMap;
 
 use crate::extractors::AuthenticatedUser;
-use crate::models::file::{BatchDeleteRequest, BatchMoveRequest};
+use crate::models::file::{BatchDeleteRequest, BatchGetRequest, BatchMoveRequest};
 use crate::services::file::FileService;
 use crate::utils::{file_response, json_response, parse_uuid_list, AppError};
 use crate::AppState;
+
+/// 批量按 ID 查询文件元数据
+///
+/// 返回顺序与请求 ids 一致；未找到或无权访问的项为 null。
+/// 供前端批量请求合并（BatchRequestManager）使用。
+///
+/// # 请求体
+/// ```json
+/// { "ids": ["uuid1", "uuid2", ...] }
+/// ```
+pub async fn batch_get_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    axum::Json(req): axum::Json<BatchGetRequest>,
+) -> Result<Response, AppError> {
+    let file_service = FileService::from_state(&state);
+    let files = file_service.get_files_by_ids(user_id, &req.ids).await?;
+    Ok(json_response(json!({ "files": files })))
+}
 
 /// 批量删除文件
 ///

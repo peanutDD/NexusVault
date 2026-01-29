@@ -4,6 +4,7 @@ import type { FileMetadata } from '../../services/files';
 import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
 import { getPreviewKind, getMimeTypeLabel } from '../../utils/mimeType';
+import { useThrottledCallback } from '../../hooks/useThrottledCallback';
 
 interface FilePreviewProps {
   file: FileMetadata | null;
@@ -29,9 +30,6 @@ export default function FilePreview({
   
   // 请求 ID 用于处理竞态条件
   const requestIdRef = useRef(0);
-  // 导航防抖 - 防止过快点击
-  const lastNavTimeRef = useRef(0);
-  const NAV_DEBOUNCE_MS = 150; // 150ms 防抖
   // 图片缩放/旋转容器 ref，用于设置 CSS 变量（避免内联 style 触发 lint）
   const imageTransformRef = useRef<HTMLDivElement>(null);
 
@@ -39,26 +37,15 @@ export default function FilePreview({
   const canGoPrev = files.length > 1 && currentIndex > 0;
   const canGoNext = files.length > 1 && currentIndex < files.length - 1;
 
-  // 导航到上一个/下一个文件（带防抖）
-  const goToPrev = useCallback(() => {
-    const now = Date.now();
-    if (now - lastNavTimeRef.current < NAV_DEBOUNCE_MS) return;
-    lastNavTimeRef.current = now;
-    
-    if (canGoPrev && onNavigate) {
-      onNavigate(files[currentIndex - 1]);
-    }
+  const goToPrevImpl = useCallback(() => {
+    if (canGoPrev && onNavigate) onNavigate(files[currentIndex - 1]);
   }, [canGoPrev, currentIndex, files, onNavigate]);
-
-  const goToNext = useCallback(() => {
-    const now = Date.now();
-    if (now - lastNavTimeRef.current < NAV_DEBOUNCE_MS) return;
-    lastNavTimeRef.current = now;
-    
-    if (canGoNext && onNavigate) {
-      onNavigate(files[currentIndex + 1]);
-    }
+  const goToNextImpl = useCallback(() => {
+    if (canGoNext && onNavigate) onNavigate(files[currentIndex + 1]);
   }, [canGoNext, currentIndex, files, onNavigate]);
+
+  const goToPrev = useThrottledCallback(goToPrevImpl, 200);
+  const goToNext = useThrottledCallback(goToNextImpl, 200);
 
   // 使用共享工具函数获取预览类型信息
   const kind = useMemo(

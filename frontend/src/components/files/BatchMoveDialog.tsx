@@ -80,6 +80,12 @@ export default function BatchMoveDialog({
         movedFolders = await folderService.moveFolders(folderIds, folderId);
       }
 
+      const anyMoved = movedFiles > 0 || movedFolders > 0;
+      if (!anyMoved) {
+        setError('没有项目被移动，请重试或检查目标位置。');
+        return;
+      }
+
       const folderName = folderId 
         ? folders.find(f => f.id === folderId)?.name 
         : '根目录';

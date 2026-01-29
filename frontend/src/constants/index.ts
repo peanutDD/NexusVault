@@ -14,6 +14,10 @@ export const FILE_LIST = {
   CACHE_MINUTES: 5,
   /** 超过该数量时启用虚拟列表 */
   VIRTUAL_THRESHOLD: 24,
+  /** 缓存版本号：数据结构变更时递增，旧缓存自动失效 */
+  CACHE_VERSION: 1,
+  /** 文件列表缓存最大条数（LRU 淘汰，避免 localStorage 溢出） */
+  CACHE_MAX_ENTRIES: 80,
 } as const;
 
 /**
@@ -60,4 +64,8 @@ export const REQUEST = {
   RETRY_INITIAL_DELAY_MS: 1000,
   /** GET 请求重试最大延迟（ms） */
   RETRY_MAX_DELAY_MS: 10000,
+  /** 全局请求去重：相同请求在此时间（ms）内复用结果，不重复发请求 */
+  DEDUP_TTL_MS: 5000,
+  /** 全局请求去重：响应缓存最大条数 */
+  DEDUP_MAX_CACHE_SIZE: 100,
 } as const;

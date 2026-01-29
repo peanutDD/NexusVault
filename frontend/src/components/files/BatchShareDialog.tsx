@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { shareService, type BatchShareRequest } from '../../services/shares';
+import { fileService } from '../../services/files';
 import { getErrorMessage } from '../../utils/error';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
@@ -27,6 +28,22 @@ export default function BatchShareDialog({
     expires_in_days: undefined,
     max_downloads: undefined,
   });
+  const [fileNames, setFileNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (fileIds.length === 0) {
+      setFileNames([]);
+      return;
+    }
+    fileService
+      .getFilesByIds(fileIds)
+      .then((files) =>
+        setFileNames(
+          files.map((f) => (f ? f.original_filename : '')).filter(Boolean)
+        )
+      )
+      .catch(() => setFileNames([]));
+  }, [fileIds]);
 
   const handleCreateShare = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,6 +178,12 @@ export default function BatchShareDialog({
             <p className="text-[0.65rem] uppercase tracking-wider text-gray-500">将创建分享</p>
             <p className="mt-0.5 font-brand text-sm font-normal tracking-wide text-white">
               <span className="font-semibold text-[#9B8FE8]">{fileCount} 个文件</span>
+              {fileNames.length > 0 && (
+                <span className="ml-1 text-gray-400">
+                  （{fileNames.slice(0, 3).join('、')}
+                  {fileNames.length > 3 ? ` 等${fileNames.length} 个` : ''}）
+                </span>
+              )}
             </p>
           </div>
 

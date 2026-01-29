@@ -111,6 +111,8 @@ const FileListFilters = memo(function FileListFilters({
   useEffect(() => {
     let rafId: number | null = null;
     let disposed = false;
+    let lastResize = 0;
+    const RESIZE_THROTTLE_MS = 150;
 
     const update = () => {
       if (disposed) return;
@@ -131,16 +133,23 @@ const FileListFilters = memo(function FileListFilters({
       });
     };
 
+    const onResize = () => {
+      const now = Date.now();
+      if (now - lastResize >= RESIZE_THROTTLE_MS) {
+        lastResize = now;
+        update();
+      }
+    };
+
     update();
     if (!typeOpen && !sortOpen) return;
 
-    window.addEventListener('resize', update);
-    // 捕获阶段监听滚动，覆盖所有滚动容器
+    window.addEventListener('resize', onResize);
     window.addEventListener('scroll', update, { capture: true, passive: true });
     return () => {
       disposed = true;
       if (rafId != null) window.cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', update);
+      window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', update, { capture: true } as AddEventListenerOptions);
     };
   }, [typeOpen, sortOpen]);

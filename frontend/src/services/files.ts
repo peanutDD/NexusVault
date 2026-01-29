@@ -2,7 +2,8 @@ import api, { limitedApi } from './api';
 import { buildQueryParams } from '../utils/queryParams';
 import { downloadBlob } from '../utils/downloadBlob';
 import { API_BASE_URL } from '../config/env';
-import { CHUNKED_UPLOAD } from '../constants';
+import { CHUNKED_UPLOAD, REQUEST } from '../constants';
+import { BatchRequestManager } from '../utils/batchRequest';
 
 // 预览请求并发限制器（最多 6 个并发请求）
 const previewQueue = {
@@ -59,7 +60,31 @@ export interface FileListQuery {
   sort_order?: 'asc' | 'desc';
 }
 
+/** 批量按 ID 查详情：一次请求，顺序与 ids 一致，未找到为 null */
+async function fetchFilesByIds(ids: string[]): Promise<(FileMetadata | null)[]> {
+  if (ids.length === 0) return [];
+  const { data } = await api.post<{ files: (FileMetadata | null)[] }>('/api/files/batch', {
+    ids,
+  });
+  return data.files;
+}
+
+const fileMetadataBatch = new BatchRequestManager<FileMetadata | null, 'metadata'>(
+  REQUEST.BATCH_DELAY_MS,
+  fetchFilesByIds
+);
+
 export const fileService = {
+  /** 按 ID 列表批量查详情（直接调用，适合已有多个 id 的场景） */
+  async getFilesByIds(ids: string[]): Promise<(FileMetadata | null)[]> {
+    return fetchFilesByIds(ids);
+  },
+
+  /** 按单 ID 查详情（经 BatchRequestManager 合并，与 getFilesByIds 共用批量接口） */
+  getFileMetadata(id: string): Promise<FileMetadata | null> {
+    return fileMetadataBatch.request('metadata', id);
+  },
+
   async listFiles(query?: FileListQuery): Promise<FileListResponse> {
     const q: Record<string, string | number | undefined | null> = {};
     
