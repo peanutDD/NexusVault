@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { fileService } from '../../services/files';
+import { ResponsivePicture } from '../common/ResponsivePicture';
 import { cn } from '../../utils/cn';
 import { isImageType, isVideoType, isPdfType, isAudioType } from '../../utils/mimeType';
 
@@ -288,11 +289,13 @@ export default function LazyThumbnail({
   if (blobUrl) {
     return (
       <div ref={containerRef} className={cn('rounded overflow-hidden shrink-0', className)}>
-        <img
+        <ResponsivePicture
           src={blobUrl}
           alt={filename}
           className="w-full h-full object-cover"
           loading="lazy"
+          decoding="async"
+          fetchPriority="low"
           onError={() => setError(true)}
         />
       </div>

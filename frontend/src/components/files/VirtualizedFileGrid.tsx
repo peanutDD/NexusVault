@@ -153,7 +153,7 @@ export default function VirtualizedFileGrid({
           if (rowFiles.length === 0) return null;
 
           return (
-            <div key={rowIndex} className="mb-4 last:mb-0">
+            <div key={rowIndex} className="virtualized-row mb-4 last:mb-0">
               <div
                 className="grid gap-4 [grid-template-columns:repeat(var(--grid-cols,2),minmax(0,1fr))]"
               >

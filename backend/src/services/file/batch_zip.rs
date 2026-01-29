@@ -3,11 +3,35 @@
 //! 注意：当前实现会把每个文件内容与最终 ZIP 都放在内存里（Vec<u8>），
 //! 因此必须设置硬限制，避免 OOM / 超时 / 服务不稳定。
 
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::utils::AppError;
 
 use super::FileService;
+
+/// 为 ZIP 内条目生成唯一名称，重名时使用 "base (1).ext"、"base (2).ext" 等。
+fn unique_zip_entry_name(name: &str, name_count: &mut HashMap<String, u32>) -> String {
+    let n = name_count.entry(name.to_string()).or_insert(0);
+    let count = *n;
+    *n = n.saturating_add(1);
+
+    if count == 0 {
+        return name.to_string();
+    }
+
+    let (base, ext) = if let Some(dot) = name.rfind('.') {
+        (&name[..dot], &name[dot + 1..])
+    } else {
+        (name.as_ref(), "")
+    };
+
+    if ext.is_empty() {
+        format!("{} ({})", base, count)
+    } else {
+        format!("{} ({}).{}", base, count, ext)
+    }
+}
 
 impl FileService {
     pub async fn batch_download_zip(
@@ -74,14 +98,18 @@ impl FileService {
         let mut buf = Vec::new();
         let mut zip = ZipWriter::new(std::io::Cursor::new(&mut buf));
 
+        // 避免 ZIP 内重名：同名文件使用 "base (1).ext"、"base (2).ext" 等
+        let mut name_count: HashMap<String, u32> = HashMap::with_capacity(uniq_ids.len());
+
         for &id in &uniq_ids {
             let Some(file) = file_by_id.get(&id) else {
                 continue;
             };
             let data = self.get_file_data(file).await?;
+            let entry_name = unique_zip_entry_name(&file.original_filename, &mut name_count);
             let options: zip::write::FileOptions<()> =
                 zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
-            zip.start_file(&file.original_filename, options)
+            zip.start_file(&entry_name, options)
                 .map_err(|e| AppError::File(format!("Failed to add file to zip: {}", e)))?;
             zip.write_all(&data)
                 .map_err(|e| AppError::File(format!("Failed to write file to zip: {}", e)))?;

@@ -43,6 +43,12 @@ code {
   width: var(--storage-progress-pct, 0%);
 }
 
+/* 虚拟列表行：浏览器跳过不可见区域渲染，提升长列表滚动性能 */
+.virtualized-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 360px;
+}
+
 /* 深色模式支持 */
 .dark {
   color-scheme: dark;

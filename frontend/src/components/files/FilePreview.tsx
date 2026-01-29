@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { fileService } from '../../services/files';
 import type { FileMetadata } from '../../services/files';
+import { ResponsivePicture } from '../common/ResponsivePicture';
 import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
 import { getPreviewKind, getMimeTypeLabel } from '../../utils/mimeType';
@@ -463,10 +464,12 @@ export default function FilePreview({
                   )}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <img
+                  <ResponsivePicture
                     src={blobUrl}
                     alt={file.original_filename}
                     className="max-h-[calc(100vh-200px)] max-w-full object-contain"
+                    decoding="async"
+                    fetchPriority="high"
                     onLoad={() => setImageLoaded(true)}
                   />
                 </div>
