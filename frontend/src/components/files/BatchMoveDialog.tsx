@@ -13,6 +13,12 @@ interface BatchMoveDialogProps {
   folderCount: number;
   onClose: () => void;
   onMoved?: () => void;
+  /** 执行移动前乐观更新，返回回滚函数；失败时调用回滚 */
+  onApplyOptimistic?: (
+    fileIds: string[],
+    folderIds: string[],
+    targetFolderId: string | null
+  ) => (() => void) | void;
 }
 
 export default function BatchMoveDialog({
@@ -22,6 +28,7 @@ export default function BatchMoveDialog({
   folderCount,
   onClose,
   onMoved,
+  onApplyOptimistic,
 }: BatchMoveDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,23 +72,24 @@ export default function BatchMoveDialog({
     setError(null);
     setSuccess(null);
 
+    const folderId = targetFolderId || null;
+    const rollback = onApplyOptimistic?.(fileIds, folderIds, folderId);
+
     try {
-      const folderId = targetFolderId || null;
       let movedFiles = 0;
       let movedFolders = 0;
 
-      // 移动文件
       if (fileIds.length > 0) {
         movedFiles = await folderService.moveFilesToFolder(fileIds, folderId);
       }
 
-      // 移动文件夹
       if (folderIds.length > 0) {
         movedFolders = await folderService.moveFolders(folderIds, folderId);
       }
 
       const anyMoved = movedFiles > 0 || movedFolders > 0;
       if (!anyMoved) {
+        rollback?.();
         setError('没有项目被移动，请重试或检查目标位置。');
         return;
       }
@@ -100,6 +108,7 @@ export default function BatchMoveDialog({
         onClose();
       }, 1200);
     } catch (err) {
+      rollback?.();
       setError(getErrorMessage(err, '移动失败'));
     } finally {
       setLoading(false);

@@ -111,6 +111,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     handleSelectFolder,
     handleOpenFolder,
     handleRenameFolder,
+    handleRenameFolderSubmit,
+    getOptimisticMoveRollback,
     navigateToFolder,
     handleDelete,
     handleDownload,
@@ -439,6 +441,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
               loadFiles();
               loadFolders();
             }}
+            onApplyOptimistic={getOptimisticMoveRollback}
           />
         )}
 
@@ -459,9 +462,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             open={!!renamingFolder}
             folder={renamingFolder}
             onClose={() => setRenamingFolder(null)}
-            onRenamed={() => {
-              setRenamingFolder(null);
-            }}
+            onRename={handleRenameFolderSubmit}
+            onRenamed={() => setRenamingFolder(null)}
           />
         )}
 

@@ -1,12 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { folderService, type Folder } from '../../services/folders';
+import { type Folder } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
 
 interface RenameFolderDialogProps {
   open: boolean;
   folder: Folder | null;
   onClose: () => void;
-  onRenamed: () => void;
+  /** 执行重命名（含乐观更新），失败会 throw */
+  onRename: (folderId: string, newName: string) => Promise<void>;
+  /** 重命名成功后的回调，如关闭对话框、清理状态 */
+  onRenamed?: () => void;
 }
 
 /**
@@ -16,6 +19,7 @@ export default function RenameFolderDialog({
   open,
   folder,
   onClose,
+  onRename,
   onRenamed,
 }: RenameFolderDialogProps) {
   const [name, setName] = useState('');
@@ -79,8 +83,8 @@ export default function RenameFolderDialog({
       setError(null);
 
       try {
-        await folderService.rename(folder.id, trimmedName);
-        onRenamed();
+        await onRename(folder.id, trimmedName);
+        onRenamed?.();
         onClose();
       } catch (err) {
         setError(getErrorMessage(err, '重命名失败'));
@@ -88,7 +92,7 @@ export default function RenameFolderDialog({
         setLoading(false);
       }
     },
-    [name, folder, onRenamed, onClose]
+    [name, folder, onRename, onRenamed, onClose]
   );
 
   if (!open || !folder) return null;

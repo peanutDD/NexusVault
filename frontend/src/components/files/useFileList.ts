@@ -513,49 +513,59 @@ export function useFileList() {
     }
   };
 
-  const handleDropOnFolder = useCallback(async (e: React.DragEvent, targetFolder: Folder) => {
-    const fileId = e.dataTransfer.getData('application/file-id');
-    const folderId = e.dataTransfer.getData('application/folder-id');
+  const handleDropOnFolder = useCallback(
+    async (e: React.DragEvent, targetFolder: Folder) => {
+      const fileId = e.dataTransfer.getData('application/file-id');
+      const folderId = e.dataTransfer.getData('application/folder-id');
 
-    if (fileId) {
-      try {
-        await folderService.moveFilesToFolder([fileId], targetFolder.id);
-        clearFileListCache();
-        loadFiles();
-      } catch (err) {
-        alert(getErrorMessage(err, '移动文件失败'));
+      if (fileId) {
+        const rollback = getOptimisticMoveRollback([fileId], [], targetFolder.id);
+        try {
+          await folderService.moveFilesToFolder([fileId], targetFolder.id);
+          clearFileListCache();
+        } catch (err) {
+          rollback();
+          alert(getErrorMessage(err, '移动文件失败'));
+        }
+      } else if (folderId && folderId !== targetFolder.id) {
+        const rollback = getOptimisticMoveRollback([], [folderId], targetFolder.id);
+        try {
+          await folderService.move(folderId, targetFolder.id);
+        } catch (err) {
+          rollback();
+          alert(getErrorMessage(err, '移动文件夹失败'));
+        }
       }
-    } else if (folderId && folderId !== targetFolder.id) {
-      try {
-        await folderService.move(folderId, targetFolder.id);
-        loadFolders();
-      } catch (err) {
-        alert(getErrorMessage(err, '移动文件夹失败'));
-      }
-    }
-  }, [loadFiles, loadFolders]);
+    },
+    [getOptimisticMoveRollback]
+  );
 
-  const handleDropOnBreadcrumb = useCallback(async (e: React.DragEvent, targetFolderId: string | null) => {
-    const fileId = e.dataTransfer.getData('application/file-id');
-    const folderId = e.dataTransfer.getData('application/folder-id');
+  const handleDropOnBreadcrumb = useCallback(
+    async (e: React.DragEvent, targetFolderId: string | null) => {
+      const fileId = e.dataTransfer.getData('application/file-id');
+      const folderId = e.dataTransfer.getData('application/folder-id');
 
-    if (fileId) {
-      try {
-        await folderService.moveFilesToFolder([fileId], targetFolderId);
-        clearFileListCache();
-        loadFiles();
-      } catch (err) {
-        alert(getErrorMessage(err, '移动文件失败'));
+      if (fileId) {
+        const rollback = getOptimisticMoveRollback([fileId], [], targetFolderId);
+        try {
+          await folderService.moveFilesToFolder([fileId], targetFolderId);
+          clearFileListCache();
+        } catch (err) {
+          rollback();
+          alert(getErrorMessage(err, '移动文件失败'));
+        }
+      } else if (folderId && folderId !== targetFolderId) {
+        const rollback = getOptimisticMoveRollback([], [folderId], targetFolderId);
+        try {
+          await folderService.move(folderId, targetFolderId);
+        } catch (err) {
+          rollback();
+          alert(getErrorMessage(err, '移动文件夹失败'));
+        }
       }
-    } else if (folderId && folderId !== targetFolderId) {
-      try {
-        await folderService.move(folderId, targetFolderId);
-        loadFolders();
-      } catch (err) {
-        alert(getErrorMessage(err, '移动文件夹失败'));
-      }
-    }
-  }, [loadFiles, loadFolders]);
+    },
+    [getOptimisticMoveRollback]
+  );
 
   const handleShowBatchMove = useCallback(() => setShowBatchMove(true), []);
 
@@ -592,6 +602,53 @@ export function useFileList() {
   const handleSelectFolder = toggleSelectFolder;
   const handleOpenFolder = useCallback((folder: Folder) => navigateToFolder(folder.id), [navigateToFolder]);
   const handleRenameFolder = useCallback((folder: Folder) => setRenamingFolder(folder), []);
+
+  /** 重命名文件夹：乐观更新列表中的名称，失败则回滚 */
+  const handleRenameFolderSubmit = useCallback(
+    async (folderId: string, newName: string) => {
+      let prevFolders: Folder[] | undefined;
+      setFolders((prev) => {
+        prevFolders = prev;
+        return prev.map((f) => (f.id === folderId ? { ...f, name: newName } : f));
+      });
+      try {
+        await folderService.rename(folderId, newName);
+      } catch (err) {
+        if (prevFolders !== undefined) setFolders(prevFolders);
+        throw err;
+      }
+    },
+    []
+  );
+
+  /**
+   * 移动前乐观更新：从当前列表移除被移动的项（仅当目标不是当前目录时），返回回滚函数。
+   * 供拖拽落点与 BatchMoveDialog 调用。
+   */
+  const getOptimisticMoveRollback = useCallback(
+    (fileIds: string[], folderIds: string[], targetFolderId: string | null) => {
+      if (targetFolderId !== currentFolderId) {
+        let prevFiles: FileMetadata[] | undefined;
+        let prevFolders: Folder[] | undefined;
+        setFiles((prev) => {
+          prevFiles = prev;
+          const idSet = new Set(fileIds);
+          return prev.filter((f) => !idSet.has(f.id));
+        });
+        setFolders((prev) => {
+          prevFolders = prev;
+          const idSet = new Set(folderIds);
+          return prev.filter((f) => !idSet.has(f.id));
+        });
+        return () => {
+          if (prevFiles !== undefined) setFiles(prevFiles);
+          if (prevFolders !== undefined) setFolders(prevFolders);
+        };
+      }
+      return () => {};
+    },
+    [currentFolderId]
+  );
 
   const handleSearchChange = useCallback((value: string) => {
     baseHandleSearchChange(value);
@@ -705,6 +762,8 @@ export function useFileList() {
     handleSelectFolder,
     handleOpenFolder,
     handleRenameFolder,
+    handleRenameFolderSubmit,
+    getOptimisticMoveRollback,
     navigateToFolder,
 
     // 文件操作
