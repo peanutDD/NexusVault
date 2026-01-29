@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { fileService } from '../../services/files';
 import { getErrorMessage } from '../../utils/error';
 import { validateFile, getMaxFileSizeGB, getMaxBatchCount } from '../../utils/uploadValidation';
+import { UPLOAD_QUEUE } from '../../constants';
 import { UploadQueue } from '../../utils/uploadQueue';
 import { cn } from '../../utils/cn';
 import UploadFileItem, { type UploadFile } from './UploadFileItem';
@@ -12,7 +13,10 @@ interface UploadDialogProps {
   onUploadComplete: () => void;
 }
 
-const uploadQueue = new UploadQueue(3);
+const uploadQueue = new UploadQueue(
+  UPLOAD_QUEUE.MAX_COST,
+  UPLOAD_QUEUE.LARGE_FILE_THRESHOLD_BYTES
+);
 
 /**
  * 上传对话框组件
@@ -109,14 +113,17 @@ export default function UploadDialog({
     );
 
     let hasNewSuccess = false;
+    const totalPending = pendingFiles.length;
 
     await Promise.all(
-      pendingFiles.map(async (uploadFile) => {
+      pendingFiles.map(async (uploadFile, index) => {
         if (!uploadFile.file) return;
 
         const file = uploadFile.file;
         const taskId = uploadFile.id;
         const useChunked = file.size >= fileService.CHUNK_THRESHOLD;
+        // 先添加的文件优先上传（列表中靠前的优先级更高）
+        const priority = totalPending - index;
 
         const updateProgress = (progress: number) => {
           setUploadFiles((prev) =>
@@ -125,10 +132,13 @@ export default function UploadDialog({
         };
 
         try {
-          await uploadQueue.add(taskId, () =>
-            useChunked
-              ? fileService.uploadFileChunked(file, updateProgress)
-              : fileService.uploadFile(file, updateProgress)
+          await uploadQueue.add(
+            taskId,
+            () =>
+              useChunked
+                ? fileService.uploadFileChunked(file, updateProgress)
+                : fileService.uploadFile(file, updateProgress),
+            { fileSize: file.size, priority }
           );
 
           setUploadFiles((prev) =>

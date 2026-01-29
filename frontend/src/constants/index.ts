@@ -48,6 +48,16 @@ export const CHUNKED_UPLOAD = {
   RETRY_DELAY_BASE: 1000,
 } as const;
 
+/**
+ * 上传队列：按成本限制并发（大文件占更多槽位），支持优先级
+ */
+export const UPLOAD_QUEUE = {
+  /** 总成本上限：小文件 cost=1，大文件 cost=3，同时最多 3 成本（即 3 小或 1 大） */
+  MAX_COST: 3,
+  /** 大于等于此大小视为大文件，占用 3 成本；否则 1 成本 */
+  LARGE_FILE_THRESHOLD_BYTES: 10 * 1024 * 1024,
+} as const;
+
 export const SIZES = ['Bytes', 'KB', 'MB', 'GB', 'TB'] as const;
 
 /**
