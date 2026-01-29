@@ -513,6 +513,35 @@ export function useFileList() {
     }
   };
 
+  /**
+   * 移动前乐观更新：从当前列表移除被移动的项（仅当目标不是当前目录时），返回回滚函数。
+   * 供拖拽落点与 BatchMoveDialog 调用。
+   */
+  const getOptimisticMoveRollback = useCallback(
+    (fileIds: string[], folderIds: string[], targetFolderId: string | null) => {
+      if (targetFolderId !== currentFolderId) {
+        let prevFiles: FileMetadata[] | undefined;
+        let prevFolders: Folder[] | undefined;
+        setFiles((prev) => {
+          prevFiles = prev;
+          const idSet = new Set(fileIds);
+          return prev.filter((f) => !idSet.has(f.id));
+        });
+        setFolders((prev) => {
+          prevFolders = prev;
+          const idSet = new Set(folderIds);
+          return prev.filter((f) => !idSet.has(f.id));
+        });
+        return () => {
+          if (prevFiles !== undefined) setFiles(prevFiles);
+          if (prevFolders !== undefined) setFolders(prevFolders);
+        };
+      }
+      return () => {};
+    },
+    [currentFolderId]
+  );
+
   const handleDropOnFolder = useCallback(
     async (e: React.DragEvent, targetFolder: Folder) => {
       const fileId = e.dataTransfer.getData('application/file-id');
@@ -619,35 +648,6 @@ export function useFileList() {
       }
     },
     []
-  );
-
-  /**
-   * 移动前乐观更新：从当前列表移除被移动的项（仅当目标不是当前目录时），返回回滚函数。
-   * 供拖拽落点与 BatchMoveDialog 调用。
-   */
-  const getOptimisticMoveRollback = useCallback(
-    (fileIds: string[], folderIds: string[], targetFolderId: string | null) => {
-      if (targetFolderId !== currentFolderId) {
-        let prevFiles: FileMetadata[] | undefined;
-        let prevFolders: Folder[] | undefined;
-        setFiles((prev) => {
-          prevFiles = prev;
-          const idSet = new Set(fileIds);
-          return prev.filter((f) => !idSet.has(f.id));
-        });
-        setFolders((prev) => {
-          prevFolders = prev;
-          const idSet = new Set(folderIds);
-          return prev.filter((f) => !idSet.has(f.id));
-        });
-        return () => {
-          if (prevFiles !== undefined) setFiles(prevFiles);
-          if (prevFolders !== undefined) setFolders(prevFolders);
-        };
-      }
-      return () => {};
-    },
-    [currentFolderId]
   );
 
   const handleSearchChange = useCallback((value: string) => {
