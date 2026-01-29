@@ -65,9 +65,17 @@ const api = axios.create({
 });
 
 // 全局请求去重 + TTL 内复用：相同请求 5 秒内不重复发送，复用缓存或飞行中 Promise
-const defaultAdapter = api.defaults.adapter;
-if (defaultAdapter) {
-  api.defaults.adapter = createDedupAdapter(defaultAdapter as AxiosAdapter);
+// axios.defaults.adapter 可能是数组 ['xhr','http','fetch'] 而非函数，需用 getAdapter 解析后再包装
+const rawAdapter = api.defaults.adapter ?? axios.defaults.adapter;
+const getAdapter = (axios as unknown as { getAdapter?: (a: unknown, c: InternalAxiosRequestConfig) => AxiosAdapter }).getAdapter;
+let adapterFn: AxiosAdapter | null =
+  typeof rawAdapter === 'function'
+    ? (rawAdapter as AxiosAdapter)
+    : rawAdapter != null && typeof getAdapter === 'function'
+      ? getAdapter(rawAdapter, {} as InternalAxiosRequestConfig)
+      : null;
+if (adapterFn) {
+  api.defaults.adapter = createDedupAdapter(adapterFn);
 }
 
 // 请求拦截：鉴权 + 请求取消（GET 同 key 取消前一个）
