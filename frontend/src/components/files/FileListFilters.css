@@ -29,31 +29,56 @@
 
 .filtersGlassScreenshot .filtersTopRow {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: var(--filters-bar-gap);
 }
 
 .filtersGlassScreenshot .filtersSearchPill {
-  min-width: 40.8rem;
-  width: min(40.8rem, 100%);
+  min-width: 0;
+  width: 100%;
   max-width: 100%;
   /* 与 Type/Sort 同高（截图要求：同一水平线且齐平） */
   height: clamp(2.2rem, 2.5vw, 2.55rem);
   border-radius: 999px;
-  justify-self: start;
+  justify-self: stretch;
 }
 
 .filtersGlassScreenshot .filtersInlineFilters {
   justify-self: start;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filtersGlassScreenshot .filtersRow {
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filtersGlassScreenshot .filtersCard {
+  flex: 1 1 auto;
+  min-width: 7.5rem;
+  height: clamp(2.2rem, 2.5vw, 2.55rem);
+  border-radius: 999px;
+  padding: 0.45rem 0.5rem;
 }
 
 .filtersGlassScreenshot .filtersActions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   justify-self: end;
+  min-width: 0;
+}
+
+.filtersGlassScreenshot .filtersActions button {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .filtersGlassScreenshot .filtersRow {
