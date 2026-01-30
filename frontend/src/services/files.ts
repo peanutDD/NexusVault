@@ -4,6 +4,7 @@ import { downloadBlob } from '../utils/downloadBlob';
 import { API_BASE_URL } from '../config/env';
 import { CHUNKED_UPLOAD, REQUEST } from '../constants';
 import { BatchRequestManager } from '../utils/batchRequest';
+import { useAuthStore } from '../store/authStore';
 
 // 预览请求并发限制器（最多 6 个并发请求）
 const previewQueue = {
@@ -326,12 +327,56 @@ export const fileService = {
   },
 
   async downloadZip(ids: string[]): Promise<void> {
-    // 使用 POST 避免 ids 过多导致 URL 超长
-    const response = await api.post<Blob>(
-      '/api/files/download-zip',
-      { ids },
-      { responseType: 'blob' }
-    );
+    const url = `${API_BASE_URL.replace(/\/$/, '')}/api/files/download-zip`;
+    const token = useAuthStore.getState().token ?? localStorage.getItem('token');
+
+    // 优先用 File System Access API：先弹保存对话框，再流式写入，保存框立即出现
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as Window & { showSaveFilePicker: (opts?: { suggestedName?: string }) => Promise<FileSystemFileHandle> })
+          .showSaveFilePicker({ suggestedName: 'files.zip' });
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ ids }),
+        });
+        if (!res.ok || !res.body) throw new Error(res.statusText || 'Download failed');
+        const writable = await handle.createWritable();
+        const reader = res.body.getReader();
+        let streamError: unknown;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            await writable.write(value);
+          }
+        } catch (e) {
+          streamError = e;
+          throw e;
+        } finally {
+          // 必须正确 close 才能让 Chrome 把临时文件 .crswap 替换成 files.zip；出错时 abort 丢弃不完整文件
+          try {
+            if (streamError != null && typeof (writable as FileSystemWritableFileStream & { abort?: () => Promise<void> }).abort === 'function') {
+              await (writable as FileSystemWritableFileStream & { abort: () => Promise<void> }).abort();
+            } else {
+              await writable.close();
+            }
+          } catch (closeErr) {
+            // 避免 close/abort 的异常覆盖 streamError
+            if (streamError == null) throw closeErr;
+          }
+        }
+        return;
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') return; // 用户取消选择
+        // 降级到 blob 方式
+      }
+    }
+
+    const response = await api.post<Blob>('/api/files/download-zip', { ids }, { responseType: 'blob' });
     downloadBlob(response.data, 'files.zip');
   },
 

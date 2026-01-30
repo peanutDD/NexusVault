@@ -132,19 +132,21 @@
 
 ### 6) 连接池“更快失败” + SQL 超时（防慢查询雪崩）
 
-连接池从“长时间等待”调整为“更快失败”，避免大量请求挂起排队：
+连接池支持环境变量调参，高并发或批量下载时减少「pool timed out」：
 
-- `acquire_timeout` 从 30s 降到 5s
+- **`DB_POOL_MAX_CONNECTIONS`**（默认 40）：最大连接数
+- **`DB_POOL_ACQUIRE_TIMEOUT_SECS`**（默认 15）：获取连接超时（秒）
 
 并且在 `after_connect` 设置：
 
 - `SET statement_timeout = '20s'`
 
-位置：`src/database/pool.rs`
+位置：`src/database/pool.rs`；示例见 `backend/.env.example`。
 
 调参建议：
 
 - 列表通常应更短（如 2–5s），写入可略长（如 5–10s），建议按接口粒度做 `SET LOCAL statement_timeout=...`（在事务/单请求作用域内）。
+- 若出现「pool timed out while waiting for an open connection」，可适当增大 `DB_POOL_MAX_CONNECTIONS` 或 `DB_POOL_ACQUIRE_TIMEOUT_SECS`（需与 PostgreSQL `max_connections` 协调）。
 
 已落地：
 
@@ -169,6 +171,18 @@
 - `src/services/file/read.rs`（`open_file_stream`）
 - `src/handlers/files/download/mod.rs`（入口 handler）
 - `src/utils/response.rs`（`stream_file_response`）
+
+---
+
+### 7.0) 批量下载 ZIP 流式（边打包边发，首包更早）
+
+批量下载 ZIP 使用 POST /download-zip 流式响应，避免整包进内存、首包更早出现保存框：
+
+- **`prepare_batch_zip_entries`**：校验数量/总大小并返回 `(File, ZIP 内条目名)` 列表，不做实际打包。
+- **`run_zip_writer_thread`**（`src/services/file/batch_zip.rs`）：独立线程内用 `ZipWriter` + **`ChannelWriter`** 边打包边写入 `mpsc::SyncSender`；`ChannelWriter` 实现 `Write` + `Seek`（仅报告当前偏移，不回退），缓冲 **8KB 即发**，**每写完一个文件调用 `flush()`**，首包/小文件也能立刻发出。
+- **handler**（`src/handlers/files/batch.rs` `batch_download_zip_post_handler`）：`prepare_batch_zip_entries` 后创建 channel，spawn 线程跑 `run_zip_writer_thread`，spawn tokio 任务按条目 `get_file_data` 并发送到 channel；响应体为 `Body::from_stream(stream)` 从 channel 读 `Bytes` 流式返回。
+
+位置：`src/services/file/batch_zip.rs`（`ChannelWriter`、`run_zip_writer_thread`、`prepare_batch_zip_entries`）、`src/handlers/files/batch.rs`（`batch_download_zip_post_handler`）。
 
 ---
 

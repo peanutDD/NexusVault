@@ -8,6 +8,8 @@ interface FileListBatchActionsProps {
   onBatchShare: () => void;
   onBatchDownload: () => void;
   onBatchDelete: () => void;
+  /** 批量下载 ZIP 进行中（后端打包 + 传输完成前保存框不会弹出） */
+  batchDownloading?: boolean;
 }
 
 const FileListBatchActions = memo(function FileListBatchActions({
@@ -17,6 +19,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
   onBatchShare,
   onBatchDownload,
   onBatchDelete,
+  batchDownloading = false,
 }: FileListBatchActionsProps) {
   const totalCount = selectedFileCount + selectedFolderCount;
   if (totalCount === 0) return null;
@@ -56,12 +59,18 @@ const FileListBatchActions = memo(function FileListBatchActions({
           <Share2 size={10} strokeWidth={2} className="shrink-0 text-white/90" aria-hidden />
           Batch Share
         </button>
-        <button type="button" onClick={onBatchDownload} className={btnClass}>
+        <button
+          type="button"
+          onClick={onBatchDownload}
+          disabled={batchDownloading}
+          className={btnClass + (batchDownloading ? ' cursor-wait opacity-70' : '')}
+          title={batchDownloading ? '正在打包 ZIP，请稍候…' : undefined}
+        >
           <span className="relative inline-flex h-2.5 w-2.5 shrink-0 items-center justify-center" aria-hidden>
             <Circle size={10} fill="currentColor" strokeWidth={0} className="absolute inset-0 h-full w-full text-white/90" />
             <Download size={6} strokeWidth={2.5} className="relative text-slate-600" />
           </span>
-          Batch Download ZIP
+          {batchDownloading ? '打包中…' : 'Batch Download ZIP'}
         </button>
         <button type="button" onClick={onBatchDelete} className={btnClass}>
           <Trash2 size={10} strokeWidth={2} className="shrink-0 text-white/90" aria-hidden />

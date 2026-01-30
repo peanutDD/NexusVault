@@ -145,6 +145,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     deleteLoading,
     executeDelete,
     setDeleteConfirm,
+    batchDownloading,
   } = useFileList();
 
   const throttledLoadMore = useThrottledCallback(loadMore, 400);
@@ -216,6 +217,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         onBatchShare={handleShowBatchShare}
         onBatchDownload={handleBatchDownload}
         onBatchDelete={handleBatchDelete}
+        batchDownloading={batchDownloading}
       />
 
       {error && (

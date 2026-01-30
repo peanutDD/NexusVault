@@ -204,6 +204,7 @@ export function useFileList() {
     folderCount?: number;
   } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [batchDownloading, setBatchDownloading] = useState(false);
 
   const limit = FILE_LIST.LIMIT;
   const fileListCacheKeyRef = useRef<string>('');
@@ -536,6 +537,7 @@ export function useFileList() {
 
   const handleBatchDownload = async () => {
     if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
+    setBatchDownloading(true);
     try {
       let allFileIds = [...selectedFileIds];
 
@@ -556,9 +558,12 @@ export function useFileList() {
         return;
       }
 
+      // 后端需在内存中完整生成 ZIP 后才返回，前端收到完整 blob 后才会弹出保存框，请稍候
       await fileService.downloadZip(allFileIds);
     } catch (err) {
       alert(getErrorMessage(err, '批量下载失败'));
+    } finally {
+      setBatchDownloading(false);
     }
   };
 
@@ -857,6 +862,7 @@ export function useFileList() {
     deleteLoading,
     executeDelete,
     setDeleteConfirm,
+    batchDownloading,
   };
 }
 

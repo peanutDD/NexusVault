@@ -19,6 +19,7 @@
 
 mod batch_get;
 mod batch_zip;
+pub(crate) use batch_zip::run_zip_writer_thread;
 mod categories;
 mod chunked_upload;
 mod delete;

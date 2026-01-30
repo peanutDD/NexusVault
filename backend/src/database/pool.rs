@@ -1,12 +1,23 @@
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
 
+fn env_u32(key: &str, default: u32) -> u32 {
+    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+}
+
 pub async fn create_pool(database_url: &str) -> anyhow::Result<PgPool> {
+    let max_connections = env_u32("DB_POOL_MAX_CONNECTIONS", 40);
+    let acquire_timeout_secs = env_u32("DB_POOL_ACQUIRE_TIMEOUT_SECS", 15);
+    tracing::info!(
+        max_connections,
+        acquire_timeout_secs,
+        "database pool configured"
+    );
+
     let pool = PgPoolOptions::new()
-        .max_connections(20) // 最大连接数
-        .min_connections(5) // 最小连接数（保持连接池预热）
-        // 高并发下建议更快失败，避免请求长期排队占用内存/任务调度资源
-        .acquire_timeout(Duration::from_secs(5)) // 获取连接超时
+        .max_connections(max_connections)
+        .min_connections(5)
+        .acquire_timeout(Duration::from_secs(acquire_timeout_secs as u64))
         .idle_timeout(Some(Duration::from_secs(600))) // 空闲连接超时（10分钟）
         .max_lifetime(Some(Duration::from_secs(1800))) // 连接最大生命周期（30分钟）
         .test_before_acquire(true) // 获取连接前测试连接是否有效
