@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
-import type { FileMetadata } from '../../services/files';
+import type { FileMetadata, Folder } from '../../types';
 import FileCard from './FileCard';
 import { FILE_LIST } from '../../constants';
 import { useThrottledCallback } from '../../hooks/useThrottledCallback';
@@ -16,12 +16,12 @@ function getColumnsFromWidth(width: number): number {
 interface VirtualizedFileGridProps {
   files: FileMetadata[];
   selectedFiles: Set<string>;
-  onSelect: (fileId: string) => void;
+  onSelect: (fileId: string, selected: boolean) => void;
   onPreview: (file: FileMetadata) => void;
   onShare: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
-  onDelete: (fileId: string) => void;
-  onDragStart: (e: React.DragEvent, file: FileMetadata) => void;
+  onDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
+  onDragStart: (fileId: string, e: React.DragEvent) => void;
 }
 
 /**
@@ -159,16 +159,16 @@ export default function VirtualizedFileGrid({
               >
                 {rowFiles.map((file) => (
                   <FileCard
-                    key={file.id}
-                    file={file}
-                    isSelected={selectedFiles.has(file.id)}
-                    onSelect={onSelect}
-                    onPreview={onPreview}
-                    onShare={onShare}
-                    onDownload={onDownload}
-                    onDelete={onDelete}
-                    onDragStart={onDragStart}
-                  />
+                      key={file.id}
+                      file={file}
+                      isSelected={selectedFiles.has(file.id)}
+                      onSelect={(id) => onSelect(id, !selectedFiles.has(id))}
+                      onPreview={onPreview}
+                      onShare={onShare}
+                      onDownload={onDownload}
+                      onDelete={() => onDelete(file, 'file')}
+                      onDragStart={(e, file) => onDragStart(file.id, e)}
+                    />
                 ))}
               </div>
             </div>

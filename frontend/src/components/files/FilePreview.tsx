@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { fileService } from '../../services/files';
-import type { FileMetadata } from '../../services/files';
+import type { FileMetadata } from '../../types';
 import { ResponsivePicture } from '../common/ResponsivePicture';
 import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
@@ -173,7 +173,7 @@ export default function FilePreview({
     const head = namePart.slice(0, Math.ceil(budget * 0.6));
     const tail = namePart.slice(-Math.floor(budget * 0.4));
     return `${head}…${tail}${extPart}`;
-  }, [file?.original_filename]);
+  }, [file]);
 
   // 每次切换文件时重置视图状态（Hooks 必须在 early return 之前）
   useEffect(() => {

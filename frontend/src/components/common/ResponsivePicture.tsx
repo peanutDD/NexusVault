@@ -36,7 +36,7 @@ export function ResponsivePicture({
   loading,
   onLoad,
   onError,
-  ...rest 
+  ...rest
 }: ResponsivePictureProps) {
   const imgProps = {
     src,

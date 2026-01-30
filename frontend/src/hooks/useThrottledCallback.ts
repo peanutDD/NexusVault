@@ -10,15 +10,15 @@ export function useThrottledCallback<T extends (...args: unknown[]) => void>(
 ): T {
   const lastRun = useRef(0);
 
-  return useCallback(
-    ((...args: Parameters<T>) => {
-      const now = Date.now();
-      const elapsed = now - lastRun.current;
-      if (elapsed >= delay || lastRun.current === 0) {
-        lastRun.current = now;
-        fn(...args);
-      }
-    }) as T,
-    [fn, delay]
-  );
+  // 使用简单的箭头函数表达式，避免 ESLint 错误
+  const throttledFn = useCallback((...args: Parameters<T>) => {
+    const now = Date.now();
+    const elapsed = now - lastRun.current;
+    if (elapsed >= delay || lastRun.current === 0) {
+      lastRun.current = now;
+      fn(...args);
+    }
+  }, [fn, delay]);
+
+  return throttledFn as unknown as T;
 }

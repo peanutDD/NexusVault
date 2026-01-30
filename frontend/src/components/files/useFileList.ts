@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, startTransition } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { fileService, type FileMetadata, type FileListQuery } from '../../services/files';
+import { fileService } from '../../services/files';
+import type { FileMetadata, FileListQuery } from '../../types';
 import { folderService, type Folder } from '../../services/folders';
 import { getErrorMessage, isRequestCanceled } from '../../utils/error';
 import {
@@ -454,11 +455,13 @@ export function useFileList() {
     return memoGrouped;
   }, [isGroupByType, files.length, workerGrouped, memoGrouped]);
 
-  /** 按类型筛选时隐藏文件夹：仅「全部」或「仅文件夹」时展示文件夹 */
-  const displayFolders = useMemo(
-    () => (mimeType === '' || mimeType === MIME_FILTER_FOLDERS ? folders : []),
-    [mimeType, folders]
-  );
+  /** 按类型筛选时隐藏文件夹：仅「全部」或「仅文件夹」时展示文件夹；有搜索词时只展示名称匹配的文件夹 */
+  const displayFolders = useMemo(() => {
+    if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
+    const q = debouncedSearch?.trim().toLowerCase();
+    if (!q) return folders;
+    return folders.filter((f) => f.name.toLowerCase().includes(q));
+  }, [mimeType, folders, debouncedSearch]);
 
   const displayFiles = useMemo(() => {
     if (!isGroupByType || !groupedFiles) return files;

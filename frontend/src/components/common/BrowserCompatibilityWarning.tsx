@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { isBrowserSupported, detectBrowser } from '../../utils/browserDetection';
 
 interface BrowserCompatibilityWarningProps {
@@ -6,14 +6,11 @@ interface BrowserCompatibilityWarningProps {
 }
 
 export default function BrowserCompatibilityWarning({ className = '' }: BrowserCompatibilityWarningProps) {
-  const [showWarning, setShowWarning] = useState(false);
-  const [browserInfo, setBrowserInfo] = useState(detectBrowser());
+  const [showWarning, setShowWarning] = useState(() => !isBrowserSupported());
+  const [browserInfo] = useState(detectBrowser());
 
-  useEffect(() => {
-    const supported = isBrowserSupported();
-    setShowWarning(!supported);
-    setBrowserInfo(detectBrowser());
-  }, []);
+  // 不需要 useEffect 来设置初始状态
+  // 状态已经在初始化时设置好了
 
   if (!showWarning) {
     return null;

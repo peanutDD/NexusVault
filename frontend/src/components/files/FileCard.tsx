@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
 import { Download, Send, Trash2 } from 'lucide-react';
 import { formatFileSize } from '../../utils/format';
-import type { FileMetadata } from '../../services/files';
+import type { FileMetadata } from '../../types';
 import LazyThumbnail from './LazyThumbnail';
 import { cn } from '../../utils/cn';
 import { getMimeTypeLabel } from '../../utils/mimeType';

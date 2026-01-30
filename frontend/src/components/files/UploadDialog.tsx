@@ -47,22 +47,23 @@ export default function UploadDialog({
   const maxBatchCount = getMaxBatchCount();
   const [batchLimitWarning, setBatchLimitWarning] = useState('');
 
-  // 添加文件到上传列表
-  const addFiles = useCallback((files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  // 添加文件到上传列表（先复制为数组，避免 onChange 里清空 input 后 FileList 失效导致只拿到 0/1 个文件）
+  const addFiles = useCallback((fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const filesArray = Array.from(fileList);
 
     setBatchLimitWarning('');
 
     setUploadFiles((prev) => {
       const remainingSlots = maxBatchCount - prev.length;
-      
+
       if (remainingSlots <= 0) {
         setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
         return prev;
       }
 
-      const filesToAdd = Array.from(files).slice(0, remainingSlots);
-      const skippedCount = files.length - filesToAdd.length;
+      const filesToAdd = filesArray.slice(0, remainingSlots);
+      const skippedCount = filesArray.length - filesToAdd.length;
 
       if (skippedCount > 0) {
         setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
@@ -423,7 +424,8 @@ export default function UploadDialog({
             className="hidden"
             aria-label="选择文件"
             onChange={(e) => {
-              addFiles(e.target.files);
+              const list = e.target.files;
+              addFiles(list);
               if (inputRef.current) inputRef.current.value = '';
             }}
           />

@@ -1,15 +1,15 @@
-import type { FileMetadata } from '../../services/files';
+import type { FileMetadata, Folder } from '../../types';
 import FileCard from './FileCard';
 
 interface FileGridProps {
   files: FileMetadata[];
   selectedFiles: Set<string>;
-  onSelect: (fileId: string) => void;
+  onSelect: (fileId: string, selected: boolean) => void;
   onPreview: (file: FileMetadata) => void;
   onShare: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
-  onDelete: (fileId: string) => void;
-  onDragStart: (e: React.DragEvent, file: FileMetadata) => void;
+  onDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
+  onDragStart: (fileId: string, e: React.DragEvent) => void;
 }
 
 export default function FileGrid({
@@ -31,12 +31,12 @@ export default function FileGrid({
           key={file.id}
           file={file}
           isSelected={selectedFiles.has(file.id)}
-          onSelect={onSelect}
+          onSelect={(id) => onSelect(id, !selectedFiles.has(id))}
           onPreview={onPreview}
           onShare={onShare}
           onDownload={onDownload}
-          onDelete={onDelete}
-          onDragStart={onDragStart}
+          onDelete={() => onDelete(file, 'file')}
+          onDragStart={(e, file) => onDragStart(file.id, e)}
         />
       ))}
     </div>

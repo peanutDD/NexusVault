@@ -1,14 +1,14 @@
-import type { Folder } from '../../services/folders';
+import type { Folder } from '../../types';
 import FolderCard from './FolderCard';
 
 interface FolderGridProps {
   folders: Folder[];
   selectedFolders: Set<string>;
-  onSelect: (folderId: string) => void;
-  onOpen: (folder: Folder) => void;
+  onSelect: (folderId: string, selected: boolean) => void;
+  onOpen: (folderId: string) => void;
   onRename: (folder: Folder) => void;
   onDelete: (folderId: string) => void;
-  onDrop: (e: React.DragEvent, folder: Folder) => void;
+  onDrop: (folderId: string, fileIds: string[], folderIds: string[]) => void;
 }
 
 export default function FolderGrid({
@@ -29,11 +29,11 @@ export default function FolderGrid({
           key={folder.id}
           folder={folder}
           isSelected={selectedFolders.has(folder.id)}
-          onSelect={onSelect}
-          onOpen={onOpen}
+          onSelect={(id) => onSelect(id, !selectedFolders.has(id))}
+          onOpen={(folder) => onOpen(folder.id)}
           onRename={onRename}
-          onDelete={onDelete}
-          onDrop={onDrop}
+          onDelete={() => onDelete(folder.id)}
+          onDrop={(_, targetFolder) => onDrop(targetFolder.id, [], [])}
         />
       ))}
     </div>
