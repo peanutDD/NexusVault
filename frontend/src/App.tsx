@@ -5,6 +5,7 @@ import { useHydrationStore } from './store/hydrationStore';
 import { useThemeStore } from './store/themeStore';
 import ErrorBoundary from './components/ErrorBoundary';
 import Spinner from './components/common/Spinner';
+import BrowserCompatibilityWarning from './components/common/BrowserCompatibilityWarning';
 
 const Login = lazy(() => import('./components/auth/Login'));
 const Register = lazy(() => import('./components/auth/Register'));
@@ -56,57 +57,60 @@ function App() {
   }, [effectiveTheme]);
 
   return (
-    <ErrorBoundary>
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              <LazyRoute>
-                <Login />
-              </LazyRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <LazyRoute>
-                <Register />
-              </LazyRoute>
-            }
-          />
-          <Route
-            path="/share/:token"
-            element={
-              <LazyRoute>
-                <Share />
-              </LazyRoute>
-            }
-          />
-          <Route
-            path="/files"
-            element={
-              <PrivateRoute>
+    <>
+      <BrowserCompatibilityWarning />
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/login"
+              element={
                 <LazyRoute>
-                  <Files />
+                  <Login />
                 </LazyRoute>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <PrivateRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
                 <LazyRoute>
-                  <Settings />
+                  <Register />
                 </LazyRoute>
-              </PrivateRoute>
-            }
-          />
-          <Route path="/" element={<Navigate to="/files" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/share/:token"
+              element={
+                <LazyRoute>
+                  <Share />
+                </LazyRoute>
+              }
+            />
+            <Route
+              path="/files"
+              element={
+                <PrivateRoute>
+                  <LazyRoute>
+                    <Files />
+                  </LazyRoute>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <PrivateRoute>
+                  <LazyRoute>
+                    <Settings />
+                  </LazyRoute>
+                </PrivateRoute>
+              }
+            />
+            <Route path="/" element={<Navigate to="/files" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </ErrorBoundary>
+    </>
   );
 }
 

@@ -64,6 +64,7 @@ export default defineConfig({
       }),
   ].filter(Boolean),
   build: {
+    target: 'es2015',
     rollupOptions: {
       output: {
         manualChunks: {
