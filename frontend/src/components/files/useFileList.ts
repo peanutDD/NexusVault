@@ -505,9 +505,12 @@ export function useFileList() {
       if (deleteConfirm.type === 'file' && deleteConfirm.id) {
         await fileService.deleteFile(deleteConfirm.id);
         clearFileListCache();
+        setFiles((prev) => prev.filter((f) => f.id !== deleteConfirm.id));
+        setTotal((prev) => Math.max(0, prev - 1));
         loadFiles();
       } else if (deleteConfirm.type === 'folder' && deleteConfirm.id) {
         await folderService.delete(deleteConfirm.id);
+        setFolders((prev) => prev.filter((f) => f.id !== deleteConfirm.id));
         loadFolders();
       } else if (deleteConfirm.type === 'batch') {
         const promises: Promise<unknown>[] = [];
@@ -527,6 +530,9 @@ export function useFileList() {
         setSelectedFiles(new Set());
         setSelectedFolders(new Set());
         clearFileListCache();
+        setFiles((prev) => prev.filter((f) => !selectedFileIds.includes(f.id)));
+        setTotal((prev) => Math.max(0, prev - selectedFileIds.length));
+        setFolders((prev) => prev.filter((f) => !selectedFolderIds.includes(f.id)));
         loadFiles();
         loadFolders();
       }
@@ -536,7 +542,7 @@ export function useFileList() {
     } finally {
       setDeleteLoading(false);
     }
-  }, [deleteConfirm, selectedFiles, selectedFolders, selectedFileIds, setSelectedFiles, setSelectedFolders, loadFiles, loadFolders]);
+  }, [deleteConfirm, selectedFiles, selectedFolders, selectedFileIds, selectedFolderIds, setSelectedFiles, setSelectedFolders, loadFiles, loadFolders]);
 
   const handleBatchDownload = async () => {
     if (selectedFiles.size === 0 && selectedFolders.size === 0) return;

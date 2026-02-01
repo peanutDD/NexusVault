@@ -47,45 +47,58 @@ export default function UploadDialog({
   const maxBatchCount = getMaxBatchCount();
   const [batchLimitWarning, setBatchLimitWarning] = useState('');
 
-  // 添加文件到上传列表（先复制为数组，避免 onChange 里清空 input 后 FileList 失效导致只拿到 0/1 个文件）
-  const addFiles = useCallback((fileList: FileList | null) => {
-    if (!fileList || fileList.length === 0) return;
-    const filesArray = Array.from(fileList);
-
-    setBatchLimitWarning('');
-
-    setUploadFiles((prev) => {
-      const remainingSlots = maxBatchCount - prev.length;
-
-      if (remainingSlots <= 0) {
-        setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
-        return prev;
-      }
-
-      const filesToAdd = filesArray.slice(0, remainingSlots);
-      const skippedCount = filesArray.length - filesToAdd.length;
-
-      if (skippedCount > 0) {
-        setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
-      }
-
-      const newFiles: UploadFile[] = filesToAdd.map((file) => {
-        const validation = validateFile(file);
-        return {
-          id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          name: file.name,
-          size: file.size,
-          mimeType: file.type || 'application/octet-stream',
-          status: validation.ok ? 'pending' : 'error',
-          progress: 0,
-          error: validation.ok ? undefined : validation.error,
-          file: validation.ok ? file : undefined,
-        };
+  /** 唯一写入口：把 File[] 追加到上传列表（拖拽与点选都经此） */
+  const appendFilesToState = useCallback(
+    (files: File[]) => {
+      if (files.length === 0) return;
+      setBatchLimitWarning('');
+      setUploadFiles((prev) => {
+        const remainingSlots = maxBatchCount - prev.length;
+        if (remainingSlots <= 0) {
+          setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
+          return prev;
+        }
+        const filesToAdd = files.slice(0, remainingSlots);
+        const skippedCount = files.length - filesToAdd.length;
+        if (skippedCount > 0) {
+          setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
+        }
+        const baseId = Date.now();
+        const newEntries: UploadFile[] = filesToAdd.map((file, index) => {
+          const validation = validateFile(file);
+          return {
+            id: `upload-${baseId}-${index}-${file.name}-${file.size}-${file.lastModified}`,
+            name: file.name,
+            size: file.size,
+            mimeType: file.type || 'application/octet-stream',
+            status: validation.ok ? 'pending' : 'error',
+            progress: 0,
+            error: validation.ok ? undefined : validation.error,
+            file: validation.ok ? file : undefined,
+          };
+        });
+        return [...prev, ...newEntries];
       });
+    },
+    [maxBatchCount]
+  );
 
-      return [...prev, ...newFiles];
-    });
-  }, [maxBatchCount]);
+  /** 拖拽：直接传 FileList，转数组后追加 */
+  const addFiles = useCallback(
+    (fileList: FileList | null) => {
+      if (!fileList || fileList.length === 0) return;
+      appendFilesToState(Array.from(fileList));
+    },
+    [appendFilesToState]
+  );
+
+  // 打开弹窗时清空 input 并强制 multiple，避免部分环境不认 JSX 的 multiple
+  useEffect(() => {
+    if (open && inputRef.current) {
+      inputRef.current.value = '';
+      inputRef.current.setAttribute('multiple', '');
+    }
+  }, [open]);
 
   // 开始上传所有 pending 文件
   const startUpload = useCallback(async () => {
@@ -336,12 +349,13 @@ export default function UploadDialog({
     [addFiles]
   );
 
-  // 关闭时清理
+  // 关闭时清理（含 input，便于下次选择不残留）
   const handleClose = useCallback(() => {
     if (!isUploadingRef.current) {
       setUploadFiles([]);
       setUrlInput('');
       setBatchLimitWarning('');
+      if (inputRef.current) inputRef.current.value = '';
       onClose();
     }
   }, [onClose]);
@@ -425,8 +439,17 @@ export default function UploadDialog({
             aria-label="选择文件"
             onChange={(e) => {
               const list = e.target.files;
-              addFiles(list);
-              if (inputRef.current) inputRef.current.value = '';
+              if (!list || list.length === 0) return;
+              const arr: File[] = [];
+              for (let i = 0; i < list.length; i++) {
+                const f = list.item(i);
+                if (f) arr.push(f);
+              }
+              if (arr.length === 0) return;
+              appendFilesToState(arr);
+              setTimeout(() => {
+                if (inputRef.current) inputRef.current.value = '';
+              }, 0);
             }}
           />
 
@@ -444,11 +467,19 @@ export default function UploadDialog({
 
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => {
+              if (inputRef.current) {
+                inputRef.current.value = '';
+                inputRef.current.click();
+              }
+            }}
             className="font-brand rounded-lg bg-[#2A2A3C] px-5 py-2.5 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#3A3A4D]"
           >
             Select files
           </button>
+          <p className="font-brand mt-2 text-xs text-gray-500">
+            支持多选；若多选只显示 1 个，请将多个文件<strong>拖入上方区域</strong>，或多次点击「Select files」逐个添加
+          </p>
         </div>
 
         {/* URL 上传 */}
