@@ -37,27 +37,58 @@ const FileListBatchActions = memo(function FileListBatchActions({
   };
 
   const rowClass =
-    'font-brand font-normal tracking-widest text-[0.625rem] leading-none';
+    'font-brand font-normal tracking-widest text-[clamp(0.45rem,1.1vw,0.6rem)] leading-none';
   const btnClass =
-    'glass-btn inline-flex items-center gap-1.5 px-2 py-1.5 hover:border-white/25 ' + rowClass;
+    'glass-btn inline-flex items-center justify-center sm:justify-start gap-[clamp(0.25rem,0.8vw,0.375rem)] px-[clamp(0.375rem,1vw,0.5rem)] py-[clamp(0.25rem,0.8vw,0.375rem)] hover:border-white/25 ' +
+    rowClass;
 
   return (
     <div className="batch-actions-bar glass-panel-soft mb-4 flex items-center justify-between gap-4 px-4 py-3 animate-fade-in transition-all duration-200">
       <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
-        <CheckCircle2 size={10} strokeWidth={2} className="shrink-0 text-gray-300" aria-hidden />
-        <span className={`min-w-0 truncate text-gray-300 ${rowClass}`}>
+        <CheckCircle2
+          strokeWidth={2}
+          className="shrink-0 text-gray-300 scale-[clamp(0.7,2vw,1)]"
+          aria-hidden
+        />
+        <span className={`min-w-0 truncate text-gray-300 ${rowClass} hidden sm:inline`}>
           Already selected {getSelectionText()}
         </span>
       </div>
 
       <div className="flex min-w-0 items-center justify-end gap-1.5 overflow-x-auto whitespace-nowrap">
         <button type="button" onClick={onBatchMove} className={btnClass}>
-          <MoveRight size={10} strokeWidth={2} className="shrink-0 text-white/90" aria-hidden />
-          Batch Move
+          <span
+            className="relative inline-flex h-[clamp(0.65rem,2vw,0.85rem)] w-[clamp(0.65rem,2vw,0.85rem)] shrink-0 items-center justify-center"
+            aria-hidden
+          >
+            <Circle
+              fill="currentColor"
+              strokeWidth={0}
+              className="absolute inset-0 h-full w-full text-white/90"
+            />
+            <MoveRight
+              strokeWidth={2}
+              className="relative h-[clamp(0.45rem,1.4vw,0.65rem)] w-[clamp(0.45rem,1.4vw,0.65rem)] text-slate-600"
+            />
+          </span>
+          <span className="hidden sm:inline">Batch Move</span>
         </button>
         <button type="button" onClick={onBatchShare} className={btnClass}>
-          <Share2 size={10} strokeWidth={2} className="shrink-0 text-white/90" aria-hidden />
-          Batch Share
+          <span
+            className="relative inline-flex h-[clamp(0.65rem,2vw,0.85rem)] w-[clamp(0.65rem,2vw,0.85rem)] shrink-0 items-center justify-center"
+            aria-hidden
+          >
+            <Circle
+              fill="currentColor"
+              strokeWidth={0}
+              className="absolute inset-0 h-full w-full text-white/90"
+            />
+            <Share2
+              strokeWidth={2}
+              className="relative h-[clamp(0.45rem,1.4vw,0.65rem)] w-[clamp(0.45rem,1.4vw,0.65rem)] text-slate-600"
+            />
+          </span>
+          <span className="hidden sm:inline">Batch Share</span>
         </button>
         <button
           type="button"
@@ -66,15 +97,40 @@ const FileListBatchActions = memo(function FileListBatchActions({
           className={btnClass + (batchDownloading ? ' cursor-wait opacity-70' : '')}
           title={batchDownloading ? '正在打包 ZIP，请稍候…' : undefined}
         >
-          <span className="relative inline-flex h-2.5 w-2.5 shrink-0 items-center justify-center" aria-hidden>
-            <Circle size={10} fill="currentColor" strokeWidth={0} className="absolute inset-0 h-full w-full text-white/90" />
-            <Download size={6} strokeWidth={2.5} className="relative text-slate-600" />
+          <span
+            className="relative inline-flex h-[clamp(0.65rem,2vw,0.85rem)] w-[clamp(0.65rem,2vw,0.85rem)] shrink-0 items-center justify-center"
+            aria-hidden
+          >
+            <Circle
+              fill="currentColor"
+              strokeWidth={0}
+              className="absolute inset-0 h-full w-full text-white/90"
+            />
+            <Download
+              strokeWidth={2.5}
+              className="relative h-[clamp(0.45rem,1.4vw,0.65rem)] w-[clamp(0.45rem,1.4vw,0.65rem)] text-slate-600"
+            />
           </span>
-          {batchDownloading ? '打包中…' : 'Batch Download ZIP'}
+          <span className="hidden sm:inline">
+            {batchDownloading ? '打包中…' : 'Batch Download ZIP'}
+          </span>
         </button>
         <button type="button" onClick={onBatchDelete} className={btnClass}>
-          <Trash2 size={10} strokeWidth={2} className="shrink-0 text-white/90" aria-hidden />
-          Batch Delete
+          <span
+            className="relative inline-flex h-[clamp(0.65rem,2vw,0.85rem)] w-[clamp(0.65rem,2vw,0.85rem)] shrink-0 items-center justify-center"
+            aria-hidden
+          >
+            <Circle
+              fill="currentColor"
+              strokeWidth={0}
+              className="absolute inset-0 h-full w-full text-white/90"
+            />
+            <Trash2
+              strokeWidth={2}
+              className="relative h-[clamp(0.45rem,1.4vw,0.65rem)] w-[clamp(0.45rem,1.4vw,0.65rem)] text-slate-600"
+            />
+          </span>
+          <span className="hidden sm:inline">Batch Delete</span>
         </button>
       </div>
     </div>
