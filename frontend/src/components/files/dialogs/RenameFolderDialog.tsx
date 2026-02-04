@@ -103,8 +103,9 @@ export default function RenameFolderDialog({
             ref={inputRef}
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value.slice(0, 50))}
             placeholder="请输入新名称"
+            maxLength={50}
             className="mb-4 w-full rounded-lg border border-[#3A3A4D] bg-transparent px-4 py-3 text-white placeholder-gray-500 focus:border-[#6C5DD3] focus:outline-none"
             disabled={loading}
           />

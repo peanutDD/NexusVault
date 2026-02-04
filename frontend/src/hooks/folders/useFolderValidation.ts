@@ -22,9 +22,9 @@ export function validateFolderName(name: string): ValidationResult {
     return { valid: false, error: '文件夹名称包含非法字符' };
   }
   
-  // 检查长度
-  if (trimmed.length > 255) {
-    return { valid: false, error: '文件夹名称过长（最大 255 字符）' };
+  // 检查长度（限制 50 字符）
+  if (trimmed.length > 50) {
+    return { valid: false, error: '文件夹名称过长（最大 50 字符）' };
   }
   
   // 检查 Windows 保留名称

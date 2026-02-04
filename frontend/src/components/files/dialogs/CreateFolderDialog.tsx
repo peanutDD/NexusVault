@@ -97,8 +97,9 @@ export default function CreateFolderDialog({
                 ref={inputRef}
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value.slice(0, 50))}
                 placeholder="请输入文件夹名称"
+                maxLength={50}
                 className="createFolderDialogInput mb-4 w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder-white/50 shadow-inner transition-colors focus:border-[#6C5DD3] focus:outline-none focus:ring-2 focus:ring-[#6C5DD3]/40"
                 disabled={loading}
               />
