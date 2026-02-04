@@ -21,7 +21,8 @@ use uuid::Uuid;
 
 use crate::{
     config::Config,
-    models::user::{LoginRequest, RegisterRequest, User, UserResponse},
+    models::user::{LoginRequest, RegisterRequest, UserResponse},
+    repositories::UsersRepo,
     utils::{hash_password, now_timestamp, parse_jwt_expiry, verify_password, AppError},
 };
 
@@ -51,69 +52,52 @@ impl AuthService {
         Self::new(state.pool.clone(), (*state.config).clone())
     }
 
+    /// 用户注册
     pub async fn register(&self, req: RegisterRequest) -> Result<UserResponse, AppError> {
-        // Validate input manually
-        if req.username.len() < 3 || req.username.len() > 50 {
-            return Err(AppError::Validation(
-                "Username must be between 3 and 50 characters".to_string(),
-            ));
-        }
-        if !req.email.contains('@') {
-            return Err(AppError::Validation("Invalid email format".to_string()));
-        }
-        if req.password.len() < 8 {
-            return Err(AppError::Validation(
-                "Password must be at least 8 characters".to_string(),
-            ));
-        }
+        // 验证输入
+        Self::validate_register_input(&req)?;
 
-        // Check if user exists
-        let existing =
-            sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1 OR username = $2")
-                .bind(&req.email)
-                .bind(&req.username)
-                .fetch_optional(&self.pool)
-                .await?;
+        let repo = UsersRepo::new(&self.pool);
 
-        if existing.is_some() {
+        // 检查用户是否已存在
+        if repo
+            .exists_by_email_or_username(&req.email, &req.username)
+            .await?
+        {
             return Err(AppError::Validation(
                 "Email or username already exists".to_string(),
             ));
         }
 
-        // Hash password
+        // 哈希密码
         let password_hash = hash_password(&req.password)?;
 
-        // Create user
-        let user = sqlx::query_as::<_, User>(
-            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING *",
-        )
-        .bind(&req.username)
-        .bind(&req.email)
-        .bind(&password_hash)
-        .fetch_one(&self.pool)
-        .await?;
+        // 创建用户
+        let user = repo.create(&req.username, &req.email, &password_hash).await?;
 
         Ok(UserResponse::from(user))
     }
 
+    /// 用户登录
     pub async fn login(&self, req: LoginRequest) -> Result<String, AppError> {
-        // Find user
-        let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1")
-            .bind(&req.email)
-            .fetch_optional(&self.pool)
+        let repo = UsersRepo::new(&self.pool);
+
+        // 查找用户
+        let user = repo
+            .find_by_email(&req.email)
             .await?
             .ok_or_else(|| AppError::Auth("Invalid email or password".to_string()))?;
 
-        // Verify password
+        // 验证密码
         if !verify_password(&req.password, &user.password_hash)? {
             return Err(AppError::Auth("Invalid email or password".to_string()));
         }
 
-        // Generate token
+        // 生成 token
         self.generate_token(&user.id)
     }
 
+    /// 生成 JWT token
     pub fn generate_token(&self, user_id: &Uuid) -> Result<String, AppError> {
         let now = now_timestamp();
         let exp = parse_jwt_expiry(&self.config.jwt_expiry);
@@ -134,6 +118,7 @@ impl AuthService {
         Ok(token)
     }
 
+    /// 验证 JWT token
     pub fn verify_token(&self, token: &str) -> Result<Uuid, AppError> {
         let token_data = decode::<Claims>(
             token,
@@ -148,52 +133,68 @@ impl AuthService {
         Ok(user_id)
     }
 
+    /// 获取用户信息
     pub async fn get_user(&self, user_id: Uuid) -> Result<UserResponse, AppError> {
-        let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await?
-            .ok_or(AppError::NotFound)?;
+        let repo = UsersRepo::new(&self.pool);
+
+        let user = repo.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
 
         Ok(UserResponse::from(user))
     }
 
+    /// 修改密码
     pub async fn change_password(
         &self,
         user_id: Uuid,
         current_password: String,
         new_password: String,
     ) -> Result<(), AppError> {
-        // Validate new password
+        // 验证新密码
         if new_password.len() < 8 {
             return Err(AppError::Validation(
                 "New password must be at least 8 characters".to_string(),
             ));
         }
 
-        // Get user
-        let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await?
-            .ok_or(AppError::NotFound)?;
+        let repo = UsersRepo::new(&self.pool);
 
-        // Verify current password
+        // 获取用户
+        let user = repo.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
+
+        // 验证当前密码
         if !verify_password(&current_password, &user.password_hash)? {
             return Err(AppError::Auth("Current password is incorrect".to_string()));
         }
 
-        // Hash new password
+        // 哈希新密码
         let new_password_hash = hash_password(&new_password)?;
 
-        // Update password
-        sqlx::query("UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3")
-            .bind(&new_password_hash)
-            .bind(Utc::now())
-            .bind(user_id)
-            .execute(&self.pool)
+        // 更新密码
+        repo.update_password(user_id, &new_password_hash, Utc::now())
             .await?;
 
+        Ok(())
+    }
+
+    // ========================================================================
+    // 私有辅助方法
+    // ========================================================================
+
+    /// 验证注册输入
+    fn validate_register_input(req: &RegisterRequest) -> Result<(), AppError> {
+        if req.username.len() < 3 || req.username.len() > 50 {
+            return Err(AppError::Validation(
+                "Username must be between 3 and 50 characters".to_string(),
+            ));
+        }
+        if !req.email.contains('@') {
+            return Err(AppError::Validation("Invalid email format".to_string()));
+        }
+        if req.password.len() < 8 {
+            return Err(AppError::Validation(
+                "Password must be at least 8 characters".to_string(),
+            ));
+        }
         Ok(())
     }
 }

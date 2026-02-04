@@ -1,11 +1,18 @@
-use crate::{
-    models::api_token::{ApiToken, ApiTokenListItem, CreateApiTokenRequest},
-    utils::AppError,
-};
+//! # API Token 服务模块
+//!
+//! 提供 API Token 的管理功能。
+
 use chrono::{Duration, Utc};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::{
+    constants::API_TOKEN_CHARSET,
+    models::api_token::{ApiToken, ApiTokenListItem, CreateApiTokenRequest},
+    repositories::ApiTokensRepo,
+    utils::AppError,
+};
 
 pub struct ApiTokenService {
     pool: PgPool,
@@ -21,9 +28,8 @@ impl ApiTokenService {
         Self::new(state.pool.clone())
     }
 
-    /// Generate a secure random token
+    /// 生成安全的随机 token
     fn generate_token() -> String {
-        use crate::constants::API_TOKEN_CHARSET;
         use rand::Rng;
         let mut rng = rand::thread_rng();
         (0..64)
@@ -34,116 +40,80 @@ impl ApiTokenService {
             .collect()
     }
 
-    /// Hash a token using SHA-256
+    /// 使用 SHA-256 哈希 token
     fn hash_token(token: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(token.as_bytes());
         format!("{:x}", hasher.finalize())
     }
 
-    /// Create a new API token
+    /// 获取 token 前缀（用于显示）
+    fn get_token_prefix(token: &str) -> String {
+        token.chars().take(8).collect()
+    }
+
+    /// 创建新的 API token
     pub async fn create_token(
         &self,
         user_id: Uuid,
         req: CreateApiTokenRequest,
     ) -> Result<(String, ApiToken), AppError> {
-        // Generate token (only shown once)
+        let repo = ApiTokensRepo::new(&self.pool);
+
+        // 生成 token（只显示一次）
         let token = Self::generate_token();
         let token_hash = Self::hash_token(&token);
+        let token_prefix = Self::get_token_prefix(&token);
 
-        // Calculate expiration
+        // 计算过期时间
         let expires_at = req
             .expires_in_days
             .map(|days| Utc::now() + Duration::days(days as i64));
 
-        // Insert into database
-        let api_token = sqlx::query_as::<_, ApiToken>(
-            r#"
-            INSERT INTO api_tokens (user_id, token_hash, name, expires_at)
-            VALUES ($1, $2, $3, $4)
-            RETURNING *
-            "#,
-        )
-        .bind(user_id)
-        .bind(&token_hash)
-        .bind(&req.name)
-        .bind(expires_at)
-        .fetch_one(&self.pool)
-        .await?;
+        // 创建 token
+        let api_token = repo
+            .create(user_id, &req.name, &token_hash, &token_prefix, expires_at)
+            .await?;
 
         Ok((token, api_token))
     }
 
-    /// Verify and get user_id from token
+    /// 验证 token 并返回用户 ID
     pub async fn verify_token(&self, token: &str) -> Result<Uuid, AppError> {
+        let repo = ApiTokensRepo::new(&self.pool);
         let token_hash = Self::hash_token(token);
 
-        let result: Option<(Uuid, Option<chrono::DateTime<Utc>>)> = sqlx::query_as(
-            r#"
-            SELECT user_id, expires_at
-            FROM api_tokens
-            WHERE token_hash = $1
-            "#,
-        )
-        .bind(&token_hash)
-        .fetch_optional(&self.pool)
-        .await?;
+        let api_token = repo
+            .find_by_token_hash(&token_hash)
+            .await?
+            .ok_or(AppError::Unauthorized)?;
 
-        let (user_id, expires_at) = result.ok_or(AppError::Unauthorized)?;
-
-        // Check expiration
-        if let Some(exp) = expires_at {
+        // 检查是否过期
+        if let Some(exp) = api_token.expires_at {
             if exp < Utc::now() {
                 return Err(AppError::Unauthorized);
             }
         }
 
-        // Update last_used_at
-        sqlx::query(
-            r#"
-            UPDATE api_tokens
-            SET last_used_at = $1, updated_at = $1
-            WHERE token_hash = $2
-            "#,
-        )
-        .bind(Utc::now())
-        .bind(&token_hash)
-        .execute(&self.pool)
-        .await?;
+        // 更新最后使用时间
+        repo.update_last_used(api_token.id).await?;
 
-        Ok(user_id)
+        Ok(api_token.user_id)
     }
 
-    /// List all API tokens for a user
+    /// 列出用户的所有 API token
     pub async fn list_tokens(&self, user_id: Uuid) -> Result<Vec<ApiTokenListItem>, AppError> {
-        let tokens = sqlx::query_as::<_, ApiToken>(
-            r#"
-            SELECT * FROM api_tokens
-            WHERE user_id = $1
-            ORDER BY created_at DESC
-            "#,
-        )
-        .bind(user_id)
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(tokens.into_iter().map(ApiTokenListItem::from).collect())
+        let repo = ApiTokensRepo::new(&self.pool);
+        repo.list_by_user(user_id).await
     }
 
-    /// Delete an API token
+    /// 删除 API token
     pub async fn delete_token(&self, token_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
-        let result = sqlx::query(
-            r#"
-            DELETE FROM api_tokens
-            WHERE id = $1 AND user_id = $2
-            "#,
-        )
-        .bind(token_id)
-        .bind(user_id)
-        .execute(&self.pool)
-        .await?;
+        let repo = ApiTokensRepo::new(&self.pool);
 
-        if result.rows_affected() == 0 {
+        let affected = repo.delete(token_id, user_id).await?;
+
+        if affected == 0 {
             return Err(AppError::NotFound);
         }
 

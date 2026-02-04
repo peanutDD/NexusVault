@@ -1,3 +1,7 @@
+//! # 分享服务模块
+//!
+//! 提供文件分享的核心业务逻辑。
+
 use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -6,6 +10,7 @@ use crate::{
     models::share::{
         BatchShareRequest, BatchShareResponse, CreateShareRequest, FileShare, ShareResponse,
     },
+    repositories::{FilesRepo, SharesRepo},
     utils::{calculate_expiration, generate_random_token, hash_password, verify_password, AppError},
 };
 
@@ -24,57 +29,50 @@ impl ShareService {
     }
 
     /// 生成分享令牌
-    ///
-    /// 使用 `utils::crypto::generate_random_token` 生成 32 字符的随机令牌。
     pub fn generate_share_token() -> String {
         generate_random_token(32)
     }
 
+    /// 创建分享
     pub async fn create_share(
         &self,
         user_id: Uuid,
         req: CreateShareRequest,
     ) -> Result<ShareResponse, AppError> {
-        // Verify file belongs to user
-        let file_exists: Option<(Uuid,)> =
-            sqlx::query_as("SELECT id FROM files WHERE id = $1 AND user_id = $2")
-                .bind(req.file_id)
-                .bind(user_id)
-                .fetch_optional(&self.pool)
-                .await?;
+        let files_repo = FilesRepo::new(&self.pool);
+        let shares_repo = SharesRepo::new(&self.pool);
 
-        if file_exists.is_none() {
+        // 验证文件属于该用户
+        if !files_repo.file_belongs_to_user(req.file_id, user_id).await? {
             return Err(AppError::NotFound);
         }
 
-        // Generate share token
+        // 生成分享令牌
         let share_token = Self::generate_share_token();
 
-        // Hash password if provided
+        // 哈希密码（如果提供）
         let password_hash = req
             .password
             .as_ref()
             .map(|p| hash_password(p))
             .transpose()?;
 
-        // Calculate expiration
+        // 计算过期时间
         let expires_at = calculate_expiration(req.expires_in_days);
 
-        // Create share
-        let share = sqlx::query_as::<_, FileShare>(
-            "INSERT INTO file_shares (file_id, user_id, share_token, password_hash, expires_at, max_downloads)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
-        )
-        .bind(req.file_id)
-        .bind(user_id)
-        .bind(&share_token)
-        .bind(&password_hash)
-        .bind(expires_at)
-        .bind(req.max_downloads)
-        .fetch_one(&self.pool)
-        .await?;
+        // 创建分享
+        let share = shares_repo
+            .create(
+                req.file_id,
+                user_id,
+                &share_token,
+                password_hash.as_deref(),
+                expires_at,
+                req.max_downloads,
+            )
+            .await?;
 
-        // Generate share URL (frontend will construct the full URL)
+        // 生成分享 URL
         let share_url = format!("/share/{}", share_token);
 
         Ok(ShareResponse {
@@ -86,22 +84,20 @@ impl ShareService {
         })
     }
 
+    /// 根据 token 获取分享信息
     pub async fn get_share_by_token(&self, token: &str) -> Result<FileShare, AppError> {
-        let share =
-            sqlx::query_as::<_, FileShare>("SELECT * FROM file_shares WHERE share_token = $1")
-                .bind(token)
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or(AppError::NotFound)?;
+        let repo = SharesRepo::new(&self.pool);
 
-        // Check expiration
+        let share = repo.find_by_token(token).await?.ok_or(AppError::NotFound)?;
+
+        // 检查是否过期
         if let Some(expires_at) = share.expires_at {
             if Utc::now() > expires_at {
                 return Err(AppError::Validation("分享链接已过期".to_string()));
             }
         }
 
-        // Check download limit
+        // 检查下载次数限制
         if let Some(max_downloads) = share.max_downloads {
             if share.download_count >= max_downloads {
                 return Err(AppError::Validation(
@@ -113,6 +109,7 @@ impl ShareService {
         Ok(share)
     }
 
+    /// 验证分享密码
     pub async fn verify_share_password(
         &self,
         share: &FileShare,
@@ -121,80 +118,61 @@ impl ShareService {
         if let Some(ref hash) = share.password_hash {
             verify_password(password, hash)
         } else {
-            Ok(true) // No password required
+            Ok(true) // 无需密码
         }
     }
 
+    /// 增加下载计数
     pub async fn increment_download_count(&self, share_id: Uuid) -> Result<(), AppError> {
-        sqlx::query(
-            "UPDATE file_shares SET download_count = download_count + 1, updated_at = $1 WHERE id = $2"
-        )
-        .bind(Utc::now())
-        .bind(share_id)
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
+        let repo = SharesRepo::new(&self.pool);
+        repo.increment_download_count(share_id).await
     }
 
+    /// 删除分享
     pub async fn delete_share(&self, share_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
-        let result = sqlx::query("DELETE FROM file_shares WHERE id = $1 AND user_id = $2")
-            .bind(share_id)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
+        let repo = SharesRepo::new(&self.pool);
 
-        if result.rows_affected() == 0 {
+        let affected = repo.delete_by_id(share_id).await?;
+
+        if affected == 0 {
             return Err(AppError::NotFound);
         }
 
         Ok(())
     }
 
+    /// 批量创建分享
     pub async fn batch_create_share(
         &self,
         user_id: Uuid,
         req: BatchShareRequest,
     ) -> Result<BatchShareResponse, AppError> {
+        let files_repo = FilesRepo::new(&self.pool);
+        let shares_repo = SharesRepo::new(&self.pool);
+
         let mut shares = Vec::new();
         let mut failed = Vec::new();
 
-        // Hash password if provided (same for all shares)
+        // 哈希密码（如果提供，所有分享使用相同密码）
         let password_hash = req
             .password
             .as_ref()
             .map(|p| hash_password(p))
             .transpose()?;
 
-        // Calculate expiration (same for all shares)
+        // 计算过期时间（所有分享使用相同过期时间）
         let expires_at = calculate_expiration(req.expires_in_days);
 
-        // Process each file
+        // 处理每个文件
         for file_id in req.file_ids {
-            // Verify file belongs to user
-            let file_exists: Option<(Uuid,)> =
-                sqlx::query_as("SELECT id FROM files WHERE id = $1 AND user_id = $2")
-                    .bind(file_id)
-                    .bind(user_id)
-                    .fetch_optional(&self.pool)
-                    .await?;
-
-            if file_exists.is_none() {
+            // 验证文件属于该用户
+            if !files_repo.file_belongs_to_user(file_id, user_id).await? {
                 failed.push(file_id);
                 continue;
             }
 
-            // Check if share already exists for this file
-            let existing_share: Option<FileShare> = sqlx::query_as::<_, FileShare>(
-                "SELECT * FROM file_shares WHERE file_id = $1 AND user_id = $2 LIMIT 1",
-            )
-            .bind(file_id)
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await?;
-
-            if let Some(existing) = existing_share {
-                // Return existing share
+            // 检查是否已存在分享
+            if let Some(existing) = shares_repo.find_by_file_and_user(file_id, user_id).await? {
                 let share_url = format!("/share/{}", existing.share_token);
                 shares.push(ShareResponse {
                     share_id: existing.id,
@@ -206,22 +184,21 @@ impl ShareService {
                 continue;
             }
 
-            // Generate share token
+            // 生成分享令牌
             let share_token = Self::generate_share_token();
 
-            // Create share
-            match sqlx::query_as::<_, FileShare>(
-                "INSERT INTO file_shares (file_id, user_id, share_token, password_hash, expires_at, max_downloads)
-                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
-            )
-            .bind(file_id)
-            .bind(user_id)
-            .bind(&share_token)
-            .bind(&password_hash)
-            .bind(expires_at)
-            .bind(req.max_downloads)
-            .fetch_one(&self.pool)
-            .await {
+            // 创建分享
+            match shares_repo
+                .create(
+                    file_id,
+                    user_id,
+                    &share_token,
+                    password_hash.as_deref(),
+                    expires_at,
+                    req.max_downloads,
+                )
+                .await
+            {
                 Ok(share) => {
                     let share_url = format!("/share/{}", share_token);
                     shares.push(ShareResponse {

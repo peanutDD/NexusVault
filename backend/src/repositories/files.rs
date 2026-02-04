@@ -54,6 +54,43 @@ impl<'a> FilesRepo<'a> {
         Ok(file)
     }
 
+    /// 检查文件是否属于指定用户
+    pub async fn file_belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let result: Option<Uuid> =
+            sqlx::query_scalar("SELECT id FROM files WHERE id = $1 AND user_id = $2")
+                .bind(file_id)
+                .bind(user_id)
+                .fetch_optional(self.pool)
+                .await?;
+        Ok(result.is_some())
+    }
+
+    /// 列出指定文件夹下的文件
+    pub async fn list_by_folder(
+        &self,
+        user_id: Uuid,
+        folder_id: Option<Uuid>,
+    ) -> Result<Vec<File>, AppError> {
+        if folder_id.is_some() {
+            sqlx::query_as::<_, File>(
+                "SELECT * FROM files WHERE user_id = $1 AND folder_id = $2 ORDER BY created_at DESC",
+            )
+            .bind(user_id)
+            .bind(folder_id)
+            .fetch_all(self.pool)
+            .await
+            .map_err(AppError::from)
+        } else {
+            sqlx::query_as::<_, File>(
+                "SELECT * FROM files WHERE user_id = $1 AND folder_id IS NULL ORDER BY created_at DESC",
+            )
+            .bind(user_id)
+            .fetch_all(self.pool)
+            .await
+            .map_err(AppError::from)
+        }
+    }
+
     pub async fn delete_file_record(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
         let result = sqlx::query("DELETE FROM files WHERE id = $1 AND user_id = $2")
             .bind(file_id)

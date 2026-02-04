@@ -6,13 +6,14 @@ use bytes::Bytes;
 use chrono::Utc;
 use uuid::Uuid;
 
+use crate::constants::{CHUNK_SIZE, DISK_RESERVE_CHUNK, DISK_RESERVE_MERGE};
 use crate::models::file::FileResponse;
 use crate::models::upload_session::{
     CompleteChunkedUploadRequest, InitChunkedUploadRequest, UploadSession,
 };
 use crate::utils::AppError;
 
-use super::{FileService, CHUNK_SIZE};
+use super::FileService;
 
 impl FileService {
     pub async fn init_chunked_upload(
@@ -88,9 +89,8 @@ impl FileService {
 
         // 磁盘空间保护（best-effort）：写分块前检查 temp_path 所在盘剩余空间
         if let Ok(free) = fs2::available_space(&s.temp_path) {
-            let reserve = 32 * 1024 * 1024u64; // 32MiB safety margin
             let need = data.len() as u64;
-            if free < need.saturating_add(reserve) {
+            if free < need.saturating_add(DISK_RESERVE_CHUNK) {
                 return Err(AppError::Storage("磁盘空间不足，请稍后重试".to_string()));
             }
         }
@@ -137,9 +137,8 @@ impl FileService {
 
         // 磁盘空间保护（best-effort）：合并前检查剩余空间是否足够容纳最终文件
         if let Ok(free) = fs2::available_space(&s.temp_path) {
-            let reserve = 64 * 1024 * 1024u64; // 64MiB safety margin
             let need = s.total_size.max(0) as u64;
-            if free < need.saturating_add(reserve) {
+            if free < need.saturating_add(DISK_RESERVE_MERGE) {
                 return Err(AppError::Storage("磁盘空间不足，无法完成合并".to_string()));
             }
         }

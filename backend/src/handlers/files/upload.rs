@@ -9,6 +9,7 @@ use axum::response::Response;
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::constants::DISK_RESERVE_UPLOAD;
 use crate::extractors::AuthenticatedUser;
 use crate::services::file::FileService;
 use crate::utils::{json_response, AppError};
@@ -71,9 +72,7 @@ pub async fn upload_file_handler(
 
             // 磁盘空间保护（best-effort）
             if let Ok(free) = fs2::available_space(&tmp_dir) {
-                // 预留 16MiB 作为安全边界（日志/临时文件/元数据）
-                let reserve = 16 * 1024 * 1024u64;
-                if free.saturating_sub(reserve) == 0 {
+                if free.saturating_sub(DISK_RESERVE_UPLOAD) == 0 {
                     return Err(AppError::Storage("磁盘空间不足，请稍后重试".to_string()));
                 }
             }

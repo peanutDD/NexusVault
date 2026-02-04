@@ -8,7 +8,7 @@ use std::io::{self, Seek, SeekFrom, Write};
 use std::sync::mpsc;
 use uuid::Uuid;
 
-use crate::constants::{MAX_BATCH_ZIP_FILES, MAX_BATCH_ZIP_TOTAL_BYTES};
+use crate::constants::{MAX_BATCH_ZIP_FILES, MAX_BATCH_ZIP_TOTAL_BYTES, ZIP_BUFFER_SIZE};
 use crate::models::file::File;
 use crate::utils::AppError;
 
@@ -252,7 +252,7 @@ pub fn run_zip_writer_thread(
     let mut writer = ChannelWriter {
         buf: Vec::new(),
         sender: output_tx,
-        cap: 8 * 1024, // 8KB 即发，首包更早；每文件后再 flush 一次，小文件也能立刻发出
+        cap: ZIP_BUFFER_SIZE, // 8KB 即发，首包更早；每文件后再 flush 一次，小文件也能立刻发出
         pos: 0,
     };
     // zip 及其循环放在块内，块结束时 zip 被 drop，对 writer 的借用结束，之后才能 writer.flush()

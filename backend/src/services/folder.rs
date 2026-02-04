@@ -12,26 +12,38 @@ use uuid::Uuid;
 
 use crate::{
     models::folder::{
-        CreateFolderRequest, Folder, FolderContentsResponse, FolderPathResponse, FolderResponse,
+        CreateFolderRequest, FolderContentsResponse, FolderPathResponse, FolderResponse,
         MoveFolderRequest, RenameFolderRequest,
     },
+    repositories::FoldersRepo,
+    services::storage::StorageBackend,
     utils::AppError,
 };
+use std::sync::Arc;
 
 /// 文件夹服务
 pub struct FolderService {
     pool: PgPool,
+    storage: Option<Arc<dyn StorageBackend>>,
 }
 
 impl FolderService {
     /// 创建新的 FolderService 实例
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self { pool, storage: None }
+    }
+
+    /// 创建带存储后端的 FolderService 实例
+    pub fn with_storage(pool: PgPool, storage: Arc<dyn StorageBackend>) -> Self {
+        Self {
+            pool,
+            storage: Some(storage),
+        }
     }
 
     /// 从 AppState 创建 FolderService（工厂方法）
     pub fn from_state(state: &crate::AppState) -> Self {
-        Self::new(state.pool.clone())
+        Self::with_storage(state.pool.clone(), state.storage.clone())
     }
 
     // ========================================================================
@@ -39,7 +51,7 @@ impl FolderService {
     // ========================================================================
 
     /// 验证文件夹名称
-    fn validate_folder_name(name: &str) -> Result<&str, AppError> {
+    fn validate_folder_name(name: &str) -> Result<String, AppError> {
         let name = name.trim();
         if name.is_empty() {
             return Err(AppError::Validation("文件夹名称不能为空".to_string()));
@@ -52,311 +64,173 @@ impl FolderService {
                 "文件夹名称包含非法字符".to_string(),
             ));
         }
-        Ok(name)
-    }
-
-    /// 验证文件夹存在性（返回文件夹 ID）
-    async fn verify_folder_exists(&self, folder_id: Uuid, user_id: Uuid) -> Result<Uuid, AppError> {
-        sqlx::query_scalar::<_, Uuid>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-            .bind(folder_id)
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await?
-            .ok_or(AppError::NotFound)
-    }
-
-    /// 获取文件夹完整信息
-    async fn get_folder_by_id(&self, folder_id: Uuid, user_id: Uuid) -> Result<Folder, AppError> {
-        sqlx::query_as::<_, Folder>(
-            "SELECT id, user_id, name, parent_id, created_at, updated_at FROM folders WHERE id = $1 AND user_id = $2",
-        )
-        .bind(folder_id)
-        .bind(user_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(AppError::NotFound)
-    }
-
-    /// 检查同级目录下是否存在同名文件夹
-    async fn check_name_conflict(
-        &self,
-        user_id: Uuid,
-        parent_id: Option<Uuid>,
-        name: &str,
-        exclude_id: Option<Uuid>,
-    ) -> Result<(), AppError> {
-        let existing: Option<Uuid> = if let Some(exclude) = exclude_id {
-            sqlx::query_scalar(
-                "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3 AND id != $4",
-            )
-            .bind(user_id)
-            .bind(parent_id)
-            .bind(name)
-            .bind(exclude)
-            .fetch_optional(&self.pool)
-            .await?
-        } else {
-            sqlx::query_scalar(
-                "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3",
-            )
-            .bind(user_id)
-            .bind(parent_id)
-            .bind(name)
-            .fetch_optional(&self.pool)
-            .await?
-        };
-
-        if existing.is_some() {
-            return Err(AppError::Validation("同名文件夹已存在".to_string()));
-        }
-        Ok(())
+        Ok(name.to_string())
     }
 
     // ========================================================================
-    // 公开方法
+    // 公开方法 - 创建
     // ========================================================================
 
     /// 创建文件夹
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `req`: 创建请求（包含名称和父文件夹 ID）
-    ///
-    /// # 返回
-    /// - `Ok(FolderResponse)`: 创建成功
-    /// - `Err(AppError)`: 创建失败（名称冲突等）
     pub async fn create_folder(
         &self,
         user_id: Uuid,
         req: CreateFolderRequest,
     ) -> Result<FolderResponse, AppError> {
-        // 验证文件夹名称
         let name = Self::validate_folder_name(&req.name)?;
+        let repo = FoldersRepo::new(&self.pool);
 
-        // 如果指定了父文件夹，验证其存在且属于该用户
+        // 如果指定了父文件夹，验证其存在
         if let Some(parent_id) = req.parent_id {
-            self.verify_folder_exists(parent_id, user_id)
-                .await
-                .map_err(|_| AppError::Validation("父文件夹不存在".to_string()))?;
+            if !repo.exists(parent_id, user_id).await? {
+                return Err(AppError::Validation("父文件夹不存在".to_string()));
+            }
         }
 
         // 检查同一父目录下是否已存在同名文件夹
-        self.check_name_conflict(user_id, req.parent_id, name, None)
-            .await?;
+        if repo
+            .name_exists_in_parent(user_id, req.parent_id, &name, None)
+            .await?
+        {
+            return Err(AppError::Validation("同名文件夹已存在".to_string()));
+        }
 
         // 创建文件夹
-        let folder: Folder = sqlx::query_as(
-            r#"
-            INSERT INTO folders (user_id, name, parent_id)
-            VALUES ($1, $2, $3)
-            RETURNING id, user_id, name, parent_id, created_at, updated_at
-            "#,
-        )
-        .bind(user_id)
-        .bind(name)
-        .bind(req.parent_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let folder = repo.create(user_id, &name, req.parent_id).await?;
 
         Ok(folder.into())
     }
 
+    // ========================================================================
+    // 公开方法 - 查询
+    // ========================================================================
+
     /// 列出文件夹
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `parent_id`: 父文件夹 ID（None 表示根目录）
-    ///
-    /// # 返回
-    /// - 文件夹列表
     pub async fn list_folders(
         &self,
         user_id: Uuid,
         parent_id: Option<Uuid>,
     ) -> Result<Vec<FolderResponse>, AppError> {
-        // 使用 IS NOT DISTINCT FROM 统一处理 NULL 和非 NULL 的 parent_id
-        let folders: Vec<Folder> = sqlx::query_as(
-            r#"
-            SELECT id, user_id, name, parent_id, created_at, updated_at
-            FROM folders
-            WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2
-            ORDER BY name ASC
-            "#,
-        )
-        .bind(user_id)
-        .bind(parent_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let repo = FoldersRepo::new(&self.pool);
 
-        Ok(folders.into_iter().map(Into::into).collect())
+        // 如果指定了父文件夹，验证其存在
+        if let Some(pid) = parent_id {
+            if !repo.exists(pid, user_id).await? {
+                return Err(AppError::NotFound);
+            }
+        }
+
+        let folders = repo.list_by_parent(user_id, parent_id).await?;
+
+        Ok(folders.into_iter().map(|f| f.into()).collect())
     }
 
-    /// 获取文件夹详情
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `folder_id`: 文件夹 ID
-    ///
-    /// # 返回
-    /// - 文件夹信息
+    /// 获取文件夹信息
     pub async fn get_folder(
         &self,
         user_id: Uuid,
         folder_id: Uuid,
     ) -> Result<FolderResponse, AppError> {
-        sqlx::query_as::<_, Folder>(
-            r#"
-            SELECT id, user_id, name, parent_id, created_at, updated_at
-            FROM folders
-            WHERE id = $1 AND user_id = $2
-            "#,
-        )
-        .bind(folder_id)
-        .bind(user_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .map(Into::into)
-        .ok_or(AppError::NotFound)
+        let repo = FoldersRepo::new(&self.pool);
+
+        let folder = repo
+            .find_by_id(folder_id, user_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        Ok(folder.into())
     }
 
-    /// 获取文件夹路径（面包屑导航）
-    ///
-    /// 返回从根目录到指定文件夹的完整路径。
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `folder_id`: 文件夹 ID
-    ///
-    /// # 返回
-    /// - 路径列表（从根目录到当前文件夹）
+    /// 获取文件夹路径
     pub async fn get_folder_path(
         &self,
         user_id: Uuid,
         folder_id: Uuid,
     ) -> Result<FolderPathResponse, AppError> {
-        // 使用递归 CTE 获取路径
-        let path: Vec<Folder> = sqlx::query_as(
-            r#"
-            WITH RECURSIVE folder_path AS (
-                -- 起点：当前文件夹
-                SELECT id, user_id, name, parent_id, created_at, updated_at, 1 as depth
-                FROM folders
-                WHERE id = $1 AND user_id = $2
-                
-                UNION ALL
-                
-                -- 递归：向上查找父文件夹
-                SELECT f.id, f.user_id, f.name, f.parent_id, f.created_at, f.updated_at, fp.depth + 1
-                FROM folders f
-                INNER JOIN folder_path fp ON f.id = fp.parent_id
-            )
-            SELECT id, user_id, name, parent_id, created_at, updated_at
-            FROM folder_path
-            ORDER BY depth DESC
-            "#,
-        )
-        .bind(folder_id)
-        .bind(user_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let repo = FoldersRepo::new(&self.pool);
 
-        (!path.is_empty())
-            .then(|| FolderPathResponse {
-                path: path.into_iter().map(Into::into).collect(),
-            })
-            .ok_or(AppError::NotFound)
+        // 验证文件夹存在
+        if !repo.exists(folder_id, user_id).await? {
+            return Err(AppError::NotFound);
+        }
+
+        let folders = repo.get_path(folder_id, user_id).await?;
+
+        Ok(FolderPathResponse {
+            path: folders.into_iter().map(|f| f.into()).collect(),
+        })
     }
 
-    /// 获取文件夹内容（子文件夹 + 路径）
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `folder_id`: 文件夹 ID（None 表示根目录）
-    ///
-    /// # 返回
-    /// - 当前文件夹信息、路径、子文件夹列表
+    /// 获取文件夹内容（子文件夹列表 + 路径）
     pub async fn get_folder_contents(
         &self,
         user_id: Uuid,
         folder_id: Option<Uuid>,
     ) -> Result<FolderContentsResponse, AppError> {
-        // 使用 match 替代 if-let-else，更清晰地处理两种情况
-        let (current, path) = match folder_id {
-            Some(fid) => {
-                let current = self.get_folder(user_id, fid).await?;
-                let path_resp = self.get_folder_path(user_id, fid).await?;
-                (Some(current), path_resp.path)
-            }
-            None => (None, vec![]),
+        let repo = FoldersRepo::new(&self.pool);
+
+        // 获取当前文件夹信息和路径
+        let (current, path) = if let Some(fid) = folder_id {
+            let folder = repo.find_by_id(fid, user_id).await?.ok_or(AppError::NotFound)?;
+            let path_folders = repo.get_path(fid, user_id).await?;
+            (Some(folder.into()), path_folders.into_iter().map(|f| f.into()).collect())
+        } else {
+            (None, vec![])
         };
 
-        let folders = self.list_folders(user_id, folder_id).await?;
+        // 获取子文件夹列表
+        let folders = repo.list_by_parent(user_id, folder_id).await?;
 
         Ok(FolderContentsResponse {
             current,
             path,
-            folders,
+            folders: folders.into_iter().map(|f| f.into()).collect(),
         })
     }
 
+    // ========================================================================
+    // 公开方法 - 修改
+    // ========================================================================
+
     /// 重命名文件夹
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `folder_id`: 文件夹 ID
-    /// - `req`: 重命名请求
-    ///
-    /// # 返回
-    /// - 更新后的文件夹信息
     pub async fn rename_folder(
         &self,
         user_id: Uuid,
         folder_id: Uuid,
         req: RenameFolderRequest,
     ) -> Result<FolderResponse, AppError> {
-        // 验证文件夹名称
         let name = Self::validate_folder_name(&req.name)?;
+        let repo = FoldersRepo::new(&self.pool);
 
         // 获取当前文件夹信息
-        let current = self.get_folder_by_id(folder_id, user_id).await?;
+        let current = repo
+            .find_by_id(folder_id, user_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
 
         // 检查同级目录下是否已有同名文件夹
-        self.check_name_conflict(user_id, current.parent_id, name, Some(folder_id))
-            .await?;
+        if repo
+            .name_exists_in_parent(user_id, current.parent_id, &name, Some(folder_id))
+            .await?
+        {
+            return Err(AppError::Validation("同名文件夹已存在".to_string()));
+        }
 
         // 更新文件夹名称
-        let folder: Folder = sqlx::query_as(
-            r#"
-            UPDATE folders
-            SET name = $1, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2 AND user_id = $3
-            RETURNING id, user_id, name, parent_id, created_at, updated_at
-            "#,
-        )
-        .bind(name)
-        .bind(folder_id)
-        .bind(user_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let folder = repo.rename(folder_id, user_id, &name).await?;
 
         Ok(folder.into())
     }
 
     /// 移动文件夹
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `folder_id`: 要移动的文件夹 ID
-    /// - `req`: 移动请求（目标父文件夹 ID）
-    ///
-    /// # 返回
-    /// - 更新后的文件夹信息
     pub async fn move_folder(
         &self,
         user_id: Uuid,
         folder_id: Uuid,
         req: MoveFolderRequest,
     ) -> Result<FolderResponse, AppError> {
+        let repo = FoldersRepo::new(&self.pool);
+
         // 不能移动到自身
         if req.parent_id == Some(folder_id) {
             return Err(AppError::Validation(
@@ -365,33 +239,19 @@ impl FolderService {
         }
 
         // 获取当前文件夹信息
-        let current = self.get_folder_by_id(folder_id, user_id).await?;
+        let current = repo
+            .find_by_id(folder_id, user_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
 
         // 如果目标父文件夹不为空，验证其存在且不是当前文件夹的子文件夹
         if let Some(new_parent_id) = req.parent_id {
-            // 验证目标文件夹存在
-            self.verify_folder_exists(new_parent_id, user_id)
-                .await
-                .map_err(|_| AppError::Validation("目标文件夹不存在".to_string()))?;
+            if !repo.exists(new_parent_id, user_id).await? {
+                return Err(AppError::Validation("目标文件夹不存在".to_string()));
+            }
 
-            // 检查目标文件夹是否是当前文件夹的子文件夹（防止循环）
-            let is_descendant: Option<i64> = sqlx::query_scalar(
-                r#"
-                WITH RECURSIVE descendants AS (
-                    SELECT id FROM folders WHERE parent_id = $1
-                    UNION ALL
-                    SELECT f.id FROM folders f
-                    INNER JOIN descendants d ON f.parent_id = d.id
-                )
-                SELECT 1 FROM descendants WHERE id = $2
-                "#,
-            )
-            .bind(folder_id)
-            .bind(new_parent_id)
-            .fetch_optional(&self.pool)
-            .await?;
-
-            if is_descendant.is_some() {
+            // 检查是否会造成循环
+            if repo.is_descendant_of(folder_id, new_parent_id).await? {
                 return Err(AppError::Validation(
                     "不能将文件夹移动到其子文件夹中".to_string(),
                 ));
@@ -399,89 +259,62 @@ impl FolderService {
         }
 
         // 检查目标位置是否已有同名文件夹
-        self.check_name_conflict(user_id, req.parent_id, &current.name, Some(folder_id))
-            .await
-            .map_err(|_| AppError::Validation("目标位置已存在同名文件夹".to_string()))?;
+        if repo
+            .name_exists_in_parent(user_id, req.parent_id, &current.name, Some(folder_id))
+            .await?
+        {
+            return Err(AppError::Validation(
+                "目标位置已存在同名文件夹".to_string(),
+            ));
+        }
 
         // 移动文件夹
-        let folder: Folder = sqlx::query_as(
-            r#"
-            UPDATE folders
-            SET parent_id = $1, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2 AND user_id = $3
-            RETURNING id, user_id, name, parent_id, created_at, updated_at
-            "#,
-        )
-        .bind(req.parent_id)
-        .bind(folder_id)
-        .bind(user_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let folder = repo.move_to(folder_id, user_id, req.parent_id).await?;
 
         Ok(folder.into())
     }
 
-    /// 删除文件夹
-    ///
-    /// 级联删除所有子文件夹和文件。
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `folder_id`: 文件夹 ID
-    ///
-    /// # 返回
-    /// - 删除的文件数量
+    // ========================================================================
+    // 公开方法 - 删除
+    // ========================================================================
+
+    /// 删除文件夹（级联删除所有子文件夹和文件）
     pub async fn delete_folder(&self, user_id: Uuid, folder_id: Uuid) -> Result<u64, AppError> {
+        let repo = FoldersRepo::new(&self.pool);
+
         // 验证文件夹存在
-        self.verify_folder_exists(folder_id, user_id).await?;
+        if !repo.exists(folder_id, user_id).await? {
+            return Err(AppError::NotFound);
+        }
 
         // 获取所有需要删除的文件夹 ID（包括子文件夹）
-        let folder_ids: Vec<(Uuid,)> = sqlx::query_as(
-            r#"
-            WITH RECURSIVE all_folders AS (
-                SELECT id FROM folders WHERE id = $1 AND user_id = $2
-                UNION ALL
-                SELECT f.id FROM folders f
-                INNER JOIN all_folders af ON f.parent_id = af.id
-            )
-            SELECT id FROM all_folders
-            "#,
-        )
-        .bind(folder_id)
-        .bind(user_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let folder_ids = repo.get_all_descendant_ids(folder_id, user_id).await?;
 
-        let ids: Vec<Uuid> = folder_ids.into_iter().map(|(id,)| id).collect();
+        // 获取需要删除的文件路径（用于清理存储）
+        let file_paths = repo.get_file_paths_in_folders(&folder_ids).await?;
+        let file_count = file_paths.len() as u64;
 
-        // 计算要删除的文件数量
-        let file_count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM files WHERE folder_id = ANY($1) AND user_id = $2",
-        )
-        .bind(&ids)
-        .bind(user_id)
-        .fetch_one(&self.pool)
-        .await?;
+        // 删除存储中的文件
+        if let Some(storage) = &self.storage {
+            for path in &file_paths {
+                let _ = storage.delete_file(path).await;
+            }
+        }
 
-        // 删除文件夹（级联删除会自动删除子文件夹，文件的 folder_id 会被设为 NULL）
-        sqlx::query("DELETE FROM folders WHERE id = $1 AND user_id = $2")
-            .bind(folder_id)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
+        // 删除文件记录
+        repo.delete_files_in_folders(&folder_ids).await?;
 
-        Ok(file_count.0 as u64)
+        // 删除文件夹
+        repo.delete(&folder_ids).await?;
+
+        Ok(file_count)
     }
 
-    /// 批量移动文件到文件夹
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `file_ids`: 文件 ID 列表
-    /// - `folder_id`: 目标文件夹 ID（None 表示移动到根目录）
-    ///
-    /// # 返回
-    /// - 成功移动的文件数量
+    // ========================================================================
+    // 公开方法 - 文件移动
+    // ========================================================================
+
+    /// 将文件移动到指定文件夹
     pub async fn move_files_to_folder(
         &self,
         user_id: Uuid,
@@ -492,77 +325,27 @@ impl FolderService {
             return Ok(0);
         }
 
+        let repo = FoldersRepo::new(&self.pool);
+
         // 如果目标文件夹不为空，验证其存在
         if let Some(fid) = folder_id {
-            self.verify_folder_exists(fid, user_id)
-                .await
-                .map_err(|_| AppError::Validation("目标文件夹不存在".to_string()))?;
+            if !repo.exists(fid, user_id).await? {
+                return Err(AppError::Validation("目标文件夹不存在".to_string()));
+            }
         }
 
         // 更新文件的 folder_id
-        let result = sqlx::query(
-            "UPDATE files SET folder_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($2) AND user_id = $3",
-        )
-        .bind(folder_id)
-        .bind(&file_ids)
-        .bind(user_id)
-        .execute(&self.pool)
-        .await?;
-
-        Ok(result.rows_affected())
+        repo.move_files_to_folder(user_id, &file_ids, folder_id)
+            .await
     }
 
     /// 获取文件夹内所有文件 ID（递归）
-    ///
-    /// # 参数
-    /// - `user_id`: 用户 ID
-    /// - `folder_ids`: 文件夹 ID 列表
-    ///
-    /// # 返回
-    /// - 所有文件 ID 列表
     pub async fn get_all_file_ids_in_folders(
         &self,
         user_id: Uuid,
         folder_ids: Vec<Uuid>,
     ) -> Result<Vec<Uuid>, AppError> {
-        if folder_ids.is_empty() {
-            return Ok(vec![]);
-        }
-
-        // 递归获取所有子文件夹 ID
-        let all_folder_ids: Vec<(Uuid,)> = sqlx::query_as(
-            r#"
-            WITH RECURSIVE all_folders AS (
-                -- 起点：传入的文件夹
-                SELECT id FROM folders WHERE id = ANY($1) AND user_id = $2
-                UNION ALL
-                -- 递归：获取所有子文件夹
-                SELECT f.id FROM folders f
-                INNER JOIN all_folders af ON f.parent_id = af.id
-            )
-            SELECT id FROM all_folders
-            "#,
-        )
-        .bind(&folder_ids)
-        .bind(user_id)
-        .fetch_all(&self.pool)
-        .await?;
-
-        let all_folder_ids: Vec<Uuid> = all_folder_ids.into_iter().map(|(id,)| id).collect();
-
-        if all_folder_ids.is_empty() {
-            return Ok(vec![]);
-        }
-
-        // 获取这些文件夹内的所有文件 ID
-        let file_ids: Vec<(Uuid,)> = sqlx::query_as(
-            "SELECT id FROM files WHERE folder_id = ANY($1) AND user_id = $2",
-        )
-        .bind(&all_folder_ids)
-        .bind(user_id)
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(file_ids.into_iter().map(|(id,)| id).collect())
+        let repo = FoldersRepo::new(&self.pool);
+        repo.get_all_file_ids_in_folders(user_id, &folder_ids).await
     }
 }
