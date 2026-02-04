@@ -356,7 +356,7 @@ export default function FilePreview({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onClose(); }}
-            className="flex items-center justify-center rounded-full bg-black/40 text-white/85 transition-colors hover:bg-black/70 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)]"
+            className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)]"
             aria-label="关闭"
           >
             <span className="flex shrink-0 items-center justify-center w-[clamp(1rem,2.5vw,1.25rem)] h-[clamp(1rem,2.5vw,1.25rem)]">
@@ -368,7 +368,7 @@ export default function FilePreview({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); handleDownload(); }}
-            className="flex items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/30 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)]"
+            className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)]"
             aria-label="下载"
           >
             <span className="flex shrink-0 items-center justify-center w-[clamp(1rem,2.5vw,1.25rem)] h-[clamp(1rem,2.5vw,1.25rem)]">
