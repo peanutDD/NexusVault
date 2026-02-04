@@ -1,12 +1,15 @@
-import { memo, useMemo, useCallback } from 'react';
-import { Download, Send, Trash2 } from 'lucide-react';
+import { memo, useState, useEffect } from 'react';
+import { Download, Send, Trash2, Eye, MoreVertical } from 'lucide-react';
 import { formatFileSize } from '../../../utils/format';
 import type { FileMetadata } from '../../../types';
 import LazyThumbnail from '../preview/LazyThumbnail';
 import { cn } from '../../../utils/cn';
 import { getMimeTypeLabel } from '../../../utils/mimeType';
-import { preloadPreview } from '../../../utils/preloadPreview';
+import { schedulePreload } from '../../../utils/preloadPreview';
 import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
+
+// 全局事件：关闭所有卡片菜单
+const CLOSE_ALL_MENUS_EVENT = 'closeAllCardMenus';
 
 interface FileCardProps {
   file: FileMetadata;
@@ -20,162 +23,191 @@ interface FileCardProps {
 }
 
 /**
- * 文件卡片组件
- * 以缩略图形式展示文件信息，支持拖拽
+ * 文件卡片组件 v4
  */
-const FileCard = memo(function FileCard({
-  file,
-  isSelected,
-  onSelect,
-  onPreview,
-  onShare,
-  onDownload,
-  onDelete,
-  onDragStart,
-}: FileCardProps) {
-  // 使用 useMemo 缓存格式化结果
-  const formattedDate = useMemo(() => {
-    return new Date(file.created_at).toLocaleString('zh-CN', {
+const FileCard = memo(
+  function FileCard({
+    file,
+    isSelected,
+    onSelect,
+    onPreview,
+    onShare,
+    onDownload,
+    onDelete,
+    onDragStart,
+  }: FileCardProps) {
+    const [showMenu, setShowMenu] = useState(false);
+
+    // 监听全局关闭事件
+    useEffect(() => {
+      const handleCloseAll = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        // 如果不是自己触发的，就关闭菜单
+        if (detail !== file.id) {
+          setShowMenu(false);
+        }
+      };
+      window.addEventListener(CLOSE_ALL_MENUS_EVENT, handleCloseAll);
+      return () => window.removeEventListener(CLOSE_ALL_MENUS_EVENT, handleCloseAll);
+    }, [file.id]);
+
+    const handleToggleMenu = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!showMenu) {
+        // 打开前先关闭其他菜单
+        window.dispatchEvent(new CustomEvent(CLOSE_ALL_MENUS_EVENT, { detail: file.id }));
+      }
+      setShowMenu(!showMenu);
+    };
+
+    const formattedDate = new Date(file.created_at).toLocaleString('zh-CN', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
-  }, [file.created_at]);
 
-  const mimeTypeLabel = useMemo(() => getMimeTypeLabel(file.mime_type), [file.mime_type]);
+    const mimeTypeLabel = getMimeTypeLabel(file.mime_type);
 
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('application/file-id', file.id);
-    e.dataTransfer.effectAllowed = 'move';
-    onDragStart?.(e, file);
-  };
-
-  const handleSelect = useCallback(() => {
-    onSelect(file.id);
-  }, [file.id, onSelect]);
-
-  return (
-    <div
-      className={cn(
-        'glass-card group relative p-3 transition-colors',
-        // 未选中时：仅 hover 出现“选中框”，鼠标移开立刻消失
-        !isSelected &&
-          'hover:outline hover:outline-2 hover:outline-purple-400 hover:bg-purple-500/5',
-        // 真正选中时：常驻更强的紫色描边
-        isSelected && 'outline outline-2 outline-purple-500 bg-purple-500/10'
-      )}
-      draggable
-      onDragStart={handleDragStart}
-      onMouseEnter={() => preloadPreview(file.id)}
-    >
-      {/* 缩略图 */}
-      <div
-        className="glass-thumb relative mb-3 aspect-square cursor-pointer overflow-hidden"
-        onClick={() => onPreview(file)}
-      >
-        {/* 选择框 */}
-        <SelectionCheckbox
-          isSelected={isSelected}
-          onClick={handleSelect}
-        />
-        <LazyThumbnail
-          fileId={file.id}
-          mimeType={file.mime_type}
-          filename={file.original_filename}
-          className="h-full w-full"
-        />
-        {/* 悬浮预览按钮 */}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPreview(file);
-            }}
-            aria-label="预览"
-            className="glass-btn bg-white/12 rounded-full p-3 transition-colors hover:bg-white/20"
-          >
-            <EyeIcon />
-          </button>
-        </div>
-      </div>
-
-      {/* 文件信息 */}
-      <div className="space-y-1.5">
-        {/* 文件名 */}
-        <h3
-          className="truncate text-sm font-medium text-white"
-          title={file.original_filename}
-        >
-          {file.original_filename}
-        </h3>
-
-        {/* 文件大小和类型 */}
-        <div className="file-meta-14px flex items-center gap-2 text-gray-400">
-          <span>{formatFileSize(file.file_size)}</span>
-          <span className="h-1 w-1 rounded-full bg-gray-600" />
-          <span>{mimeTypeLabel}</span>
-        </div>
-
-        {/* 上传时间 */}
-        <p className="file-meta-14px text-gray-500">{formattedDate}</p>
-      </div>
-
-      {/* 操作按钮（更克制的小图标，常驻但非常弱化） */}
-      <div
+    return (
+      <article
         className={cn(
-          'mt-1.5 flex items-center justify-end gap-1 border-t border-white/5 pt-1.5 text-[10px]',
-          'text-purple-100/50',
+          'group relative rounded-xl',
+          'bg-white/5 backdrop-blur-sm',
+          'hover:bg-white/10',
+          isSelected && 'bg-purple-500/15 hover:bg-purple-500/20'
         )}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('application/file-id', file.id);
+          e.dataTransfer.effectAllowed = 'move';
+          onDragStart?.(e, file);
+        }}
+        onMouseEnter={() => schedulePreload(file.id)}
       >
-        <button
-          type="button"
-          onClick={() => onDownload(file)}
-          className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-purple-100/60 hover:text-purple-200 hover:bg-purple-500/10"
-          title="下载"
-        >
-          <Download className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onShare(file)}
-          className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-purple-100/60 hover:text-purple-200 hover:bg-purple-500/15"
-          title="分享"
-        >
-          <Send className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(file.id)}
-          className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-purple-100/60 hover:text-rose-300 hover:bg-rose-500/15"
-          title="删除"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
-  );
-});
+        {/* 选中指示条 */}
+        {isSelected && (
+          <div className="absolute left-0 top-0 h-full w-1 bg-purple-500" />
+        )}
 
-// 预览图标
-function EyeIcon() {
-  return (
-    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-      />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-      />
-    </svg>
-  );
-}
+        <div className="p-3">
+          {/* 缩略图区域 */}
+          <div
+            className="relative mb-3 aspect-square cursor-pointer overflow-hidden rounded-lg bg-black/20"
+            onClick={() => onPreview(file)}
+          >
+            <SelectionCheckbox
+              isSelected={isSelected}
+              onClick={() => onSelect(file.id)}
+            />
+
+            <LazyThumbnail
+              fileId={file.id}
+              mimeType={file.mime_type}
+              filename={file.original_filename}
+              className="h-full w-full"
+            />
+
+            {/* 悬浮预览按钮 */}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPreview(file);
+                }}
+                aria-label="预览"
+                className="rounded-full bg-white/20 p-3 backdrop-blur-sm hover:bg-white/30"
+              >
+                <Eye className="h-6 w-6 text-white" />
+              </button>
+            </div>
+          </div>
+
+          {/* 文件信息 + 设置按钮 */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <h3 className="truncate text-[10px] font-medium text-white" title={file.original_filename}>
+                {file.original_filename}
+              </h3>
+              <p className="flex items-center gap-1 text-[8px] text-gray-400">
+                <span>{formatFileSize(file.file_size)}</span>
+                <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden />
+                <span>{mimeTypeLabel}</span>
+              </p>
+              <p className="text-[8px] text-gray-500">{formattedDate}</p>
+            </div>
+
+            {/* 设置按钮 */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={handleToggleMenu}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-white/10 hover:text-white"
+                aria-label="更多操作"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+
+              {/* 玻璃拟态下拉菜单 */}
+              {showMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div className="absolute bottom-full right-0 z-50 mb-1 w-14 rounded-md border border-white/30 bg-white/20 p-0.5 shadow-xl backdrop-blur-2xl">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] text-white transition-colors hover:bg-white/20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMenu(false);
+                        onDownload(file);
+                      }}
+                    >
+                      <Download className="h-2 w-2 text-purple-300" />
+                      下载
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] text-white transition-colors hover:bg-white/20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMenu(false);
+                        onShare(file);
+                      }}
+                    >
+                      <Send className="h-2 w-2 text-blue-300" />
+                      分享
+                    </button>
+                    <div className="my-0.5 border-t border-white/20" />
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] text-rose-300 transition-colors hover:bg-white/20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMenu(false);
+                        onDelete(file.id);
+                      }}
+                    >
+                      <Trash2 className="h-2 w-2" />
+                      删除
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  },
+  (prev, next) =>
+    prev.file.id === next.file.id &&
+    prev.file.original_filename === next.file.original_filename &&
+    prev.file.file_size === next.file.file_size &&
+    prev.isSelected === next.isSelected
+);
 
 export default FileCard;

@@ -3,6 +3,8 @@ import { REQUEST } from '../constants';
 
 const TTL_MS = REQUEST.DEDUP_TTL_MS;
 const MAX_CACHE_SIZE = REQUEST.DEDUP_MAX_CACHE_SIZE;
+const CLEANUP_INTERVAL_MS = 5000; // 5 秒清理一次
+const INFLIGHT_TIMEOUT_MS = 30000; // 飞行中请求超时 30 秒
 
 /** 生成请求去重 key：method + url + params + body（FormData/Blob 不参与，避免误合并） */
 function getDedupKey(config: InternalAxiosRequestConfig): string {
@@ -46,19 +48,87 @@ interface CacheEntry {
   expiresAt: number;
 }
 
-const inFlight = new Map<string, Promise<AxiosResponse>>();
+interface InFlightEntry {
+  promise: Promise<AxiosResponse>;
+  startedAt: number;
+}
+
+const inFlight = new Map<string, InFlightEntry>();
 const responseCache = new Map<string, CacheEntry>();
 
-function evictCacheIfNeeded(): void {
+// 插入顺序记录（用于 LRU 淘汰，避免遍历）
+const insertOrder: string[] = [];
+
+/**
+ * 定时批量清理过期条目
+ * 修复：避免每次请求都遍历全部缓存
+ */
+function cleanupExpiredEntries(): void {
   const now = Date.now();
+
+  // 清理过期的响应缓存
+  const expiredKeys: string[] = [];
   for (const [key, entry] of responseCache) {
-    if (entry.expiresAt <= now) responseCache.delete(key);
+    if (entry.expiresAt <= now) {
+      expiredKeys.push(key);
+    }
   }
-  while (responseCache.size > MAX_CACHE_SIZE) {
-    const firstKey = responseCache.keys().next().value;
-    if (firstKey === undefined) break;
-    responseCache.delete(firstKey);
+  for (const key of expiredKeys) {
+    responseCache.delete(key);
+    const idx = insertOrder.indexOf(key);
+    if (idx !== -1) insertOrder.splice(idx, 1);
   }
+
+  // 清理超时的飞行中请求（防止 Promise 永不 resolve 导致泄漏）
+  const staleInFlightKeys: string[] = [];
+  for (const [key, entry] of inFlight) {
+    if (now - entry.startedAt > INFLIGHT_TIMEOUT_MS) {
+      staleInFlightKeys.push(key);
+    }
+  }
+  for (const key of staleInFlightKeys) {
+    inFlight.delete(key);
+  }
+}
+
+/**
+ * 容量限制淘汰（LRU）
+ * 仅在新增缓存时调用，不遍历全部
+ */
+function evictIfOverCapacity(): void {
+  while (responseCache.size > MAX_CACHE_SIZE && insertOrder.length > 0) {
+    const oldestKey = insertOrder.shift();
+    if (oldestKey) {
+      responseCache.delete(oldestKey);
+    }
+  }
+}
+
+/**
+ * 添加缓存条目
+ */
+function addToCache(key: string, response: AxiosResponse, expiresAt: number): void {
+  // 如果已存在，先移除旧的顺序记录
+  const existingIdx = insertOrder.indexOf(key);
+  if (existingIdx !== -1) {
+    insertOrder.splice(existingIdx, 1);
+  }
+
+  responseCache.set(key, { response, expiresAt });
+  insertOrder.push(key);
+  evictIfOverCapacity();
+}
+
+// 启动定时清理（仅在浏览器环境）
+let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+function startCleanupTimer(): void {
+  if (cleanupTimer !== null || typeof window === 'undefined') return;
+  cleanupTimer = setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
+}
+
+if (typeof window !== 'undefined') {
+  startCleanupTimer();
 }
 
 /** 是否应缓存该响应（仅缓存 JSON/文本等可复用的，不缓存 blob/arraybuffer） */
@@ -92,6 +162,11 @@ function shouldSkipDedup(config: InternalAxiosRequestConfig): boolean {
  * - 相同 key 的请求在 TTL 内若已有缓存，直接返回缓存响应，不发请求。
  * - 相同 key 的请求若已在飞行中，复用同一 Promise。
  * - POST/PUT/DELETE 等写操作不进行去重。
+ *
+ * 修复：
+ * - 使用定时器批量清理过期条目，避免每次请求都遍历
+ * - 添加飞行中请求超时清理，防止 Promise 永不 resolve 导致泄漏
+ * - 改进 LRU 淘汰策略
  */
 export function createDedupAdapter(defaultAdapter: AxiosAdapter): AxiosAdapter {
   return function dedupAdapter(config: InternalAxiosRequestConfig): Promise<AxiosResponse> {
@@ -103,21 +178,33 @@ export function createDedupAdapter(defaultAdapter: AxiosAdapter): AxiosAdapter {
     const key = getDedupKey(config);
     const now = Date.now();
 
+    // 检查缓存（不在这里清理过期条目，由定时器负责）
     const cached = responseCache.get(key);
     if (cached && cached.expiresAt > now) {
       return Promise.resolve(cached.response);
     }
-    if (cached) responseCache.delete(key);
+    // 缓存过期，删除
+    if (cached) {
+      responseCache.delete(key);
+      const idx = insertOrder.indexOf(key);
+      if (idx !== -1) insertOrder.splice(idx, 1);
+    }
 
+    // 检查飞行中请求
     const existing = inFlight.get(key);
-    if (existing) return existing;
+    if (existing && now - existing.startedAt < INFLIGHT_TIMEOUT_MS) {
+      return existing.promise;
+    }
+    // 飞行中请求超时，删除
+    if (existing) {
+      inFlight.delete(key);
+    }
 
     const promise = defaultAdapter(config)
       .then((response) => {
         inFlight.delete(key);
         if (shouldCacheResponse(response)) {
-          responseCache.set(key, { response, expiresAt: now + TTL_MS });
-          evictCacheIfNeeded();
+          addToCache(key, response, now + TTL_MS);
         }
         return response;
       })
@@ -126,7 +213,26 @@ export function createDedupAdapter(defaultAdapter: AxiosAdapter): AxiosAdapter {
         throw err;
       });
 
-    inFlight.set(key, promise);
+    inFlight.set(key, { promise, startedAt: now });
     return promise;
+  };
+}
+
+/**
+ * 清空所有缓存（用于登出等场景）
+ */
+export function clearDedupCache(): void {
+  responseCache.clear();
+  inFlight.clear();
+  insertOrder.length = 0;
+}
+
+/**
+ * 获取缓存统计（用于调试/监控）
+ */
+export function getDedupStats(): { cacheSize: number; inFlightSize: number } {
+  return {
+    cacheSize: responseCache.size,
+    inFlightSize: inFlight.size,
   };
 }

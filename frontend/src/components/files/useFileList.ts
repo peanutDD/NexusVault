@@ -6,9 +6,9 @@ import { folderService } from '../../services/folders';
 import { getErrorMessage, isRequestCanceled } from '../../utils/error';
 import {
   getCacheKey,
-  getCachedFileList,
-  setCachedFileList,
-  clearFileListCache,
+  getCachedFileListSync as getCachedFileList,
+  setCachedFileListSync as setCachedFileList,
+  clearFileListCacheSync as clearFileListCache,
 } from '../../utils/fileListCache';
 import { BATCH_LIMITS, FILE_LIST, MIME_FILTER_FOLDERS } from '../../constants';
 import { useRequestDedup } from '../../hooks/useRequestDedup';
@@ -16,6 +16,7 @@ import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcut
 import { useFileFilters } from '../../hooks/files/useFileFilters';
 import { useFileSelection } from '../../hooks/files/useFileSelection';
 import { FILE_TYPE_LABELS } from './fileTypeLabels';
+import { groupFilesInWorker } from '../../utils/workerPool';
 
 // 重新导出 FILE_TYPE_LABELS 以保持向后兼容
 export { FILE_TYPE_LABELS };
@@ -35,6 +36,10 @@ function getTypeKey(mime: string): string {
   return 'other';
 }
 
+/**
+ * 文件分组 Hook（使用 Worker 池复用）
+ * 修复：不再每次消息后 terminate Worker，使用池化复用
+ */
 function useFileGroupingWithIcons(files: FileMetadata[], isGroupByType: boolean) {
   const typeOrderForWorker = useMemo(
     () => Object.fromEntries(Object.entries(FILE_TYPE_LABELS).map(([k, v]) => [k, v.order])),
@@ -45,41 +50,38 @@ function useFileGroupingWithIcons(files: FileMetadata[], isGroupByType: boolean)
     Array<{ key: string; order: number; files: FileMetadata[] }> | null
   >(null);
 
-  useEffect(() => {
-    if (files.length <= GROUP_FILES_WORKER_THRESHOLD || !isGroupByType) {
-      return;
-    }
-    
-    let isCancelled = false;
-    const worker = new Worker(
-      new URL('../../workers/groupFiles.worker.ts', import.meta.url),
-      { type: 'module' }
-    );
-    worker.postMessage({ files, typeOrder: typeOrderForWorker });
-    worker.onmessage = (e: MessageEvent<Array<{ key: string; order: number; files: FileMetadata[] }>>) => {
-      if (!isCancelled) {
-        setWorkerGrouped(e.data);
-      }
-      worker.terminate();
-    };
-    worker.onerror = () => {
-      if (!isCancelled) {
-        setWorkerGrouped(null);
-      }
-      worker.terminate();
-    };
-    return () => {
-      isCancelled = true;
-      worker.terminate();
-    };
-  }, [files, isGroupByType, typeOrderForWorker]);
+  // 用于取消的 ref
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     if (files.length <= GROUP_FILES_WORKER_THRESHOLD || !isGroupByType) {
-      const timer = setTimeout(() => setWorkerGrouped(null), 0);
-      return () => clearTimeout(timer);
+      setWorkerGrouped(null);
+      return;
     }
-  }, [files.length, isGroupByType]);
+
+    // 递增请求 ID，用于检测竞态
+    const currentRequestId = ++requestIdRef.current;
+
+    // 使用 Worker 池执行分组（复用 Worker，不再每次创建/销毁）
+    groupFilesInWorker(files as Parameters<typeof groupFilesInWorker>[0], typeOrderForWorker)
+      .then((result) => {
+        // 检查是否仍然是最新的请求
+        if (requestIdRef.current === currentRequestId) {
+          setWorkerGrouped(result as Array<{ key: string; order: number; files: FileMetadata[] }>);
+        }
+      })
+      .catch(() => {
+        // Worker 错误，回退到主线程计算（memoGrouped）
+        if (requestIdRef.current === currentRequestId) {
+          setWorkerGrouped(null);
+        }
+      });
+
+    // 清理函数：标记当前请求已过期
+    return () => {
+      requestIdRef.current++;
+    };
+  }, [files, isGroupByType, typeOrderForWorker]);
 
   const memoGrouped = useMemo(() => {
     if (!isGroupByType) return null;
@@ -305,7 +307,11 @@ export function useFileList() {
     try {
       const response = await dedupedListFiles(query);
       if (fileListCacheKeyRef.current !== cacheKey) return;
+      // 关键修复：setLoading(false) 必须在 startTransition 内部
+      // 否则会导致两次渲染：1) loading=false + 旧数据  2) 新数据
+      // 这个中间状态会触发大量无意义的组件挂载/卸载，阻塞主线程
       startTransition(() => {
+        setLoading(false);
         setFiles(response.files);
         setTotal(response.total);
         setLoadedPageCount(1);
@@ -315,7 +321,6 @@ export function useFileList() {
     } catch (err) {
       if (isRequestCanceled(err)) return;
       setError(getErrorMessage(err, 'Failed to load files'));
-    } finally {
       setLoading(false);
     }
   }, [limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles, setSelectedFiles]);
@@ -324,9 +329,25 @@ export function useFileList() {
   const hasMore = loadedPageCount < totalPages && total > 0;
 
   // 加载更多（无限滚动）
+  // 修复：添加竞态检查，防止快速切换文件夹时旧页数据追加到新列表
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || loading) return;
     const nextPage = loadedPageCount + 1;
+
+    // 计算第一页的 cacheKey 用于竞态检查
+    const firstPageQuery: FileListQuery = {
+      page: 1,
+      limit,
+      search: debouncedSearch || undefined,
+      mime_type: mimeType || undefined,
+      folder_id: currentFolderId,
+      sort_by: sortField,
+      sort_order: sortOrder,
+    };
+    const firstPageCacheKey = getCacheKey(firstPageQuery as Record<string, unknown>);
+
+    // 竞态检查：如果当前查询已变更，则放弃本次加载
+    if (fileListCacheKeyRef.current !== firstPageCacheKey) return;
 
     const query: FileListQuery = {
       page: nextPage,
@@ -344,6 +365,8 @@ export function useFileList() {
     setLoadingMore(true);
     try {
       if (cached) {
+        // 再次检查竞态：缓存读取后可能查询已变更
+        if (fileListCacheKeyRef.current !== firstPageCacheKey) return;
         startTransition(() => {
           setFiles((prev) => [...prev, ...cached.files]);
           setLoadedPageCount(nextPage);
@@ -351,6 +374,8 @@ export function useFileList() {
         return;
       }
       const response = await dedupedListFiles(query);
+      // 请求完成后再次检查竞态：异步请求期间查询可能已变更
+      if (fileListCacheKeyRef.current !== firstPageCacheKey) return;
       startTransition(() => {
         setFiles((prev) => [...prev, ...response.files]);
         setLoadedPageCount(nextPage);

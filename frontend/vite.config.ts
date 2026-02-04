@@ -15,28 +15,55 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // 静态资源预缓存（排除频繁变化的 HTML）
+        globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+        // 不预缓存 HTML，让其走 NetworkFirst
+        navigateFallback: null,
         runtimeCaching: [
+          // HTML 页面：NetworkFirst，短缓存
+          {
+            urlPattern: /^https?:\/\/[^/]+\/?$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 5 }, // 5 分钟
+              cacheableResponse: { statuses: [200] }, // 仅缓存成功响应
+              networkTimeoutSeconds: 3,
+            },
+          },
+          // 文件列表 API：NetworkFirst，短缓存（数据频繁变化）
           {
             urlPattern: /\/api\/files\?/,
             handler: 'NetworkFirst',
             method: 'GET',
             options: {
               cacheName: 'file-list-cache',
-              expiration: { maxEntries: 128, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 5 }, // 5 分钟
+              cacheableResponse: { statuses: [200] }, // 仅缓存成功响应，不缓存 status 0
               networkTimeoutSeconds: 10,
             },
           },
+          // 文件夹 API：NetworkFirst，短缓存
           {
             urlPattern: /\/api\/folders(\/contents)?(\?|$)/,
             handler: 'NetworkFirst',
             method: 'GET',
             options: {
               cacheName: 'folders-cache',
-              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 32, maxAgeSeconds: 60 * 5 }, // 5 分钟
+              cacheableResponse: { statuses: [200] }, // 仅缓存成功响应
               networkTimeoutSeconds: 10,
+            },
+          },
+          // 文件预览 API：CacheFirst，长缓存（文件内容不变）
+          {
+            urlPattern: /\/api\/files\/[^/]+\/preview/,
+            handler: 'CacheFirst',
+            method: 'GET',
+            options: {
+              cacheName: 'preview-cache',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 }, // 7 天
+              cacheableResponse: { statuses: [200] },
             },
           },
         ],

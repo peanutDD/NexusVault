@@ -12,6 +12,14 @@ interface FileGridProps {
   onDragStart: (fileId: string, e: React.DragEvent) => void;
 }
 
+/**
+ * 文件网格组件 v2
+ *
+ * 设计原则：
+ * 1. 不使用 memo - 组件本身足够简单，memo 开销反而更大
+ * 2. 子组件 FileCard 自带 memo + 自定义比较，已足够高效
+ * 3. 使用 CSS content-visibility 实现原生虚拟化（浏览器自动优化）
+ */
 export default function FileGrid({
   files,
   selectedFiles,
@@ -25,7 +33,10 @@ export default function FileGrid({
   if (files.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+    <div
+      // CSS content-visibility 通过 Tailwind 任意值实现
+      className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 [content-visibility:auto]"
+    >
       {files.map((file) => (
         <FileCard
           key={file.id}
@@ -36,10 +47,9 @@ export default function FileGrid({
           onShare={onShare}
           onDownload={onDownload}
           onDelete={() => onDelete(file, 'file')}
-          onDragStart={(e, file) => onDragStart(file.id, e)}
+          onDragStart={(e) => onDragStart(file.id, e)}
         />
       ))}
     </div>
   );
 }
-

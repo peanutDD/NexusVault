@@ -1,7 +1,11 @@
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
+import { FolderOpen, Pencil, Trash2, MoreVertical } from 'lucide-react';
 import type { Folder } from '../../../types';
 import { cn } from '../../../utils/cn';
 import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
+
+// 全局事件：关闭所有卡片菜单
+const CLOSE_ALL_MENUS_EVENT = 'closeAllCardMenus';
 
 interface FolderCardProps {
   folder: Folder;
@@ -17,8 +21,7 @@ interface FolderCardProps {
 }
 
 /**
- * 文件夹卡片组件
- * 支持双击进入、右键菜单、拖拽
+ * 文件夹卡片组件 v4
  */
 const FolderCard = memo(function FolderCard({
   folder,
@@ -35,13 +38,28 @@ const FolderCard = memo(function FolderCard({
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
-  const handleDoubleClick = () => {
-    onOpen(folder);
+  // 监听全局关闭事件
+  useEffect(() => {
+    const handleCloseAll = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail !== folder.id) {
+        setShowMenu(false);
+      }
+    };
+    window.addEventListener(CLOSE_ALL_MENUS_EVENT, handleCloseAll);
+    return () => window.removeEventListener(CLOSE_ALL_MENUS_EVENT, handleCloseAll);
+  }, [folder.id]);
+
+  const handleToggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!showMenu) {
+      window.dispatchEvent(new CustomEvent(CLOSE_ALL_MENUS_EVENT, { detail: folder.id }));
+    }
+    setShowMenu(!showMenu);
   };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setShowMenu(true);
+  const handleDoubleClick = () => {
+    onOpen(folder);
   };
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -53,7 +71,6 @@ const FolderCard = memo(function FolderCard({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // 检查是否是文件或文件夹
     const hasFolderId = e.dataTransfer.types.includes('application/folder-id');
     const hasFileId = e.dataTransfer.types.includes('application/file-id');
     if (hasFolderId || hasFileId) {
@@ -83,12 +100,11 @@ const FolderCard = memo(function FolderCard({
   return (
     <div
       className={cn(
-        'glass-card group relative cursor-pointer p-3',
-        // 未选中时：hover 显示选中框
-        !isSelected && !isDragOver &&
-          'hover:outline hover:outline-2 hover:outline-purple-400 hover:bg-purple-500/5',
-        isSelected && 'outline outline-2 outline-purple-500 bg-purple-500/10',
-        isDragOver && 'outline outline-2 outline-blue-500 bg-blue-500/10'
+        'group relative cursor-pointer rounded-xl',
+        'bg-white/5 backdrop-blur-sm',
+        'hover:bg-white/10',
+        isSelected && 'bg-purple-500/15 hover:bg-purple-500/20',
+        isDragOver && 'bg-blue-500/20 hover:bg-blue-500/25'
       )}
       draggable
       onDragStart={handleDragStart}
@@ -96,71 +112,98 @@ const FolderCard = memo(function FolderCard({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onDoubleClick={handleDoubleClick}
-      onContextMenu={handleContextMenu}
     >
-      {/* 选择框 */}
-      <SelectionCheckbox
-        isSelected={isSelected}
-        onClick={handleSelect}
-      />
-
-      {/* 文件夹图标 */}
-      <div className="glass-thumb mb-3 flex aspect-square items-center justify-center">
-        <i className="bi bi-folder2 text-5xl text-white/90" aria-hidden />
-      </div>
-
-      {/* 文件夹名称 */}
-      <h3
-        className="truncate text-center text-sm font-medium text-white"
-        title={folder.name}
-      >
-        {folder.name}
-      </h3>
-
-      {/* 右键菜单 */}
-      {showMenu && (
-        <>
-          <div
-            className="fixed inset-0 z-20"
-            onClick={() => setShowMenu(false)}
-          />
-          <div className="glass-panel-soft absolute right-0 top-full z-30 mt-2 w-36 py-1">
-            <button
-              type="button"
-              className="w-full px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(false);
-                onOpen(folder);
-              }}
-            >
-              打开
-            </button>
-            <button
-              type="button"
-              className="w-full px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(false);
-                onRename(folder);
-              }}
-            >
-              重命名
-            </button>
-            <button
-              type="button"
-              className="w-full px-3 py-2 text-left text-sm text-rose-300 hover:bg-white/10"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(false);
-                onDelete(folder.id);
-              }}
-            >
-              删除
-            </button>
-          </div>
-        </>
+      {/* 选中指示条 */}
+      {isSelected && (
+        <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl bg-purple-500" />
       )}
+
+      {/* 拖拽指示条 */}
+      {isDragOver && !isSelected && (
+        <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl bg-blue-500" />
+      )}
+
+      <div className="p-3">
+        {/* 文件夹图标 */}
+        <div className="relative mb-3 flex aspect-square items-center justify-center rounded-lg bg-black/20">
+          <SelectionCheckbox
+            isSelected={isSelected}
+            onClick={handleSelect}
+          />
+          <i className="bi bi-folder2 text-5xl text-white/80" aria-hidden />
+        </div>
+
+        {/* 文件夹名称 + 设置按钮 */}
+        <div className="relative">
+          <h3
+            className="truncate text-center text-[10px] font-medium text-white pr-4"
+            title={folder.name}
+          >
+            {folder.name}
+          </h3>
+
+          {/* 设置按钮 - 绝对定位在右侧 */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <button
+              type="button"
+              onClick={handleToggleMenu}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-white/10 hover:text-white"
+              aria-label="更多操作"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+
+            {/* 玻璃拟态菜单 */}
+            {showMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowMenu(false)}
+                />
+                <div className="absolute bottom-full right-0 z-50 mb-1 w-14 rounded-md border border-white/30 bg-white/20 p-0.5 shadow-xl backdrop-blur-2xl">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] text-white transition-colors hover:bg-white/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      onOpen(folder);
+                    }}
+                  >
+                    <FolderOpen className="h-2 w-2 text-amber-300" />
+                    打开
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] text-white transition-colors hover:bg-white/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      onRename(folder);
+                    }}
+                  >
+                    <Pencil className="h-2 w-2 text-blue-300" />
+                    重命名
+                  </button>
+                  <div className="my-0.5 border-t border-white/20" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] text-rose-300 transition-colors hover:bg-white/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      onDelete(folder.id);
+                    }}
+                  >
+                    <Trash2 className="h-2 w-2" />
+                    删除
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 });

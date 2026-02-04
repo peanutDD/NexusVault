@@ -416,6 +416,11 @@ export const fileService = {
    * 批量下载文件为 ZIP 包
    * 优先使用 File System Access API 进行流式下载，支持大文件
    * 降级方案使用传统的 Blob 下载方式
+   *
+   * 修复：
+   * - 成功路径必须调用 writable.close()，否则 Chrome 不会把临时文件替换成 files.zip
+   * - 使用 finally 确保正确关闭/中止
+   *
    * @param ids 文件 ID 列表
    */
   async downloadZip(ids: string[]): Promise<void> {
@@ -424,10 +429,29 @@ export const fileService = {
 
     // 优先用 File System Access API：先弹保存对话框，再流式写入，保存框立即出现
     if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      let writable: FileSystemWritableFileStream | null = null;
+      let hasError = false;
+
       try {
-        const handle = await (window as Window & { showSaveFilePicker: (opts?: { suggestedName?: string }) => Promise<FileSystemFileHandle> })
-          .showSaveFilePicker({ suggestedName: 'files.zip' });
-        
+        // 1. 立即弹出保存对话框（用户选择保存位置）
+        const handle = await (
+          window as Window & {
+            showSaveFilePicker: (opts?: {
+              suggestedName?: string;
+              types?: Array<{ description?: string; accept?: Record<string, string[]> }>;
+            }) => Promise<FileSystemFileHandle>;
+          }
+        ).showSaveFilePicker({
+          suggestedName: 'files.zip',
+          types: [
+            {
+              description: 'ZIP Archive',
+              accept: { 'application/zip': ['.zip'] },
+            },
+          ],
+        });
+
+        // 2. 用户选择保存位置后，开始请求后端
         const res = await fetch(url, {
           method: 'POST',
           headers: {
@@ -436,48 +460,78 @@ export const fileService = {
           },
           body: JSON.stringify({ ids }),
         });
-        
-        if (!res.ok || !res.body) {
-          throw new Error(res.statusText || 'Download failed');
-        }
-        
-        const writable = await handle.createWritable();
-        const reader = res.body.getReader();
-        let streamError: unknown;
-        
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            await writable.write(value);
-          }
-        } catch (e) {
-          streamError = e;
-          // 必须正确 close 才能让 Chrome 把临时文件 .crswap 替换成 files.zip
-          // 出错时 abort 丢弃不完整文件
+
+        if (!res.ok) {
+          // 尝试读取错误信息
+          let errorMessage = res.statusText || 'Download failed';
           try {
-            if (streamError != null && typeof (writable as FileSystemWritableFileStream & { abort?: () => Promise<void> }).abort === 'function') {
-              await (writable as FileSystemWritableFileStream & { abort: () => Promise<void> }).abort();
+            const errorData = await res.json();
+            if (errorData.error) errorMessage = errorData.error;
+          } catch {
+            // 忽略 JSON 解析错误
+          }
+          throw new Error(errorMessage);
+        }
+
+        if (!res.body) {
+          throw new Error('Response body is empty');
+        }
+
+        // 3. 创建可写流
+        writable = await handle.createWritable();
+        const reader = res.body.getReader();
+
+        // 4. 流式写入
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          await writable.write(value);
+        }
+
+        // 5. 成功完成，关闭流（这会把临时文件替换成 files.zip）
+        await writable.close();
+        writable = null; // 标记已关闭，防止 finally 重复关闭
+        return;
+      } catch (e) {
+        hasError = true;
+
+        if (e instanceof Error && e.name === 'AbortError') {
+          return; // 用户取消选择保存位置
+        }
+
+        // 如果已经创建了 writable，需要中止
+        if (writable) {
+          try {
+            const writableWithAbort = writable as FileSystemWritableFileStream & {
+              abort?: () => Promise<void>;
+            };
+            if (typeof writableWithAbort.abort === 'function') {
+              await writableWithAbort.abort();
             } else {
               await writable.close();
             }
-          } catch (closeErr) {
-            // 避免 close/abort 的异常覆盖 streamError
-            if (streamError == null) throw closeErr;
+          } catch {
+            // 忽略关闭错误
           }
-          throw e;
+          writable = null;
         }
-        
-        return;
-      } catch (e) {
-        if (e instanceof Error && e.name === 'AbortError') {
-          return; // 用户取消选择
+
+        // 如果是网络错误或服务器错误，降级到 blob 方式
+        console.warn('File System Access API failed, falling back to blob download:', e);
+      } finally {
+        // 确保 writable 被关闭（防止遗漏）
+        if (writable && !hasError) {
+          try {
+            await writable.close();
+          } catch {
+            // 忽略关闭错误
+          }
         }
-        // 降级到 blob 方式
       }
     }
 
-    // 传统 Blob 下载方式
+    // 降级：传统 Blob 下载方式（Firefox/Safari 或 File System Access API 失败时）
+    // 注意：这种方式需要等待整个文件下载完成后才会弹出保存框
     const response = await api.post<Blob>('/api/files/download-zip', { ids }, { responseType: 'blob' });
     downloadBlob(response.data, 'files.zip');
   },
@@ -496,10 +550,20 @@ export const fileService = {
    * @param fileId 文件 ID
    * @returns 预览 Blob 数据
    */
-  async fetchPreviewBlob(fileId: string): Promise<Blob> {
+  /**
+   * 获取文件预览 Blob
+   * @param fileId 文件 ID
+   * @param options 可选配置（支持 AbortSignal 用于取消）
+   * @returns 预览 Blob
+   */
+  async fetchPreviewBlob(
+    fileId: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<Blob> {
     return previewQueue.run(async () => {
       const { data } = await api.get<Blob>(`/api/files/${fileId}/preview`, {
         responseType: 'blob',
+        signal: options?.signal,
       });
       return data;
     });

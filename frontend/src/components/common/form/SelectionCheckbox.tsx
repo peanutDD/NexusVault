@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { cn } from '../../../utils/cn';
 
 interface SelectionCheckboxProps {
@@ -12,81 +11,83 @@ interface SelectionCheckboxProps {
   positionClassName?: string;
   /** 大小 */
   size?: 'sm' | 'md';
-  /** 是否在 group hover 时显示 */
-  showOnGroupHover?: boolean;
 }
 
 /**
- * 选择框组件
- * 用于文件卡片和文件夹卡片的选择交互
+ * 选择框组件 v3
+ *
+ * 核心优化：
+ * 1. 使用 visibility 替代 opacity - visibility 变化不触发重绘，更高效
+ * 2. 添加 will-change 提示 - 让浏览器提前优化图层
+ * 3. 使用 CSS contain - 隔离样式计算范围
+ * 4. 选中状态始终显示，无需 hover 检测
  */
-export const SelectionCheckbox = memo(function SelectionCheckbox({
+export function SelectionCheckbox({
   isSelected,
   onClick,
   alwaysVisible = false,
   positionClassName = 'absolute left-2 top-2',
   size = 'md',
-  showOnGroupHover = true,
 }: SelectionCheckboxProps) {
-  const sizeClasses = size === 'sm' 
-    ? { outer: 'h-4 w-4', inner: 'h-3 w-3', icon: 'h-2 w-2' }
-    : { outer: 'h-5 w-5', inner: 'h-4 w-4', icon: 'h-3 w-3' };
+  const isSmall = size === 'sm';
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onClick();
-  };
+  // 选中状态：始终显示
+  // 未选中状态：默认隐藏，hover 时显示
+  const shouldHideByDefault = !isSelected && !alwaysVisible;
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       className={cn(
         positionClassName,
-        'z-10 flex cursor-pointer items-center justify-center transition-all',
-        sizeClasses.outer
+        'z-10 flex cursor-pointer items-center justify-center',
+        // 使用 visibility 替代 opacity，性能更好
+        // visibility: hidden 的元素不参与事件处理，但保留布局
+        shouldHideByDefault && 'invisible group-hover:visible',
+        // will-change 提示浏览器优化
+        '[will-change:visibility] [contain:layout_style]',
+        isSmall ? 'h-4 w-4' : 'h-5 w-5'
       )}
-      onClick={handleClick}
+      aria-label={isSelected ? '取消选择' : '选择'}
     >
       {isSelected ? (
-        <div 
+        <span
           className={cn(
-            'card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full',
-            sizeClasses.outer
+            'card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-violet-500',
+            isSmall ? 'h-3 w-3' : 'h-4 w-4'
           )}
         >
-          <div 
-            className={cn(
-              'flex items-center justify-center rounded-full bg-violet-500',
-              sizeClasses.inner
-            )}
+          <svg
+            className={cn('text-white', isSmall ? 'h-2 w-2' : 'h-2.5 w-2.5')}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={3}
           >
-            <svg 
-              className={cn('text-white drop-shadow-sm', sizeClasses.icon)} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-        </div>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </span>
       ) : (
-        <div 
+        <span
           className={cn(
             'flex items-center justify-center rounded-full bg-black/40',
-            sizeClasses.inner,
-            !alwaysVisible && showOnGroupHover && 'opacity-0 group-hover:opacity-100'
+            isSmall ? 'h-3 w-3' : 'h-4 w-4'
           )}
         >
-          <div 
+          <span
             className={cn(
               'rounded-full border-2 border-white/60',
-              size === 'sm' ? 'h-2 w-2' : 'h-3 w-3'
-            )} 
+              isSmall ? 'h-1.5 w-1.5' : 'h-2.5 w-2.5'
+            )}
           />
-        </div>
+        </span>
       )}
-    </div>
+    </button>
   );
-});
+}
 
 export default SelectionCheckbox;

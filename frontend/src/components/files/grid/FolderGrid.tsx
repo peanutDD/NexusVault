@@ -11,6 +11,14 @@ interface FolderGridProps {
   onDrop: (folderId: string, fileIds: string[], folderIds: string[]) => void;
 }
 
+/**
+ * 文件夹网格组件 v2
+ *
+ * 设计原则：
+ * 1. 不使用 memo - 组件本身足够简单
+ * 2. 子组件 FolderCard 自带 memo，已足够高效
+ * 3. 文件夹数量通常较少，无需虚拟化
+ */
 export default function FolderGrid({
   folders,
   selectedFolders,
@@ -30,13 +38,16 @@ export default function FolderGrid({
           folder={folder}
           isSelected={selectedFolders.has(folder.id)}
           onSelect={(id) => onSelect(id, !selectedFolders.has(id))}
-          onOpen={(folder) => onOpen(folder.id)}
+          onOpen={(f) => onOpen(f.id)}
           onRename={onRename}
           onDelete={() => onDelete(folder.id)}
-          onDrop={(_, targetFolder) => onDrop(targetFolder.id, [], [])}
+          onDrop={(e, target) => {
+            const fileId = e.dataTransfer.getData('application/file-id');
+            const folderId = e.dataTransfer.getData('application/folder-id');
+            onDrop(target.id, fileId ? [fileId] : [], folderId ? [folderId] : []);
+          }}
         />
       ))}
     </div>
   );
 }
-

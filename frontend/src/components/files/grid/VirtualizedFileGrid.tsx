@@ -1,8 +1,7 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import type { FileMetadata, Folder } from '../../../types';
 import FileCard from './FileCard';
 import { FILE_LIST } from '../../../constants';
-import { useThrottledCallback } from '../../../hooks/useThrottledCallback';
 
 /** 根据窗口宽度估算网格列数（与 Tailwind grid-cols-2 … xl:grid-cols-6 一致） */
 function getColumnsFromWidth(width: number): number {
@@ -28,6 +27,11 @@ interface VirtualizedFileGridProps {
  * 虚拟化文件网格（基于浏览器窗口滚动）：
  * - 内嵌「窗口」= 浏览器视口，列表参与整页滚动，有足够可视空间。
  * - 只渲染视口内行 + overscan，减少大列表 DOM 与渲染压力。
+ *
+ * 修复：
+ * - 移除嵌套 RAF，使用单一更新机制
+ * - 对 scroll 事件使用 RAF 节流，避免过于频繁的计算
+ * - 合并 resize 监听器，避免重复
  */
 export default function VirtualizedFileGrid({
   files,
@@ -52,50 +56,82 @@ export default function VirtualizedFileGrid({
     typeof window !== 'undefined' ? window.innerHeight : 800
   );
 
-  const throttledSetColumns = useThrottledCallback(
-    () => setColumns(getColumnsFromWidth(window.innerWidth)),
-    150
-  );
-  useEffect(() => {
-    window.addEventListener('resize', throttledSetColumns);
-    return () => window.removeEventListener('resize', throttledSetColumns);
-  }, [throttledSetColumns]);
+  // 使用 refs 跟踪 RAF 和节流状态
+  const rafIdRef = useRef<number | null>(null);
+  const isUpdatingRef = useRef(false);
 
-  useEffect(() => {
-    const update = () => {
-      const el = containerRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      setContainerTop(rect.top);
-      const viewportBottom = window.innerHeight;
-      const visibleTop = Math.max(0, rect.top);
-      const visibleBottom = Math.min(viewportBottom, rect.bottom);
-      setVisibleHeight(Math.max(0, visibleBottom - visibleTop));
-    };
+  // 更新视口位置
+  const updateViewport = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setContainerTop(rect.top);
+    const viewportBottom = window.innerHeight;
+    const visibleTop = Math.max(0, rect.top);
+    const visibleBottom = Math.min(viewportBottom, rect.bottom);
+    setVisibleHeight(Math.max(0, visibleBottom - visibleTop));
+  }, []);
 
-    const rafId = requestAnimationFrame(() => {
-      update();
-      requestAnimationFrame(update);
+  // 使用 RAF 节流的更新函数
+  const scheduleUpdate = useCallback(() => {
+    // 如果已经在等待更新，跳过
+    if (isUpdatingRef.current) return;
+
+    isUpdatingRef.current = true;
+    rafIdRef.current = requestAnimationFrame(() => {
+      updateViewport();
+      isUpdatingRef.current = false;
     });
+  }, [updateViewport]);
 
-    let lastResize = 0;
+  // 统一的 resize 处理（节流 + 更新 columns 和 viewport）
+  useEffect(() => {
+    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
     const RESIZE_THROTTLE_MS = 150;
-    const onResize = () => {
-      const now = Date.now();
-      if (now - lastResize >= RESIZE_THROTTLE_MS) {
-        lastResize = now;
-        update();
-      }
+
+    const handleResize = () => {
+      if (resizeTimeout !== null) return;
+
+      resizeTimeout = setTimeout(() => {
+        resizeTimeout = null;
+        setColumns(getColumnsFromWidth(window.innerWidth));
+        updateViewport();
+      }, RESIZE_THROTTLE_MS);
     };
 
-    window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', onResize);
+    window.addEventListener('resize', handleResize);
     return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener('scroll', update);
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeout !== null) clearTimeout(resizeTimeout);
     };
-  }, [files.length, columns]);
+  }, [updateViewport]);
+
+  // scroll 事件监听（使用 RAF 节流）
+  useEffect(() => {
+    // 初始更新
+    updateViewport();
+
+    // scroll 事件处理
+    const handleScroll = () => {
+      scheduleUpdate();
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      // 清理挂起的 RAF
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      isUpdatingRef.current = false;
+    };
+  }, [updateViewport, scheduleUpdate]);
+
+  // 当 files 或 columns 变化时重新计算
+  useEffect(() => {
+    updateViewport();
+  }, [files.length, columns, updateViewport]);
 
   const rowHeight = FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
   const rowCount = Math.ceil(files.length / columns);

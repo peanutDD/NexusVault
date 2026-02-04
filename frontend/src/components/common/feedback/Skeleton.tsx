@@ -45,13 +45,13 @@ export default function Skeleton({
     none: '',
   };
 
-  const style: React.CSSProperties = {};
-  if (width) {
-    style.width = typeof width === 'number' ? `${width}px` : width;
-  }
-  if (height) {
-    style.height = typeof height === 'number' ? `${height}px` : height;
-  }
+  // 使用 Tailwind 任意值类替代内联样式
+  const widthClass = width
+    ? `w-[${typeof width === 'number' ? `${width}px` : width}]`
+    : '';
+  const heightClass = height
+    ? `h-[${typeof height === 'number' ? `${height}px` : height}]`
+    : '';
 
   return (
     <div
@@ -59,9 +59,10 @@ export default function Skeleton({
         baseClasses,
         variantClasses[variant],
         animationClasses[animation],
+        widthClass,
+        heightClass,
         className
       )}
-      style={style}
       aria-hidden="true"
     />
   );
