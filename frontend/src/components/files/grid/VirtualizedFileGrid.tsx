@@ -3,13 +3,13 @@ import type { FileMetadata, Folder } from '../../../types';
 import FileCard from './FileCard';
 import { FILE_LIST } from '../../../constants';
 
-/** 根据窗口宽度估算网格列数（与 Tailwind grid-cols-2 … xl:grid-cols-6 一致） */
+/** 根据窗口宽度估算网格列数（与 FileGrid/FolderGrid 保持一致） */
 function getColumnsFromWidth(width: number): number {
-  if (width >= 1280) return 6;
-  if (width >= 1024) return 5;
-  if (width >= 768) return 4;
-  if (width >= 640) return 3;
-  return 2;
+  if (width >= 1280) return 10;
+  if (width >= 1024) return 8;
+  if (width >= 768) return 6;
+  if (width >= 640) return 4;
+  return 3;
 }
 
 interface VirtualizedFileGridProps {
@@ -189,9 +189,9 @@ export default function VirtualizedFileGrid({
           if (rowFiles.length === 0) return null;
 
           return (
-            <div key={rowIndex} className="virtualized-row mb-4 last:mb-0">
+            <div key={rowIndex} className="virtualized-row mb-2 last:mb-0">
               <div
-                className="grid gap-4 [grid-template-columns:repeat(var(--grid-cols,2),minmax(0,1fr))]"
+                className="grid gap-2 [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
               >
                 {rowFiles.map((file) => (
                   <FileCard

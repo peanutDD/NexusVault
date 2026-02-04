@@ -42,13 +42,13 @@ impl Config {
             aws_region: env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
             aws_bucket: env::var("AWS_BUCKET").unwrap_or_default(),
             max_file_size: env::var("MAX_FILE_SIZE")
-                .unwrap_or_else(|_| "104857600".to_string())
+                .unwrap_or_else(|_| "2147483648".to_string())
                 .parse()
                 .map_err(|_| {
                     ConfigError::InvalidConfig("MAX_FILE_SIZE must be a number".to_string())
                 })?,
             allowed_mime_types: env::var("ALLOWED_MIME_TYPES")
-                .unwrap_or_else(|_| "image/*,application/pdf,text/*".to_string())
+                .unwrap_or_else(|_| "image/*,video/*,audio/*,application/pdf,text/*".to_string())
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect(),

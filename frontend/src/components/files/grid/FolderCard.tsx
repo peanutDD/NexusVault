@@ -114,14 +114,6 @@ const FolderCard = memo(function FolderCard({
       onDoubleClick={handleDoubleClick}
     >
       {/* 选中指示条 */}
-      {isSelected && (
-        <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl bg-purple-500" />
-      )}
-
-      {/* 拖拽指示条 */}
-      {isDragOver && !isSelected && (
-        <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl bg-blue-500" />
-      )}
 
       <div className="p-3">
         {/* 文件夹图标 */}
@@ -160,7 +152,7 @@ const FolderCard = memo(function FolderCard({
                   className="fixed inset-0 z-40"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute bottom-full right-0 z-50 mb-1 w-14 rounded-md border border-white/30 bg-white/20 p-0.5 shadow-xl backdrop-blur-2xl">
+                <div className="absolute bottom-full right-0 z-50 mb-1 w-16 origin-bottom-right scale-[0.8] rounded-md border border-white/30 bg-white/20 p-0.5 shadow-xl backdrop-blur-2xl sm:scale-100">
                   <button
                     type="button"
                     className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] text-white transition-colors hover:bg-white/20"
@@ -171,7 +163,7 @@ const FolderCard = memo(function FolderCard({
                     }}
                   >
                     <FolderOpen className="h-2 w-2 text-amber-300" />
-                    打开
+                    <span className="whitespace-nowrap">打开</span>
                   </button>
                   <button
                     type="button"
@@ -183,7 +175,7 @@ const FolderCard = memo(function FolderCard({
                     }}
                   >
                     <Pencil className="h-2 w-2 text-blue-300" />
-                    重命名
+                    <span className="whitespace-nowrap">重命名</span>
                   </button>
                   <div className="my-0.5 border-t border-white/20" />
                   <button
@@ -196,7 +188,7 @@ const FolderCard = memo(function FolderCard({
                     }}
                   >
                     <Trash2 className="h-2 w-2" />
-                    删除
+                    <span className="whitespace-nowrap">删除</span>
                   </button>
                 </div>
               </>
