@@ -79,8 +79,11 @@ const FolderCard = memo(function FolderCard({
     <div
       className={cn(
         'glass-card group relative cursor-pointer p-3',
-        isSelected && 'ring-2 ring-purple-500 bg-purple-500/10',
-        isDragOver && 'ring-2 ring-blue-500 bg-blue-500/10'
+        // 未选中时：hover 显示选中框
+        !isSelected && !isDragOver &&
+          'hover:outline hover:outline-2 hover:outline-purple-400 hover:bg-purple-500/5',
+        isSelected && 'outline outline-2 outline-purple-500 bg-purple-500/10',
+        isDragOver && 'outline outline-2 outline-blue-500 bg-blue-500/10'
       )}
       draggable
       onDragStart={handleDragStart}

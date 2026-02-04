@@ -33,6 +33,15 @@ export default function UploadDialog({
   const [urlLoading, setUrlLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isUploadingRef = useRef(false);
+  // 用 ref 保存真实状态，绕过 React 18 StrictMode 双重调用导致的 prev 始终为初始值问题
+  const uploadFilesRef = useRef<UploadFile[]>([]);
+  
+  // 封装 setState，同时更新 ref 和 state
+  const updateUploadFiles = useCallback((updater: UploadFile[] | ((prev: UploadFile[]) => UploadFile[])) => {
+    const newValue = typeof updater === 'function' ? updater(uploadFilesRef.current) : updater;
+    uploadFilesRef.current = newValue;
+    setUploadFiles(newValue);
+  }, []);
 
   // ESC 关闭
   useEffect(() => {
@@ -50,37 +59,56 @@ export default function UploadDialog({
   /** 唯一写入口：把 File[] 追加到上传列表（拖拽与点选都经此） */
   const appendFilesToState = useCallback(
     (files: File[]) => {
-      if (files.length === 0) return;
+      console.log('[appendFilesToState] Called with', files.length, 'files:', files.map(f => f.name));
+      if (files.length === 0) {
+        console.log('[appendFilesToState] files array is empty, returning');
+        return;
+      }
       setBatchLimitWarning('');
-      setUploadFiles((prev) => {
-        const remainingSlots = maxBatchCount - prev.length;
-        if (remainingSlots <= 0) {
-          setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
-          return prev;
-        }
-        const filesToAdd = files.slice(0, remainingSlots);
-        const skippedCount = files.length - filesToAdd.length;
-        if (skippedCount > 0) {
-          setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
-        }
-        const baseId = Date.now();
-        const newEntries: UploadFile[] = filesToAdd.map((file, index) => {
-          const validation = validateFile(file);
-          return {
-            id: `upload-${baseId}-${index}-${file.name}-${file.size}-${file.lastModified}`,
-            name: file.name,
-            size: file.size,
-            mimeType: file.type || 'application/octet-stream',
-            status: validation.ok ? 'pending' : 'error',
-            progress: 0,
-            error: validation.ok ? undefined : validation.error,
-            file: validation.ok ? file : undefined,
-          };
-        });
-        return [...prev, ...newEntries];
+      
+      // 使用 ref 获取真实的当前状态，绕过 StrictMode 双重调用问题
+      const currentFiles = uploadFilesRef.current;
+      console.log('[appendFilesToState] currentFiles.length (from ref):', currentFiles.length);
+      
+      const remainingSlots = maxBatchCount - currentFiles.length;
+      console.log('[appendFilesToState] remainingSlots:', remainingSlots);
+      if (remainingSlots <= 0) {
+        setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
+        return;
+      }
+      
+      const filesToAdd = files.slice(0, remainingSlots);
+      console.log('[appendFilesToState] filesToAdd.length:', filesToAdd.length);
+      const skippedCount = files.length - filesToAdd.length;
+      if (skippedCount > 0) {
+        setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
+      }
+      
+      const baseId = Date.now();
+      const newEntries: UploadFile[] = filesToAdd.map((file, index) => {
+        const validation = validateFile(file);
+        const entry: UploadFile = {
+          id: `upload-${baseId}-${index}-${file.name}-${file.size}-${file.lastModified}`,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type || 'application/octet-stream',
+          status: validation.ok ? 'pending' : 'error',
+          progress: 0,
+          error: validation.ok ? undefined : validation.error,
+          file: validation.ok ? file : undefined,
+        };
+        console.log('[appendFilesToState] Created entry:', entry.id, entry.name);
+        return entry;
       });
+      
+      console.log('[appendFilesToState] newEntries.length:', newEntries.length);
+      const result = [...currentFiles, ...newEntries];
+      console.log('[appendFilesToState] Setting state with', result.length, 'items');
+      
+      // 使用 wrapper 同时更新 ref 和 state
+      updateUploadFiles(result);
     },
-    [maxBatchCount]
+    [maxBatchCount, updateUploadFiles]
   );
 
   /** 拖拽：直接传 FileList，转数组后追加 */
@@ -104,21 +132,24 @@ export default function UploadDialog({
   const startUpload = useCallback(async () => {
     if (isUploadingRef.current) return;
 
-    // 使用已计算的 uploadStats.pendingWithFile
-    const pendingFiles = uploadFiles.filter((f) => f.status === 'pending' && f.file);
+    // 使用 ref 获取最新状态，避免闭包捕获旧的 uploadFiles
+    const currentFiles = uploadFilesRef.current;
+    console.log('[startUpload] currentFiles.length:', currentFiles.length);
+    const pendingFiles = currentFiles.filter((f) => f.status === 'pending' && f.file);
+    console.log('[startUpload] pendingFiles.length:', pendingFiles.length);
     if (pendingFiles.length === 0) {
-      const allSuccess = uploadFiles.length > 0 && uploadFiles.every((f) => f.status === 'success');
+      const allSuccess = currentFiles.length > 0 && currentFiles.every((f) => f.status === 'success');
       if (allSuccess) {
         onUploadComplete();
         onClose();
-        setUploadFiles([]);
+        updateUploadFiles([]);
       }
       return;
     }
 
     isUploadingRef.current = true;
 
-    setUploadFiles((prev) =>
+    updateUploadFiles((prev) =>
       prev.map((f) =>
         f.status === 'pending' && f.file
           ? { ...f, status: 'uploading', startTime: Date.now() }
@@ -140,7 +171,7 @@ export default function UploadDialog({
         const priority = totalPending - index;
 
         const updateProgress = (progress: number) => {
-          setUploadFiles((prev) =>
+          updateUploadFiles((prev) =>
             prev.map((f) => (f.id === taskId ? { ...f, progress } : f))
           );
         };
@@ -155,14 +186,14 @@ export default function UploadDialog({
             { fileSize: file.size, priority }
           );
 
-          setUploadFiles((prev) =>
+          updateUploadFiles((prev) =>
             prev.map((f) =>
               f.id === taskId ? { ...f, status: 'success', progress: 100 } : f
             )
           );
           hasNewSuccess = true;
         } catch (err) {
-          setUploadFiles((prev) =>
+          updateUploadFiles((prev) =>
             prev.map((f) =>
               f.id === taskId
                 ? { ...f, status: 'error', error: getErrorMessage(err, '上传失败') }
@@ -178,23 +209,23 @@ export default function UploadDialog({
     if (hasNewSuccess) {
       onUploadComplete();
     }
-  }, [uploadFiles, onUploadComplete, onClose]);
+  }, [onUploadComplete, onClose, updateUploadFiles]);
 
   // 重试单个文件
   const handleRetry = useCallback((id: string) => {
-    setUploadFiles((prev) =>
+    updateUploadFiles((prev) =>
       prev.map((f) =>
         f.id === id && f.file
           ? { ...f, status: 'pending', progress: 0, error: undefined }
           : f
       )
     );
-  }, []);
+  }, [updateUploadFiles]);
 
   // 移除单个文件
   const handleRemove = useCallback((id: string) => {
-    setUploadFiles((prev) => prev.filter((f) => f.id !== id));
-  }, []);
+    updateUploadFiles((prev) => prev.filter((f) => f.id !== id));
+  }, [updateUploadFiles]);
 
   // URL 上传 - 获取详细错误信息
   const getUrlErrorMessage = useCallback((err: unknown, url: string): string => {
@@ -310,7 +341,7 @@ export default function UploadDialog({
         file: validation.ok ? file : undefined,
       };
 
-      setUploadFiles((prev) => [...prev, uploadFile]);
+      updateUploadFiles((prev) => [...prev, uploadFile]);
       setUrlInput('');
     } catch (err) {
       const errorFile: UploadFile = {
@@ -322,11 +353,11 @@ export default function UploadDialog({
         progress: 0,
         error: getUrlErrorMessage(err, trimmedUrl),
       };
-      setUploadFiles((prev) => [...prev, errorFile]);
+      updateUploadFiles((prev) => [...prev, errorFile]);
     } finally {
       setUrlLoading(false);
     }
-  }, [urlInput, getUrlErrorMessage]);
+  }, [urlInput, getUrlErrorMessage, updateUploadFiles]);
 
   // 拖拽事件
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -352,13 +383,13 @@ export default function UploadDialog({
   // 关闭时清理（含 input，便于下次选择不残留）
   const handleClose = useCallback(() => {
     if (!isUploadingRef.current) {
-      setUploadFiles([]);
+      updateUploadFiles([]);
       setUrlInput('');
       setBatchLimitWarning('');
       if (inputRef.current) inputRef.current.value = '';
       onClose();
     }
-  }, [onClose]);
+  }, [onClose, updateUploadFiles]);
 
   const maxGB = getMaxFileSizeGB();
   
@@ -388,9 +419,12 @@ export default function UploadDialog({
         onUploadComplete();
       }
       onClose();
-      setUploadFiles([]);
+      updateUploadFiles([]);
     }
-  }, [hasPending, isUploading, uploadStats.successCount, startUpload, onUploadComplete, onClose]);
+  }, [hasPending, isUploading, uploadStats.successCount, startUpload, onUploadComplete, onClose, updateUploadFiles]);
+
+  // 调试：每次渲染时打印 uploadFiles 长度
+  console.log('[UploadDialog render] uploadFiles.length:', uploadFiles.length, 'uploadFilesRef.current.length:', uploadFilesRef.current.length);
 
   if (!open) return null;
 
@@ -439,13 +473,25 @@ export default function UploadDialog({
             aria-label="选择文件"
             onChange={(e) => {
               const list = e.target.files;
-              if (!list || list.length === 0) return;
+              // 调试：打印浏览器返回的 FileList
+              console.log('[UploadDialog] onChange triggered, FileList:', list);
+              console.log('[UploadDialog] FileList.length:', list?.length);
+              if (!list || list.length === 0) {
+                console.log('[UploadDialog] FileList is empty or null, returning');
+                return;
+              }
               const arr: File[] = [];
               for (let i = 0; i < list.length; i++) {
                 const f = list.item(i);
+                console.log(`[UploadDialog] list.item(${i}):`, f?.name, f?.size, f?.type);
                 if (f) arr.push(f);
               }
-              if (arr.length === 0) return;
+              console.log('[UploadDialog] Copied array length:', arr.length);
+              if (arr.length === 0) {
+                console.log('[UploadDialog] Copied array is empty, returning');
+                return;
+              }
+              console.log('[UploadDialog] Calling appendFilesToState with', arr.length, 'files');
               appendFilesToState(arr);
               setTimeout(() => {
                 if (inputRef.current) inputRef.current.value = '';

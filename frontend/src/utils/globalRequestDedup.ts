@@ -73,12 +73,33 @@ function shouldCacheResponse(response: AxiosResponse): boolean {
 export type AxiosAdapter = (config: InternalAxiosRequestConfig) => Promise<AxiosResponse>;
 
 /**
+ * 判断请求是否应该跳过去重/缓存
+ * - POST/PUT/DELETE 等写操作不应被去重
+ * - FormData/Blob 请求不应被去重（如文件上传）
+ */
+function shouldSkipDedup(config: InternalAxiosRequestConfig): boolean {
+  const method = (config.method ?? 'get').toLowerCase();
+  // 只对 GET 请求进行去重
+  if (method !== 'get') return true;
+  // FormData/Blob 请求不去重
+  const data = config.data;
+  if (data instanceof FormData || data instanceof Blob) return true;
+  return false;
+}
+
+/**
  * 包装 axios adapter：全局请求去重 + TTL 内复用结果。
  * - 相同 key 的请求在 TTL 内若已有缓存，直接返回缓存响应，不发请求。
  * - 相同 key 的请求若已在飞行中，复用同一 Promise。
+ * - POST/PUT/DELETE 等写操作不进行去重。
  */
 export function createDedupAdapter(defaultAdapter: AxiosAdapter): AxiosAdapter {
   return function dedupAdapter(config: InternalAxiosRequestConfig): Promise<AxiosResponse> {
+    // 写操作和文件上传不去重，直接发送
+    if (shouldSkipDedup(config)) {
+      return defaultAdapter(config);
+    }
+
     const key = getDedupKey(config);
     const now = Date.now();
 

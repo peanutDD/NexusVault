@@ -53,8 +53,12 @@ const FileCard = memo(function FileCard({
   return (
     <div
       className={cn(
-        'glass-card group relative p-3',
-        isSelected && 'ring-2 ring-purple-500 bg-purple-500/10'
+        'glass-card group relative p-3 transition-colors',
+        // 未选中时：仅 hover 出现“选中框”，鼠标移开立刻消失
+        !isSelected &&
+          'hover:outline hover:outline-2 hover:outline-purple-400 hover:bg-purple-500/5',
+        // 真正选中时：常驻更强的紫色描边
+        isSelected && 'outline outline-2 outline-purple-500 bg-purple-500/10'
       )}
       draggable
       onDragStart={handleDragStart}

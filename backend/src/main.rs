@@ -46,7 +46,7 @@ use config::Config;
 use database::pool::create_pool;
 use middleware::rate_limit;
 use services::file::create_storage;
-use services::maintenance::spawn_upload_session_cleanup;
+use services::maintenance::{spawn_files_consistency_checker, spawn_upload_session_cleanup};
 
 fn main() -> anyhow::Result<()> {
     // 允许通过环境变量调优 Tokio runtime（学习/压测非常有用）
@@ -106,6 +106,14 @@ async fn async_main() -> anyhow::Result<()> {
 
     // 后台维护任务：清理过期分块上传会话与临时目录（防止磁盘长期堆积）
     spawn_upload_session_cleanup(app_state.pool.clone(), Duration::from_secs(300), 200);
+
+    // 后台维护任务：定期检测 DB 记录对应的物理文件是否存在，若已丢失则删除 DB 记录，避免读路径出错
+    spawn_files_consistency_checker(
+        app_state.pool.clone(),
+        app_state.storage.clone(),
+        Duration::from_secs(600),
+        500,
+    );
 
     // Build application
     let app = create_app(app_state, &config).await;

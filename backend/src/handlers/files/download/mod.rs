@@ -93,8 +93,13 @@ async fn file_get_or_head_response(
     }
 
     // If-None-Match（仅在非 Range 情况下返回 304）
+    // 但在返回 304 之前，先验证文件是否真实存在且非空
     if range_header.is_none() && if_none_match == Some(entity_headers.etag_str.as_str()) {
-        return Ok(not_modified_response(&entity_headers));
+        // 验证文件是否存在，防止数据库记录存在但文件缺失的情况
+        if file_service.verify_file_exists(&file).await.is_ok() {
+            return Ok(not_modified_response(&entity_headers));
+        }
+        // 文件不存在，继续处理以返回错误或重新生成内容
     }
 
     // If-Modified-Since（仅在非 Range 情况下生效；Range 推荐用 If-Range）
@@ -107,7 +112,10 @@ async fn file_get_or_head_response(
                     .unwrap_or_default()
                     .as_secs();
                 if updated_ts <= t_ts {
-                    return Ok(not_modified_response(&entity_headers));
+                    // 同样验证文件是否存在
+                    if file_service.verify_file_exists(&file).await.is_ok() {
+                        return Ok(not_modified_response(&entity_headers));
+                    }
                 }
             }
         }
