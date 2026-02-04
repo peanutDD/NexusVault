@@ -1,22 +1,32 @@
-//! files 表相关查询
+//! # 文件数据访问层 - SQLx 实现
+//!
+//! 提供 `FilesRepository` trait 的 PostgreSQL/SQLx 实现。
 
+use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::{postgres::PgRow, PgPool, Row};
 use uuid::Uuid;
 
 use crate::models::file::{File, FileListQuery};
+use crate::repositories::traits::FilesRepository;
 use crate::utils::AppError;
 
-pub struct FilesRepo<'a> {
-    pool: &'a PgPool,
+/// SQLx 实现的文件仓库
+///
+/// 持有 `PgPool` 句柄，通过 `Arc<dyn FilesRepository>` 注入到 Service。
+pub struct SqlxFilesRepo {
+    pool: PgPool,
 }
 
-impl<'a> FilesRepo<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
+impl SqlxFilesRepo {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+}
 
-    pub async fn insert_file(
+#[async_trait]
+impl FilesRepository for SqlxFilesRepo {
+    async fn insert(
         &self,
         file_id: Uuid,
         user_id: Uuid,
@@ -27,7 +37,7 @@ impl<'a> FilesRepo<'a> {
         mime_type: &str,
         storage_backend: &str,
     ) -> Result<File, AppError> {
-        let file = sqlx::query_as::<_, File>(
+        sqlx::query_as::<_, File>(
             "INSERT INTO files (id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
         )
@@ -39,34 +49,31 @@ impl<'a> FilesRepo<'a> {
         .bind(file_size as i64)
         .bind(mime_type)
         .bind(storage_backend)
-        .fetch_one(self.pool)
-        .await?;
-
-        Ok(file)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(AppError::from)
     }
 
-    pub async fn get_file(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError> {
-        let file = sqlx::query_as::<_, File>("SELECT * FROM files WHERE id = $1 AND user_id = $2")
+    async fn find_by_id(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError> {
+        sqlx::query_as::<_, File>("SELECT * FROM files WHERE id = $1 AND user_id = $2")
             .bind(file_id)
             .bind(user_id)
-            .fetch_optional(self.pool)
-            .await?;
-        Ok(file)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(AppError::from)
     }
 
-    /// 检查文件是否属于指定用户
-    pub async fn file_belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+    async fn belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
         let result: Option<Uuid> =
             sqlx::query_scalar("SELECT id FROM files WHERE id = $1 AND user_id = $2")
                 .bind(file_id)
                 .bind(user_id)
-                .fetch_optional(self.pool)
+                .fetch_optional(&self.pool)
                 .await?;
         Ok(result.is_some())
     }
 
-    /// 列出指定文件夹下的文件
-    pub async fn list_by_folder(
+    async fn list_by_folder(
         &self,
         user_id: Uuid,
         folder_id: Option<Uuid>,
@@ -77,7 +84,7 @@ impl<'a> FilesRepo<'a> {
             )
             .bind(user_id)
             .bind(folder_id)
-            .fetch_all(self.pool)
+            .fetch_all(&self.pool)
             .await
             .map_err(AppError::from)
         } else {
@@ -85,43 +92,39 @@ impl<'a> FilesRepo<'a> {
                 "SELECT * FROM files WHERE user_id = $1 AND folder_id IS NULL ORDER BY created_at DESC",
             )
             .bind(user_id)
-            .fetch_all(self.pool)
+            .fetch_all(&self.pool)
             .await
             .map_err(AppError::from)
         }
     }
 
-    pub async fn delete_file_record(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
+    async fn delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
         let result = sqlx::query("DELETE FROM files WHERE id = $1 AND user_id = $2")
             .bind(file_id)
             .bind(user_id)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(result.rows_affected())
     }
 
-    pub async fn delete_file_records_by_ids(
-        &self,
-        ids: &[Uuid],
-        user_id: Uuid,
-    ) -> Result<u64, AppError> {
+    async fn delete_batch(&self, ids: &[Uuid], user_id: Uuid) -> Result<u64, AppError> {
         if ids.is_empty() {
             return Ok(0);
         }
         let result = sqlx::query("DELETE FROM files WHERE user_id = $1 AND id = ANY($2)")
             .bind(user_id)
             .bind(ids)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(result.rows_affected())
     }
 
-    pub async fn get_storage_usage(&self, user_id: Uuid) -> Result<(i64, u64), AppError> {
+    async fn get_storage_usage(&self, user_id: Uuid) -> Result<(i64, u64), AppError> {
         let result: Option<(i64, i64)> = sqlx::query_as(
             "SELECT COALESCE(SUM(file_size)::BIGINT, 0), COUNT(*)::BIGINT FROM files WHERE user_id = $1",
         )
         .bind(user_id)
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
 
         match result {
@@ -130,86 +133,73 @@ impl<'a> FilesRepo<'a> {
         }
     }
 
-    pub async fn list_categories(&self, user_id: Uuid) -> Result<Vec<String>, AppError> {
-        let rows = sqlx::query_scalar::<_, String>(
+    async fn list_categories(&self, user_id: Uuid) -> Result<Vec<String>, AppError> {
+        sqlx::query_scalar::<_, String>(
             "SELECT DISTINCT category FROM files WHERE user_id = $1 AND category IS NOT NULL AND TRIM(category) != '' ORDER BY category",
         )
         .bind(user_id)
-        .fetch_all(self.pool)
-        .await?;
-        Ok(rows)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(AppError::from)
     }
 
-    pub async fn update_category(
+    async fn update_category(
         &self,
         user_id: Uuid,
         ids: &[Uuid],
-        category_value: Option<&str>,
+        category: Option<&str>,
         updated_at: DateTime<Utc>,
     ) -> Result<u64, AppError> {
         let result = sqlx::query(
             "UPDATE files SET category = $1, updated_at = $2 WHERE user_id = $3 AND id = ANY($4)",
         )
-        .bind(category_value)
+        .bind(category)
         .bind(updated_at)
         .bind(user_id)
         .bind(ids)
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
 
         Ok(result.rows_affected())
     }
 
-    pub async fn sum_size_for_ids(
-        &self,
-        user_id: Uuid,
-        ids: &[Uuid],
-    ) -> Result<(i64, i64), AppError> {
+    async fn sum_size_for_ids(&self, user_id: Uuid, ids: &[Uuid]) -> Result<(i64, i64), AppError> {
         let (found_count, total_size): (i64, i64) = sqlx::query_as(
             "SELECT COUNT(*)::BIGINT, COALESCE(SUM(file_size)::BIGINT, 0) \
              FROM files WHERE user_id = $1 AND id = ANY($2)",
         )
         .bind(user_id)
         .bind(ids)
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
         Ok((found_count, total_size))
     }
 
-    pub async fn get_files_by_ids(
-        &self,
-        user_id: Uuid,
-        ids: &[Uuid],
-    ) -> Result<Vec<File>, AppError> {
-        let files =
-            sqlx::query_as::<_, File>("SELECT * FROM files WHERE user_id = $1 AND id = ANY($2)")
-                .bind(user_id)
-                .bind(ids)
-                .fetch_all(self.pool)
-                .await?;
-        Ok(files)
+    async fn find_by_ids(&self, user_id: Uuid, ids: &[Uuid]) -> Result<Vec<File>, AppError> {
+        sqlx::query_as::<_, File>("SELECT * FROM files WHERE user_id = $1 AND id = ANY($2)")
+            .bind(user_id)
+            .bind(ids)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(AppError::from)
     }
 
-    pub async fn get_file_paths_by_ids(
+    async fn find_paths_by_ids(
         &self,
         user_id: Uuid,
         ids: &[Uuid],
     ) -> Result<Vec<(Uuid, String)>, AppError> {
-        let rows = sqlx::query_as::<_, (Uuid, String)>(
+        sqlx::query_as::<_, (Uuid, String)>(
             "SELECT id, file_path FROM files WHERE user_id = $1 AND id = ANY($2)",
         )
         .bind(user_id)
         .bind(ids)
-        .fetch_all(self.pool)
-        .await?;
-        Ok(rows)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(AppError::from)
     }
 
-    pub async fn list_files(
-        &self,
-        user_id: Uuid,
-        query: FileListQuery,
-    ) -> Result<(Vec<File>, i64), AppError> {
+    async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<(Vec<File>, i64), AppError> {
         use sqlx::QueryBuilder;
 
         let page = query.page.unwrap_or(1);
@@ -254,12 +244,12 @@ impl<'a> FilesRepo<'a> {
             }
         });
 
-        let folder_id_filter: Option<Option<uuid::Uuid>> = query.folder_id.as_ref().map(|s| {
+        let folder_id_filter: Option<Option<Uuid>> = query.folder_id.as_ref().map(|s| {
             let t = s.trim();
             if t.is_empty() || t.to_lowercase() == "null" || t == "root" {
                 None
             } else {
-                uuid::Uuid::parse_str(t).ok()
+                Uuid::parse_str(t).ok()
             }
         });
 
@@ -283,11 +273,13 @@ impl<'a> FilesRepo<'a> {
             .date_to
             .as_deref()
             .and_then(|s| {
-                NaiveDateTime::parse_from_str(s, "%Y-%m-%d").ok().and_then(|dt| {
-                    dt.date().and_hms_opt(23, 59, 59).map(|end_of_day| {
-                        DateTime::<Utc>::from_naive_utc_and_offset(end_of_day, Utc)
+                NaiveDateTime::parse_from_str(s, "%Y-%m-%d")
+                    .ok()
+                    .and_then(|dt| {
+                        dt.date()
+                            .and_hms_opt(23, 59, 59)
+                            .map(|end_of_day| DateTime::<Utc>::from_naive_utc_and_offset(end_of_day, Utc))
                     })
-                })
             })
             .or_else(|| {
                 query.date_to.as_deref().and_then(|s| {

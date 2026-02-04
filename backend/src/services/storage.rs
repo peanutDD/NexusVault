@@ -53,6 +53,11 @@ pub trait StorageBackend: Send + Sync {
     ) -> Result<StorageReadStream, AppError>;
 
     async fn delete_file(&self, file_path: &str) -> Result<(), AppError>;
+
+    /// 健康检查
+    ///
+    /// 验证存储后端是否可用。
+    async fn health_check(&self) -> Result<(), AppError>;
 }
 
 pub struct LocalStorage {
@@ -172,6 +177,24 @@ impl StorageBackend for LocalStorage {
             }
         }
 
+        Ok(())
+    }
+
+    async fn health_check(&self) -> Result<(), AppError> {
+        // 检查存储目录是否可访问
+        let path = Path::new(&self.base_path);
+        if !path.exists() {
+            return Err(AppError::Storage("Storage directory does not exist".to_string()));
+        }
+        if !path.is_dir() {
+            return Err(AppError::Storage("Storage path is not a directory".to_string()));
+        }
+        // 尝试创建一个临时文件验证写入权限
+        let test_file = path.join(".health_check");
+        tokio::fs::write(&test_file, b"health")
+            .await
+            .map_err(|e| AppError::Storage(format!("Storage not writable: {}", e)))?;
+        let _ = tokio::fs::remove_file(&test_file).await;
         Ok(())
     }
 }
@@ -311,6 +334,17 @@ impl StorageBackend for S3Storage {
             .await
             .map_err(|e| AppError::File(format!("Failed to delete file from S3: {}", e)))?;
 
+        Ok(())
+    }
+
+    async fn health_check(&self) -> Result<(), AppError> {
+        // 检查 S3 bucket 是否可访问
+        self.client
+            .head_bucket()
+            .bucket(&self.bucket)
+            .send()
+            .await
+            .map_err(|e| AppError::Storage(format!("S3 bucket not accessible: {}", e)))?;
         Ok(())
     }
 }

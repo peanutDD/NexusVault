@@ -29,6 +29,7 @@ pub struct FolderService {
 
 impl FolderService {
     /// 创建新的 FolderService 实例
+    #[allow(dead_code)]
     pub fn new(pool: PgPool) -> Self {
         Self { pool, storage: None }
     }

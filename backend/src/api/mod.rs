@@ -12,4 +12,5 @@ pub mod api_token;
 pub mod auth;
 pub mod files;
 pub mod folders;
+pub mod openapi;
 pub mod share;

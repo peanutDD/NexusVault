@@ -11,8 +11,8 @@ use super::FileService;
 
 impl FileService {
     pub async fn get_file(&self, file_id: Uuid, user_id: Uuid) -> Result<File, AppError> {
-        crate::repositories::files::FilesRepo::new(&self.pool)
-            .get_file(file_id, user_id)
+        self.files_repo
+            .find_by_id(file_id, user_id)
             .await?
             .ok_or(AppError::NotFound)
     }
@@ -21,7 +21,7 @@ impl FileService {
     /// 用于验证缓存有效性，防止数据库记录存在但文件缺失的情况
     pub async fn verify_file_exists(&self, file: &File) -> Result<(), AppError> {
         let path = Path::new(&file.file_path);
-        
+
         // 检查文件是否存在
         match tokio::fs::metadata(path).await {
             Ok(metadata) => {

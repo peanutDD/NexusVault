@@ -17,9 +17,11 @@
 //! - `share`: 文件分享（创建、验证、访问）
 //! - `api_token`: API Token 管理
 //! - `storage`: 存储后端抽象（本地、S3）
+//! - `cache`: 应用级缓存服务
 
 pub mod api_token;
 pub mod auth;
+pub mod cache;
 pub mod file;
 pub mod folder;
 pub mod maintenance;

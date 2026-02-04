@@ -95,7 +95,10 @@ async fn extract_user_id_from_headers(
     }
 
     // 如果 JWT 失败，尝试 API token
-    let token_service = crate::services::api_token::ApiTokenService::new(pool.clone());
+    let token_service = crate::services::api_token::ApiTokenService::new(
+        pool.clone(),
+        config.jwt_secret.clone(),
+    );
     let user_id = token_service.verify_token(token).await?;
     tracing::debug!(user_id = %user_id, "Authenticated via API token");
     Ok(user_id)
@@ -111,7 +114,7 @@ async fn extract_user_id_from_headers(
 /// - `Ok(Uuid)`: 解析成功的用户 ID
 /// - `Err(AppError::Unauthorized)`: token 无效或过期
 fn extract_user_id_from_jwt_token(config: &Config, token: &str) -> Result<Uuid, AppError> {
-    use jsonwebtoken::{decode, DecodingKey, Validation};
+    use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
     use serde::{Deserialize, Serialize};
 
     /// JWT Claims 结构
@@ -125,11 +128,15 @@ fn extract_user_id_from_jwt_token(config: &Config, token: &str) -> Result<Uuid, 
         iat: usize,
     }
 
+    // 明确指定 HS256 算法，防止算法混淆攻击
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.validate_exp = true;
+
     // 解码并验证 token
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(config.jwt_secret.as_ref()),
-        &Validation::default(),
+        &validation,
     )
     .map_err(|e| {
         tracing::debug!("JWT token decode failed: {}", e);

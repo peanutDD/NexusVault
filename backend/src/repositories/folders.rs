@@ -251,6 +251,7 @@ impl<'a> FoldersRepo<'a> {
     }
 
     /// 获取文件夹下的文件数量
+    #[allow(dead_code)]
     pub async fn count_files_in_folders(&self, folder_ids: &[Uuid]) -> Result<i64, AppError> {
         let result: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM files WHERE folder_id = ANY($1)",

@@ -43,8 +43,10 @@ use tower_http::{
 // use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 // use std::net::IpAddr;
 
+use api::openapi::create_openapi_router;
 use config::Config;
 use database::pool::create_pool;
+use middleware::metrics::metrics_middleware;
 use middleware::rate_limit;
 use services::file::create_storage;
 use services::maintenance::{spawn_files_consistency_checker, spawn_upload_session_cleanup};
@@ -84,6 +86,10 @@ async fn async_main() -> anyhow::Result<()> {
         )
         .init();
 
+    // Initialize Prometheus metrics
+    let metrics_renderer = middleware::metrics::init_metrics();
+    tracing::info!("Prometheus metrics initialized");
+
     // Load configuration
     dotenv::dotenv().ok();
     let config = Arc::new(Config::from_env()?);
@@ -117,7 +123,7 @@ async fn async_main() -> anyhow::Result<()> {
     );
 
     // Build application
-    let app = create_app(app_state, &config).await;
+    let app = create_app(app_state, &config, metrics_renderer).await;
 
     let addr = format!("0.0.0.0:{}", config.port);
     tracing::info!("Server listening on {}", addr);
@@ -159,10 +165,14 @@ async fn shutdown_signal() {
 /// # 参数
 /// - `app_state`: 应用共享状态
 /// - `config`: 应用配置（用于 CORS 配置）
+/// - `metrics_renderer`: Prometheus metrics 渲染器
 ///
 /// # 返回
 /// 配置完成的 Axum Router
-async fn create_app(app_state: AppState, config: &Config) -> Router {
+async fn create_app<F>(app_state: AppState, config: &Config, metrics_renderer: F) -> Router
+where
+    F: Fn() -> String + Clone + Send + Sync + 'static,
+{
     // 配置 CORS
     let cors = create_cors_layer(config);
 
@@ -192,11 +202,34 @@ async fn create_app(app_state: AppState, config: &Config) -> Router {
         .layer(cors) // CORS 支持
         .into_inner();
 
+    // Metrics 端点处理器
+    let metrics_handler = {
+        let renderer = metrics_renderer.clone();
+        move || {
+            let r = renderer.clone();
+            async move { r() }
+        }
+    };
+
     // 构建路由
     Router::new()
-        // 健康检查端点
+        // 健康检查端点（完整检查：数据库 + 存储）
         .route("/health", get(health_check))
-        // API 路由
+        // 存活检查端点（轻量级，用于 k8s liveness probe）
+        .route("/livez", get(liveness_check))
+        // Prometheus metrics 端点
+        .route("/metrics", get(metrics_handler))
+        // 就绪检查端点（与 /health 相同，用于 k8s readiness probe）
+        .route("/readyz", get(health_check))
+        // OpenAPI/Swagger 文档
+        .merge(create_openapi_router())
+        // API v1 路由（当前版本）
+        .nest("/api/v1/auth", api::auth::create_router())
+        .nest("/api/v1/files", api::files::create_router())
+        .nest("/api/v1/folders", api::folders::create_router())
+        .nest("/api/v1/shares", api::share::create_router())
+        .nest("/api/v1/tokens", api::api_token::create_router())
+        // 向后兼容：旧路由重定向到 v1（可选，可在迁移后移除）
         .nest("/api/auth", api::auth::create_router())
         .nest("/api/files", api::files::create_router())
         .nest("/api/folders", api::folders::create_router())
@@ -205,6 +238,7 @@ async fn create_app(app_state: AppState, config: &Config) -> Router {
         // 注入应用状态（使用 State<AppState> 替代多个 Extension）
         .with_state(app_state)
         // 应用中间件（从外到内执行）
+        .layer(axum::middleware::from_fn(metrics_middleware)) // HTTP 请求指标追踪
         .layer(axum::middleware::from_fn(move |req, next| {
             let state = rate_limit_state.clone();
             rate_limit::rate_limit_middleware(state, req, next)
@@ -246,7 +280,66 @@ fn create_cors_layer(config: &Config) -> CorsLayer {
 /// 健康检查端点
 ///
 /// 用于监控和负载均衡器健康检查。
-async fn health_check() -> &'static str {
+/// 检查数据库连接和存储后端状态。
+async fn health_check(
+    axum::extract::State(state): axum::extract::State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let mut status = "healthy";
+    let mut checks = serde_json::Map::new();
+
+    // 检查数据库连接
+    let db_check = sqlx::query("SELECT 1")
+        .execute(&state.pool)
+        .await;
+    let db_status = match db_check {
+        Ok(_) => {
+            checks.insert("database".to_string(), json!({ "status": "up" }));
+            true
+        }
+        Err(e) => {
+            tracing::error!("Health check: database connection failed: {}", e);
+            checks.insert("database".to_string(), json!({
+                "status": "down",
+                "error": "connection failed"
+            }));
+            status = "unhealthy";
+            false
+        }
+    };
+
+    // 检查存储后端
+    let storage_status = state.storage.health_check().await;
+    let storage_ok = match &storage_status {
+        Ok(_) => {
+            checks.insert("storage".to_string(), json!({ "status": "up" }));
+            true
+        }
+        Err(e) => {
+            tracing::error!("Health check: storage backend failed: {}", e);
+            checks.insert("storage".to_string(), json!({
+                "status": "down",
+                "error": format!("{}", e)
+            }));
+            status = "unhealthy";
+            false
+        }
+    };
+
+    let response = json!({
+        "status": status,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "checks": checks
+    });
+
+    if db_status && storage_ok {
+        Ok(Json(response))
+    } else {
+        Err((StatusCode::SERVICE_UNAVAILABLE, Json(response)))
+    }
+}
+
+/// 轻量级存活检查（用于 k8s liveness probe）
+async fn liveness_check() -> &'static str {
     "OK"
 }
 

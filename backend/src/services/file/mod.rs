@@ -8,14 +8,11 @@
 //! - **批量操作**: 批量删除、批量移动、批量下载
 //! - **存储配额**: 配额检查和使用量统计
 //!
-//! ## 设计目标（为什么要拆分）
+//! ## 设计目标
 //!
-//! 旧的 `services/file.rs` 过大时，常见问题是：
-//! - 不同功能（列表/上传/分块/批量）混在一起，改动风险高
-//! - 重复的校验/查询/路径处理逻辑到处复制，难以统一优化
-//! - 编译/审查成本高，不利于渐进式重构
-//!
-//! 因此这里按“业务能力”拆成多个子模块文件，并保持对外 `FileService` API 不变。
+//! 1. **依赖倒置**：通过 `DynFilesRepo` / `DynUsersRepo` 依赖抽象
+//! 2. **可测试性**：测试时可用内存实现替换真实数据库
+//! 3. **模块化**：按业务能力拆分为子模块，降低复杂度
 
 mod batch_get;
 mod batch_zip;
@@ -36,23 +33,47 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::config::Config;
+use crate::repositories::{DynFilesRepo, DynUsersRepo, SqlxFilesRepo, SqlxUsersRepo};
 use crate::services::storage::StorageBackend;
 use crate::utils::AppError;
 
 pub use storage_factory::create_storage;
-// 重新导出常量以保持向后兼容
-pub use crate::constants::CHUNK_SIZE;
 
+/// 文件服务
+///
+/// 通过 `DynFilesRepo` / `DynUsersRepo` 依赖抽象，而非具体的 SQLx 实现。
 pub struct FileService {
+    /// 文件仓库（Trait Object）
+    pub(super) files_repo: DynFilesRepo,
+    /// 用户仓库（Trait Object），用于配额查询
+    pub(super) users_repo: DynUsersRepo,
+    /// 数据库连接池（仅用于分块上传会话等尚未抽象的 Repository）
     pub(super) pool: PgPool,
+    /// 存储后端
     pub(super) storage: Arc<dyn StorageBackend>,
+    /// 应用配置
     pub(super) config: Arc<Config>,
 }
 
 impl FileService {
     /// 创建新的 FileService 实例
-    pub fn new(pool: PgPool, storage: Arc<dyn StorageBackend>, config: Arc<Config>) -> Self {
+    ///
+    /// # 参数
+    /// - `files_repo`: 文件仓库（Trait Object）
+    /// - `users_repo`: 用户仓库（Trait Object）
+    /// - `pool`: 数据库连接池（用于尚未抽象的 Repository）
+    /// - `storage`: 存储后端
+    /// - `config`: 应用配置
+    pub fn new(
+        files_repo: DynFilesRepo,
+        users_repo: DynUsersRepo,
+        pool: PgPool,
+        storage: Arc<dyn StorageBackend>,
+        config: Arc<Config>,
+    ) -> Self {
         Self {
+            files_repo,
+            users_repo,
             pool,
             storage,
             config,
@@ -61,9 +82,14 @@ impl FileService {
 
     /// 从 AppState 创建 FileService（工厂方法）
     ///
-    /// 简化 handler 中的 Service 创建，避免重复的 clone 调用。
+    /// 使用 SQLx 实现的 Repository。
     pub fn from_state(state: &crate::AppState) -> Self {
+        let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(state.pool.clone()));
+        let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(state.pool.clone()));
+
         Self::new(
+            files_repo,
+            users_repo,
             state.pool.clone(),
             state.storage.clone(),
             state.config.clone(),

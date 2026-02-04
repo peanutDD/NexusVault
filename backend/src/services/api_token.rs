@@ -1,9 +1,15 @@
 //! # API Token 服务模块
 //!
 //! 提供 API Token 的管理功能。
+//!
+//! ## 安全特性
+//!
+//! - 使用 HMAC-SHA256 加盐哈希，防止彩虹表攻击
+//! - Token 只在创建时返回一次，数据库仅存储哈希值
 
 use chrono::{Duration, Utc};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
+use hmac::{Hmac, Mac};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -14,18 +20,21 @@ use crate::{
     utils::AppError,
 };
 
+type HmacSha256 = Hmac<Sha256>;
+
 pub struct ApiTokenService {
     pool: PgPool,
+    secret: String,
 }
 
 impl ApiTokenService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, secret: String) -> Self {
+        Self { pool, secret }
     }
 
     /// 从 AppState 创建 ApiTokenService（工厂方法）
     pub fn from_state(state: &crate::AppState) -> Self {
-        Self::new(state.pool.clone())
+        Self::new(state.pool.clone(), state.config.jwt_secret.clone())
     }
 
     /// 生成安全的随机 token
@@ -40,11 +49,15 @@ impl ApiTokenService {
             .collect()
     }
 
-    /// 使用 SHA-256 哈希 token
-    fn hash_token(token: &str) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(token.as_bytes());
-        format!("{:x}", hasher.finalize())
+    /// 使用 HMAC-SHA256 加盐哈希 token
+    ///
+    /// 使用服务器密钥作为盐值，防止彩虹表攻击
+    fn hash_token(&self, token: &str) -> String {
+        let mut mac = HmacSha256::new_from_slice(self.secret.as_bytes())
+            .expect("HMAC can take key of any size");
+        mac.update(token.as_bytes());
+        let result = mac.finalize();
+        format!("{:x}", result.into_bytes())
     }
 
     /// 获取 token 前缀（用于显示）
@@ -62,7 +75,7 @@ impl ApiTokenService {
 
         // 生成 token（只显示一次）
         let token = Self::generate_token();
-        let token_hash = Self::hash_token(&token);
+        let token_hash = self.hash_token(&token);
         let token_prefix = Self::get_token_prefix(&token);
 
         // 计算过期时间
@@ -81,7 +94,7 @@ impl ApiTokenService {
     /// 验证 token 并返回用户 ID
     pub async fn verify_token(&self, token: &str) -> Result<Uuid, AppError> {
         let repo = ApiTokensRepo::new(&self.pool);
-        let token_hash = Self::hash_token(token);
+        let token_hash = self.hash_token(token);
 
         let api_token = repo
             .find_by_token_hash(&token_hash)

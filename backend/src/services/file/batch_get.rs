@@ -29,9 +29,7 @@ impl FileService {
             )));
         }
 
-        let files = crate::repositories::files::FilesRepo::new(&self.pool)
-            .get_files_by_ids(user_id, ids)
-            .await?;
+        let files = self.files_repo.find_by_ids(user_id, ids).await?;
         let map: std::collections::HashMap<Uuid, FileResponse> = files
             .into_iter()
             .map(|f| (f.id, FileResponse::from(f)))

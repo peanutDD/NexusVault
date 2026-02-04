@@ -13,9 +13,7 @@ impl FileService {
         user_id: Uuid,
         query: FileListQuery,
     ) -> Result<(Vec<FileResponse>, u64), AppError> {
-        let (files, total) = crate::repositories::files::FilesRepo::new(&self.pool)
-            .list_files(user_id, query)
-            .await?;
+        let (files, total) = self.files_repo.list(user_id, query).await?;
         Ok((
             files.into_iter().map(FileResponse::from).collect(),
             total as u64,

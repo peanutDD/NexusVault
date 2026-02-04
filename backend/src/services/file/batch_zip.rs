@@ -48,7 +48,7 @@ impl Write for ChannelWriter {
 
 impl Seek for ChannelWriter {
     /// 流式写入无法真正回退。Current(0)/End(0) 报告当前偏移；Start(n) 若 n <= pos 则返回 Ok(pos) 不改变 pos，
-    /// 满足 zip 在 finish_file 的 file_end >= stats.start，且 Drop 时的“回退再写”会得到当前 pos 从而继续写尾部的 central directory。
+    /// 满足 zip 在 finish_file 的 file_end >= stats.start，且 Drop 时的"回退再写"会得到当前 pos 从而继续写尾部的 central directory。
     fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
         match pos {
             SeekFrom::Current(0) | SeekFrom::End(0) => Ok(self.pos),
@@ -117,7 +117,8 @@ impl FileService {
         }
 
         // 先用数据库聚合校验总大小（避免提前读入所有文件数据）
-        let (found_count, total_size) = crate::repositories::files::FilesRepo::new(&self.pool)
+        let (found_count, total_size) = self
+            .files_repo
             .sum_size_for_ids(user_id, &uniq_ids)
             .await?;
 
@@ -135,9 +136,7 @@ impl FileService {
         }
 
         // 一次性把文件记录取出来，避免 N+1 查询
-        let files = crate::repositories::files::FilesRepo::new(&self.pool)
-            .get_files_by_ids(user_id, &uniq_ids)
-            .await?;
+        let files = self.files_repo.find_by_ids(user_id, &uniq_ids).await?;
         let mut file_by_id =
             std::collections::HashMap::<Uuid, crate::models::file::File>::with_capacity(
                 files.len(),
@@ -201,7 +200,8 @@ impl FileService {
             )));
         }
 
-        let (found_count, total_size) = crate::repositories::files::FilesRepo::new(&self.pool)
+        let (found_count, total_size) = self
+            .files_repo
             .sum_size_for_ids(user_id, &uniq_ids)
             .await?;
 
@@ -218,11 +218,8 @@ impl FileService {
             )));
         }
 
-        let files = crate::repositories::files::FilesRepo::new(&self.pool)
-            .get_files_by_ids(user_id, &uniq_ids)
-            .await?;
-        let mut file_by_id =
-            std::collections::HashMap::<Uuid, File>::with_capacity(files.len());
+        let files = self.files_repo.find_by_ids(user_id, &uniq_ids).await?;
+        let mut file_by_id = std::collections::HashMap::<Uuid, File>::with_capacity(files.len());
         for f in files {
             file_by_id.insert(f.id, f);
         }

@@ -7,22 +7,22 @@
 //! - **Token 管理**: 生成和验证 JWT token
 //! - **密码管理**: 修改密码
 //!
-//! ## 安全特性
+//! ## 设计
 //!
+//! - 依赖 `DynUsersRepo`（通过 Trait 抽象），便于测试时 mock
 //! - 使用 bcrypt 进行密码哈希
 //! - JWT token 有过期时间
 //! - 所有认证失败返回统一错误，防止信息泄露
 
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
     config::Config,
     models::user::{LoginRequest, RegisterRequest, UserResponse},
-    repositories::UsersRepo,
+    repositories::{DynUsersRepo, SqlxUsersRepo},
     utils::{hash_password, now_timestamp, parse_jwt_expiry, verify_password, AppError},
 };
 
@@ -37,19 +37,31 @@ pub struct Claims {
     pub iat: usize,
 }
 
+/// 认证服务
+///
+/// 通过 `DynUsersRepo` 依赖抽象，而非具体的 SQLx 实现。
 pub struct AuthService {
-    pool: PgPool,
+    users_repo: DynUsersRepo,
     config: Config,
 }
 
 impl AuthService {
-    pub fn new(pool: PgPool, config: Config) -> Self {
-        Self { pool, config }
+    /// 创建新的 AuthService 实例
+    ///
+    /// # 参数
+    /// - `users_repo`: 用户仓库（Trait Object）
+    /// - `config`: 应用配置
+    pub fn new(users_repo: DynUsersRepo, config: Config) -> Self {
+        Self { users_repo, config }
     }
 
     /// 从 AppState 创建 AuthService（工厂方法）
+    ///
+    /// 使用 SQLx 实现的 UsersRepo。
     pub fn from_state(state: &crate::AppState) -> Self {
-        Self::new(state.pool.clone(), (*state.config).clone())
+        let users_repo: DynUsersRepo =
+            std::sync::Arc::new(SqlxUsersRepo::new(state.pool.clone()));
+        Self::new(users_repo, (*state.config).clone())
     }
 
     /// 用户注册
@@ -57,10 +69,9 @@ impl AuthService {
         // 验证输入
         Self::validate_register_input(&req)?;
 
-        let repo = UsersRepo::new(&self.pool);
-
         // 检查用户是否已存在
-        if repo
+        if self
+            .users_repo
             .exists_by_email_or_username(&req.email, &req.username)
             .await?
         {
@@ -73,17 +84,19 @@ impl AuthService {
         let password_hash = hash_password(&req.password)?;
 
         // 创建用户
-        let user = repo.create(&req.username, &req.email, &password_hash).await?;
+        let user = self
+            .users_repo
+            .create(&req.username, &req.email, &password_hash)
+            .await?;
 
         Ok(UserResponse::from(user))
     }
 
     /// 用户登录
     pub async fn login(&self, req: LoginRequest) -> Result<String, AppError> {
-        let repo = UsersRepo::new(&self.pool);
-
         // 查找用户
-        let user = repo
+        let user = self
+            .users_repo
             .find_by_email(&req.email)
             .await?
             .ok_or_else(|| AppError::Auth("Invalid email or password".to_string()))?;
@@ -120,10 +133,14 @@ impl AuthService {
 
     /// 验证 JWT token
     pub fn verify_token(&self, token: &str) -> Result<Uuid, AppError> {
+        // 明确指定 HS256 算法，防止算法混淆攻击
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = true;
+
         let token_data = decode::<Claims>(
             token,
             &DecodingKey::from_secret(self.config.jwt_secret.as_ref()),
-            &Validation::default(),
+            &validation,
         )
         .map_err(|_| AppError::Unauthorized)?;
 
@@ -135,9 +152,11 @@ impl AuthService {
 
     /// 获取用户信息
     pub async fn get_user(&self, user_id: Uuid) -> Result<UserResponse, AppError> {
-        let repo = UsersRepo::new(&self.pool);
-
-        let user = repo.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
+        let user = self
+            .users_repo
+            .find_by_id(user_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
 
         Ok(UserResponse::from(user))
     }
@@ -156,10 +175,12 @@ impl AuthService {
             ));
         }
 
-        let repo = UsersRepo::new(&self.pool);
-
         // 获取用户
-        let user = repo.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
+        let user = self
+            .users_repo
+            .find_by_id(user_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
 
         // 验证当前密码
         if !verify_password(&current_password, &user.password_hash)? {
@@ -170,7 +191,8 @@ impl AuthService {
         let new_password_hash = hash_password(&new_password)?;
 
         // 更新密码
-        repo.update_password(user_id, &new_password_hash, Utc::now())
+        self.users_repo
+            .update_password(user_id, &new_password_hash, Utc::now())
             .await?;
 
         Ok(())

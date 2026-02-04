@@ -11,9 +11,7 @@ use super::FileService;
 impl FileService {
     /// List distinct categories for a user (excluding null/empty).
     pub async fn list_categories(&self, user_id: Uuid) -> Result<Vec<String>, AppError> {
-        crate::repositories::files::FilesRepo::new(&self.pool)
-            .list_categories(user_id)
-            .await
+        self.files_repo.list_categories(user_id).await
     }
 
     /// Batch move files to a category. Empty category = uncategorized (NULL).
@@ -27,7 +25,7 @@ impl FileService {
             }
         });
 
-        crate::repositories::files::FilesRepo::new(&self.pool)
+        self.files_repo
             .update_category(user_id, &req.ids, category_value.as_deref(), Utc::now())
             .await
     }

@@ -2,6 +2,8 @@
 //!
 //! 提供文件分享的核心业务逻辑。
 
+use std::sync::Arc;
+
 use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -10,22 +12,24 @@ use crate::{
     models::share::{
         BatchShareRequest, BatchShareResponse, CreateShareRequest, FileShare, ShareResponse,
     },
-    repositories::{FilesRepo, SharesRepo},
+    repositories::{DynFilesRepo, SharesRepo, SqlxFilesRepo},
     utils::{calculate_expiration, generate_random_token, hash_password, verify_password, AppError},
 };
 
 pub struct ShareService {
+    files_repo: DynFilesRepo,
     pool: PgPool,
 }
 
 impl ShareService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(files_repo: DynFilesRepo, pool: PgPool) -> Self {
+        Self { files_repo, pool }
     }
 
     /// 从 AppState 创建 ShareService（工厂方法）
     pub fn from_state(state: &crate::AppState) -> Self {
-        Self::new(state.pool.clone())
+        let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(state.pool.clone()));
+        Self::new(files_repo, state.pool.clone())
     }
 
     /// 生成分享令牌
@@ -39,11 +43,10 @@ impl ShareService {
         user_id: Uuid,
         req: CreateShareRequest,
     ) -> Result<ShareResponse, AppError> {
-        let files_repo = FilesRepo::new(&self.pool);
         let shares_repo = SharesRepo::new(&self.pool);
 
         // 验证文件属于该用户
-        if !files_repo.file_belongs_to_user(req.file_id, user_id).await? {
+        if !self.files_repo.belongs_to_user(req.file_id, user_id).await? {
             return Err(AppError::NotFound);
         }
 
@@ -129,7 +132,7 @@ impl ShareService {
     }
 
     /// 删除分享
-    pub async fn delete_share(&self, share_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+    pub async fn delete_share(&self, share_id: Uuid, _user_id: Uuid) -> Result<(), AppError> {
         let repo = SharesRepo::new(&self.pool);
 
         let affected = repo.delete_by_id(share_id).await?;
@@ -147,7 +150,6 @@ impl ShareService {
         user_id: Uuid,
         req: BatchShareRequest,
     ) -> Result<BatchShareResponse, AppError> {
-        let files_repo = FilesRepo::new(&self.pool);
         let shares_repo = SharesRepo::new(&self.pool);
 
         let mut shares = Vec::new();
@@ -166,7 +168,7 @@ impl ShareService {
         // 处理每个文件
         for file_id in req.file_ids {
             // 验证文件属于该用户
-            if !files_repo.file_belongs_to_user(file_id, user_id).await? {
+            if !self.files_repo.belongs_to_user(file_id, user_id).await? {
                 failed.push(file_id);
                 continue;
             }

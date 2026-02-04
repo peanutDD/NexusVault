@@ -49,6 +49,7 @@ impl<'a> SharesRepo<'a> {
     }
 
     /// 列出用户的所有分享
+    #[allow(dead_code)]
     pub async fn list_by_user(&self, user_id: Uuid) -> Result<Vec<FileShare>, AppError> {
         sqlx::query_as::<_, FileShare>(
             "SELECT * FROM file_shares WHERE user_id = $1 ORDER BY created_at DESC",
@@ -103,6 +104,7 @@ impl<'a> SharesRepo<'a> {
     }
 
     /// 删除分享
+    #[allow(dead_code)]
     pub async fn delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
         let result = sqlx::query("DELETE FROM file_shares WHERE file_id = $1 AND user_id = $2")
             .bind(file_id)

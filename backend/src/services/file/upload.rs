@@ -37,8 +37,9 @@ impl FileService {
             .save_file(user_id, file_id, &storage_filename, &data)
             .await?;
 
-        let inserted = crate::repositories::files::FilesRepo::new(&self.pool)
-            .insert_file(
+        let inserted = self
+            .files_repo
+            .insert(
                 file_id,
                 user_id,
                 &storage_filename,
@@ -51,7 +52,7 @@ impl FileService {
             .await
             .map(FileResponse::from);
 
-        // 若落库失败，尽量清理已写入的存储文件，避免产生“孤儿文件”占用空间
+        // 若落库失败，尽量清理已写入的存储文件，避免产生"孤儿文件"占用空间
         if inserted.is_err() {
             let _ = self.storage.delete_file(&file_path).await;
         }
@@ -79,8 +80,9 @@ impl FileService {
             .save_file_from_path(user_id, file_id, &storage_filename, source_path)
             .await?;
 
-        let inserted = crate::repositories::files::FilesRepo::new(&self.pool)
-            .insert_file(
+        let inserted = self
+            .files_repo
+            .insert(
                 file_id,
                 user_id,
                 &storage_filename,

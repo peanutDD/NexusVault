@@ -2,18 +2,17 @@
 //!
 //! 后台维护任务：清理过期分块上传会话、临时文件等。
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use std::sync::Arc;
-
-use crate::repositories::files::FilesRepo;
+use crate::repositories::{DynFilesRepo, SqlxFilesRepo};
 use crate::services::storage::StorageBackend;
 use crate::utils::AppError;
 
-/// 启动“过期分块上传会话”清理任务。
+/// 启动"过期分块上传会话"清理任务。
 ///
 /// - 周期性查询 `upload_sessions.expires_at < NOW()` 的记录
 /// - best-effort 删除 `temp_path` 目录
@@ -67,7 +66,7 @@ async fn cleanup_expired_upload_sessions_once(
 ///
 /// 设计目标：
 /// - **保护读路径**：避免下载/预览时因为底层文件丢失导致反复报错
-/// - **仅从 DB → 存储方向校验**：不会去扫描整个存储目录删除“孤儿文件”，避免大规模 I/O
+/// - **仅从 DB → 存储方向校验**：不会去扫描整个存储目录删除"孤儿文件"，避免大规模 I/O
 ///
 /// 行为：
 /// - 每次从 `files` 表中按 `updated_at DESC` 取一批记录（最近被操作的更容易出问题）
@@ -111,7 +110,7 @@ async fn cleanup_missing_storage_files_once(
         return Ok(());
     }
 
-    let repo = FilesRepo::new(pool);
+    let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(pool.clone()));
 
     for (id, user_id, file_path) in rows {
         match storage.open_read_stream(&file_path).await {
@@ -119,8 +118,8 @@ async fn cleanup_missing_storage_files_once(
                 // 文件存在，跳过
             }
             Err(AppError::File(_)) | Err(AppError::Storage(_)) => {
-                // 底层报告“文件相关错误”或“存储后端错误”：视为文件已不存在，best-effort 删除 DB 记录
-                if let Err(e) = repo.delete_file_record(id, user_id).await {
+                // 底层报告"文件相关错误"或"存储后端错误"：视为文件已不存在，best-effort 删除 DB 记录
+                if let Err(e) = files_repo.delete(id, user_id).await {
                     tracing::warn!(
                         "failed to delete orphan file record id={} user_id={}: {}",
                         id,
@@ -148,4 +147,3 @@ async fn cleanup_missing_storage_files_once(
 
     Ok(())
 }
-
