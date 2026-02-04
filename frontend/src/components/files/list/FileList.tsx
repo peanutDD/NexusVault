@@ -110,9 +110,15 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     // 这里简化处理，直接导航到文件夹
     navigateToFolder(folderId);
   };
-  const handleDeleteAdapter = (file: { id: string }, type: 'file' | 'folder') => {
+  const handleDeleteAdapter = (item: { id: string; name?: string; original_filename?: string }, type: 'file' | 'folder') => {
     if (type === 'file') {
-      handleDelete(file.id);
+      handleDelete(item.id);
+    } else if (type === 'folder') {
+      setDeleteConfirm({
+        type: 'folder',
+        id: item.id,
+        name: item.name || '文件夹',
+      });
     }
   };
   const handleFileDragStartAdapter = (fileId: string, e: React.DragEvent) => {

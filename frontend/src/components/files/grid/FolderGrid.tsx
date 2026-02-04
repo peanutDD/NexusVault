@@ -40,7 +40,7 @@ export default function FolderGrid({
           onSelect={(id) => onSelect(id, !selectedFolders.has(id))}
           onOpen={(f) => onOpen(f.id)}
           onRename={onRename}
-          onDelete={() => onDelete(folder.id)}
+          onDelete={onDelete}
           onDrop={(e, target) => {
             const fileId = e.dataTransfer.getData('application/file-id');
             const folderId = e.dataTransfer.getData('application/folder-id');

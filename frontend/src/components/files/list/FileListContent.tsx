@@ -284,7 +284,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     onSelect={handleSelectFolder}
                     onOpen={handleOpenFolder}
                     onRename={handleRenameFolder}
-                    onDelete={() => {}}
+                    onDelete={(folderId) => {
+                      const folder = displayFolders.find(f => f.id === folderId);
+                      if (folder) handleDelete(folder, 'folder');
+                    }}
                     onDrop={handleDropOnFolder}
                   />
                 </div>
@@ -321,7 +324,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
                 onSelect={handleSelectFolder}
                 onOpen={handleOpenFolder}
                 onRename={handleRenameFolder}
-                onDelete={() => {}}
+                onDelete={(folderId) => {
+                  const folder = displayFolders.find(f => f.id === folderId);
+                  if (folder) handleDelete(folder, 'folder');
+                }}
                 onDrop={handleDropOnFolder}
               />
               {files.length > FILE_LIST.VIRTUAL_THRESHOLD ? (
