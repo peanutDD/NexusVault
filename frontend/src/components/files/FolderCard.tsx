@@ -1,6 +1,7 @@
-import { memo, useState } from 'react';
+import { memo, useState, useCallback } from 'react';
 import type { Folder } from '../../types';
 import { cn } from '../../utils/cn';
+import { SelectionCheckbox } from '../common/form/SelectionCheckbox';
 
 interface FolderCardProps {
   folder: Folder;
@@ -75,6 +76,10 @@ const FolderCard = memo(function FolderCard({
     onDrop?.(e, folder);
   };
 
+  const handleSelect = useCallback(() => {
+    onSelect(folder.id);
+  }, [folder.id, onSelect]);
+
   return (
     <div
       className={cn(
@@ -93,28 +98,11 @@ const FolderCard = memo(function FolderCard({
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
     >
-      {/* 选择框 - 纯色紫圈 + 外圈水晶，选中闪动（固定尺寸避免切换时位移） */}
-      <div
-        className="absolute left-2 top-2 z-10 flex h-5 w-5 cursor-pointer items-center justify-center transition-all"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(folder.id);
-        }}
-      >
-        {isSelected ? (
-          <div className="card-checkbox-outer-crystal card-checkbox-selected flex h-5 w-5 items-center justify-center rounded-full">
-            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-500">
-              <svg className="h-3 w-3 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          </div>
-        ) : (
-          <div className="flex h-4 w-4 items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100">
-            <div className="h-3 w-3 rounded-full border-2 border-white/60" />
-          </div>
-        )}
-      </div>
+      {/* 选择框 */}
+      <SelectionCheckbox
+        isSelected={isSelected}
+        onClick={handleSelect}
+      />
 
       {/* 文件夹图标 */}
       <div className="glass-thumb mb-3 flex aspect-square items-center justify-center">

@@ -1,15 +1,34 @@
-import { type ReactNode } from 'react';
-import { cn } from '../../utils/cn';
-import { useDialog } from '../../hooks/common/useDialog';
+import { type ReactNode, useRef } from 'react';
+import { cn } from '../../../utils/cn';
+import { useDialog } from '../../../hooks/common/useDialog';
 
-interface ModalProps {
-  title: string;
+interface BaseDialogProps {
+  /** 对话框是否打开 */
+  open: boolean;
+  /** 关闭回调 */
   onClose: () => void;
-  children: ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  /** 标题 */
+  title: string;
+  /** 描述（可选） */
   description?: string;
+  /** 子内容 */
+  children: ReactNode;
+  /** 最大宽度 */
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  /** 样式变体 */
   variant?: 'default' | 'glass' | 'upload';
+  /** 是否在 loading 时禁止关闭 */
   loading?: boolean;
+  /** 是否在按 ESC 时关闭，默认 true */
+  closeOnEscape?: boolean;
+  /** 是否在点击背景时关闭，默认 true */
+  closeOnBackdrop?: boolean;
+  /** 自动聚焦的元素引用 */
+  autoFocusRef?: React.RefObject<HTMLElement | null>;
+  /** 底部操作区 */
+  footer?: ReactNode;
+  /** 自定义类名 */
+  className?: string;
 }
 
 const maxWidthClasses = {
@@ -19,21 +38,38 @@ const maxWidthClasses = {
   xl: 'max-w-4xl',
 } as const;
 
-export default function Modal({
-  title,
+/**
+ * 基础对话框组件
+ * 提供统一的对话框结构、样式和交互逻辑
+ */
+export function BaseDialog({
+  open,
   onClose,
+  title,
+  description,
   children,
   maxWidth = 'md',
-  description,
   variant = 'default',
   loading = false,
-}: ModalProps) {
-  // 使用 useDialog hook 统一处理 ESC 关闭
+  closeOnEscape = true,
+  closeOnBackdrop = true,
+  autoFocusRef,
+  footer,
+  className,
+}: BaseDialogProps) {
+  const defaultFocusRef = useRef<HTMLButtonElement>(null);
+  const focusRef = autoFocusRef ?? defaultFocusRef;
+
   const { handleBackdropClick } = useDialog({
-    open: true,
+    open,
     onClose,
     loading,
+    autoFocusRef: focusRef,
+    closeOnEscape,
+    closeOnBackdrop,
   });
+
+  if (!open) return null;
 
   const isUploadVariant = variant === 'upload';
 
@@ -46,7 +82,7 @@ export default function Modal({
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby="dialog-title"
     >
       <div
         className={cn(
@@ -67,13 +103,15 @@ export default function Modal({
                   'before:bg-gradient-to-br before:from-[#6C5DD3]/10 before:via-transparent before:to-transparent',
                 ].join(' ')
               : 'bg-gray-800 dark:bg-gray-900 rounded-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl transform transition-all duration-300 animate-fade-in',
-          maxWidthClasses[maxWidth]
+          maxWidthClasses[maxWidth],
+          className
         )}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2
-            id="modal-title"
+            id="dialog-title"
             className={cn(
               'text-xl font-semibold transition-colors duration-200',
               isUploadVariant ? 'text-white' : 'text-white dark:text-gray-100'
@@ -82,6 +120,7 @@ export default function Modal({
             {title}
           </h2>
           <button
+            ref={autoFocusRef ? undefined : defaultFocusRef}
             type="button"
             onClick={onClose}
             disabled={loading}
@@ -99,6 +138,8 @@ export default function Modal({
             ×
           </button>
         </div>
+
+        {/* Description */}
         {description && (
           <p
             className={cn(
@@ -109,8 +150,15 @@ export default function Modal({
             {description}
           </p>
         )}
-        {children}
+
+        {/* Content */}
+        <div className="dialog-content">{children}</div>
+
+        {/* Footer */}
+        {footer && <div className="mt-6">{footer}</div>}
       </div>
     </div>
   );
 }
+
+export default BaseDialog;

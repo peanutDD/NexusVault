@@ -2,17 +2,8 @@ import { memo, useRef, useEffect } from 'react';
 import { HardDrive } from 'lucide-react';
 import { formatBytes } from '../../utils/format';
 import { cn } from '../../utils/cn';
+import type { StorageUsage } from '../../types';
 import SettingsCard from './SettingsCard';
-
-interface StorageUsage {
-  total_size: number;
-  file_count: number;
-  total_size_mb: number;
-  quota: number | null;
-  quota_mb: number | null;
-  usage_percent: number | null;
-  is_unlimited: boolean;
-}
 
 interface StorageUsageSectionProps {
   storageUsage: StorageUsage | null;

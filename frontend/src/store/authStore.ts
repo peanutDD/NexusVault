@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '../services/auth';
+import type { User } from '../types';
 import { useHydrationStore } from './hydrationStore';
 
 interface AuthState {

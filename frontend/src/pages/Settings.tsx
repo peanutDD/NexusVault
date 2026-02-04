@@ -5,6 +5,7 @@ import { authService } from '../services/auth';
 import { fileService } from '../services/files';
 import { apiTokenService } from '../services/apiTokens';
 import type { ApiToken } from '../services/apiTokens';
+import type { StorageUsage } from '../types';
 import { getErrorMessage } from '../utils/error';
 import ErrorMessage from '../components/common/ErrorMessage';
 import PageLayout from '../components/layout/PageLayout';
@@ -15,16 +16,6 @@ import {
   ApiTokenSection,
 } from '../components/settings';
 import { Settings2 } from 'lucide-react';
-
-interface StorageUsage {
-  total_size: number;
-  file_count: number;
-  total_size_mb: number;
-  quota: number | null;
-  quota_mb: number | null;
-  usage_percent: number | null;
-  is_unlimited: boolean;
-}
 
 export default function Settings() {
   const navigate = useNavigate();

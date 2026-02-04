@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { Download, Send, Trash2 } from 'lucide-react';
 import { formatFileSize } from '../../utils/format';
 import type { FileMetadata } from '../../types';
@@ -6,6 +6,7 @@ import LazyThumbnail from './LazyThumbnail';
 import { cn } from '../../utils/cn';
 import { getMimeTypeLabel } from '../../utils/mimeType';
 import { preloadPreview } from '../../utils/preloadPreview';
+import { SelectionCheckbox } from '../common/form/SelectionCheckbox';
 
 interface FileCardProps {
   file: FileMetadata;
@@ -50,6 +51,10 @@ const FileCard = memo(function FileCard({
     onDragStart?.(e, file);
   };
 
+  const handleSelect = useCallback(() => {
+    onSelect(file.id);
+  }, [file.id, onSelect]);
+
   return (
     <div
       className={cn(
@@ -69,28 +74,11 @@ const FileCard = memo(function FileCard({
         className="glass-thumb relative mb-3 aspect-square cursor-pointer overflow-hidden"
         onClick={() => onPreview(file)}
       >
-        {/* 选择框 - 纯色紫圈 + 外圈水晶，选中闪动（固定尺寸避免切换时位移） */}
-        <div
-          className="absolute left-2 top-2 z-10 flex h-5 w-5 cursor-pointer items-center justify-center transition-all"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(file.id);
-          }}
-        >
-          {isSelected ? (
-            <div className="card-checkbox-outer-crystal card-checkbox-selected flex h-5 w-5 items-center justify-center rounded-full">
-              <div className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-500">
-                <svg className="h-3 w-3 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100">
-              <div className="h-3 w-3 rounded-full border-2 border-white/60" />
-            </div>
-          )}
-        </div>
+        {/* 选择框 */}
+        <SelectionCheckbox
+          isSelected={isSelected}
+          onClick={handleSelect}
+        />
         <LazyThumbnail
           fileId={file.id}
           mimeType={file.mime_type}

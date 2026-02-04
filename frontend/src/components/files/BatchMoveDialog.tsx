@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { folderService, type Folder } from '../../services/folders';
+import { folderService } from '../../services/folders';
+import type { Folder } from '../../types';
 import { getErrorMessage } from '../../utils/error';
 import { Home, Check, Loader2 } from 'lucide-react';
 import { cn } from '../../utils/cn';

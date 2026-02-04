@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef, startTransition } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fileService } from '../../services/files';
-import type { FileMetadata, FileListQuery } from '../../types';
-import { folderService, type Folder } from '../../services/folders';
+import type { FileMetadata, FileListQuery, Folder } from '../../types';
+import { folderService } from '../../services/folders';
 import { getErrorMessage, isRequestCanceled } from '../../utils/error';
 import {
   getCacheKey,
@@ -11,15 +11,19 @@ import {
   clearFileListCache,
 } from '../../utils/fileListCache';
 import { BATCH_LIMITS, FILE_LIST, MIME_FILTER_FOLDERS } from '../../constants';
-import { useDebounce } from '../../hooks/useDebounce';
 import { useRequestDedup } from '../../hooks/useRequestDedup';
 import { useKeyboardShortcuts, SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
+import { useFileFilters } from '../../hooks/files/useFileFilters';
+import { useFileSelection } from '../../hooks/files/useFileSelection';
 import { FILE_TYPE_LABELS } from './fileTypeLabels';
 
-/** 超过该数量时在 Worker 中分组，避免主线程卡顿 */
+// 重新导出 FILE_TYPE_LABELS 以保持向后兼容
+export { FILE_TYPE_LABELS };
+
+// 自定义分组 hook，使用完整版 FILE_TYPE_LABELS（带 icon）
 const GROUP_FILES_WORKER_THRESHOLD = 50;
 
-const getTypeKey = (mime: string): string => {
+function getTypeKey(mime: string): string {
   if (mime === 'image/gif') return 'gif';
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
@@ -29,118 +33,104 @@ const getTypeKey = (mime: string): string => {
   if (mime === 'application/zip' || mime === 'application/x-zip-compressed') return 'application/zip';
   if (mime.startsWith('application/')) return 'application';
   return 'other';
-};
-
-function useFileFiltersAndSorting() {
-  const [search, setSearch] = useState('');
-  const [mimeType, setMimeType] = useState('');
-  const [sortBy, setSortBy] = useState<import('./FileListFilters').SortOption>(() => {
-    const saved = localStorage.getItem('fileListSortBy');
-    return (saved as import('./FileListFilters').SortOption) || 'created_at_desc';
-  });
-
-  const debouncedSearch = useDebounce(search, 300);
-
-  const [sortField, sortOrder] = useMemo(() => {
-    if (sortBy === 'type_group') {
-      return ['created_at', 'desc'] as const;
-    }
-    if (sortBy.startsWith('created_at_')) {
-      return ['created_at', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
-    }
-    if (sortBy.startsWith('file_size_')) {
-      return ['file_size', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
-    }
-    if (sortBy.startsWith('filename_')) {
-      return ['filename', sortBy.endsWith('_asc') ? 'asc' : 'desc'] as const;
-    }
-    const [field, order] = sortBy.split('_') as [string, string];
-    return [field as 'created_at' | 'filename' | 'file_size', order as 'asc' | 'desc'] as const;
-  }, [sortBy]);
-
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-  }, []);
-
-  const handleMimeTypeChange = useCallback((value: string) => {
-    setMimeType(value);
-  }, []);
-
-  const handleSortChange = useCallback((value: import('./FileListFilters').SortOption) => {
-    clearFileListCache();
-    setSortBy(value);
-    localStorage.setItem('fileListSortBy', value);
-  }, []);
-
-  return {
-    search,
-    mimeType,
-    sortBy,
-    debouncedSearch,
-    sortField,
-    sortOrder,
-    handleSearchChange,
-    handleMimeTypeChange,
-    handleSortChange,
-    setSearch,
-    setMimeType,
-    setSortBy,
-  };
 }
 
-function useSelectionState(files: FileMetadata[], folders: Folder[]) {
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
+function useFileGroupingWithIcons(files: FileMetadata[], isGroupByType: boolean) {
+  const typeOrderForWorker = useMemo(
+    () => Object.fromEntries(Object.entries(FILE_TYPE_LABELS).map(([k, v]) => [k, v.order])),
+    []
+  );
 
-  const selectedFileIds = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
-  const selectedFolderIds = useMemo(() => Array.from(selectedFolders), [selectedFolders]);
+  const [workerGrouped, setWorkerGrouped] = useState<
+    Array<{ key: string; order: number; files: FileMetadata[] }> | null
+  >(null);
 
-  const toggleSelectFile = useCallback((fileId: string) => {
-    setSelectedFiles((prev) => {
-      const next = new Set(prev);
-      if (next.has(fileId)) next.delete(fileId);
-      else next.add(fileId);
-      return next;
-    });
-  }, []);
-
-  const toggleSelectFolder = useCallback((folderId: string) => {
-    setSelectedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(folderId)) next.delete(folderId);
-      else next.add(folderId);
-      return next;
-    });
-  }, []);
-
-  const allSelected =
-    (files.length > 0 || folders.length > 0) &&
-    selectedFiles.size === files.length &&
-    selectedFolders.size === folders.length;
-
-  const toggleSelectAll = useCallback(() => {
-    if (allSelected) {
-      setSelectedFiles(new Set());
-      setSelectedFolders(new Set());
-    } else {
-      setSelectedFiles(new Set(files.map((f) => f.id)));
-      setSelectedFolders(new Set(folders.map((f) => f.id)));
+  useEffect(() => {
+    if (files.length <= GROUP_FILES_WORKER_THRESHOLD || !isGroupByType) {
+      return;
     }
-  }, [files, folders, allSelected]);
+    
+    let isCancelled = false;
+    const worker = new Worker(
+      new URL('../../workers/groupFiles.worker.ts', import.meta.url),
+      { type: 'module' }
+    );
+    worker.postMessage({ files, typeOrder: typeOrderForWorker });
+    worker.onmessage = (e: MessageEvent<Array<{ key: string; order: number; files: FileMetadata[] }>>) => {
+      if (!isCancelled) {
+        setWorkerGrouped(e.data);
+      }
+      worker.terminate();
+    };
+    worker.onerror = () => {
+      if (!isCancelled) {
+        setWorkerGrouped(null);
+      }
+      worker.terminate();
+    };
+    return () => {
+      isCancelled = true;
+      worker.terminate();
+    };
+  }, [files, isGroupByType, typeOrderForWorker]);
 
-  const allFilesSelected = useMemo(() => allSelected, [allSelected]);
+  useEffect(() => {
+    if (files.length <= GROUP_FILES_WORKER_THRESHOLD || !isGroupByType) {
+      const timer = setTimeout(() => setWorkerGrouped(null), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [files.length, isGroupByType]);
+
+  const memoGrouped = useMemo(() => {
+    if (!isGroupByType) return null;
+
+    const groups = new Map<string, FileMetadata[]>();
+    files.forEach((file) => {
+      const key = getTypeKey(file.mime_type);
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(file);
+    });
+
+    return Array.from(groups.entries())
+      .map(([key, groupFiles]) => ({
+        key,
+        ...(FILE_TYPE_LABELS[key] ?? FILE_TYPE_LABELS.other),
+        files: groupFiles,
+      }))
+      .sort((a, b) => a.order - b.order);
+  }, [files, isGroupByType]);
+
+  const groupedFiles = useMemo(() => {
+    if (!isGroupByType) return null;
+    if (files.length > GROUP_FILES_WORKER_THRESHOLD && workerGrouped) {
+      return workerGrouped.map(({ key, files: groupFiles }) => ({
+        key,
+        ...(FILE_TYPE_LABELS[key] ?? FILE_TYPE_LABELS.other),
+        files: groupFiles,
+      }));
+    }
+    return memoGrouped;
+  }, [isGroupByType, files.length, workerGrouped, memoGrouped]);
+
+  const displayFiles = useMemo(() => {
+    if (!isGroupByType || !groupedFiles) return files;
+    return groupedFiles.flatMap((group) => group.files);
+  }, [files, isGroupByType, groupedFiles]);
+
+  const displayFileIndexById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < displayFiles.length; i += 1) {
+      m.set(displayFiles[i]!.id, i);
+    }
+    return m;
+  }, [displayFiles]);
 
   return {
-    selectedFiles,
-    selectedFolders,
-    selectedFileIds,
-    selectedFolderIds,
-    toggleSelectFile,
-    toggleSelectFolder,
-    toggleSelectAll,
-    allFilesSelected,
-    setSelectedFiles,
-    setSelectedFolders,
+    groupedFiles,
+    displayFiles,
+    displayFileIndexById,
   };
 }
 
@@ -161,7 +151,7 @@ export function useFileList() {
   const [folderPath, setFolderPath] = useState<Folder[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(false);
 
-  // 过滤器 + 排序
+  // 使用抽取的过滤器 Hook
   const {
     search,
     mimeType,
@@ -169,24 +159,33 @@ export function useFileList() {
     debouncedSearch,
     sortField,
     sortOrder,
+    isGroupByType,
     handleSearchChange: baseHandleSearchChange,
     handleMimeTypeChange: baseHandleMimeTypeChange,
     handleSortChange: baseHandleSortChange,
-  } = useFileFiltersAndSorting();
+  } = useFileFilters();
 
-  // 选择状态
+  // 使用抽取的选择状态 Hook
   const {
     selectedFiles,
     selectedFolders,
     selectedFileIds,
     selectedFolderIds,
+    allFilesSelected,
     toggleSelectFile,
     toggleSelectFolder,
     toggleSelectAll,
-    allFilesSelected,
+    clearSelection,
     setSelectedFiles,
     setSelectedFolders,
-  } = useSelectionState(files, folders);
+  } = useFileSelection(files, folders);
+
+  // 使用带 icon 的分组 Hook（保持与 FileListContent 兼容）
+  const {
+    groupedFiles,
+    displayFiles,
+    displayFileIndexById,
+  } = useFileGroupingWithIcons(files, isGroupByType);
 
   // 对话框状态
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
@@ -369,7 +368,6 @@ export function useFileList() {
   useEffect(() => {
     loadFolders();
     loadFiles();
-    // loadFiles 内部会设置 setLoadedPageCount(1)，无需在此处设置
   }, [loadFolders, loadFiles]);
 
   const navigateToFolder = useCallback((folderId: string | null) => {
@@ -390,71 +388,6 @@ export function useFileList() {
     setSelectedFolders(new Set());
   }, [setSearchParams, setSelectedFiles, setSelectedFolders]);
 
-  const isGroupByType = sortBy === 'type_group';
-
-  const typeOrderForWorker = useMemo(
-    () => Object.fromEntries(Object.entries(FILE_TYPE_LABELS).map(([k, v]) => [k, v.order])),
-    []
-  );
-
-  const [workerGrouped, setWorkerGrouped] = useState<
-    Array<{ key: string; order: number; files: FileMetadata[] }> | null
-  >(null);
-
-  useEffect(() => {
-    if (files.length <= GROUP_FILES_WORKER_THRESHOLD || !isGroupByType) {
-      setWorkerGrouped(null);
-      return;
-    }
-    const worker = new Worker(
-      new URL('../../workers/groupFiles.worker.ts', import.meta.url),
-      { type: 'module' }
-    );
-    worker.postMessage({ files, typeOrder: typeOrderForWorker });
-    worker.onmessage = (e: MessageEvent<Array<{ key: string; order: number; files: FileMetadata[] }>>) => {
-      setWorkerGrouped(e.data);
-      worker.terminate();
-    };
-    worker.onerror = () => {
-      setWorkerGrouped(null);
-      worker.terminate();
-    };
-    return () => worker.terminate();
-  }, [files, isGroupByType, typeOrderForWorker]);
-
-  const memoGrouped = useMemo(() => {
-    if (!isGroupByType) return null;
-
-    const groups = new Map<string, FileMetadata[]>();
-    files.forEach((file) => {
-      const key = getTypeKey(file.mime_type);
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(file);
-    });
-
-    return Array.from(groups.entries())
-      .map(([key, groupFiles]) => ({
-        key,
-        ...(FILE_TYPE_LABELS[key] ?? FILE_TYPE_LABELS.other),
-        files: groupFiles,
-      }))
-      .sort((a, b) => a.order - b.order);
-  }, [files, isGroupByType]);
-
-  const groupedFiles = useMemo(() => {
-    if (!isGroupByType) return null;
-    if (files.length > GROUP_FILES_WORKER_THRESHOLD && workerGrouped) {
-      return workerGrouped.map(({ key, files: groupFiles }) => ({
-        key,
-        ...(FILE_TYPE_LABELS[key] ?? FILE_TYPE_LABELS.other),
-        files: groupFiles,
-      }));
-    }
-    return memoGrouped;
-  }, [isGroupByType, files.length, workerGrouped, memoGrouped]);
-
   /** 按类型筛选时隐藏文件夹：仅「全部」或「仅文件夹」时展示文件夹；有搜索词时只展示名称匹配的文件夹 */
   const displayFolders = useMemo(() => {
     if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
@@ -462,19 +395,6 @@ export function useFileList() {
     if (!q) return folders;
     return folders.filter((f) => f.name.toLowerCase().includes(q));
   }, [mimeType, folders, debouncedSearch]);
-
-  const displayFiles = useMemo(() => {
-    if (!isGroupByType || !groupedFiles) return files;
-    return groupedFiles.flatMap((group) => group.files);
-  }, [files, isGroupByType, groupedFiles]);
-
-  const displayFileIndexById = useMemo(() => {
-    const m = new Map<string, number>();
-    for (let i = 0; i < displayFiles.length; i += 1) {
-      m.set(displayFiles[i]!.id, i);
-    }
-    return m;
-  }, [displayFiles]);
 
   const handleDelete = useCallback((fileId: string) => {
     const file = files.find((f) => f.id === fileId);
@@ -567,7 +487,6 @@ export function useFileList() {
         return;
       }
 
-      // 后端需在内存中完整生成 ZIP 后才返回，前端收到完整 blob 后才会弹出保存框，请稍候
       await fileService.downloadZip(allFileIds);
     } catch (err) {
       alert(getErrorMessage(err, '批量下载失败'));
@@ -586,7 +505,6 @@ export function useFileList() {
 
   /**
    * 移动前乐观更新：从当前列表移除被移动的项（仅当目标不是当前目录时），返回回滚函数。
-   * 供拖拽落点与 BatchMoveDialog 调用。
    */
   const getOptimisticMoveRollback = useCallback(
     (fileIds: string[], folderIds: string[], targetFolderId: string | null) => {
@@ -669,11 +587,6 @@ export function useFileList() {
 
   const handleShowBatchMove = useCallback(() => setShowBatchMove(true), []);
 
-  const clearSelection = useCallback(() => {
-    setSelectedFiles(new Set());
-    setSelectedFolders(new Set());
-  }, [setSelectedFiles, setSelectedFolders]);
-
   const handleShowBatchShare = useCallback(async () => {
     if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
 
@@ -731,10 +644,8 @@ export function useFileList() {
     setLoadedPageCount(1);
   }, [baseHandleMimeTypeChange]);
 
-  const handleSortChange = useCallback((value: import('./FileListFilters').SortOption) => {
+  const handleSortChange = useCallback((value: import('../../hooks/files/useFileFilters').SortOption) => {
     baseHandleSortChange(value);
-    // sortField/sortOrder 变化会触发 useEffect 重新调用 loadFiles
-    // loadFiles 内部会设置 setLoadedPageCount(1)，无需在此处设置
   }, [baseHandleSortChange]);
 
   const handleFileDragStart = useCallback((e: React.DragEvent, file: FileMetadata) => {
@@ -773,8 +684,7 @@ export function useFileList() {
     {
       key: SHORTCUTS.ESCAPE,
       handler: () => {
-        setSelectedFiles(new Set());
-        setSelectedFolders(new Set());
+        clearSelection();
         setPreviewFile(null);
         setShareFile(null);
         setShowBatchShare(false);
@@ -874,4 +784,3 @@ export function useFileList() {
     batchDownloading,
   };
 }
-

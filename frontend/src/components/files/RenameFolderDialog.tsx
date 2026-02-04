@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { type Folder } from '../../services/folders';
+import type { Folder } from '../../types';
 import { getErrorMessage } from '../../utils/error';
+import { useDialog } from '../../hooks/common/useDialog';
+import { validateFolderName } from '../../hooks/folders/useFolderValidation';
 
 interface RenameFolderDialogProps {
   open: boolean;
@@ -27,27 +29,25 @@ export default function RenameFolderDialog({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 打开时设置初始值并聚焦
+  // 使用 useDialog hook 统一处理 ESC 和聚焦
+  const { handleBackdropClick } = useDialog({
+    open,
+    onClose,
+    loading,
+    autoFocusRef: inputRef,
+  });
+
+  // 打开时设置初始值
   useEffect(() => {
     if (open && folder) {
       setName(folder.name);
       setError(null);
+      // 延迟选中文本
       setTimeout(() => {
-        inputRef.current?.focus();
         inputRef.current?.select();
-      }, 100);
+      }, 150);
     }
   }, [open, folder]);
-
-  // ESC 关闭
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -55,27 +55,17 @@ export default function RenameFolderDialog({
       if (!folder) return;
 
       const trimmedName = name.trim();
-      if (!trimmedName) {
-        setError('文件夹名称不能为空');
-        return;
-      }
-
+      
+      // 如果名称没变，直接关闭
       if (trimmedName === folder.name) {
         onClose();
         return;
       }
 
-      if (trimmedName.length > 255) {
-        setError('文件夹名称过长');
-        return;
-      }
-
-      if (
-        trimmedName.includes('/') ||
-        trimmedName.includes('\\') ||
-        trimmedName.includes('\0')
-      ) {
-        setError('文件夹名称包含非法字符');
+      // 使用统一的验证函数
+      const validation = validateFolderName(name);
+      if (!validation.valid) {
+        setError(validation.error ?? '验证失败');
         return;
       }
 
@@ -100,7 +90,7 @@ export default function RenameFolderDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={onClose}
+      onClick={handleBackdropClick}
     >
       <div
         className="w-full max-w-sm animate-fade-in rounded-2xl bg-[#1C1C28] p-6 shadow-2xl"
