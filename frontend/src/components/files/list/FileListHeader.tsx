@@ -86,10 +86,10 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
                 type="button"
                 onClick={() => setShowCreateFolder(true)}
                 className="glass-btn toolbarActionBtn font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0"
-                aria-label="新建文件夹"
+                aria-label="New Folder"
               >
                 <i className="bi bi-folder-plus shrink-0 text-[0.75rem]" aria-hidden />
-                <span>新建文件夹</span>
+                <span>New Folder</span>
               </button>
               {onOpenUpload && (
                 <button

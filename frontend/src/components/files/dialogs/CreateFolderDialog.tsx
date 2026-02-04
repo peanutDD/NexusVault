@@ -14,7 +14,7 @@ interface CreateFolderDialogProps {
 }
 
 /**
- * 新建文件夹对话框
+ * Create folder dialog
  */
 export default function CreateFolderDialog({
   open,
@@ -27,7 +27,6 @@ export default function CreateFolderDialog({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 使用 useDialog hook 统一处理 ESC 和聚焦
   const { handleBackdropClick } = useDialog({
     open,
     onClose,
@@ -35,7 +34,6 @@ export default function CreateFolderDialog({
     autoFocusRef: inputRef,
   });
 
-  // 打开时重置状态
   useEffect(() => {
     if (open) {
       setName('');
@@ -47,10 +45,9 @@ export default function CreateFolderDialog({
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      // 使用统一的验证函数
       const validation = validateFolderName(name);
       if (!validation.valid) {
-        setError(validation.error ?? '验证失败');
+        setError(validation.error ?? 'Validation failed');
         return;
       }
 
@@ -62,7 +59,7 @@ export default function CreateFolderDialog({
         onCreated(created);
         onClose();
       } catch (err) {
-        setError(getErrorMessage(err, '创建文件夹失败'));
+        setError(getErrorMessage(err, 'Failed to create folder'));
       } finally {
         setLoading(false);
       }
@@ -84,13 +81,12 @@ export default function CreateFolderDialog({
         <div
           className="createFolderDialogPanel relative w-full max-w-sm animate-fade-in overflow-hidden rounded-2xl border border-white/15 p-6 shadow-2xl text-white"
         >
-          {/* 赛博朋克玻璃高光层 */}
           <div
             className="createFolderDialogHighlight pointer-events-none absolute inset-0 rounded-2xl"
             aria-hidden
           />
           <div className="relative z-10">
-            <h2 className="mb-4 text-lg font-semibold text-white drop-shadow-sm">新建文件夹</h2>
+            <h2 className="mb-4 text-lg font-semibold text-white drop-shadow-sm">New Folder</h2>
 
             <form onSubmit={handleSubmit}>
               <input
@@ -98,7 +94,7 @@ export default function CreateFolderDialog({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value.slice(0, 50))}
-                placeholder="请输入文件夹名称"
+                placeholder="Enter folder name"
                 maxLength={50}
                 className="createFolderDialogInput mb-4 w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder-white/50 shadow-inner transition-colors focus:border-[#6C5DD3] focus:outline-none focus:ring-2 focus:ring-[#6C5DD3]/40"
                 disabled={loading}
@@ -113,14 +109,14 @@ export default function CreateFolderDialog({
                   disabled={loading}
                   className="createFolderDialogCancelBtn flex-1 rounded-xl border border-white/15 bg-white/10 py-3 text-sm font-medium text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  取消
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !name.trim()}
                   className="createFolderDialogSubmitBtn flex-1 rounded-xl border border-[#6C5DD3]/40 bg-[#6C5DD3]/30 py-3 text-sm font-medium text-white transition-colors hover:bg-[#6C5DD3]/40 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {loading ? '创建中...' : '创建'}
+                  {loading ? 'Creating...' : 'Create'}
                 </button>
               </div>
             </form>
