@@ -51,8 +51,6 @@ export class UploadQueue {
     const priority = options?.priority ?? 0;
     const cost = this.costForFileSize(options?.fileSize);
 
-    console.log('[UploadQueue.add] id:', id, 'priority:', priority, 'cost:', cost, 'queueSize:', this.queue.length, 'runningCost:', this.runningCost);
-
     return new Promise<T>((resolve, reject) => {
       this.queue.push({
         id,
@@ -89,23 +87,18 @@ export class UploadQueue {
 
   private async process(): Promise<void> {
     const item = this.pickNext();
-    console.log('[UploadQueue.process] picked item:', item?.id ?? 'null', 'queueSize:', this.queue.length, 'runningCost:', this.runningCost);
     if (!item) return;
 
     this.runningCost += item.cost;
     const cost = item.cost;
-    console.log('[UploadQueue.process] starting task:', item.id, 'runningCost:', this.runningCost);
 
     try {
       const result = await item.task();
-      console.log('[UploadQueue.process] task completed:', item.id);
       item.resolve(result);
     } catch (err) {
-      console.log('[UploadQueue.process] task failed:', item.id, err);
       item.reject(err);
     } finally {
       this.runningCost -= cost;
-      console.log('[UploadQueue.process] task finished:', item.id, 'runningCost:', this.runningCost);
       this.process();
     }
   }

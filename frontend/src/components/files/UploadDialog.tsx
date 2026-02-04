@@ -59,26 +59,18 @@ export default function UploadDialog({
   /** 唯一写入口：把 File[] 追加到上传列表（拖拽与点选都经此） */
   const appendFilesToState = useCallback(
     (files: File[]) => {
-      console.log('[appendFilesToState] Called with', files.length, 'files:', files.map(f => f.name));
-      if (files.length === 0) {
-        console.log('[appendFilesToState] files array is empty, returning');
-        return;
-      }
+      if (files.length === 0) return;
       setBatchLimitWarning('');
       
       // 使用 ref 获取真实的当前状态，绕过 StrictMode 双重调用问题
       const currentFiles = uploadFilesRef.current;
-      console.log('[appendFilesToState] currentFiles.length (from ref):', currentFiles.length);
-      
       const remainingSlots = maxBatchCount - currentFiles.length;
-      console.log('[appendFilesToState] remainingSlots:', remainingSlots);
       if (remainingSlots <= 0) {
         setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
         return;
       }
       
       const filesToAdd = files.slice(0, remainingSlots);
-      console.log('[appendFilesToState] filesToAdd.length:', filesToAdd.length);
       const skippedCount = files.length - filesToAdd.length;
       if (skippedCount > 0) {
         setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
@@ -87,7 +79,7 @@ export default function UploadDialog({
       const baseId = Date.now();
       const newEntries: UploadFile[] = filesToAdd.map((file, index) => {
         const validation = validateFile(file);
-        const entry: UploadFile = {
+        return {
           id: `upload-${baseId}-${index}-${file.name}-${file.size}-${file.lastModified}`,
           name: file.name,
           size: file.size,
@@ -97,16 +89,10 @@ export default function UploadDialog({
           error: validation.ok ? undefined : validation.error,
           file: validation.ok ? file : undefined,
         };
-        console.log('[appendFilesToState] Created entry:', entry.id, entry.name);
-        return entry;
       });
       
-      console.log('[appendFilesToState] newEntries.length:', newEntries.length);
-      const result = [...currentFiles, ...newEntries];
-      console.log('[appendFilesToState] Setting state with', result.length, 'items');
-      
       // 使用 wrapper 同时更新 ref 和 state
-      updateUploadFiles(result);
+      updateUploadFiles([...currentFiles, ...newEntries]);
     },
     [maxBatchCount, updateUploadFiles]
   );
@@ -134,9 +120,7 @@ export default function UploadDialog({
 
     // 使用 ref 获取最新状态，避免闭包捕获旧的 uploadFiles
     const currentFiles = uploadFilesRef.current;
-    console.log('[startUpload] currentFiles.length:', currentFiles.length);
     const pendingFiles = currentFiles.filter((f) => f.status === 'pending' && f.file);
-    console.log('[startUpload] pendingFiles.length:', pendingFiles.length);
     if (pendingFiles.length === 0) {
       const allSuccess = currentFiles.length > 0 && currentFiles.every((f) => f.status === 'success');
       if (allSuccess) {
@@ -423,9 +407,6 @@ export default function UploadDialog({
     }
   }, [hasPending, isUploading, uploadStats.successCount, startUpload, onUploadComplete, onClose, updateUploadFiles]);
 
-  // 调试：每次渲染时打印 uploadFiles 长度
-  console.log('[UploadDialog render] uploadFiles.length:', uploadFiles.length, 'uploadFilesRef.current.length:', uploadFilesRef.current.length);
-
   if (!open) return null;
 
   return (
@@ -473,26 +454,8 @@ export default function UploadDialog({
             aria-label="选择文件"
             onChange={(e) => {
               const list = e.target.files;
-              // 调试：打印浏览器返回的 FileList
-              console.log('[UploadDialog] onChange triggered, FileList:', list);
-              console.log('[UploadDialog] FileList.length:', list?.length);
-              if (!list || list.length === 0) {
-                console.log('[UploadDialog] FileList is empty or null, returning');
-                return;
-              }
-              const arr: File[] = [];
-              for (let i = 0; i < list.length; i++) {
-                const f = list.item(i);
-                console.log(`[UploadDialog] list.item(${i}):`, f?.name, f?.size, f?.type);
-                if (f) arr.push(f);
-              }
-              console.log('[UploadDialog] Copied array length:', arr.length);
-              if (arr.length === 0) {
-                console.log('[UploadDialog] Copied array is empty, returning');
-                return;
-              }
-              console.log('[UploadDialog] Calling appendFilesToState with', arr.length, 'files');
-              appendFilesToState(arr);
+              if (!list || list.length === 0) return;
+              appendFilesToState(Array.from(list));
               setTimeout(() => {
                 if (inputRef.current) inputRef.current.value = '';
               }, 0);
