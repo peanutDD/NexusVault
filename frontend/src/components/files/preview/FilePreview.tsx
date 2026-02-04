@@ -1,11 +1,11 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { fileService } from '../../services/files';
-import type { FileMetadata } from '../../types';
-import { ResponsivePicture } from '../common/ResponsivePicture';
-import { formatFileSize } from '../../utils/format';
-import { cn } from '../../utils/cn';
-import { getPreviewKind, getMimeTypeLabel } from '../../utils/mimeType';
-import { useThrottledCallback } from '../../hooks/useThrottledCallback';
+import { fileService } from '../../../services/files';
+import type { FileMetadata } from '../../../types';
+import { ResponsivePicture } from '../../common/ResponsivePicture';
+import { formatFileSize } from '../../../utils/format';
+import { cn } from '../../../utils/cn';
+import { getPreviewKind, getMimeTypeLabel } from '../../../utils/mimeType';
+import { useThrottledCallback } from '../../../hooks/useThrottledCallback';
 
 interface FilePreviewProps {
   file: FileMetadata | null;

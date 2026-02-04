@@ -16,10 +16,10 @@
  * @param props.onOpenUpload 打开上传对话框的回调函数
  */
 import React from 'react';
-import FolderBreadcrumb from './FolderBreadcrumb';
+import FolderBreadcrumb from '../FolderBreadcrumb';
 import FileListFilters from './FileListFilters';
 
-import type { Folder } from '../../types';
+import type { Folder } from '../../../types';
 
 interface FileListHeaderProps {
   folderPath: Folder[];

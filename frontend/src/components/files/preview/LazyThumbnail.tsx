@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { fileService } from '../../services/files';
-import { ResponsivePicture } from '../common/ResponsivePicture';
-import { cn } from '../../utils/cn';
-import { isImageType, isVideoType, isPdfType, isAudioType } from '../../utils/mimeType';
+import { fileService } from '../../../services/files';
+import { ResponsivePicture } from '../../common/ResponsivePicture';
+import { cn } from '../../../utils/cn';
+import { isImageType, isVideoType, isPdfType, isAudioType } from '../../../utils/mimeType';
 
 interface LazyThumbnailProps {
   fileId: string;

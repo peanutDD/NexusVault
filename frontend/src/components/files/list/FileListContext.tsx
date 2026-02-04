@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- Context and hook are intentionally co-located */
 import { createContext, use } from 'react';
-import type { FileMetadata, Folder } from '../../types';
+import type { FileMetadata, Folder } from '../../../types';
 
 /**
  * 文件列表上下文类型

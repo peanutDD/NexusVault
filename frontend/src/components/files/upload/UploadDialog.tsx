@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { fileService } from '../../services/files';
-import { getErrorMessage } from '../../utils/error';
-import { validateFile, getMaxFileSizeGB, getMaxBatchCount } from '../../utils/uploadValidation';
-import { UPLOAD_QUEUE } from '../../constants';
-import { UploadQueue } from '../../utils/uploadQueue';
-import { cn } from '../../utils/cn';
+import { fileService } from '../../../services/files';
+import { getErrorMessage } from '../../../utils/error';
+import { validateFile, getMaxFileSizeGB, getMaxBatchCount } from '../../../utils/uploadValidation';
+import { UPLOAD_QUEUE } from '../../../constants';
+import { UploadQueue } from '../../../utils/uploadQueue';
+import { cn } from '../../../utils/cn';
 import UploadFileItem, { type UploadFile } from './UploadFileItem';
 
 interface UploadDialogProps {

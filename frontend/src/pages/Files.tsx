@@ -2,11 +2,11 @@ import { useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import PageLayout from '../components/layout/PageLayout';
-import FileList from '../components/files/FileList';
+import FileList from '../components/files/list/FileList';
 import { clearFileListCache } from '../utils/fileListCache';
 
 // 懒加载重型对话框组件
-const UploadDialog = lazy(() => import('../components/files/UploadDialog'));
+const UploadDialog = lazy(() => import('../components/files/upload/UploadDialog'));
 
 export default function Files() {
   const navigate = useNavigate();

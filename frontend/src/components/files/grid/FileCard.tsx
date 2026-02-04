@@ -1,12 +1,12 @@
 import { memo, useMemo, useCallback } from 'react';
 import { Download, Send, Trash2 } from 'lucide-react';
-import { formatFileSize } from '../../utils/format';
-import type { FileMetadata } from '../../types';
-import LazyThumbnail from './LazyThumbnail';
-import { cn } from '../../utils/cn';
-import { getMimeTypeLabel } from '../../utils/mimeType';
-import { preloadPreview } from '../../utils/preloadPreview';
-import { SelectionCheckbox } from '../common/form/SelectionCheckbox';
+import { formatFileSize } from '../../../utils/format';
+import type { FileMetadata } from '../../../types';
+import LazyThumbnail from '../preview/LazyThumbnail';
+import { cn } from '../../../utils/cn';
+import { getMimeTypeLabel } from '../../../utils/mimeType';
+import { preloadPreview } from '../../../utils/preloadPreview';
+import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
 
 interface FileCardProps {
   file: FileMetadata;

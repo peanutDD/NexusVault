@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { MIME_FILTER_FOLDERS } from '../../constants';
-import DropdownMenu from '../common/DropdownMenu';
+import { MIME_FILTER_FOLDERS } from '../../../constants';
+import DropdownMenu from '../../common/DropdownMenu';
 import './FileListFilters.css';
 
 export type SortOption = 'created_at_desc' | 'created_at_asc' | 'filename_asc' | 'filename_desc' | 'file_size_desc' | 'file_size_asc' | 'type_group';

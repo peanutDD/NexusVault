@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getErrorMessage } from '../utils/error';
-import ErrorMessage from '../components/common/ErrorMessage';
+import ErrorMessage from '../components/common/feedback/ErrorMessage';
 
 export default function Share() {
   const { token } = useParams<{ token: string }>();

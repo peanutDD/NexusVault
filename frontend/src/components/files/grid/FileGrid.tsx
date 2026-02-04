@@ -1,4 +1,4 @@
-import type { FileMetadata, Folder } from '../../types';
+import type { FileMetadata, Folder } from '../../../types';
 import FileCard from './FileCard';
 
 interface FileGridProps {

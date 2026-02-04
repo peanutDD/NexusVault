@@ -1,6 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react';
-import { cn } from '../../utils/cn';
-import { getMaxFileSizeGB } from '../../utils/uploadValidation';
+import { cn } from '../../../utils/cn';
+import { getMaxFileSizeGB } from '../../../utils/uploadValidation';
 
 interface UploadDropzoneProps {
   /** 拖拽状态 */

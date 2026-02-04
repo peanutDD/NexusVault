@@ -2,7 +2,7 @@
 //!
 //! 骨架屏组件，用于加载状态的占位显示。
 
-import { cn } from '../../utils/cn';
+import { cn } from '../../../utils/cn';
 
 interface SkeletonProps {
   className?: string;

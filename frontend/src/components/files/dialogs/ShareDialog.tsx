@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { shareService, type CreateShareRequest } from '../../services/shares';
-import { getErrorMessage } from '../../utils/error';
-import ErrorMessage from '../common/ErrorMessage';
-import Modal from '../common/Modal';
+import { shareService, type CreateShareRequest } from '../../../services/shares';
+import { getErrorMessage } from '../../../utils/error';
+import ErrorMessage from '../../common/feedback/ErrorMessage';
+import Modal from '../../common/dialog/Modal';
 
 interface ShareDialogProps {
   fileId: string;

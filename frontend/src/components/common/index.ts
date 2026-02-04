@@ -14,6 +14,5 @@ export * from './feedback';
 // 其他
 export { default as Button } from './Button';
 export { default as DropdownMenu } from './DropdownMenu';
-export { default as Modal } from './Modal';
 export { default as ThemeToggle } from './ThemeToggle';
 export { default as BrowserCompatibilityWarning } from './BrowserCompatibilityWarning';

@@ -1,7 +1,7 @@
 import { memo, useState, useCallback } from 'react';
-import type { Folder } from '../../types';
-import { cn } from '../../utils/cn';
-import { SelectionCheckbox } from '../common/form/SelectionCheckbox';
+import type { Folder } from '../../../types';
+import { cn } from '../../../utils/cn';
+import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
 
 interface FolderCardProps {
   folder: Folder;

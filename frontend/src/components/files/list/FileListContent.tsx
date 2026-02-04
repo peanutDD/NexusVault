@@ -67,16 +67,16 @@
  * @param props.batchDownloading 是否正在批量下载
  */
 import React from 'react';
-import FileGrid from './FileGrid';
-import VirtualizedFileGrid from './VirtualizedFileGrid';
-import FolderGrid from './FolderGrid';
+import FileGrid from '../grid/FileGrid';
+import VirtualizedFileGrid from '../grid/VirtualizedFileGrid';
+import FolderGrid from '../grid/FolderGrid';
 import FileListBatchActions from './FileListBatchActions';
 import FileListPagination from './FileListPagination';
-import ErrorMessage from '../common/ErrorMessage';
-import { FileCardSkeleton } from '../common/Skeleton';
-import { FILE_LIST } from '../../constants';
-import InfiniteScrollSentinel from './InfiniteScrollSentinel';
-import type { FileMetadata, Folder } from '../../types';
+import ErrorMessage from '../../common/feedback/ErrorMessage';
+import { FileCardSkeleton } from '../../common/feedback/Skeleton';
+import { FILE_LIST } from '../../../constants';
+import InfiniteScrollSentinel from '../InfiniteScrollSentinel';
+import type { FileMetadata, Folder } from '../../../types';
 
 interface FileListContentProps {
   files: FileMetadata[];

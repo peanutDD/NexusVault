@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
-import type { FileMetadata, Folder } from '../../types';
+import type { FileMetadata, Folder } from '../../../types';
 import FileCard from './FileCard';
-import { FILE_LIST } from '../../constants';
-import { useThrottledCallback } from '../../hooks/useThrottledCallback';
+import { FILE_LIST } from '../../../constants';
+import { useThrottledCallback } from '../../../hooks/useThrottledCallback';
 
 /** 根据窗口宽度估算网格列数（与 Tailwind grid-cols-2 … xl:grid-cols-6 一致） */
 function getColumnsFromWidth(width: number): number {

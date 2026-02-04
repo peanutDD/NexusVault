@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '../../../utils/cn';
 
 interface FileListPaginationProps {
   /** 当前已加载页数（无限滚动）或当前页码（传统分页） */

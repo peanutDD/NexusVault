@@ -1,7 +1,7 @@
 import { memo, useState, useEffect, useMemo, useRef, useCallback, useId } from 'react';
-import { formatFileSize } from '../../utils/format';
-import { cn } from '../../utils/cn';
-import { getMimeTypeInfo } from '../../utils/mimeType';
+import { formatFileSize } from '../../../utils/format';
+import { cn } from '../../../utils/cn';
+import { getMimeTypeInfo } from '../../../utils/mimeType';
 import { createPortal } from 'react-dom';
 import './UploadFileItem.css';
 

@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { folderService } from '../../services/folders';
-import type { Folder } from '../../types';
-import { getErrorMessage } from '../../utils/error';
+import { folderService } from '../../../services/folders';
+import type { Folder } from '../../../types';
+import { getErrorMessage } from '../../../utils/error';
 import { Home, Check, Loader2 } from 'lucide-react';
-import { cn } from '../../utils/cn';
-import Modal from '../common/Modal';
-import ErrorMessage from '../common/ErrorMessage';
+import { cn } from '../../../utils/cn';
+import Modal from '../../common/dialog/Modal';
+import ErrorMessage from '../../common/feedback/ErrorMessage';
 
 interface BatchMoveDialogProps {
   fileIds: string[];

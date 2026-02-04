@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '../../../utils/cn';
 
 export type ConfirmVariant = 'danger' | 'warning' | 'info';
 export type ConfirmAppearance = 'default' | 'glass';

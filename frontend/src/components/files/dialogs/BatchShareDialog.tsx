@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { shareService, type BatchShareRequest } from '../../services/shares';
-import { fileService } from '../../services/files';
-import { getErrorMessage } from '../../utils/error';
-import ErrorMessage from '../common/ErrorMessage';
-import Modal from '../common/Modal';
+import { shareService, type BatchShareRequest } from '../../../services/shares';
+import { fileService } from '../../../services/files';
+import { getErrorMessage } from '../../../utils/error';
+import ErrorMessage from '../../common/feedback/ErrorMessage';
+import Modal from '../../common/dialog/Modal';
 
 interface BatchShareDialogProps {
   fileIds: string[];

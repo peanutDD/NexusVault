@@ -2,22 +2,22 @@ import { lazy, Suspense } from 'react';
 import './FileListGlass.css';
 import FileListHeader from './FileListHeader';
 import FileListContent from './FileListContent';
-import { useFileList } from './useFileList';
-import { clearFileListCache } from '../../utils/fileListCache';
-import { useThrottledCallback } from '../../hooks/useThrottledCallback';
+import { useFileList } from '../useFileList';
+import { clearFileListCache } from '../../../utils/fileListCache';
+import { useThrottledCallback } from '../../../hooks/useThrottledCallback';
 
 interface FileListProps {
   onOpenUpload?: () => void;
 }
 
 // 懒加载重型对话框组件
-const FilePreview = lazy(() => import('./FilePreview'));
-const ShareDialog = lazy(() => import('./ShareDialog'));
-const BatchShareDialog = lazy(() => import('./BatchShareDialog'));
-const BatchMoveDialog = lazy(() => import('./BatchMoveDialog'));
-const CreateFolderDialog = lazy(() => import('./CreateFolderDialog'));
-const RenameFolderDialog = lazy(() => import('./RenameFolderDialog'));
-const ConfirmDialog = lazy(() => import('../common/ConfirmDialog'));
+const FilePreview = lazy(() => import('../preview/FilePreview'));
+const ShareDialog = lazy(() => import('../dialogs/ShareDialog'));
+const BatchShareDialog = lazy(() => import('../dialogs/BatchShareDialog'));
+const BatchMoveDialog = lazy(() => import('../dialogs/BatchMoveDialog'));
+const CreateFolderDialog = lazy(() => import('../dialogs/CreateFolderDialog'));
+const RenameFolderDialog = lazy(() => import('../dialogs/RenameFolderDialog'));
+const ConfirmDialog = lazy(() => import('../../common/dialog/ConfirmDialog'));
 
 /** 删除确认文案中显示的文件/文件夹名：过长时中间省略，最多约 19 字 */
 function truncateNameForConfirm(name: string, maxLen = 19): string {

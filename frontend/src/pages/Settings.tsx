@@ -7,7 +7,7 @@ import { apiTokenService } from '../services/apiTokens';
 import type { ApiToken } from '../services/apiTokens';
 import type { StorageUsage } from '../types';
 import { getErrorMessage } from '../utils/error';
-import ErrorMessage from '../components/common/ErrorMessage';
+import ErrorMessage from '../components/common/feedback/ErrorMessage';
 import PageLayout from '../components/layout/PageLayout';
 import {
   UserInfoSection,

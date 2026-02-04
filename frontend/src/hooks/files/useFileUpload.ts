@@ -4,7 +4,7 @@ import { getErrorMessage } from '../../utils/error';
 import { validateFile, getMaxBatchCount } from '../../utils/uploadValidation';
 import { UPLOAD_QUEUE } from '../../constants';
 import { UploadQueue } from '../../utils/uploadQueue';
-import type { UploadFile } from '../../components/files/UploadFileItem';
+import type { UploadFile } from '../../components/files/upload/UploadFileItem';
 
 const uploadQueue = new UploadQueue(
   UPLOAD_QUEUE.MAX_COST,

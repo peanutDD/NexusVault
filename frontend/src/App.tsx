@@ -4,7 +4,7 @@ import { useAuthStore } from './store/authStore';
 import { useHydrationStore } from './store/hydrationStore';
 import { useThemeStore } from './store/themeStore';
 import ErrorBoundary from './components/ErrorBoundary';
-import Spinner from './components/common/Spinner';
+import Spinner from './components/common/feedback/Spinner';
 import BrowserCompatibilityWarning from './components/common/BrowserCompatibilityWarning';
 
 const Login = lazy(() => import('./components/auth/Login'));

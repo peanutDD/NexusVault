@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { cn } from '../../utils/cn';
-import { validateFile } from '../../utils/uploadValidation';
+import { cn } from '../../../utils/cn';
+import { validateFile } from '../../../utils/uploadValidation';
 import type { UploadFile } from './UploadFileItem';
 
 interface UrlUploadFormProps {
