@@ -78,15 +78,15 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
 /// let token = generate_random_token(32); // 生成 32 字符的令牌
 /// ```
 pub fn generate_random_token(length: usize) -> String {
+    use crate::constants::RANDOM_TOKEN_CHARSET;
     use rand::Rng;
 
-    const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let mut rng = rand::thread_rng();
 
     (0..length)
         .map(|_| {
-            let idx = rng.gen_range(0..CHARSET.len());
-            CHARSET[idx] as char
+            let idx = rng.gen_range(0..RANDOM_TOKEN_CHARSET.len());
+            RANDOM_TOKEN_CHARSET[idx] as char
         })
         .collect()
 }

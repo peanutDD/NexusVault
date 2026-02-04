@@ -314,26 +314,3 @@ impl StorageBackend for S3Storage {
         Ok(())
     }
 }
-
-#[allow(dead_code)]
-pub fn create_storage_backend(
-    backend_type: &str,
-    storage_path: String,
-    _aws_bucket: String,
-    _aws_region: String,
-) -> Result<Box<dyn StorageBackend>, AppError> {
-    match backend_type {
-        "local" => Ok(Box::new(LocalStorage::new(storage_path))),
-        "s3" => {
-            // Note: S3Storage::new is async, so we can't call it here
-            // In production, you'd initialize it differently
-            Err(AppError::Storage(
-                "S3 storage must be initialized asynchronously".to_string(),
-            ))
-        }
-        _ => Err(AppError::Storage(format!(
-            "Unknown storage backend: {}",
-            backend_type
-        ))),
-    }
-}

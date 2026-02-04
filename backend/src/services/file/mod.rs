@@ -40,16 +40,8 @@ use crate::services::storage::StorageBackend;
 use crate::utils::AppError;
 
 pub use storage_factory::create_storage;
-
-/// 分块上传的块大小（5 MiB）
-pub const CHUNK_SIZE: u32 = 5 * 1024 * 1024;
-
-/// 批量下载 ZIP 的安全限制（硬限制）
-///
-/// 说明：当前实现会把每个文件内容与最终 ZIP 都放在内存里（Vec<u8>），
-/// 若不限制，容易导致内存暴涨/超时/服务不稳定。
-pub(super) const MAX_BATCH_ZIP_FILES: usize = 200;
-pub(super) const MAX_BATCH_ZIP_TOTAL_BYTES: i64 = 250 * 1024 * 1024; // 250 MiB
+// 重新导出常量以保持向后兼容
+pub use crate::constants::CHUNK_SIZE;
 
 pub struct FileService {
     pub(super) pool: PgPool,

@@ -34,6 +34,88 @@ impl FolderService {
         Self::new(state.pool.clone())
     }
 
+    // ========================================================================
+    // 私有辅助方法
+    // ========================================================================
+
+    /// 验证文件夹名称
+    fn validate_folder_name(name: &str) -> Result<&str, AppError> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(AppError::Validation("文件夹名称不能为空".to_string()));
+        }
+        if name.len() > 255 {
+            return Err(AppError::Validation("文件夹名称过长".to_string()));
+        }
+        if name.contains('/') || name.contains('\\') || name.contains('\0') {
+            return Err(AppError::Validation(
+                "文件夹名称包含非法字符".to_string(),
+            ));
+        }
+        Ok(name)
+    }
+
+    /// 验证文件夹存在性（返回文件夹 ID）
+    async fn verify_folder_exists(&self, folder_id: Uuid, user_id: Uuid) -> Result<Uuid, AppError> {
+        sqlx::query_scalar::<_, Uuid>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
+            .bind(folder_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(AppError::NotFound)
+    }
+
+    /// 获取文件夹完整信息
+    async fn get_folder_by_id(&self, folder_id: Uuid, user_id: Uuid) -> Result<Folder, AppError> {
+        sqlx::query_as::<_, Folder>(
+            "SELECT id, user_id, name, parent_id, created_at, updated_at FROM folders WHERE id = $1 AND user_id = $2",
+        )
+        .bind(folder_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(AppError::NotFound)
+    }
+
+    /// 检查同级目录下是否存在同名文件夹
+    async fn check_name_conflict(
+        &self,
+        user_id: Uuid,
+        parent_id: Option<Uuid>,
+        name: &str,
+        exclude_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
+        let existing: Option<Uuid> = if let Some(exclude) = exclude_id {
+            sqlx::query_scalar(
+                "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3 AND id != $4",
+            )
+            .bind(user_id)
+            .bind(parent_id)
+            .bind(name)
+            .bind(exclude)
+            .fetch_optional(&self.pool)
+            .await?
+        } else {
+            sqlx::query_scalar(
+                "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3",
+            )
+            .bind(user_id)
+            .bind(parent_id)
+            .bind(name)
+            .fetch_optional(&self.pool)
+            .await?
+        };
+
+        if existing.is_some() {
+            return Err(AppError::Validation("同名文件夹已存在".to_string()));
+        }
+        Ok(())
+    }
+
+    // ========================================================================
+    // 公开方法
+    // ========================================================================
+
     /// 创建文件夹
     ///
     /// # 参数
@@ -49,43 +131,18 @@ impl FolderService {
         req: CreateFolderRequest,
     ) -> Result<FolderResponse, AppError> {
         // 验证文件夹名称
-        let name = req.name.trim();
-        if name.is_empty() {
-            return Err(AppError::Validation("文件夹名称不能为空".to_string()));
-        }
-        if name.len() > 255 {
-            return Err(AppError::Validation("文件夹名称过长".to_string()));
-        }
-        // 禁止特殊字符
-        if name.contains('/') || name.contains('\\') || name.contains('\0') {
-            return Err(AppError::Validation(
-                "文件夹名称包含非法字符".to_string(),
-            ));
-        }
+        let name = Self::validate_folder_name(&req.name)?;
 
         // 如果指定了父文件夹，验证其存在且属于该用户
         if let Some(parent_id) = req.parent_id {
-            sqlx::query_as::<_, (Uuid,)>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-                .bind(parent_id)
-                .bind(user_id)
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| AppError::Validation("父文件夹不存在".to_string()))?;
+            self.verify_folder_exists(parent_id, user_id)
+                .await
+                .map_err(|_| AppError::Validation("父文件夹不存在".to_string()))?;
         }
 
-        // 检查同一父目录下是否已存在同名文件夹（使用 IS NOT DISTINCT FROM 统一处理 NULL）
-        let existing: Option<(Uuid,)> = sqlx::query_as(
-            "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3",
-        )
-        .bind(user_id)
-        .bind(req.parent_id)
-        .bind(name)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        if existing.is_some() {
-            return Err(AppError::Validation("同名文件夹已存在".to_string()));
-        }
+        // 检查同一父目录下是否已存在同名文件夹
+        self.check_name_conflict(user_id, req.parent_id, name, None)
+            .await?;
 
         // 创建文件夹
         let folder: Folder = sqlx::query_as(
@@ -257,43 +314,15 @@ impl FolderService {
         folder_id: Uuid,
         req: RenameFolderRequest,
     ) -> Result<FolderResponse, AppError> {
-        let name = req.name.trim();
-        if name.is_empty() {
-            return Err(AppError::Validation("文件夹名称不能为空".to_string()));
-        }
-        if name.len() > 255 {
-            return Err(AppError::Validation("文件夹名称过长".to_string()));
-        }
-        if name.contains('/') || name.contains('\\') || name.contains('\0') {
-            return Err(AppError::Validation(
-                "文件夹名称包含非法字符".to_string(),
-            ));
-        }
+        // 验证文件夹名称
+        let name = Self::validate_folder_name(&req.name)?;
 
         // 获取当前文件夹信息
-        let current = sqlx::query_as::<_, Folder>(
-            "SELECT id, user_id, name, parent_id, created_at, updated_at FROM folders WHERE id = $1 AND user_id = $2",
-        )
-        .bind(folder_id)
-        .bind(user_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(AppError::NotFound)?;
+        let current = self.get_folder_by_id(folder_id, user_id).await?;
 
-        // 检查同级目录下是否已有同名文件夹（使用 IS NOT DISTINCT FROM 统一处理）
-        let existing: Option<(Uuid,)> = sqlx::query_as(
-            "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3 AND id != $4",
-        )
-        .bind(user_id)
-        .bind(current.parent_id)
-        .bind(name)
-        .bind(folder_id)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        if existing.is_some() {
-            return Err(AppError::Validation("同名文件夹已存在".to_string()));
-        }
+        // 检查同级目录下是否已有同名文件夹
+        self.check_name_conflict(user_id, current.parent_id, name, Some(folder_id))
+            .await?;
 
         // 更新文件夹名称
         let folder: Folder = sqlx::query_as(
@@ -336,27 +365,17 @@ impl FolderService {
         }
 
         // 获取当前文件夹信息
-        let current = sqlx::query_as::<_, Folder>(
-            "SELECT id, user_id, name, parent_id, created_at, updated_at FROM folders WHERE id = $1 AND user_id = $2",
-        )
-        .bind(folder_id)
-        .bind(user_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(AppError::NotFound)?;
+        let current = self.get_folder_by_id(folder_id, user_id).await?;
 
         // 如果目标父文件夹不为空，验证其存在且不是当前文件夹的子文件夹
         if let Some(new_parent_id) = req.parent_id {
             // 验证目标文件夹存在
-            sqlx::query_as::<_, (Uuid,)>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-                .bind(new_parent_id)
-                .bind(user_id)
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| AppError::Validation("目标文件夹不存在".to_string()))?;
+            self.verify_folder_exists(new_parent_id, user_id)
+                .await
+                .map_err(|_| AppError::Validation("目标文件夹不存在".to_string()))?;
 
             // 检查目标文件夹是否是当前文件夹的子文件夹（防止循环）
-            let is_descendant: Option<(i64,)> = sqlx::query_as(
+            let is_descendant: Option<i64> = sqlx::query_scalar(
                 r#"
                 WITH RECURSIVE descendants AS (
                     SELECT id FROM folders WHERE parent_id = $1
@@ -379,22 +398,10 @@ impl FolderService {
             }
         }
 
-        // 检查目标位置是否已有同名文件夹（使用 IS NOT DISTINCT FROM 统一处理）
-        let existing: Option<(Uuid,)> = sqlx::query_as(
-            "SELECT id FROM folders WHERE user_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND name = $3 AND id != $4",
-        )
-        .bind(user_id)
-        .bind(req.parent_id)
-        .bind(&current.name)
-        .bind(folder_id)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        if existing.is_some() {
-            return Err(AppError::Validation(
-                "目标位置已存在同名文件夹".to_string(),
-            ));
-        }
+        // 检查目标位置是否已有同名文件夹
+        self.check_name_conflict(user_id, req.parent_id, &current.name, Some(folder_id))
+            .await
+            .map_err(|_| AppError::Validation("目标位置已存在同名文件夹".to_string()))?;
 
         // 移动文件夹
         let folder: Folder = sqlx::query_as(
@@ -426,12 +433,7 @@ impl FolderService {
     /// - 删除的文件数量
     pub async fn delete_folder(&self, user_id: Uuid, folder_id: Uuid) -> Result<u64, AppError> {
         // 验证文件夹存在
-        sqlx::query_as::<_, (Uuid,)>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-            .bind(folder_id)
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await?
-            .ok_or(AppError::NotFound)?;
+        self.verify_folder_exists(folder_id, user_id).await?;
 
         // 获取所有需要删除的文件夹 ID（包括子文件夹）
         let folder_ids: Vec<(Uuid,)> = sqlx::query_as(
@@ -492,12 +494,9 @@ impl FolderService {
 
         // 如果目标文件夹不为空，验证其存在
         if let Some(fid) = folder_id {
-            sqlx::query_as::<_, (Uuid,)>("SELECT id FROM folders WHERE id = $1 AND user_id = $2")
-                .bind(fid)
-                .bind(user_id)
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| AppError::Validation("目标文件夹不存在".to_string()))?;
+            self.verify_folder_exists(fid, user_id)
+                .await
+                .map_err(|_| AppError::Validation("目标文件夹不存在".to_string()))?;
         }
 
         // 更新文件的 folder_id

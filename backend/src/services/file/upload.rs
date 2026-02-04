@@ -15,6 +15,8 @@ fn build_storage_filename(file_id: Uuid, original_filename: &str) -> Result<Stri
 }
 
 impl FileService {
+    /// 从内存数据创建文件（暂未使用，保留以备将来 API 扩展）
+    #[allow(dead_code)]
     pub async fn create_file(
         &self,
         user_id: Uuid,

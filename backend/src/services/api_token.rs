@@ -23,13 +23,13 @@ impl ApiTokenService {
 
     /// Generate a secure random token
     fn generate_token() -> String {
+        use crate::constants::API_TOKEN_CHARSET;
         use rand::Rng;
-        const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         let mut rng = rand::thread_rng();
         (0..64)
             .map(|_| {
-                let idx = rng.gen_range(0..CHARSET.len());
-                CHARSET[idx] as char
+                let idx = rng.gen_range(0..API_TOKEN_CHARSET.len());
+                API_TOKEN_CHARSET[idx] as char
             })
             .collect()
     }

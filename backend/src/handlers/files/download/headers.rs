@@ -6,9 +6,8 @@
 
 use axum::http::{header, HeaderMap, HeaderValue};
 
+use crate::constants::CACHE_CONTROL_PRIVATE_REVALIDATE;
 use crate::utils::AppError;
-
-pub const CACHE_CONTROL_PRIVATE_REVALIDATE: &str = "private, max-age=0, must-revalidate";
 
 #[derive(Clone)]
 pub struct EntityHeaders {

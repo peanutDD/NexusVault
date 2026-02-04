@@ -8,6 +8,7 @@ use std::io::{self, Seek, SeekFrom, Write};
 use std::sync::mpsc;
 use uuid::Uuid;
 
+use crate::constants::{MAX_BATCH_ZIP_FILES, MAX_BATCH_ZIP_TOTAL_BYTES};
 use crate::models::file::File;
 use crate::utils::AppError;
 
@@ -107,10 +108,10 @@ impl FileService {
             }
         }
 
-        if uniq_ids.len() > super::MAX_BATCH_ZIP_FILES {
+        if uniq_ids.len() > MAX_BATCH_ZIP_FILES {
             return Err(AppError::Validation(format!(
                 "单次批量下载最多 {} 个文件（当前 {}）",
-                super::MAX_BATCH_ZIP_FILES,
+                MAX_BATCH_ZIP_FILES,
                 uniq_ids.len()
             )));
         }
@@ -124,9 +125,9 @@ impl FileService {
             return Err(AppError::Validation("没有可下载的文件".to_string()));
         }
 
-        if total_size > super::MAX_BATCH_ZIP_TOTAL_BYTES {
+        if total_size > MAX_BATCH_ZIP_TOTAL_BYTES {
             let total_mb = (total_size as f64 / 1_048_576.0).ceil() as i64;
-            let limit_mb = (super::MAX_BATCH_ZIP_TOTAL_BYTES as f64 / 1_048_576.0).ceil() as i64;
+            let limit_mb = (MAX_BATCH_ZIP_TOTAL_BYTES as f64 / 1_048_576.0).ceil() as i64;
             return Err(AppError::Validation(format!(
                 "所选文件总大小约 {}MB，超过单次下载上限 {}MB，请缩小范围后重试",
                 total_mb, limit_mb
@@ -192,10 +193,10 @@ impl FileService {
             }
         }
 
-        if uniq_ids.len() > super::MAX_BATCH_ZIP_FILES {
+        if uniq_ids.len() > MAX_BATCH_ZIP_FILES {
             return Err(AppError::Validation(format!(
                 "单次批量下载最多 {} 个文件（当前 {}）",
-                super::MAX_BATCH_ZIP_FILES,
+                MAX_BATCH_ZIP_FILES,
                 uniq_ids.len()
             )));
         }
@@ -208,9 +209,9 @@ impl FileService {
             return Err(AppError::Validation("没有可下载的文件".to_string()));
         }
 
-        if total_size > super::MAX_BATCH_ZIP_TOTAL_BYTES {
+        if total_size > MAX_BATCH_ZIP_TOTAL_BYTES {
             let total_mb = (total_size as f64 / 1_048_576.0).ceil() as i64;
-            let limit_mb = (super::MAX_BATCH_ZIP_TOTAL_BYTES as f64 / 1_048_576.0).ceil() as i64;
+            let limit_mb = (MAX_BATCH_ZIP_TOTAL_BYTES as f64 / 1_048_576.0).ceil() as i64;
             return Err(AppError::Validation(format!(
                 "所选文件总大小约 {}MB，超过单次下载上限 {}MB，请缩小范围后重试",
                 total_mb, limit_mb
@@ -256,25 +257,22 @@ pub fn run_zip_writer_thread(
     };
     // zip 及其循环放在块内，块结束时 zip 被 drop，对 writer 的借用结束，之后才能 writer.flush()
     {
-        let mut zip = Some(ZipWriter::new(&mut writer));
+        let mut zip = ZipWriter::new(&mut writer);
         while let Ok((name_opt, data)) = input_rx.recv() {
             if let Some(entry_name) = name_opt {
                 let options: zip::write::FileOptions<()> =
                     zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
-                if zip.as_mut().unwrap().start_file(&entry_name, options).is_err() {
+                if zip.start_file(&entry_name, options).is_err() {
                     break;
                 }
-                let _ = zip.as_mut().unwrap().write_all(&data);
+                let _ = zip.write_all(&data);
                 // 每写完一个文件就 flush，首包/小文件也能立刻发出，保存对话框更早出现
-                let _ = zip.as_mut().unwrap().flush();
+                let _ = zip.flush();
             } else {
                 break;
             }
         }
-        let taken = std::mem::take(&mut zip);
-        if let Some(mut z) = taken {
-            let _ = z.finish();
-        }
+        let _ = zip.finish();
     }
     let _ = writer.flush();
 }

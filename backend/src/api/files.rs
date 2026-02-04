@@ -14,6 +14,10 @@ use serde_json::json;
 use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError, ServiceBuilder};
 use tower_http::limit::RequestBodyLimitLayer;
 
+use crate::constants::{
+    CHUNK_CONCURRENCY, COMPLETE_CONCURRENCY, LIST_CONCURRENCY, MAX_CHUNK_BODY, MAX_UPLOAD_BODY,
+    UPLOAD_CONCURRENCY,
+};
 use crate::handlers::files::{
     batch_delete_handler, batch_download_zip_handler, batch_download_zip_post_handler,
     batch_get_handler, batch_move_handler, categories_handler,
@@ -23,21 +27,6 @@ use crate::handlers::files::{
     upload_file_handler,
 };
 use crate::AppState;
-
-/// 单文件上传最大 100MB（小文件直接上传，大文件使用分块上传）
-const MAX_UPLOAD_BODY: usize = 104_857_600;
-/// 分块上传每块最大 12 MiB（前端使用 10MB 块，留出边界空间）
-const MAX_CHUNK_BODY: usize = 12 * 1024 * 1024;
-
-/// 并发限制（单机 10 核 / max_connections=20 的保守起步值）
-///
-/// 目标：在高并发下快速背压，避免：
-/// - 连接池排队导致堆积
-/// - 大文件处理导致内存/IO 被打爆
-const LIST_CONCURRENCY: usize = 12;
-const UPLOAD_CONCURRENCY: usize = 4;
-const CHUNK_CONCURRENCY: usize = 12;
-const COMPLETE_CONCURRENCY: usize = 2;
 
 /// 创建文件管理相关的路由
 ///

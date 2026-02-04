@@ -117,6 +117,7 @@ pub struct BatchShareResponse {
 
 impl FileShare {
     /// 检查分享是否已过期
+    #[allow(dead_code)]
     pub fn is_expired(&self) -> bool {
         self.expires_at
             .map(|exp| Utc::now() > exp)
@@ -124,6 +125,7 @@ impl FileShare {
     }
 
     /// 检查是否已达到下载次数限制
+    #[allow(dead_code)]
     pub fn is_download_limit_reached(&self) -> bool {
         self.max_downloads
             .map(|max| self.download_count >= max)
@@ -131,6 +133,7 @@ impl FileShare {
     }
 
     /// 检查是否需要密码
+    #[allow(dead_code)]
     pub fn requires_password(&self) -> bool {
         self.password_hash.is_some()
     }

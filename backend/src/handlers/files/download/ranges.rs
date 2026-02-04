@@ -1,10 +1,9 @@
 //! Range 解析与规范化（支持多段 Range）。
 
+use crate::constants::MAX_RANGES;
 use crate::utils::AppError;
 
 pub type ByteRange = (u64, u64); // (start, end_inclusive)
-
-const MAX_RANGES: usize = 8;
 
 pub fn parse_ranges(
     range_header: Option<&str>,

@@ -52,7 +52,3 @@ fn verify_token_simple(config: &Config, token: &str) -> Result<Uuid, AppError> {
     Ok(user_id)
 }
 
-// Better approach: Extract user from token in handlers
-pub fn extract_user_id_from_token(config: &Config, token: &str) -> Result<Uuid, AppError> {
-    verify_token_simple(config, token)
-}

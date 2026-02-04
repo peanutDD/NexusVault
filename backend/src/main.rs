@@ -16,6 +16,7 @@
 
 mod api;
 mod config;
+mod constants;
 mod database;
 mod extractors;
 mod handlers;

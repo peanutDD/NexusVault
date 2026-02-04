@@ -92,16 +92,14 @@ pub async fn rate_limit_middleware(state: RateLimitState, req: Request, next: Ne
         )
             .into_response();
 
-        // Set headers
+        // Set headers (HeaderValue::from_str for numeric strings should not fail)
         let headers = response.headers_mut();
-        headers.insert(
-            "X-RateLimit-Limit",
-            HeaderValue::from_str(&state.max_requests.to_string()).unwrap(),
-        );
-        headers.insert(
-            "X-RateLimit-Window",
-            HeaderValue::from_str(&state.window_seconds.to_string()).unwrap(),
-        );
+        if let Ok(limit_val) = HeaderValue::from_str(&state.max_requests.to_string()) {
+            headers.insert("X-RateLimit-Limit", limit_val);
+        }
+        if let Ok(window_val) = HeaderValue::from_str(&state.window_seconds.to_string()) {
+            headers.insert("X-RateLimit-Window", window_val);
+        }
 
         return response;
     }

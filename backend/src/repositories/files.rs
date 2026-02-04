@@ -246,9 +246,10 @@ impl<'a> FilesRepo<'a> {
             .date_to
             .as_deref()
             .and_then(|s| {
-                NaiveDateTime::parse_from_str(s, "%Y-%m-%d").ok().map(|dt| {
-                    let end_of_day = dt.date().and_hms_opt(23, 59, 59).unwrap();
-                    DateTime::<Utc>::from_naive_utc_and_offset(end_of_day, Utc)
+                NaiveDateTime::parse_from_str(s, "%Y-%m-%d").ok().and_then(|dt| {
+                    dt.date().and_hms_opt(23, 59, 59).map(|end_of_day| {
+                        DateTime::<Utc>::from_naive_utc_and_offset(end_of_day, Utc)
+                    })
                 })
             })
             .or_else(|| {

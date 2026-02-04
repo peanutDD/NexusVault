@@ -4,13 +4,11 @@
 
 use uuid::Uuid;
 
+use crate::constants::MAX_BATCH_GET_IDS;
 use crate::models::file::FileResponse;
 use crate::utils::AppError;
 
 use super::FileService;
-
-/// 单次批量查询最大条数（防止 URL/体过大）
-const MAX_BATCH_GET_IDS: usize = 100;
 
 impl FileService {
     /// 按 ID 列表批量查询文件元数据。

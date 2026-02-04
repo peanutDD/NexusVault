@@ -56,40 +56,6 @@ pub fn json_response<T: Serialize>(data: T) -> Response {
     Json(data).into_response()
 }
 
-/// 构建带分页信息的列表响应
-///
-/// # 参数
-/// - `items`: 列表数据
-/// - `total`: 总记录数
-/// - `page`: 当前页码（可选）
-/// - `limit`: 每页数量（可选）
-///
-/// # 示例
-///
-/// ```rust
-/// Ok(paginated_response(files, total, Some(page), Some(limit)))
-/// ```
-pub fn paginated_response<T: Serialize>(
-    items: Vec<T>,
-    total: u64,
-    page: Option<u32>,
-    limit: Option<u32>,
-) -> Response {
-    let mut response = json!({
-        "items": items,
-        "total": total,
-    });
-
-    if let Some(p) = page {
-        response["page"] = json!(p);
-    }
-    if let Some(l) = limit {
-        response["limit"] = json!(l);
-    }
-
-    Json(response).into_response()
-}
-
 /// 构建文件下载响应
 ///
 /// # 参数

@@ -8,12 +8,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 // Re-export share types for backward compatibility
-pub use super::share::{
-    AccessShareRequest, BatchShareRequest, BatchShareResponse, CreateShareRequest, FileShare,
-    ShareResponse,
-};
-
-use crate::utils::validate_pagination;
+pub use super::share::{AccessShareRequest, BatchShareRequest, CreateShareRequest};
 
 // ============================================================================
 // 数据库实体
@@ -117,26 +112,6 @@ pub struct FileListQuery {
     pub sort_order: Option<String>,
 }
 
-impl FileListQuery {
-    /// 验证并获取规范化的分页参数
-    ///
-    /// # 返回
-    /// - `Ok((page, limit))`: 验证通过的分页参数
-    /// - `Err(AppError)`: 参数无效
-    pub fn validate_pagination(&self) -> Result<(u32, u32), crate::utils::AppError> {
-        validate_pagination(self.page, self.limit)
-    }
-
-    /// 获取规范化的页码（至少为 1）
-    pub fn page_normalized(&self) -> u32 {
-        self.page.unwrap_or(1).max(1)
-    }
-
-    /// 获取规范化的每页数量（1-100 之间）
-    pub fn limit_normalized(&self) -> u32 {
-        self.limit.unwrap_or(20).clamp(1, 100)
-    }
-}
 
 /// 批量删除请求
 #[derive(Debug, Deserialize)]

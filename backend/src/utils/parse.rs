@@ -66,30 +66,3 @@ pub fn parse_part_number(params: &HashMap<String, String>) -> Result<u32, AppErr
         })
 }
 
-/// 解析可选的整数参数
-///
-/// 从字符串解析可选的整数值。
-///
-/// # 参数
-/// - `value`: 可选的字符串值
-///
-/// # 返回
-/// - `Some(i64)`: 解析成功
-/// - `None`: 值为 None 或解析失败
-pub fn parse_optional_i64(value: Option<&str>) -> Option<i64> {
-    value.and_then(|s| s.parse::<i64>().ok())
-}
-
-/// 解析可选的 UUID
-///
-/// 从字符串解析可选的 UUID。
-///
-/// # 参数
-/// - `value`: 可选的字符串值
-///
-/// # 返回
-/// - `Some(Uuid)`: 解析成功
-/// - `None`: 值为 None 或格式无效
-pub fn parse_optional_uuid(value: Option<&str>) -> Option<Uuid> {
-    value.and_then(|s| Uuid::from_str(s).ok())
-}

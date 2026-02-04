@@ -122,10 +122,12 @@ pub async fn batch_download_zip_post_handler(
     let stream = async_stream::stream! {
         loop {
             let rx = Arc::clone(&output_rx);
-            let chunk = tokio::task::spawn_blocking(move || rx.lock().unwrap().recv())
+            let chunk = tokio::task::spawn_blocking(move || {
+                rx.lock().ok().and_then(|guard| guard.recv().ok())
+            })
                 .await
                 .ok()
-                .and_then(|r| r.ok());
+                .flatten();
             match chunk {
                 Some(c) => yield Ok::<_, std::io::Error>(Bytes::from(c)),
                 None => break,
