@@ -8,4 +8,4 @@
 
 pub mod auth;
 
-pub use auth::AuthenticatedUser;
+pub use auth::{AuthenticatedUser, AuthenticatedUserQuery};

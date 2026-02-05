@@ -66,7 +66,7 @@
  * @param props.setDeleteConfirm 设置删除确认信息的回调函数
  * @param props.batchDownloading 是否正在批量下载
  */
-import React from 'react';
+import React, { useRef } from 'react';
 import FileGrid from '../grid/FileGrid';
 import VirtualizedFileGrid from '../grid/VirtualizedFileGrid';
 import FolderGrid from '../grid/FolderGrid';
@@ -77,6 +77,9 @@ import { FileCardSkeleton } from '../../common/feedback/Skeleton';
 import { FILE_LIST } from '../../../constants';
 import InfiniteScrollSentinel from '../InfiniteScrollSentinel';
 import type { FileMetadata, Folder } from '../../../types';
+
+/** 移动端宽度阈值：小于此宽度禁用虚拟列表 */
+const MOBILE_WIDTH_THRESHOLD = 768;
 
 interface FileListContentProps {
   files: FileMetadata[];
@@ -177,6 +180,18 @@ const FileListContent: React.FC<FileListContentProps> = ({
   setPreviewFile,
   setShareFile,
 }) => {
+  // 检测是否为移动端（仅在首次挂载时检测，避免切换导致布局跳动）
+  const isMobileRef = useRef(
+    typeof window !== 'undefined' && window.innerWidth < MOBILE_WIDTH_THRESHOLD
+  );
+
+  // 记住是否应该使用虚拟列表（一旦决定使用，就一直使用，避免切换导致无限加载）
+  const shouldUseVirtualListRef = useRef<boolean | null>(null);
+  if (shouldUseVirtualListRef.current === null && files.length > 0) {
+    shouldUseVirtualListRef.current = !isMobileRef.current && files.length > FILE_LIST.VIRTUAL_THRESHOLD;
+  }
+  const shouldUseVirtualList = shouldUseVirtualListRef.current ?? false;
+
   return (
     <>
       {/* 批量操作栏 */}
@@ -330,7 +345,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                 }}
                 onDrop={handleDropOnFolder}
               />
-              {files.length > FILE_LIST.VIRTUAL_THRESHOLD ? (
+              {shouldUseVirtualList ? (
                 <VirtualizedFileGrid
                   key={`virtual-${files.length}`}
                   files={files}
@@ -359,7 +374,12 @@ const FileListContent: React.FC<FileListContentProps> = ({
           )}
 
           {/* 分页 / 无限滚动：已加载 x/y 页 + 加载更多，滚动到底部自动加载 */}
-          <InfiniteScrollSentinel hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+          <InfiniteScrollSentinel
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={loadMore}
+            requireUserScroll
+          />
           <FileListPagination
             page={page}
             totalPages={totalPages}

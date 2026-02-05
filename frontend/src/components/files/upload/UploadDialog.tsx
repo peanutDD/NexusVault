@@ -150,7 +150,8 @@ export default function UploadDialog({
 
         const file = uploadFile.file;
         const taskId = uploadFile.id;
-        const useChunked = file.size >= fileService.CHUNK_THRESHOLD;
+        const isVideo = file.type.startsWith('video/');
+        const useChunked = isVideo || file.size >= fileService.CHUNK_THRESHOLD;
         // 先添加的文件优先上传（列表中靠前的优先级更高）
         const priority = totalPending - index;
 

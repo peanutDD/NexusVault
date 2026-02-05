@@ -134,7 +134,8 @@ export function useFileUpload(
 
         const file = uploadFile.file;
         const taskId = uploadFile.id;
-        const useChunked = file.size >= fileService.CHUNK_THRESHOLD;
+        const isVideo = file.type.startsWith('video/');
+        const useChunked = isVideo || file.size >= fileService.CHUNK_THRESHOLD;
         const priority = totalPending - index;
 
         const updateProgress = (progress: number) => {

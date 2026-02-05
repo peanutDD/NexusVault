@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { fileService } from '../../../services/files';
+import { useAuthStore } from '../../../store/authStore';
 import type { FileMetadata } from '../../../types';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { formatFileSize } from '../../../utils/format';
@@ -56,6 +57,14 @@ export default function FilePreview({
 
   const [loading, setLoading] = useState(() => (file ? kind.supported : false));
 
+  const getStreamUrl = useCallback((fileId: string) => {
+    const base = fileService.getPreviewUrl(fileId);
+    const token = useAuthStore.getState().token ?? localStorage.getItem('token');
+    if (!token) return base;
+    const joiner = base.includes('?') ? '&' : '?';
+    return `${base}${joiner}token=${encodeURIComponent(token)}`;
+  }, []);
+
   useEffect(() => {
     if (!file || !kind.supported) return;
 
@@ -65,6 +74,8 @@ export default function FilePreview({
     const finish = () => {
       if (isValidRequest()) setLoading(false);
     };
+
+    const isGif = file.mime_type.toLowerCase() === 'image/gif';
 
     if (kind.isText) {
       fileService
@@ -82,6 +93,14 @@ export default function FilePreview({
       return;
     }
 
+    // 视频/音频/GIF：使用可流式的直连 URL，避免等待完整 Blob
+    if (kind.isVideo || kind.isAudio || isGif) {
+      if (!isValidRequest()) return;
+      setBlobUrl(getStreamUrl(file.id));
+      finish();
+      return;
+    }
+
     fileService
       .fetchPreviewBlob(file.id)
       .then((b) => {
@@ -94,7 +113,7 @@ export default function FilePreview({
       })
       .finally(finish);
     // 仅依赖 file?.id 与 kind，避免 file 引用变化导致重复请求
-  }, [file, kind.supported, kind.isText]);
+  }, [file, kind.supported, kind.isText, kind.isVideo, kind.isAudio, getStreamUrl]);
 
   useEffect(() => {
     return () => {

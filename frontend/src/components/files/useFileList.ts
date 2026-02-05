@@ -146,6 +146,9 @@ export function useFileList() {
   const [loadedPageCount, setLoadedPageCount] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [total, setTotal] = useState(0);
+  const loadingMoreRef = useRef(false);
+  const lastRequestedPageRef = useRef(1);
+  const nextAllowedLoadMoreAtRef = useRef(0);
 
   // 文件夹状态
   const currentFolderId = searchParams.get('folder') || null;
@@ -316,6 +319,7 @@ export function useFileList() {
         setTotal(response.total);
         setLoadedPageCount(1);
         setSelectedFiles(new Set());
+        lastRequestedPageRef.current = 1;
         setCachedFileList(cacheKey, response.files, response.total);
       });
     } catch (err) {
@@ -331,8 +335,19 @@ export function useFileList() {
   // 加载更多（无限滚动）
   // 修复：添加竞态检查，防止快速切换文件夹时旧页数据追加到新列表
   const loadMore = useCallback(async () => {
-    if (!hasMore || loadingMore || loading) return;
+    if (!hasMore || loadingMoreRef.current || loading) return;
+    const now = Date.now();
+    if (now < nextAllowedLoadMoreAtRef.current) return;
+    // 基础冷却，避免短时间重复触发
+    nextAllowedLoadMoreAtRef.current = now + 800;
+
+    loadingMoreRef.current = true;
     const nextPage = loadedPageCount + 1;
+    if (nextPage <= lastRequestedPageRef.current) {
+      loadingMoreRef.current = false;
+      return;
+    }
+    lastRequestedPageRef.current = nextPage;
 
     // 计算第一页的 cacheKey 用于竞态检查
     const firstPageQuery: FileListQuery = {
@@ -383,11 +398,18 @@ export function useFileList() {
       });
     } catch (err) {
       if (isRequestCanceled(err)) return;
+      // 允许失败后重试当前页
+      if (lastRequestedPageRef.current === nextPage) {
+        lastRequestedPageRef.current = nextPage - 1;
+      }
+      // 失败时增加退避，避免无限重试
+      nextAllowedLoadMoreAtRef.current = Date.now() + 2000;
       setError(getErrorMessage(err, 'Failed to load more'));
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [hasMore, loadingMore, loading, loadedPageCount, limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles]);
+  }, [hasMore, loading, loadedPageCount, limit, debouncedSearch, mimeType, currentFolderId, sortField, sortOrder, dedupedListFiles]);
 
   // 初始化加载 / 依赖变更时重新加载（始终加载第 1 页）
   useEffect(() => {

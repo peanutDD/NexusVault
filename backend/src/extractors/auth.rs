@@ -19,6 +19,7 @@ use axum::{
     extract::FromRequestParts,
     http::{request::Parts, HeaderMap},
 };
+use percent_encoding::percent_decode_str;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -49,6 +50,35 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
             extract_user_id_from_headers(headers, &state.config, &state.pool).await?;
 
         Ok(AuthenticatedUser(user_id))
+    }
+}
+
+/// 允许从 query 中读取 token 的认证提取器（用于预览等场景）
+#[derive(Debug, Clone, Copy)]
+pub struct AuthenticatedUserQuery(pub Uuid);
+
+#[async_trait]
+impl FromRequestParts<AppState> for AuthenticatedUserQuery {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        // 先尝试 Authorization header
+        if let Ok(user_id) =
+            extract_user_id_from_headers(&parts.headers, &state.config, &state.pool).await
+        {
+            return Ok(AuthenticatedUserQuery(user_id));
+        }
+
+        // 再尝试 query token
+        if let Some(token) = extract_token_from_query(parts) {
+            let user_id = extract_user_id_from_token(&token, &state.config, &state.pool).await?;
+            return Ok(AuthenticatedUserQuery(user_id));
+        }
+
+        Err(AppError::Unauthorized)
     }
 }
 
@@ -87,7 +117,15 @@ async fn extract_user_id_from_headers(
     }
 
     let token = auth_header.trim_start_matches("Bearer ");
+    extract_user_id_from_token(token, config, pool).await
+}
 
+/// 从 token 字符串中提取并验证用户 ID（JWT 或 API token）
+async fn extract_user_id_from_token(
+    token: &str,
+    config: &Config,
+    pool: &PgPool,
+) -> Result<Uuid, AppError> {
     // 优先尝试 JWT token
     if let Ok(user_id) = extract_user_id_from_jwt_token(config, token) {
         tracing::debug!(user_id = %user_id, "Authenticated via JWT token");
@@ -102,6 +140,21 @@ async fn extract_user_id_from_headers(
     let user_id = token_service.verify_token(token).await?;
     tracing::debug!(user_id = %user_id, "Authenticated via API token");
     Ok(user_id)
+}
+
+/// 从 query string 中提取 token 参数（如 ?token=xxx）
+fn extract_token_from_query(parts: &Parts) -> Option<String> {
+    let query = parts.uri.query()?;
+    for pair in query.split('&') {
+        let mut iter = pair.splitn(2, '=');
+        let key = iter.next()?;
+        let value = iter.next().unwrap_or_default();
+        if key == "token" && !value.is_empty() {
+            let decoded = percent_decode_str(value).decode_utf8_lossy();
+            return Some(decoded.to_string());
+        }
+    }
+    None
 }
 
 /// 从 JWT token 中提取用户 ID

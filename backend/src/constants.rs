@@ -9,11 +9,11 @@
 /// 普通上传最大请求体大小（100 MiB）
 pub const MAX_UPLOAD_BODY: usize = 104_857_600;
 
-/// 分块上传单个分块最大大小（12 MiB）
-pub const MAX_CHUNK_BODY: usize = 12 * 1024 * 1024;
+/// 分块上传单个分块最大大小（3 MiB）
+pub const MAX_CHUNK_BODY: usize = 3 * 1024 * 1024;
 
-/// 分块上传标准分块大小（5 MiB）
-pub const CHUNK_SIZE: u32 = 5 * 1024 * 1024;
+/// 分块上传标准分块大小（2 MiB）
+pub const CHUNK_SIZE: u32 = 2 * 1024 * 1024;
 
 // ============================================================================
 // 磁盘空间预留

@@ -21,7 +21,7 @@ use axum::http::{header, HeaderMap, Method};
 use axum::response::Response;
 use uuid::Uuid;
 
-use crate::extractors::AuthenticatedUser;
+use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
 use crate::services::file::FileService;
 use crate::utils::AppError;
 use crate::AppState;
@@ -177,7 +177,7 @@ pub async fn download_file_handler(
 /// 返回文件内容，设置 `Content-Disposition: inline` 在浏览器中显示。
 pub async fn preview_file_handler(
     State(state): State<AppState>,
-    AuthenticatedUser(user_id): AuthenticatedUser,
+    AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
     method: Method,
     headers: HeaderMap,
     Path(file_id): Path<Uuid>,

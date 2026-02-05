@@ -38,7 +38,10 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError, ServiceBuilder};
 use tower_http::{
-    catch_panic::CatchPanicLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
+    catch_panic::CatchPanicLayer,
+    cors::{Any, AllowOrigin, CorsLayer},
+    timeout::TimeoutLayer,
+    trace::TraceLayer,
 };
 // use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 // use std::net::IpAddr;
@@ -198,7 +201,7 @@ where
         .layer(ConcurrencyLimitLayer::new(512))
         .layer(CatchPanicLayer::new()) // 捕获 panic，避免因意外 panic 导致进程退出（panic=unwind 时尤为有用）
         .layer(TraceLayer::new_for_http()) // HTTP 请求追踪
-        .layer(TimeoutLayer::new(Duration::from_secs(30))) // 30 秒超时
+        .layer(TimeoutLayer::new(Duration::from_secs(120))) // 120 秒超时（上传大文件更稳）
         .layer(cors) // CORS 支持
         .into_inner();
 
@@ -251,14 +254,23 @@ where
 ///
 /// 根据配置创建适当的 CORS 策略。
 fn create_cors_layer(config: &Config) -> CorsLayer {
-    let cors_origin = if config.cors_origin == "*" {
-        tower_http::cors::Any.into()
-    } else {
-        config
-            .cors_origin
-            .parse::<axum::http::HeaderValue>()
-            .map(tower_http::cors::AllowOrigin::exact)
-            .unwrap_or(tower_http::cors::Any.into())
+    let cors_origin: AllowOrigin = {
+        let raw = config.cors_origin.trim();
+        if raw == "*" {
+            Any.into()
+        } else {
+            let origins: Vec<axum::http::HeaderValue> = raw
+                .split(',')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .filter_map(|s| s.parse::<axum::http::HeaderValue>().ok())
+                .collect();
+            if origins.is_empty() {
+                Any.into()
+            } else {
+                AllowOrigin::list(origins)
+            }
+        }
     };
 
     CorsLayer::new()
@@ -273,8 +285,11 @@ fn create_cors_layer(config: &Config) -> CorsLayer {
         .allow_headers([
             axum::http::header::CONTENT_TYPE,
             axum::http::header::AUTHORIZATION,
+            axum::http::header::ACCEPT,
+            axum::http::header::ORIGIN,
+            axum::http::header::RANGE,
         ])
-        .allow_credentials(config.cors_origin != "*")
+        .allow_credentials(config.cors_origin.trim() != "*")
 }
 
 /// 健康检查端点
