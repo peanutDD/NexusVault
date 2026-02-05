@@ -116,31 +116,78 @@ npm run dev
 
 ## 项目结构
 
-```
+### 顶层
+
+```txt
 upload-download-util/
-├── backend/              # Rust 后端
-│   ├── src/
-│   │   ├── api/         # API 路由
-│   │   ├── handlers/    # 请求处理器
-│   │   ├── models/      # 数据模型
-│   │   ├── services/    # 业务逻辑
-│   │   ├── middleware/  # 中间件
-│   │   ├── database/    # 数据库相关
-│   │   ├── config/      # 配置管理
-│   │   └── utils/       # 工具函数
-│   ├── migrations/      # 数据库迁移
-│   └── Cargo.toml
-├── frontend/            # React 前端
-│   ├── src/
-│   │   ├── components/  # React 组件
-│   │   ├── pages/       # 页面组件
-│   │   ├── services/    # API 服务
-│   │   ├── store/       # 状态管理
-│   │   └── utils/       # 工具函数
-│   └── package.json
-├── docker-compose.yml   # PostgreSQL 容器
+├── backend/                # Rust 后端服务（Axum + SQLx）
+├── frontend/               # React 19 + TypeScript 前端
+├── docs/                   # 文档（快速开始 / 说明）
+├── docker-compose.yml      # 本地 PostgreSQL / 依赖服务
 └── README.md
 ```
+
+### 后端结构（`backend/`）
+
+```txt
+backend/
+├── src/
+│   ├── api/                # 路由注册入口（按模块拆分，如 auth/files 等）
+│   ├── handlers/           # 具体 Handler（文件 / 认证 / 健康检查等）
+│   ├── models/             # 数据模型与数据库实体
+│   ├── services/           # 业务服务（文件存储、共享链接、权限）
+│   ├── middleware/         # 中间件（鉴权、日志、CORS 等）
+│   ├── database/           # SQLx Pool 管理、迁移工具
+│   ├── config/             # 配置加载（env + 默认值）
+│   └── utils/              # 通用工具（错误处理、时间、ID 生成）
+├── migrations/             # SQLx 数据库迁移
+└── Cargo.toml
+```
+
+> **后端职责概览**  
+> - 认证：注册 / 登录 / 用户信息、JWT 签发与校验  
+> - 文件：上传、下载、删除、分页列表、搜索与排序  
+> - 存储：本地文件系统 + S3 的统一适配  
+> - 共享：分享链接、下载次数与过期控制  
+
+### 前端结构（`frontend/`）
+
+```txt
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── files/              # 文件相关 UI（列表 / 网格 / 过滤 / 预览 等）
+│   │   │   ├── list/           # FileList 主视图（过滤栏、分组、分页/无限滚动）
+│   │   │   ├── grid/           # FileCard / FolderCard / FileGrid / VirtualizedFileGrid
+│   │   │   ├── preview/        # FilePreview（图片/视频/音频/文本预览、不支持类型提示框）
+│   │   │   ├── dialogs/        # 批量分享 / 批量移动 / 新建文件夹 / 重命名 对话框
+│   │   │   └── upload/         # 上传对话框、上传队列、URL 上传表单
+│   │   ├── common/             # 通用组件（按钮、对话框、DropdownMenu、表单控件等）
+│   │   └── layout/             # 布局与导航（顶部导航栏 / 外层布局）
+│   ├── pages/
+│   │   ├── Files.tsx           # 文件管理主页面
+│   │   ├── Login.tsx           # 登录页
+│   │   ├── Register.tsx        # 注册页
+│   │   └── Share.tsx           # 文件分享访问页面
+│   ├── hooks/
+│   │   ├── files/              # 文件过滤 / 选择 / 分组等业务 Hook（useFileFilters/useFileSelection 等）
+│   │   └── useRequestDedup     # 请求去重 Hook（防止重复并发相同请求）
+│   ├── services/               # API 封装（Auth / Files / Folders / Shares）
+│   ├── store/                  # Zustand 状态（文件列表缓存 / 上传队列等）
+│   ├── utils/                  # 工具函数（mime 类型、格式化、worker 池、文件列表缓存）
+│   └── index.css               # 全局样式（导航栏、霓虹玻璃 UI、Tailwind 覆盖）
+├── public/                     # 静态资源
+└── package.json
+```
+
+> **前端职责概览**  
+> - `useFileList`：集中处理列表数据获取、过滤、排序、分页、选择状态  
+> - 分组模式：  
+>   - **By Type**：按类型分组（Images / Videos / Audio / Docs / Text / Archives / Others），每组带独立「全选」  
+>   - **By Time**：按「天」分组，例如 `Jan 24, 2025`，支持分组级「全选」  
+> - 列表性能：虚拟网格 + 无限滚动 + `Load more` 按钮兜底  
+> - 预览体验：支持常见文件类型内联预览；不支持的类型使用霓虹玻璃风提示框 + 下载按钮  
+> - 响应式：桌面 / 移动端统一使用同一套过滤栏、分组栏与下拉菜单视觉风格
 
 ## API 端点
 
