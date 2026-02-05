@@ -49,7 +49,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     isRevalidating,
     totalItems,
     isGroupByType,
+    isGroupByTime,
     groupedFiles,
+    timeGroupedFiles,
     displayFolders,
     displayFiles,
     displayFileIndexById,
@@ -167,7 +169,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         isRevalidating={isRevalidating}
         totalItems={totalItems}
         isGroupByType={isGroupByType}
+        isGroupByTime={isGroupByTime}
         groupedFiles={groupedFiles}
+        timeGroupedFiles={timeGroupedFiles}
         displayFolders={displayFolders}
         displayFiles={displayFiles}
         displayFileIndexById={displayFileIndexById}

@@ -37,6 +37,20 @@ function getTypeKey(mime: string): string {
 }
 
 /**
+ * 根据日期获取时间分组的键和标签
+ * 返回格式: { key: '2024-01', label: '2024年1月', sortKey: 202401 }
+ */
+function getTimeGroupInfo(dateStr: string): { key: string; label: string; sortKey: number } {
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const key = `${year}-${String(month).padStart(2, '0')}`;
+  const label = `${year}年${month}月`;
+  const sortKey = year * 100 + month;
+  return { key, label, sortKey };
+}
+
+/**
  * 文件分组 Hook（使用 Worker 池复用）
  * 修复：不再每次消息后 terminate Worker，使用池化复用
  */
@@ -136,6 +150,45 @@ function useFileGroupingWithIcons(files: FileMetadata[], isGroupByType: boolean)
   };
 }
 
+/**
+ * 按时间分组 Hook
+ * 将文件按月份分组，最新的月份在前
+ */
+function useTimeGrouping(files: FileMetadata[], isGroupByTime: boolean) {
+  const timeGroupedFiles = useMemo(() => {
+    if (!isGroupByTime) return null;
+
+    const groups = new Map<string, { label: string; sortKey: number; files: FileMetadata[] }>();
+    
+    files.forEach((file) => {
+      const { key, label, sortKey } = getTimeGroupInfo(file.created_at);
+      if (!groups.has(key)) {
+        groups.set(key, { label, sortKey, files: [] });
+      }
+      groups.get(key)!.files.push(file);
+    });
+
+    return Array.from(groups.entries())
+      .map(([key, { label, sortKey, files: groupFiles }]) => ({
+        key,
+        label,
+        sortKey,
+        files: groupFiles,
+      }))
+      .sort((a, b) => b.sortKey - a.sortKey);
+  }, [files, isGroupByTime]);
+
+  const displayFilesForTime = useMemo(() => {
+    if (!isGroupByTime || !timeGroupedFiles) return files;
+    return timeGroupedFiles.flatMap((group) => group.files);
+  }, [files, isGroupByTime, timeGroupedFiles]);
+
+  return {
+    timeGroupedFiles,
+    displayFilesForTime,
+  };
+}
+
 export function useFileList() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -165,6 +218,7 @@ export function useFileList() {
     sortField,
     sortOrder,
     isGroupByType,
+    isGroupByTime,
     handleSearchChange: baseHandleSearchChange,
     handleMimeTypeChange: baseHandleMimeTypeChange,
     handleSortChange: baseHandleSortChange,
@@ -191,6 +245,15 @@ export function useFileList() {
     displayFiles,
     displayFileIndexById,
   } = useFileGroupingWithIcons(files, isGroupByType);
+
+  // 使用时间分组 Hook
+  const {
+    timeGroupedFiles,
+    displayFilesForTime,
+  } = useTimeGrouping(files, isGroupByTime);
+
+  // 根据分组模式选择正确的 displayFiles
+  const finalDisplayFiles = isGroupByTime ? displayFilesForTime : displayFiles;
 
   // 对话框状态
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
@@ -768,9 +831,11 @@ export function useFileList() {
     isLoading,
     totalItems,
     isGroupByType,
+    isGroupByTime,
     groupedFiles,
+    timeGroupedFiles,
     displayFolders,
-    displayFiles,
+    displayFiles: finalDisplayFiles,
     displayFileIndexById,
     totalPages,
     page: loadedPageCount,

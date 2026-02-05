@@ -69,13 +69,23 @@ const FileCard = memo(
 
     const mimeTypeLabel = getMimeTypeLabel(file.mime_type);
 
+    const handleMouseEnter = () => {
+      // 调试 hover 是否第一时间触发
+      // 在控制台可以看到时间戳
+      // 例如： [hover] file-card xxx 12345.67
+      // 不影响正式逻辑
+      // eslint-disable-next-line no-console
+      console.log('[hover] file-card', file.id, performance.now());
+      schedulePreload(file.id);
+    };
+
     return (
       <article
         className={cn(
-          'group relative rounded-xl',
+          'group relative rounded-xl transition-colors',
           'bg-white/5 backdrop-blur-sm',
-          'hover:bg-white/10',
-          isSelected && 'bg-purple-500/15 hover:bg-purple-500/20'
+          'hover:bg-white/10 active:bg-white/15',
+          isSelected && 'bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25'
         )}
         draggable
         onDragStart={(e) => {
@@ -83,7 +93,7 @@ const FileCard = memo(
           e.dataTransfer.effectAllowed = 'move';
           onDragStart?.(e, file);
         }}
-        onMouseEnter={() => schedulePreload(file.id)}
+        onMouseEnter={handleMouseEnter}
       >
         <div className="p-3">
           {/* 缩略图区域 */}

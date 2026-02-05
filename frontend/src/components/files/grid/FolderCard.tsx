@@ -97,20 +97,27 @@ const FolderCard = memo(function FolderCard({
     onSelect(folder.id);
   }, [folder.id, onSelect]);
 
+  const handleMouseEnter = () => {
+    // 调试 hover 是否第一时间触发
+    // eslint-disable-next-line no-console
+    console.log('[hover] folder-card', folder.id, performance.now());
+  };
+
   return (
     <div
       className={cn(
-        'group relative cursor-pointer rounded-xl',
+        'group relative cursor-pointer rounded-xl transition-colors',
         'bg-white/5 backdrop-blur-sm',
-        'hover:bg-white/10',
-        isSelected && 'bg-purple-500/15 hover:bg-purple-500/20',
-        isDragOver && 'bg-blue-500/20 hover:bg-blue-500/25'
+        'hover:bg-white/10 active:bg-white/15',
+        isSelected && 'bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25',
+        isDragOver && 'bg-blue-500/20 hover:bg-blue-500/25 active:bg-blue-500/30'
       )}
       draggable
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onMouseEnter={handleMouseEnter}
       onDoubleClick={handleDoubleClick}
     >
       <div className="p-3">

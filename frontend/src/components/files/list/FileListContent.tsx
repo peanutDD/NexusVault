@@ -94,7 +94,9 @@ interface FileListContentProps {
   isRevalidating: boolean;
   totalItems: number;
   isGroupByType: boolean;
+  isGroupByTime: boolean;
   groupedFiles: { key: string; files: FileMetadata[]; icon: React.ReactNode; label: string }[] | null;
+  timeGroupedFiles: { key: string; label: string; sortKey: number; files: FileMetadata[] }[] | null;
   displayFolders: Folder[];
   displayFiles: FileMetadata[];
   displayFileIndexById: Map<string, number>;
@@ -155,7 +157,9 @@ const FileListContent: React.FC<FileListContentProps> = ({
   isRevalidating,
   totalItems,
   isGroupByType,
+  isGroupByTime,
   groupedFiles,
+  timeGroupedFiles,
   displayFolders,
   totalPages,
   page,
@@ -278,14 +282,22 @@ const FileListContent: React.FC<FileListContentProps> = ({
             </span>
           </div>
 
-          {/* 文件区域 - 按类型分组或普通列表 */}
+          {/* 文件区域 - 按类型分组、按时间分组或普通列表 */}
           {isGroupByType && groupedFiles ? (
-            // 分组视图：文件夹单独一组 + 各类型文件分组
+            // 按类型分组视图：文件夹单独一组 + 各类型文件分组
             <div className="space-y-6">
               {/* 文件夹分组 */}
               {displayFolders.length > 0 && (
                 <div>
                   <div className="mb-3 flex items-center gap-3">
+                    {/* 分组全选复选框 */}
+                    <GroupSelectCheckbox
+                      itemIds={displayFolders.map(f => f.id)}
+                      selectedIds={selectedFolders}
+                      onToggle={(ids, selected) => {
+                        ids.forEach(id => handleSelectFolder(id, selected));
+                      }}
+                    />
                     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
                       <i className="bi bi-folder2" aria-hidden />
                     </span>
@@ -311,6 +323,14 @@ const FileListContent: React.FC<FileListContentProps> = ({
               {groupedFiles.map((group) => (
                 <div key={`group-${group.key}-${files.length}`}>
                   <div className="mb-3 flex items-center gap-3">
+                    {/* 分组全选复选框 */}
+                    <GroupSelectCheckbox
+                      itemIds={group.files.map(f => f.id)}
+                      selectedIds={selectedFiles}
+                      onToggle={(ids, selected) => {
+                        ids.forEach(id => handleSelectFile(id, selected));
+                      }}
+                    />
                     {group.icon}
                     <span className="text-sm font-medium text-gray-400">{group.label}</span>
                     <span className="text-xs text-gray-500">({group.files.length})</span>
@@ -318,6 +338,75 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   </div>
                   <FileGrid
                     key={`group-grid-${group.key}-${files.length}`}
+                    files={group.files}
+                    selectedFiles={selectedFiles}
+                    onSelect={handleSelectFile}
+                    onPreview={setPreviewFile}
+                    onShare={setShareFile}
+                    onDownload={handleDownload}
+                    onDelete={handleDelete}
+                    onDragStart={handleFileDragStart}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : isGroupByTime && timeGroupedFiles ? (
+            // 按时间分组视图：文件夹单独一组 + 各月份文件分组
+            <div className="space-y-6">
+              {/* 文件夹分组 */}
+              {displayFolders.length > 0 && (
+                <div>
+                  <div className="mb-3 flex items-center gap-3">
+                    {/* 分组全选复选框 */}
+                    <GroupSelectCheckbox
+                      itemIds={displayFolders.map(f => f.id)}
+                      selectedIds={selectedFolders}
+                      onToggle={(ids, selected) => {
+                        ids.forEach(id => handleSelectFolder(id, selected));
+                      }}
+                    />
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
+                      <i className="bi bi-folder2" aria-hidden />
+                    </span>
+                    <span className="text-sm font-medium text-gray-400">文件夹</span>
+                    <span className="text-xs text-gray-500">({displayFolders.length})</span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
+                  <FolderGrid
+                    folders={displayFolders}
+                    selectedFolders={selectedFolders}
+                    onSelect={handleSelectFolder}
+                    onOpen={handleOpenFolder}
+                    onRename={handleRenameFolder}
+                    onDelete={(folderId) => {
+                      const folder = displayFolders.find(f => f.id === folderId);
+                      if (folder) handleDelete(folder, 'folder');
+                    }}
+                    onDrop={handleDropOnFolder}
+                  />
+                </div>
+              )}
+              {/* 各月份文件分组 */}
+              {timeGroupedFiles.map((group) => (
+                <div key={`time-group-${group.key}-${files.length}`}>
+                  <div className="mb-3 flex items-center gap-3">
+                    {/* 分组全选复选框 */}
+                    <GroupSelectCheckbox
+                      itemIds={group.files.map(f => f.id)}
+                      selectedIds={selectedFiles}
+                      onToggle={(ids, selected) => {
+                        ids.forEach(id => handleSelectFile(id, selected));
+                      }}
+                    />
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
+                      <i className="bi bi-calendar3" aria-hidden />
+                    </span>
+                    <span className="text-sm font-medium text-gray-400">{group.label}</span>
+                    <span className="text-xs text-gray-500">({group.files.length})</span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
+                  <FileGrid
+                    key={`time-group-grid-${group.key}-${files.length}`}
                     files={group.files}
                     selectedFiles={selectedFiles}
                     onSelect={handleSelectFile}
@@ -392,6 +481,47 @@ const FileListContent: React.FC<FileListContentProps> = ({
     </>
   );
 };
+
+// 分组全选复选框组件
+interface GroupSelectCheckboxProps {
+  itemIds: string[];
+  selectedIds: Set<string>;
+  onToggle: (ids: string[], selected: boolean) => void;
+}
+
+function GroupSelectCheckbox({ itemIds, selectedIds, onToggle }: GroupSelectCheckboxProps) {
+  const selectedCount = itemIds.filter(id => selectedIds.has(id)).length;
+  const allSelected = selectedCount === itemIds.length && itemIds.length > 0;
+  const someSelected = selectedCount > 0 && selectedCount < itemIds.length;
+
+  const handleClick = () => {
+    // 如果全选了，则取消全选；否则全选
+    onToggle(itemIds, !allSelected);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`
+        flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-150
+        ${allSelected
+          ? 'border-white/30 bg-white/15 text-white'
+          : someSelected
+            ? 'border-white/30 bg-white/10 text-white'
+            : 'border-white/15 bg-white/5 text-transparent hover:border-white/25 hover:bg-white/10'
+        }
+      `}
+      aria-label={allSelected ? '取消全选此分组' : '全选此分组'}
+    >
+      {allSelected ? (
+        <i className="bi bi-check-lg text-[0.625rem] font-bold leading-none" aria-hidden />
+      ) : someSelected ? (
+        <i className="bi bi-dash text-[0.625rem] font-bold leading-none" aria-hidden />
+      ) : null}
+    </button>
+  );
+}
 
 // 空状态图标组件
 function EmptyIcon() {

@@ -12,7 +12,8 @@ export type SortOption =
   | 'file_size_asc'
   | 'filename_asc'
   | 'filename_desc'
-  | 'type_group';
+  | 'type_group'
+  | 'time_group';
 
 /**
  * 排序字段类型
@@ -39,6 +40,8 @@ interface UseFileFiltersReturn {
   sortOrder: SortOrder;
   /** 是否按类型分组 */
   isGroupByType: boolean;
+  /** 是否按时间分组 */
+  isGroupByTime: boolean;
   /** 设置搜索关键词 */
   setSearch: (value: string) => void;
   /** 设置 MIME 类型筛选 */
@@ -68,7 +71,7 @@ export function useFileFilters(): UseFileFiltersReturn {
   const debouncedSearch = useDebounce(search, 300);
 
   const [sortField, sortOrder] = useMemo((): [SortField, SortOrder] => {
-    if (sortBy === 'type_group') {
+    if (sortBy === 'type_group' || sortBy === 'time_group') {
       return ['created_at', 'desc'];
     }
     if (sortBy.startsWith('created_at_')) {
@@ -85,6 +88,7 @@ export function useFileFilters(): UseFileFiltersReturn {
   }, [sortBy]);
 
   const isGroupByType = sortBy === 'type_group';
+  const isGroupByTime = sortBy === 'time_group';
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -108,6 +112,7 @@ export function useFileFilters(): UseFileFiltersReturn {
     sortField,
     sortOrder,
     isGroupByType,
+    isGroupByTime,
     setSearch,
     setMimeType,
     setSortBy,

@@ -80,7 +80,7 @@ export const useFileListStore = create<FileListState>((set, get) => ({
     set({ error: null, loading: true });
 
     const cacheKey = getCacheKey(query as Record<string, unknown>);
-    const cached = getCachedFileList(cacheKey);
+    const cached = await getCachedFileList(cacheKey);
 
     if (cached) {
       set({

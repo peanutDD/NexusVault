@@ -34,8 +34,8 @@ export default function FileGrid({
 
   return (
     <div
-      // CSS content-visibility 通过 Tailwind 任意值实现
-      className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 [content-visibility:auto]"
+      // 去掉 content-visibility:auto，避免少数浏览器在页面刚渲染完时延迟鼠标事件 / hover 呈现
+      className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
     >
       {files.map((file) => (
         <FileCard

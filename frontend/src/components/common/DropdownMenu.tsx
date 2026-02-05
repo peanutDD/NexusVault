@@ -12,6 +12,9 @@ import { ChevronDown } from 'lucide-react';
 interface DropdownMenuOption {
   label: string;
   value: string;
+  icon?: React.ReactNode;
+  /** 是否在此选项前显示分隔线 */
+  divider?: boolean;
 }
 
 interface DropdownMenuProps {
@@ -37,12 +40,12 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
   const selectedOption = options.find((option) => option.value === selectedValue);
   const selectedLabel = selectedOption?.label || '';
 
-  // 计算下拉菜单位置
+  // 计算下拉菜单位置（宽度为触发器的 80%，右对齐）
   const computeMenuPosition = (el: HTMLElement) => {
     const rect = el.getBoundingClientRect();
-    const width = Math.max(120, rect.width);
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-    const top = Math.min(rect.bottom + 8, window.innerHeight - 8);
+    const width = rect.width * 0.8;
+    const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+    const top = Math.min(rect.bottom + 4, window.innerHeight - 8);
     return { left, top, width };
   };
 
@@ -134,15 +137,23 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
           >
             <div className="filtersList">
               {options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="menuitem"
-                  className={option.value === selectedValue ? 'filtersItem filtersItemSelected' : 'filtersItem'}
-                  onClick={() => handleOptionSelect(option.value)}
-                >
-                  {option.label}
-                </button>
+                <React.Fragment key={option.value}>
+                  {option.divider && <div className="filtersDivider" />}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={option.value === selectedValue ? 'filtersItem filtersItemSelected' : 'filtersItem'}
+                    onClick={() => handleOptionSelect(option.value)}
+                  >
+                    {option.icon && <span className="filtersItemIcon">{option.icon}</span>}
+                    <span className="filtersItemLabel">{option.label}</span>
+                    {option.value === selectedValue && (
+                      <span className="filtersItemCheck">
+                        <i className="bi bi-check2" aria-hidden />
+                      </span>
+                    )}
+                  </button>
+                </React.Fragment>
               ))}
             </div>
           </div>,

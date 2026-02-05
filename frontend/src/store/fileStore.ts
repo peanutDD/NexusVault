@@ -213,7 +213,7 @@ export const useFileStore = create<FileState>((set, get) => {
       };
 
       const cacheKey = getCacheKey(query as Record<string, unknown>);
-      const cached = getCachedFileList(cacheKey);
+      const cached = await getCachedFileList(cacheKey);
 
       // 如果有缓存，先展示缓存数据
       if (cached) {

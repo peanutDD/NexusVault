@@ -370,31 +370,30 @@
   padding: clamp(0.3rem, 0.45vw, 0.41rem);
 }
 
-/* Portal 下拉：与工具栏/全选栏字体一致 */
+/* Portal dropdown: compact and aligned with trigger */
 .filtersDropdownPortal {
   font-family: var(--font-brand);
-  font-size: 0.625rem;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  line-height: 1;
+  font-size: 0.4375rem;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
   position: fixed;
-  /* 需要高于页面内容，但必须低于 NavBar（z-50）与 Modal（z-50） */
   z-index: 45;
-  max-height: min(52.5vh, 18rem);
+  max-height: min(50vh, 16rem);
   overflow-y: auto;
   overscroll-behavior: contain;
 
-  border-radius: clamp(0.6rem, 1.0vw, 0.9rem);
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   background:
-    radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.14), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.045));
+    radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.12), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
   box-shadow:
-    0 22px 70px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.20);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
-  padding: clamp(0.3rem, 0.45vw, 0.41rem);
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  padding: 0.1rem;
 }
 
 .filtersDropdownPortal::-webkit-scrollbar {
@@ -430,27 +429,29 @@
 
 .filtersList {
   margin-top: 0;
-  padding-bottom: clamp(0.11rem, 0.19vw, 0.19rem);
+  padding: 0.125rem;
   display: flex;
   flex-direction: column;
-  /* 更紧凑：减少项间距（0.75 倍） */
-  gap: clamp(0.17rem, 0.34vw, 0.26rem);
+  gap: 0;
 }
 
 .filtersItem {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
   text-align: left;
   background: transparent;
   border: 0;
   cursor: pointer;
-  padding: clamp(0.21rem, 0.26vw, 0.26rem) clamp(0.34rem, 0.41vw, 0.41rem);
-  border-radius: clamp(0.5rem, 0.7vw, 0.65rem);
-  color: rgba(255, 255, 255, 0.85);
+  padding: 0.2rem 0.25rem;
+  border-radius: 0.2rem;
+  color: rgba(255, 255, 255, 0.8);
   font-family: var(--font-brand);
-  font-size: 0.625rem;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  line-height: 1;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+  font-size: 0.4375rem;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
 .filtersItem:hover {
@@ -459,10 +460,45 @@
 }
 
 .filtersItemSelected {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(217, 70, 239, 0.12));
-  border: 1px solid rgba(168, 85, 247, 0.25);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(217, 70, 239, 0.14));
   color: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
+}
+
+.filtersItemIcon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  font-size: 0.4375rem;
+  opacity: 0.8;
+}
+
+.filtersItemLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filtersItemCheck {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.375rem;
+  height: 0.375rem;
+  color: rgba(168, 85, 247, 0.9);
+  font-size: 0.3125rem;
+}
+
+/* 分隔线 */
+.filtersDivider {
+  height: 1px;
+  margin: 0.125rem 0.1875rem;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* NOTE: 避免重复的空 media block（已移除） */
