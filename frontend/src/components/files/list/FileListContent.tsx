@@ -301,8 +301,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
                       <i className="bi bi-folder2" aria-hidden />
                     </span>
-                    <span className="text-sm font-medium text-gray-400">文件夹</span>
-                    <span className="text-xs text-gray-500">({displayFolders.length})</span>
+                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
+                      FOLDERS
+                      <span className="ml-2 text-[0.7em] text-white/60">({displayFolders.length})</span>
+                    </span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <FolderGrid
@@ -332,8 +334,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
                       }}
                     />
                     {group.icon}
-                    <span className="text-sm font-medium text-gray-400">{group.label}</span>
-                    <span className="text-xs text-gray-500">({group.files.length})</span>
+                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
+                      {group.label}
+                      <span className="ml-2 text-[0.7em] text-white/60">({group.files.length})</span>
+                    </span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <FileGrid
@@ -368,8 +372,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
                       <i className="bi bi-folder2" aria-hidden />
                     </span>
-                    <span className="text-sm font-medium text-gray-400">文件夹</span>
-                    <span className="text-xs text-gray-500">({displayFolders.length})</span>
+                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
+                      FOLDERS
+                      <span className="ml-2 text-[0.7em] text-white/60">({displayFolders.length})</span>
+                    </span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <FolderGrid
@@ -401,8 +407,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
                       <i className="bi bi-calendar3" aria-hidden />
                     </span>
-                    <span className="text-sm font-medium text-gray-400">{group.label}</span>
-                    <span className="text-xs text-gray-500">({group.files.length})</span>
+                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
+                      {group.label}
+                      <span className="ml-2 text-[0.7em] text-white/60">({group.files.length})</span>
+                    </span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <FileGrid

@@ -22,7 +22,7 @@ const TYPE_BADGE_CLASS = 'bg-white/10 text-white/90';
 
 export const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; order: number }> = {
   image: {
-    label: '图片',
+    label: 'Images',
     icon: (
       <IconBadge className={TYPE_BADGE_CLASS}>
         <i className="bi bi-file-earmark-image-fill" aria-hidden />
@@ -40,7 +40,7 @@ export const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; 
     order: 2,
   },
   video: {
-    label: '视频',
+    label: 'Videos',
     icon: (
       <IconBadge className={TYPE_BADGE_CLASS}>
         <i className="bi bi-camera-video-fill" aria-hidden />
@@ -49,7 +49,7 @@ export const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; 
     order: 3,
   },
   audio: {
-    label: '音频',
+    label: 'Audio',
     icon: (
       <IconBadge className={TYPE_BADGE_CLASS}>
         <i className="bi bi-file-earmark-music-fill" aria-hidden />
@@ -67,7 +67,7 @@ export const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; 
     order: 5,
   },
   text: {
-    label: '文本',
+    label: 'Text',
     icon: (
       <IconBadge className={TYPE_BADGE_CLASS}>
         <i className="bi bi-file-text-fill" aria-hidden />
@@ -76,7 +76,7 @@ export const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; 
     order: 6,
   },
   'application/zip': {
-    label: '压缩包',
+    label: 'Archives',
     icon: (
       <IconBadge className={TYPE_BADGE_CLASS}>
         <i className="bi bi-file-zip-fill" aria-hidden />
@@ -85,7 +85,7 @@ export const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; 
     order: 7,
   },
   application: {
-    label: '文档',
+    label: 'Docs',
     icon: (
       <IconBadge className={TYPE_BADGE_CLASS}>
         <i className="bi bi-file-spreadsheet-fill" aria-hidden />
@@ -94,7 +94,7 @@ export const FILE_TYPE_LABELS: Record<string, { label: string; icon: ReactNode; 
     order: 8,
   },
   other: {
-    label: '其他',
+    label: 'Others',
     icon: (
       <IconBadge className={TYPE_BADGE_CLASS}>
         <i className="bi bi-file-earmark-fill" aria-hidden />

@@ -156,7 +156,8 @@ function getFileTypeDisplay(mimeType: string) {
   }
   return {
     icon: <FileIcon className="h-8 w-8" />,
-    bgClass: 'bg-gray-700',
+    // 其他类型占位图：与视频卡片统一使用紫色背景
+    bgClass: 'bg-purple-900/30',
     label: null,
   };
 }
@@ -237,7 +238,8 @@ export default function LazyThumbnail({
     <div
       ref={containerRef}
       className={cn(
-        'flex items-center justify-center bg-gray-700 dark:bg-gray-600 rounded overflow-hidden shrink-0',
+        // 图片类与加载中占位：使用与视频卡片一致的紫色背景
+        'flex items-center justify-center bg-purple-900/30 dark:bg-purple-900/40 rounded overflow-hidden shrink-0',
         className
       )}
     >
@@ -277,7 +279,8 @@ export default function LazyThumbnail({
       <div
         ref={containerRef}
         className={cn(
-          'flex items-center justify-center bg-gray-700 dark:bg-gray-600 rounded overflow-hidden shrink-0',
+          // 错误占位也统一使用与视频卡片相同的紫色背景
+          'flex items-center justify-center bg-purple-900/30 dark:bg-purple-900/40 rounded overflow-hidden shrink-0',
           className
         )}
       >

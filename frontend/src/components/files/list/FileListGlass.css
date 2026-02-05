@@ -202,10 +202,8 @@
     radial-gradient(120% 100% at 10% 10%, rgba(255, 255, 255, 0.14), transparent 55%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
   box-shadow:
-    0 18px 58px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    /* 科技感微光 */
-    0 0 15px rgba(168, 85, 247, 0.1);
+    0 12px 32px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
   /* 性能关键：列表里卡片数量多，去掉 backdrop-filter 避免滚动卡顿 */
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -232,7 +230,7 @@
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  opacity: 0;
+  opacity: 0.18;
   transition: opacity 180ms ease;
   pointer-events: none;
   z-index: 0;
@@ -242,14 +240,12 @@
   transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.18);
   box-shadow: 
-    0 22px 70px rgba(0, 0, 0, 0.42),
-    0 0 25px rgba(168, 85, 247, 0.2),
-    0 0 40px rgba(34, 211, 238, 0.15);
+    0 16px 40px rgba(0, 0, 0, 0.38),
+    0 0 20px rgba(168, 85, 247, 0.18);
 }
 
 .fileListGlassScope .glass-card:hover::after {
-  opacity: 1;
-  animation: techBorderGlow 2s ease-in-out infinite;
+  opacity: 0.45;
 }
 
 @keyframes techBorderGlow {

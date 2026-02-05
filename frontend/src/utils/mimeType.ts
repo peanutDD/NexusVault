@@ -88,11 +88,12 @@ export function getMimeTypeInfo(mime: string): MimeTypeInfo {
     [() => isDocumentType(mime), { label: 'DOC', color: '#3B82F6', bgClass: 'bg-blue-900/30' }],
     [() => isSpreadsheetType(mime), { label: 'SHEET', color: '#10B981', bgClass: 'bg-emerald-900/30' }],
     [() => isArchiveType(mime), { label: 'ZIP', color: '#F59E0B', bgClass: 'bg-amber-900/30' }],
-    [() => isTextType(mime), { label: 'TEXT', color: '#6B7280', bgClass: 'bg-gray-700' }],
+    // 文本等其他类型：占位背景与视频卡片保持一致的紫色系
+    [() => isTextType(mime), { label: 'TEXT', color: '#6B7280', bgClass: 'bg-purple-900/30' }],
   ];
 
   const match = typeMap.find(([predicate]) => predicate());
-  return match?.[1] ?? { label: 'FILE', color: '#6B7280', bgClass: 'bg-gray-700' };
+  return match?.[1] ?? { label: 'FILE', color: '#6B7280', bgClass: 'bg-purple-900/30' };
 }
 
 /** 获取图标颜色（用于 UploadFileItem 等组件） */

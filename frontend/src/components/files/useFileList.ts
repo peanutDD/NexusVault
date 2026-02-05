@@ -37,16 +37,18 @@ function getTypeKey(mime: string): string {
 }
 
 /**
- * 根据日期获取时间分组的键和标签
- * 返回格式: { key: '2024-01', label: '2024年1月', sortKey: 202401 }
+ * 根据日期获取时间分组的键和标签（精确到「天」）
+ * 返回格式: { key: '2024-01-24', label: 'Jan 24, 2024', sortKey: 20240124 }
  */
 function getTimeGroupInfo(dateStr: string): { key: string; label: string; sortKey: number } {
   const date = new Date(dateStr);
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
-  const key = `${year}-${String(month).padStart(2, '0')}`;
-  const label = `${year}年${month}月`;
-  const sortKey = year * 100 + month;
+  const day = date.getDate();
+  const key = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const label = `${monthNames[month - 1]} ${day}, ${year}`;
+  const sortKey = year * 10000 + month * 100 + day;
   return { key, label, sortKey };
 }
 
@@ -159,14 +161,19 @@ function useTimeGrouping(files: FileMetadata[], isGroupByTime: boolean) {
     if (!isGroupByTime) return null;
 
     const groups = new Map<string, { label: string; sortKey: number; files: FileMetadata[] }>();
-    
-    files.forEach((file) => {
-      const { key, label, sortKey } = getTimeGroupInfo(file.created_at);
-      if (!groups.has(key)) {
-        groups.set(key, { label, sortKey, files: [] });
+
+    // 避免对同一月份重复计算 label/sortKey：仅在首次创建分组时调用 getTimeGroupInfo
+    for (const file of files) {
+      const createdAt = file.created_at;
+      // 预判 key：仅用于 map 查询；label/sortKey 在首次命中时再正式计算
+      const { key, label, sortKey } = getTimeGroupInfo(createdAt);
+      const existing = groups.get(key);
+      if (existing) {
+        existing.files.push(file);
+      } else {
+        groups.set(key, { label, sortKey, files: [file] });
       }
-      groups.get(key)!.files.push(file);
-    });
+    }
 
     return Array.from(groups.entries())
       .map(([key, { label, sortKey, files: groupFiles }]) => ({
@@ -574,7 +581,7 @@ export function useFileList() {
     }
   }, [deleteConfirm, selectedFiles, selectedFolders, selectedFileIds, selectedFolderIds, setSelectedFiles, setSelectedFolders, loadFiles, loadFolders]);
 
-  const handleBatchDownload = async () => {
+  const handleBatchDownload = useCallback(async () => {
     if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
     setBatchDownloading(true);
     try {
@@ -603,15 +610,15 @@ export function useFileList() {
     } finally {
       setBatchDownloading(false);
     }
-  };
+  }, [selectedFiles.size, selectedFolders.size, selectedFileIds, selectedFolderIds]);
 
-  const handleDownload = async (file: FileMetadata) => {
+  const handleDownload = useCallback(async (file: FileMetadata) => {
     try {
       await fileService.downloadFile(file.id, file.original_filename);
     } catch (err) {
       alert(getErrorMessage(err, '下载失败'));
     }
-  };
+  }, []);
 
   /**
    * 移动前乐观更新：从当前列表移除被移动的项（仅当目标不是当前目录时），返回回滚函数。

@@ -574,27 +574,75 @@ export default function FilePreview({
           </div>
         )}
 
-        {/* 不支持的文件类型 */}
+        {/* 不支持的文件类型 - 霓虹玻璃拟态提示 + 下载 */}
         {!loading && !error && !supported && (
-          <div
-            className="flex h-[calc(100vh-180px)] w-full max-w-5xl items-center justify-center"
-          >
+          <div className="flex h-[calc(100vh-180px)] w-full max-w-5xl items-center justify-center">
             <div
-              className="flex flex-col items-center gap-4 rounded-2xl bg-white/5 px-8 py-10 text-center"
               onClick={(e) => e.stopPropagation()}
+              className={cn(
+                'relative flex flex-col items-center gap-5 text-center',
+                // 主卡片：椭圆玻璃面板
+                'rounded-[1.75rem] border border-white/18 bg-gradient-to-br from-[#111827]/90 via-[#020617]/90 to-[#020617]/95',
+                'px-10 py-8 shadow-[0_24px_80px_rgba(15,23,42,0.95)]',
+                'backdrop-blur-2xl'
+              )}
             >
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-purple-500/20">
-                <FileIcon />
+              {/* 背景霓虹光环 */}
+              <div className="pointer-events-none absolute -top-20 h-40 w-40 rounded-full bg-[radial-gradient(circle_at_30%_0%,rgba(244,114,182,0.55),transparent_60%),radial-gradient(circle_at_80%_40%,rgba(56,189,248,0.55),transparent_60%)] opacity-60 blur-2xl" />
+
+              {/* 中心霓虹胶囊 / 水母形图标 */}
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-gradient-to-b from-fuchsia-500/80 via-purple-500/70 to-cyan-400/70 shadow-[0_18px_45px_rgba(59,130,246,0.75)]">
+                <div className="flex h-[70%] w-[70%] items-center justify-center rounded-[1.25rem] bg-black/40 border border-white/30 text-cyan-200">
+                  <FileIcon />
+                </div>
+                {/* 下垂的发光线条 */}
+                <div className="pointer-events-none absolute -bottom-8 flex h-10 w-16 items-start justify-center gap-1 opacity-80">
+                  <span className="h-full w-[2px] rounded-full bg-gradient-to-b from-cyan-300 to-transparent" />
+                  <span className="h-full w-[2px] rounded-full bg-gradient-to-b from-fuchsia-300 to-transparent" />
+                  <span className="h-full w-[2px] rounded-full bg-gradient-to-b from-sky-300 to-transparent" />
+                </div>
               </div>
-              <p className="text-lg text-white">无法预览此文件类型</p>
-              <p className="text-sm text-white/50">{file.mime_type}</p>
+
+              {/* 霓虹主标题 */}
+              <p
+                className={cn(
+                  'font-brand text-[0.86rem] leading-tight tracking-[0.32em] uppercase',
+                  'bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-transparent',
+                  'drop-shadow-[0_0_12px_rgba(244,114,182,0.9)]'
+                )}
+              >
+                无法预览此文件类型
+              </p>
+              {/* 次级信息（MIME）——更小、更靠近标题，层级低一档 */}
+              <p className="mt-[0.18rem] text-[0.66rem] leading-snug text-cyan-200/70 drop-shadow-[0_0_6px_rgba(34,211,238,0.45)]">
+                {file.mime_type}
+              </p>
+
+              {/* 底部霓虹信息条 */}
+              <div className="mt-[0.45rem] flex flex-wrap items-center justify-center gap-2 text-[0.65rem] text-white/70">
+                <span className="rounded-full bg-white/6 px-3 py-1 backdrop-blur-sm">
+                  {formatFileSize(file.file_size)}
+                </span>
+                <span className="rounded-full bg-cyan-500/14 px-3 py-1 text-cyan-200 backdrop-blur-sm">
+                  {getMimeTypeLabel(file.mime_type)}
+                </span>
+              </div>
+
               <button
                 type="button"
                 onClick={handleDownload}
-                className="mt-2 flex items-center gap-2 rounded-full bg-purple-600 px-6 py-2.5 text-sm text-white transition-colors hover:bg-purple-500"
+                className={cn(
+                  'mt-4 inline-flex items-center justify-center gap-2',
+                  'rounded-full border border-fuchsia-400/60 bg-gradient-to-r from-fuchsia-500/50 via-purple-500/60 to-sky-400/60',
+                  'px-6 py-2.5 text-[0.78rem] font-brand tracking-[0.22em] text-white shadow-[0_14px_40px_rgba(129,140,248,0.65)]',
+                  'backdrop-blur-md transition-transform transition-colors',
+                  'hover:brightness-110 hover:-translate-y-[1px]'
+                )}
               >
-                <DownloadIcon />
-                下载文件
+                <span className="inline-flex h-3.5 w-3.5 items-center justify-center">
+                  <DownloadIcon />
+                </span>
+                <span>下载文件</span>
               </button>
             </div>
           </div>
@@ -651,10 +699,16 @@ function CloseIcon() {
   );
 }
 
-// 下载图标
+// 下载图标（适配按钮内的小尺寸图标）
 function DownloadIcon() {
   return (
-    <svg className="h-full w-full shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="clamp(1.5, 0.4vw, 2.5)">
+    <svg
+      className="h-3.5 w-3.5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
