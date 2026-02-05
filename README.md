@@ -189,6 +189,54 @@ frontend/
 > - 预览体验：支持常见文件类型内联预览；不支持的类型使用霓虹玻璃风提示框 + 下载按钮  
 > - 响应式：桌面 / 移动端统一使用同一套过滤栏、分组栏与下拉菜单视觉风格
 
+## 高并发与性能设计
+
+本项目在前后端都针对高并发 / 大文件量场景做了专门的设计。下面是实际用到的关键技术与策略。
+
+### 后端高并发能力（Rust + Axum + SQLx）
+
+- **异步运行时：Tokio**  
+  - 所有 HTTP Handler 基于 async/await，依托 Tokio 事件循环，单进程即可处理大量并发连接。  
+- **连接池与零拷贝 I/O**  
+  - SQLx 内置连接池，复用数据库连接，避免在高并发下频繁创建/销毁连接。  
+  - 文件上传 / 下载使用 Rust 标准库与 Tokio I/O 组合，尽量以流式方式读写，减小内存占用峰值。  
+- **分层架构解耦**  
+  - `handlers/` 只负责 HTTP 解析与入参校验；  
+  - `services/` 内部封装核心业务（如批量删除、文件共享、权限判断），便于在未来增加队列或任务系统时扩展。  
+- **存储后端抽象**  
+  - 通过配置切换本地文件系统与 S3，接口统一，便于在高并发下迁移到更高吞吐的对象存储。  
+- **安全与限流基础**  
+  - 通过环境变量控制单文件大小 `MAX_FILE_SIZE` 与 MIME 白名单；  
+  - 预留了在中间件层增加限流、速率限制的入口（如基于 IP / 用户维度）。
+
+### 前端高并发与大列表能力（React 19 + Zustand）
+
+- **请求去重与并发控制**  
+  - `useRequestDedup` 基于 `REQUEST` 常量（`REQUEST.DEDUP_TTL_MS` / `REQUEST.DEDUP_MAX_CACHE_SIZE`），  
+    对相同参数的请求在短时间内复用结果，避免多次点击 / 滚动触发重复请求。  
+  - 请求层面的并发上限由 `REQUEST.LIMITER_MAX_CONCURRENT` 控制，可按需收紧。
+- **文件列表缓存（stale-while-revalidate）**  
+  - `useFileList` + `utils/fileListCache`：  
+    - 第一页及后续分页结果会缓存在 `localStorage` 中（LRU 替换，数量由 `FILE_LIST.CACHE_MAX_ENTRIES` 控制）。  
+    - 命中缓存时立即渲染，再在后台静默刷新，既保证首次渲染速度，又能尽量保持数据新鲜。  
+- **分页与无限滚动结合**  
+  - `FILE_LIST.LIMIT` 控制单页返回量（默认为 60），降低单次渲染压力。  
+  - `InfiniteScrollSentinel` + `loadMore`：滑动到底部自动加载下一页，  
+    同时提供 `Load more` 按钮兜底（防止某些环境下 IntersectionObserver 不稳定）。  
+  - 通过冷却时间与请求 ID 竞态检查，避免频繁触底导致的「并发 loadMore 洪泛」。
+- **虚拟列表与分组 Worker**  
+  - 当文件数量超过 `FILE_LIST.VIRTUAL_THRESHOLD` 时，自动切换为 `VirtualizedFileGrid`，  
+    仅渲染可视区域的网格行，显著降低大列表滚动成本。  
+  - 类型分组逻辑在 `useFileGroupingWithIcons` 中使用 `groupFilesInWorker`（Web Worker 池），  
+    将「按类型聚合 + 排序」这类 O(n) 计算从主线程剥离出来，保持交互流畅。
+- **过滤 / 排序防抖与状态集中管理**  
+  - `useFileFilters` 对搜索输入做防抖，避免每个字符都触发一次网络请求与重渲染。  
+  - `useFileList` 统一维护 `files / total / loadedPageCount / selection` 等状态，  
+    结合 Zustand store（如 `fileStore` / `files/listStore`）做缓存与派发，减少多处组件重复计算。
+
+> 总体上：后端依靠 Rust + Axum + SQLx + Tokio 提供高并发处理能力；  
+> 前端则通过请求去重、缓存、虚拟列表与 Worker 分组，确保在大量文件与频繁操作下仍然保持良好的响应速度。
+
 ## API 端点
 
 ### 认证 API
