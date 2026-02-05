@@ -419,17 +419,22 @@
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  border-radius: 8px;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  border-color: rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(168, 85, 247, 0.18), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
   box-shadow:
-    0 14px 40px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .fileListGlassScope .glass-btn.toolbarActionBtn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.26);
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(168, 85, 247, 0.24), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12));
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 /* 上传按钮高亮样式：柔和的紫色调 + 保持玻璃质感 */

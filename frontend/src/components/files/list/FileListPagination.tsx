@@ -47,30 +47,30 @@ const FileListPagination = memo(function FileListPagination({
     if (totalPages <= 1) return null;
 
     return (
-      <div className="mt-8 flex flex-col items-center justify-center gap-3">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-400">
-            已加载 {page} / {totalPages} 页
-          </span>
-          <button
-            type="button"
-            onClick={onLoadMore}
-            disabled={!hasMore || loadingMore}
-            className="glass-btn flex items-center gap-1 px-4 py-2 text-sm disabled:opacity-50"
-          >
-            {loadingMore ? (
-              <>
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                加载中…
-              </>
-            ) : (
-              <>
-                加载更多
-                <ChevronRightIcon />
-              </>
-            )}
-          </button>
-        </div>
+      <div className="mt-8 flex items-center justify-center">
+        <button
+          type="button"
+          onClick={onLoadMore}
+          disabled={!hasMore || loadingMore}
+          className={cn(
+            'glass-btn toolbarActionBtn font-brand px-6 py-2 text-sm font-normal tracking-widest disabled:opacity-50',
+            // 整体缩放到原来的 80%
+            'scale-[0.8]',
+            'flex items-center justify-center gap-2'
+          )}
+        >
+          {loadingMore ? (
+            <>
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Loading...
+            </>
+          ) : (
+            <>
+              Load more
+              <ChevronRightIcon />
+            </>
+          )}
+        </button>
       </div>
     );
   }
@@ -129,7 +129,19 @@ function ChevronLeftIcon() {
 function ChevronRightIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      {/* 更“艺术”的长箭头：一条主线 + 流线型箭头 */}
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M5 12h11"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M13 7l6 5-6 5"
+      />
     </svg>
   );
 }

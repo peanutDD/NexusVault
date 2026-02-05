@@ -121,13 +121,13 @@ const FolderCard = memo(function FolderCard({
       onDoubleClick={handleDoubleClick}
     >
       <div className="p-3">
-        {/* 文件夹图标 */}
+        {/* 文件夹图标：使用和视频文件相同的主色（text-purple-400），但缩小尺寸避免过于抢眼 */}
         <div className="relative mb-3 flex aspect-square items-center justify-center rounded-lg bg-black/20">
           <SelectionCheckbox
             isSelected={isSelected}
             onClick={handleSelect}
           />
-          <i className="bi bi-folder2 text-5xl text-white/80" aria-hidden />
+          <i className="bi bi-folder2 text-[clamp(1.5rem,3.2vw,2.25rem)] text-purple-400" aria-hidden />
         </div>
 
         {/* 文件夹名称 + 设置按钮 */}

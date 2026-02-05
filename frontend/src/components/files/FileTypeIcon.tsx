@@ -94,7 +94,7 @@ function ImageIcon() {
 function VideoIcon() {
   return (
     <svg
-      className="h-5 w-5 text-pink-400"
+      className="h-5 w-5 text-purple-400"
       viewBox="0 0 24 24"
       fill="currentColor"
     >
