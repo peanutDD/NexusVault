@@ -393,3 +393,5 @@ html {
   );
   pointer-events: none;
 }
+
+/* rare-cow Loading 动画已移除，恢复为默认的旋转圆形样式（使用 Tailwind 工具类） */

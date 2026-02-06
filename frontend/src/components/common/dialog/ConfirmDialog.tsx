@@ -12,6 +12,12 @@ interface ConfirmDialogProps {
   cancelText?: string;
   variant?: ConfirmVariant;
   appearance?: ConfirmAppearance;
+  /** 可选：自定义头部图标 */
+  icon?: ReactNode;
+  /** 可选：自定义图标背景样式类 */
+  iconBgClass?: string;
+  /** 可选：自定义图标颜色样式类 */
+  iconColorClass?: string;
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
@@ -61,6 +67,9 @@ export default function ConfirmDialog({
   cancelText = '取消',
   variant = 'danger',
   appearance = 'default',
+  icon,
+  iconBgClass,
+  iconColorClass,
   onConfirm,
   onCancel,
   loading = false,
@@ -68,6 +77,10 @@ export default function ConfirmDialog({
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const config = variantConfig[variant];
   const isGlass = appearance === 'glass';
+
+  const displayIcon = icon ?? config.icon;
+  const displayIconBg = iconBgClass ?? config.iconBg;
+  const displayIconColor = iconColorClass ?? config.iconColor;
 
   const glassConfirmClass =
     variant === 'danger'
@@ -162,12 +175,12 @@ export default function ConfirmDialog({
             <div
               className={cn(
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                config.iconBg,
-                config.iconColor,
+                displayIconBg,
+                displayIconColor,
                 isSciFi && 'confirm-dialog-sci-fi-icon'
               )}
             >
-              {config.icon}
+              {displayIcon}
             </div>
             <h3
               id="confirm-title"
@@ -180,9 +193,9 @@ export default function ConfirmDialog({
             </h3>
           </div>
 
-          {/* 正文：消息，长文件名换行、不超宽 */}
+          {/* 正文：消息容器，支持任意 ReactNode 内容 */}
           <div className="px-4 pb-4">
-            <p
+            <div
               id="confirm-message"
               className={cn(
                 'max-w-full py-3 text-xs leading-relaxed break-words whitespace-pre-line',
@@ -190,7 +203,7 @@ export default function ConfirmDialog({
               )}
             >
               {message}
-            </p>
+            </div>
 
           {/* 操作区：上边框区分 */}
           <div

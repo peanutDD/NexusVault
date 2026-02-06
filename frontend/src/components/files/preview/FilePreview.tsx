@@ -439,10 +439,10 @@ export default function FilePreview({
         className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-16 py-2"
         onClick={onClose}
       >
-        {/* 加载状态 */}
+        {/* 加载状态：恢复为原来的圆形旋转 Loading */}
         {loading && (
           <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
-            <div className="h-12 w-12 animate-spin rounded-full border-3 border-white/20 border-t-purple-500" />
+            <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/25 border-t-purple-500" />
             <span className="text-sm text-white/60">加载中…</span>
           </div>
         )}
@@ -574,77 +574,42 @@ export default function FilePreview({
           </div>
         )}
 
-        {/* 不支持的文件类型 - 霓虹玻璃拟态提示 + 下载 */}
+        {/* 不支持的文件类型 - 使用与文件卡片相同的布局（缩略图 + 文本信息） */}
         {!loading && !error && !supported && (
-          <div className="flex h-[calc(100vh-180px)] w-full max-w-5xl items-center justify-center">
-            <div
+          <div className="flex h-full w-full items-center justify-center pointer-events-none">
+            <article
+              className="pointer-events-auto group relative rounded-md transition-colors bg-purple-900/40 backdrop-blur-md hover:bg-purple-800/50 max-w-[min(92vw,22rem)] scale-[2]"
               onClick={(e) => e.stopPropagation()}
-              className={cn(
-                'relative flex flex-col items-center gap-5 text-center',
-                // 主卡片：椭圆玻璃面板
-                'rounded-[1.75rem] border border-white/18 bg-gradient-to-br from-[#111827]/90 via-[#020617]/90 to-[#020617]/95',
-                'px-10 py-8 shadow-[0_24px_80px_rgba(15,23,42,0.95)]',
-                'backdrop-blur-2xl'
-              )}
             >
-              {/* 背景霓虹光环 */}
-              <div className="pointer-events-none absolute -top-20 h-40 w-40 rounded-full bg-[radial-gradient(circle_at_30%_0%,rgba(244,114,182,0.55),transparent_60%),radial-gradient(circle_at_80%_40%,rgba(56,189,248,0.55),transparent_60%)] opacity-60 blur-2xl" />
-
-              {/* 中心霓虹胶囊 / 水母形图标 */}
-              <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-gradient-to-b from-fuchsia-500/80 via-purple-500/70 to-cyan-400/70 shadow-[0_18px_45px_rgba(59,130,246,0.75)]">
-                <div className="flex h-[70%] w-[70%] items-center justify-center rounded-[1.25rem] bg-black/40 border border-white/30 text-cyan-200">
-                  <FileIcon />
+              <div className="p-3">
+                {/* 缩略图区域：与 FileCard 一致的占位风格 */}
+                <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-black/20">
+                  <div className="flex h-full w-full items-center justify-center rounded overflow-hidden shrink-0 bg-purple-900/30">
+                    <FileIcon />
+                  </div>
                 </div>
-                {/* 下垂的发光线条 */}
-                <div className="pointer-events-none absolute -bottom-8 flex h-10 w-16 items-start justify-center gap-1 opacity-80">
-                  <span className="h-full w-[2px] rounded-full bg-gradient-to-b from-cyan-300 to-transparent" />
-                  <span className="h-full w-[2px] rounded-full bg-gradient-to-b from-fuchsia-300 to-transparent" />
-                  <span className="h-full w-[2px] rounded-full bg-gradient-to-b from-sky-300 to-transparent" />
+
+                {/* 文件信息区域：整体居中显示，字号略小一档 */}
+                <div className="flex w-full items-center justify-center">
+                  <div className="min-w-0 flex-1 space-y-0.5 text-center">
+                    <h3
+                      className="truncate whitespace-nowrap text-[clamp(7px,2vw,9px)] font-medium text-white"
+                      title={file.original_filename}
+                    >
+                      不支持预览
+                    </h3>
+                    <p className="flex items-center justify-center gap-1 whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-gray-400">
+                      <span>{formatFileSize(file.file_size)}</span>
+                      <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden />
+                      <span>{getMimeTypeLabel(file.mime_type)}</span>
+                    </p>
+                    <p className="whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-gray-500">
+                      {formatDate(file.created_at)}
+                    </p>
+                  </div>
                 </div>
               </div>
-
-              {/* 霓虹主标题 */}
-              <p
-                className={cn(
-                  'font-brand text-[0.86rem] leading-tight tracking-[0.32em] uppercase',
-                  'bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300 bg-clip-text text-transparent',
-                  'drop-shadow-[0_0_12px_rgba(244,114,182,0.9)]'
-                )}
-              >
-                无法预览此文件类型
-              </p>
-              {/* 次级信息（MIME）——更小、更靠近标题，层级低一档 */}
-              <p className="mt-[0.18rem] text-[0.66rem] leading-snug text-cyan-200/70 drop-shadow-[0_0_6px_rgba(34,211,238,0.45)]">
-                {file.mime_type}
-              </p>
-
-              {/* 底部霓虹信息条 */}
-              <div className="mt-[0.45rem] flex flex-wrap items-center justify-center gap-2 text-[0.65rem] text-white/70">
-                <span className="rounded-full bg-white/6 px-3 py-1 backdrop-blur-sm">
-                  {formatFileSize(file.file_size)}
-                </span>
-                <span className="rounded-full bg-cyan-500/14 px-3 py-1 text-cyan-200 backdrop-blur-sm">
-                  {getMimeTypeLabel(file.mime_type)}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDownload}
-                className={cn(
-                  'mt-4 inline-flex items-center justify-center gap-2',
-                  'rounded-full border border-fuchsia-400/60 bg-gradient-to-r from-fuchsia-500/50 via-purple-500/60 to-sky-400/60',
-                  'px-6 py-2.5 text-[0.78rem] font-brand tracking-[0.22em] text-white shadow-[0_14px_40px_rgba(129,140,248,0.65)]',
-                  'backdrop-blur-md transition-transform transition-colors',
-                  'hover:brightness-110 hover:-translate-y-[1px]'
-                )}
-              >
-                <span className="inline-flex h-3.5 w-3.5 items-center justify-center">
-                  <DownloadIcon />
-                </span>
-                <span>下载文件</span>
-              </button>
-            </div>
+            </article>
           </div>
         )}
       </div>
@@ -735,7 +700,7 @@ function ErrorIcon() {
 // 文件图标
 function FileIcon() {
   return (
-    <svg className="h-10 w-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-5 w-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
