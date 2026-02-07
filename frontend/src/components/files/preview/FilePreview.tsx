@@ -434,12 +434,12 @@ export default function FilePreview({
         </div>
       </div>
 
-      {/* 主内容区：z-0 置于顶栏之下；预留顶部/底部空间，图片与视频不遮挡 23/60 与底部；高度随视窗 */}
+      {/* 主内容区：四边留白 = 顶栏/底栏/左钮/右钮，中间为可缩放的预览框（非固定尺寸） */}
       <div
-        className="relative z-0 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-16 pt-[clamp(2rem,6vh,4rem)] pb-2"
+        className="relative z-0 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pl-[clamp(4.5rem,13vw,7rem)] pr-[clamp(4.5rem,13vw,7rem)] py-[clamp(1rem,4vh,2.5rem)]"
         onClick={onClose}
       >
-        {/* 加载状态：恢复为原来的圆形旋转 Loading */}
+        {/* 加载状态 */}
         {loading && (
           <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
             <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/25 border-t-purple-500" />
@@ -467,21 +467,19 @@ export default function FilePreview({
           </div>
         )}
 
-        {/* 统一预览容器 - 最大高度 82vh 留出顶/底栏空间，不遮挡 23/60 与底部，随视窗变化 */}
+        {/* 预览框：上不超顶栏、下不超底栏、左不超左钮、右不超右钮；随视窗缩放；图/视频在框内按比例 contain */}
         {!loading && !error && supported && (
-          <div
-            className="flex min-h-0 w-full max-w-5xl flex-1 items-center justify-center max-h-[82vh]"
-          >
+          <div className="flex min-h-0 w-full flex-1 items-center justify-center">
             {/* 图片预览 */}
             {isImage && blobUrl && (
-              <div className="relative flex h-full max-h-full w-full items-center justify-center pointer-events-none">
+              <div className="relative flex h-full w-full min-h-0 items-center justify-center">
+                {/* 容器必须 h-full w-full，img 的 max-100% 才有参考，才能完整 contain */}
                 <div
                   ref={imageTransformRef}
                   className={cn(
-                    'pointer-events-auto relative overflow-hidden rounded-lg origin-center transition-transform duration-500 ease-out',
+                    'flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-lg origin-center transition-transform duration-500 ease-out cursor-pointer',
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   )}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   <ResponsivePicture
                     src={blobUrl}
@@ -493,7 +491,7 @@ export default function FilePreview({
                   />
                 </div>
                 {!imageLoaded && (
-                  <div className="absolute flex items-center justify-center">
+                  <div className="absolute flex items-center justify-center inset-0">
                     <div className="h-10 w-10 animate-spin rounded-full border-3 border-white/20 border-t-purple-500" />
                   </div>
                 )}
@@ -502,9 +500,9 @@ export default function FilePreview({
 
             {/* PDF 预览 */}
             {isPDF && blobUrl && (
-              <div className="flex h-full w-full items-center justify-center pointer-events-none">
+              <div className="flex h-full w-full min-h-0 items-center justify-center pointer-events-none">
                 <div
-                  className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,64rem)] overflow-hidden rounded-lg"
+                  className="pointer-events-auto h-full max-h-full w-full max-w-full overflow-hidden rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <iframe
@@ -518,12 +516,12 @@ export default function FilePreview({
 
             {/* 视频预览 */}
             {isVideo && blobUrl && (
-              <div className="flex h-full max-h-full w-full items-center justify-center pointer-events-none">
+              <div className="flex h-full w-full min-h-0 items-center justify-center pointer-events-none">
                 <video
                   src={blobUrl}
                   controls
                   autoPlay
-                  className="pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl object-contain min-h-0"
+                  className="pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl object-contain"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <track kind="captions" />
@@ -614,9 +612,9 @@ export default function FilePreview({
         )}
       </div>
 
-      {/* 底部文件信息（尺寸基于视口）- z-20 确保始终在预览内容之上 */}
+      {/* 底部文件信息（尺寸基于视口）- z-20 确保始终在预览内容之上；上下 padding 一致 */}
       <div
-        className="relative z-20 shrink-0 bg-gradient-to-t from-black/70 to-transparent px-[clamp(0.8rem,2vw,1rem)] pt-[clamp(0.8rem,2vw,1rem)] pb-[clamp(1rem,2.5vw,1.5rem)]"
+        className="relative z-20 shrink-0 bg-gradient-to-t from-black/70 to-transparent px-[clamp(0.8rem,2vw,1rem)] py-[clamp(0.9rem,2.25vw,1.25rem)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto max-w-3xl">
