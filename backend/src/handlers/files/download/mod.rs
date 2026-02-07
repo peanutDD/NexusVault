@@ -234,3 +234,62 @@ pub async fn thumbnail_file_handler(
     file_response(buf, "thumb.jpg", "image/jpeg", true)
         .map_err(|_| AppError::Internal)
 }
+
+/// 返回 HLS 主列表（playlist.m3u8），供前端 hls.js 加载。仅对超过阈值的视频生效。
+pub async fn hls_playlist_handler(
+    State(state): State<AppState>,
+    AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
+    Path(file_id): Path<Uuid>,
+) -> Result<Response, AppError> {
+    let file_service = FileService::from_state(&state);
+    let file = file_service.get_file(file_id, user_id).await?;
+    let out_dir = file_service.ensure_hls_ready(&file).await?;
+    let playlist_path = out_dir.join("playlist.m3u8");
+    let data = tokio::fs::read(&playlist_path)
+        .await
+        .map_err(|e| AppError::File(format!("读取 HLS 列表失败: {}", e)))?;
+    crate::utils::response::file_response(
+        data,
+        "playlist.m3u8",
+        "application/vnd.apple.mpegurl",
+        true,
+    )
+    .map_err(|_| AppError::Internal)
+}
+
+/// 返回 HLS 分片（segment*.ts）或 playlist.m3u8。仅允许安全文件名，防止路径穿越。
+pub async fn hls_asset_handler(
+    State(state): State<AppState>,
+    AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
+    Path((file_id, filename)): Path<(Uuid, String)>,
+) -> Result<Response, AppError> {
+    let file_service = FileService::from_state(&state);
+    let file = file_service.get_file(file_id, user_id).await?;
+    if !file_service.should_use_hls(&file) {
+        return Err(AppError::NotFound);
+    }
+    let out_dir = file_service.ensure_hls_ready(&file).await?;
+    let safe_name = filename
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
+        && (filename.ends_with(".ts") || filename.ends_with(".m3u8"))
+        && !filename.contains("..");
+    if !safe_name {
+        return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
+    }
+    let path = out_dir.join(&filename);
+    let parent = path.parent().ok_or_else(|| AppError::Validation("无效的 HLS 资源名".to_string()))?;
+    if parent != out_dir.as_path() {
+        return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
+    }
+    let data = tokio::fs::read(&path)
+        .await
+        .map_err(|_| AppError::NotFound)?;
+    let mime = if filename.ends_with(".m3u8") {
+        "application/vnd.apple.mpegurl"
+    } else {
+        "video/MP2T"
+    };
+    crate::utils::response::file_response(data, &filename, mime, true)
+        .map_err(|_| AppError::Internal)
+}

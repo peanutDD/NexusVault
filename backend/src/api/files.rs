@@ -23,8 +23,8 @@ use crate::handlers::files::{
     batch_get_handler, batch_move_handler, categories_handler,
     chunked_upload_abort_handler, chunked_upload_chunk_handler, chunked_upload_complete_handler,
     chunked_upload_init_handler, chunked_upload_status_handler, delete_file_handler,
-    download_file_handler, list_files_handler, preview_file_handler, storage_usage_handler,
-    thumbnail_file_handler, upload_file_handler,
+    download_file_handler, hls_asset_handler, hls_playlist_handler, list_files_handler,
+    preview_file_handler, storage_usage_handler, thumbnail_file_handler, upload_file_handler,
 };
 use crate::AppState;
 
@@ -176,5 +176,7 @@ pub fn create_router() -> Router<AppState> {
         .route("/:id/download", get(download_file_handler).head(download_file_handler))
         .route("/:id/preview", get(preview_file_handler).head(preview_file_handler))
         .route("/:id/thumbnail", get(thumbnail_file_handler))
+        .route("/:id/hls", get(hls_playlist_handler))
+        .route("/:id/hls/:filename", get(hls_asset_handler))
         .route("/:id", delete(delete_file_handler))
 }

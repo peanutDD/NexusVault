@@ -17,6 +17,8 @@ pub struct Config {
     pub allowed_mime_types: Vec<String>,
     pub port: u16,
     pub cors_origin: String,
+    /// 超过此大小的视频使用 HLS 转码预览（字节），默认 100MB
+    pub hls_threshold_bytes: u64,
 }
 
 #[derive(Error, Debug)]
@@ -57,6 +59,10 @@ impl Config {
                 .parse()
                 .unwrap_or(3000),
             cors_origin: env::var("CORS_ORIGIN").unwrap_or_else(|_| "*".to_string()),
+            hls_threshold_bytes: env::var("HLS_THRESHOLD_BYTES")
+                .unwrap_or_else(|_| "104857600".to_string()) // 100MB
+                .parse()
+                .unwrap_or(104_857_600),
         })
     }
 }

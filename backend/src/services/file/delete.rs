@@ -11,6 +11,7 @@ impl FileService {
         let file = self.get_file(file_id, user_id).await?;
         self.storage.delete_file(&file.file_path).await?;
         let _ = self.delete_thumbnail(file_id).await;
+        let _ = self.delete_hls(file_id).await;
         self.files_repo.delete(file_id, user_id).await?;
         Ok(())
     }
@@ -29,6 +30,7 @@ impl FileService {
                 return Err(e);
             }
             let _ = self.delete_thumbnail(id).await;
+            let _ = self.delete_hls(id).await;
             deleted_ids.push(id);
         }
 

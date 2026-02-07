@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import Hls from 'hls.js';
 import { fileService } from '../../../services/files';
 import { useAuthStore } from '../../../store/authStore';
 import type { FileMetadata } from '../../../types';
@@ -56,6 +57,13 @@ export default function FilePreview({
   );
 
   const [loading, setLoading] = useState(() => (file ? kind.supported : false));
+  const [useHls, setUseHls] = useState(false);
+  const videoFallbackTriedRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const tryVideoAudioFallbackRef = useRef<() => void>(() => {});
+
+  /** 超过此大小使用 HLS 转码预览（与后端 HLS_THRESHOLD_BYTES 一致，默认 100MB） */
+  const HLS_THRESHOLD = 100 * 1024 * 1024;
 
   const getStreamUrl = useCallback((fileId: string) => {
     const base = fileService.getPreviewUrl(fileId);
@@ -64,6 +72,37 @@ export default function FilePreview({
     const joiner = base.includes('?') ? '&' : '?';
     return `${base}${joiner}token=${encodeURIComponent(token)}`;
   }, []);
+
+  const getHlsUrl = useCallback((fileId: string) => {
+    const base = fileService.getHlsUrl(fileId);
+    const token = useAuthStore.getState().token ?? localStorage.getItem('token');
+    if (!token) return base;
+    const joiner = base.includes('?') ? '&' : '?';
+    return `${base}${joiner}token=${encodeURIComponent(token)}`;
+  }, []);
+
+  /** 直连 URL 加载失败（如 CORS/401）时，改用 axios 拉取 Blob 再播放 */
+  const tryVideoAudioFallback = useCallback(() => {
+    if (!file) return;
+    if (videoFallbackTriedRef.current) {
+      setError('视频加载或播放失败');
+      return;
+    }
+    if (blobUrl?.startsWith('blob:')) return;
+    videoFallbackTriedRef.current = true;
+    setError(null);
+    setLoading(true);
+    fileService
+      .fetchPreviewBlob(file.id)
+      .then((b) => {
+        setBlobUrl(URL.createObjectURL(b));
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : '加载失败');
+      })
+      .finally(() => setLoading(false));
+  }, [file, blobUrl]);
+  tryVideoAudioFallbackRef.current = tryVideoAudioFallback;
 
   useEffect(() => {
     if (!file || !kind.supported) return;
@@ -93,10 +132,17 @@ export default function FilePreview({
       return;
     }
 
-    // 视频/音频/GIF：使用可流式的直连 URL，避免等待完整 Blob
+    // 视频/音频/GIF：优先直连 URL（流式）；超大视频用 HLS
     if (kind.isVideo || kind.isAudio || isGif) {
       if (!isValidRequest()) return;
-      setBlobUrl(getStreamUrl(file.id));
+      videoFallbackTriedRef.current = false;
+      if (kind.isVideo && file.file_size >= HLS_THRESHOLD) {
+        setBlobUrl(getHlsUrl(file.id));
+        setUseHls(true);
+      } else {
+        setBlobUrl(getStreamUrl(file.id));
+        setUseHls(false);
+      }
       finish();
       return;
     }
@@ -113,13 +159,32 @@ export default function FilePreview({
       })
       .finally(finish);
     // 仅依赖 file?.id 与 kind，避免 file 引用变化导致重复请求
-  }, [file, kind.supported, kind.isText, kind.isVideo, kind.isAudio, getStreamUrl]);
+  }, [file, kind.supported, kind.isText, kind.isVideo, kind.isAudio, getStreamUrl, getHlsUrl]);
 
   useEffect(() => {
     return () => {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      if (blobUrl?.startsWith('blob:')) URL.revokeObjectURL(blobUrl);
     };
   }, [blobUrl]);
+
+  // 超大视频：hls.js 加载 m3u8；Safari 等原生支持 HLS 则直接用 src
+  useEffect(() => {
+    if (!kind.isVideo || !useHls || !blobUrl) return;
+    const video = videoRef.current;
+    if (!video) return;
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(blobUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) tryVideoAudioFallbackRef.current();
+      });
+      return () => {
+        hls.destroy();
+      };
+    }
+    video.src = blobUrl;
+  }, [kind.isVideo, useHls, blobUrl]);
 
   // 预加载相邻图片（仅图片类型，加载完成后预加载）
   useEffect(() => {
@@ -514,15 +579,19 @@ export default function FilePreview({
               </div>
             )}
 
-            {/* 视频预览 */}
+            {/* 视频预览：小视频直连 URL；超大视频（>100MB）用 HLS（hls.js） */}
             {isVideo && blobUrl && (
-              <div className="flex h-full w-full min-h-0 items-center justify-center pointer-events-none">
+              <div className="flex h-full w-full min-h-0 items-center justify-center">
                 <video
-                  src={blobUrl}
+                  ref={videoRef}
+                  key={blobUrl}
+                  src={useHls ? undefined : blobUrl}
                   controls
                   autoPlay
-                  className="pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl object-contain"
+                  preload="metadata"
+                  className="pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl object-contain cursor-pointer"
                   onClick={(e) => e.stopPropagation()}
+                  onError={tryVideoAudioFallback}
                 >
                   <track kind="captions" />
                   您的浏览器不支持视频播放
@@ -541,10 +610,12 @@ export default function FilePreview({
                     <AudioIcon />
                   </div>
                   <audio
+                    key={blobUrl}
                     src={blobUrl}
                     controls
                     autoPlay
                     className="w-80"
+                    onError={tryVideoAudioFallback}
                   >
                     您的浏览器不支持音频播放
                   </audio>

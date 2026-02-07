@@ -5,6 +5,7 @@
 ## 近期变更（2026-02-07）
 
 - **列表缩略图**：列表卡片图片改为请求后端 `GET /api/files/:id/thumbnail`（压缩后 JPEG），不再用预览原图接口，减轻加载与带宽；`fileService.fetchThumbnailBlob` 在 404/415 时返回 `null`，前端显示占位图标。详见后端 `ENGINEERING_PLAYBOOK.md` 第 17 节。
+- **视频预览与播放**：预览页视频使用直连 `GET /api/files/:id/preview?token=...`，不拉整文件到内存；后端支持 HTTP Range，浏览器可流式播放与拖拽进度。前端对 `<video>` 使用 `preload="metadata"` 减少首包，并增加 `onError` 提示。
 
 ---
 
@@ -997,6 +998,13 @@ export function getCacheKey(query: Record<string, unknown>): string {
   return `${CACHE_KEY_PREFIX}${JSON.stringify(query)}`;
 }
 ```
+
+### 8.3 视频预览与流式播放（已实现）
+
+- **直连 URL**：预览页视频、音频使用 `getStreamUrl(file.id)`（即 `GET /api/files/:id/preview?token=...`），不先拉完整 Blob，避免大文件占满内存。
+- **后端 Range**：`preview` 与 `download` 共用同一 GET 逻辑，响应带 `Accept-Ranges: bytes`，支持 `Range: bytes=start-end`，浏览器可流式加载与拖拽进度。
+- **前端**：`<video preload="metadata">` 仅拉元数据，播放或 seek 时再按需请求区间；`onError` 时回退为 fetch Blob 或提示失败。
+- **超大视频 HLS（已实现）**：文件大小 ≥ 100MB 时，后端用 FFmpeg 转码为 HLS（`.m3u8` + `.ts`），前端用 hls.js 播放；仅支持本地存储，需安装 ffmpeg。见后端 `ENGINEERING_PLAYBOOK.md` HLS 节。
 
 ---
 

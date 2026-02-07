@@ -1,7 +1,8 @@
 //! # Maintenance / Housekeeping
 //!
-//! 后台维护任务：清理过期分块上传会话、临时文件等。
+//! 后台维护任务：清理过期分块上传会话、临时文件、孤儿文件等。
 
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -11,6 +12,9 @@ use uuid::Uuid;
 use crate::repositories::{DynFilesRepo, SqlxFilesRepo};
 use crate::services::storage::StorageBackend;
 use crate::utils::AppError;
+
+/// 本地存储下需跳过的顶层目录（非用户文件目录）
+const SKIP_DIRS: &[&str] = &[".thumbnails", ".hls", ".chunked"];
 
 /// 启动"过期分块上传会话"清理任务。
 ///
@@ -145,5 +149,121 @@ async fn cleanup_missing_storage_files_once(
         }
     }
 
+    Ok(())
+}
+
+/// 周期性扫描本地存储目录，删除「磁盘上有文件但 DB 无记录」的孤儿文件。
+///
+/// 与 `spawn_files_consistency_checker` 方向相反：前者是「DB 有记录但文件丢了」删 DB；
+/// 本任务是「磁盘有文件但 DB 无记录」删文件（多为上传落盘成功、落库失败或未完成）。
+///
+/// 仅当 `storage_backend == "local"` 时启动；目录结构假定为 `{storage_path}/{user_id}/{file_id}/{filename}`。
+pub fn spawn_orphan_storage_files_cleanup(
+    pool: PgPool,
+    storage_path: String,
+    interval: Duration,
+    batch_limit: u32,
+) {
+    tokio::spawn(async move {
+        let mut tick = tokio::time::interval(interval);
+        loop {
+            tick.tick().await;
+            if let Err(e) =
+                delete_orphan_storage_files_once(&pool, &storage_path, batch_limit).await
+            {
+                tracing::warn!("orphan storage files cleanup failed: {}", e);
+            }
+        }
+    });
+}
+
+async fn delete_orphan_storage_files_once(
+    pool: &PgPool,
+    storage_path: &str,
+    batch_limit: u32,
+) -> anyhow::Result<()> {
+    let base = Path::new(storage_path);
+    if !base.exists() || !base.is_dir() {
+        return Ok(());
+    }
+
+    let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(pool.clone()));
+    let mut deleted = 0u32;
+    tracing::debug!("orphan storage files cleanup run started (base={})", base.display());
+
+    let mut user_dirs = tokio::fs::read_dir(base).await?;
+    while let Ok(Some(user_entry)) = user_dirs.next_entry().await {
+        let user_path = user_entry.path();
+        if !user_path.is_dir() {
+            continue;
+        }
+        let user_name = user_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        if SKIP_DIRS.contains(&user_name) {
+            continue;
+        }
+        let user_id: Uuid = match user_name.parse() {
+            Ok(u) => u,
+            Err(_) => continue,
+        };
+
+        let mut file_id_dirs = tokio::fs::read_dir(&user_path).await?;
+        while let Ok(Some(file_id_entry)) = file_id_dirs.next_entry().await {
+            if deleted >= batch_limit {
+                return Ok(());
+            }
+            let file_id_path = file_id_entry.path();
+            if !file_id_path.is_dir() {
+                continue;
+            }
+            let file_id_str = file_id_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
+            let file_id: Uuid = match file_id_str.parse() {
+                Ok(u) => u,
+                Err(_) => continue,
+            };
+
+            let mut files_in_dir = tokio::fs::read_dir(&file_id_path).await?;
+            while let Ok(Some(file_entry)) = files_in_dir.next_entry().await {
+                if deleted >= batch_limit {
+                    return Ok(());
+                }
+                let file_path = file_entry.path();
+                if !file_path.is_file() {
+                    continue;
+                }
+                match files_repo.find_by_id(file_id, user_id).await {
+                    Ok(Some(_)) => {}
+                    Ok(None) | Err(_) => {
+                        if let Err(e) = tokio::fs::remove_file(&file_path).await {
+                            tracing::warn!(
+                                "failed to remove orphan file {}: {}",
+                                file_path.display(),
+                                e
+                            );
+                        } else {
+                            deleted += 1;
+                            tracing::info!(
+                                "removed orphan file (no DB record): {}",
+                                file_path.display()
+                            );
+                        }
+                    }
+                }
+            }
+
+            if deleted < batch_limit {
+                let _ = tokio::fs::remove_dir(&file_id_path).await;
+            }
+        }
+    }
+
+    if deleted > 0 {
+        tracing::info!("orphan storage files cleanup run finished, removed {} file(s)", deleted);
+    }
     Ok(())
 }

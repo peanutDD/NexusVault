@@ -546,6 +546,11 @@ export const fileService = {
     return `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/preview`;
   },
 
+  /** 超大视频 HLS 列表 URL（>100MB 时后端转码为 .m3u8 + ts，供 hls.js 播放） */
+  getHlsUrl(fileId: string): string {
+    return `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/hls`;
+  },
+
   /**
    * 获取图片缩略图 Blob（仅 image/*，列表卡片用，压缩后体积小）
    * @param fileId 文件 ID

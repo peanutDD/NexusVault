@@ -20,6 +20,7 @@ pub(crate) use batch_zip::run_zip_writer_thread;
 mod categories;
 mod chunked_upload;
 mod delete;
+mod hls;
 mod list;
 mod quota;
 mod read;

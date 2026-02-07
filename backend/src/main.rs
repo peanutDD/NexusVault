@@ -52,7 +52,10 @@ use database::pool::create_pool;
 use middleware::metrics::metrics_middleware;
 use middleware::rate_limit;
 use services::file::create_storage;
-use services::maintenance::{spawn_files_consistency_checker, spawn_upload_session_cleanup};
+use services::maintenance::{
+    spawn_files_consistency_checker, spawn_orphan_storage_files_cleanup,
+    spawn_upload_session_cleanup,
+};
 
 fn main() -> anyhow::Result<()> {
     // 允许通过环境变量调优 Tokio runtime（学习/压测非常有用）
@@ -124,6 +127,20 @@ async fn async_main() -> anyhow::Result<()> {
         Duration::from_secs(600),
         500,
     );
+
+    // 后台维护任务（仅 local 存储）：扫描存储目录，删除「磁盘有文件但 DB 无记录」的孤儿文件
+    if config.storage_backend == "local" {
+        spawn_orphan_storage_files_cleanup(
+            app_state.pool.clone(),
+            config.storage_path.clone(),
+            Duration::from_secs(600),
+            500,
+        );
+        tracing::info!(
+            "orphan storage files cleanup task started (storage_path={}, interval=600s, batch_limit=500)",
+            config.storage_path
+        );
+    }
 
     // Build application
     let app = create_app(app_state, &config, metrics_renderer).await;

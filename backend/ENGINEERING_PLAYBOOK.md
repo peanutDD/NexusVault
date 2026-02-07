@@ -301,6 +301,10 @@
 - interval：默认 5 分钟
 - batch_size：默认 200
 
+**13.1) 孤儿存储文件清理（存储 → DB 反向检查）**
+
+与「DB 记录对应文件是否还在」相反：扫描本地存储目录，若某文件在磁盘上存在但 `files` 表无对应记录，则删除该文件（多为上传落盘成功、落库失败或未完成）。仅当 `storage_backend == "local"` 时启动；目录结构假定为 `{storage_path}/{user_id}/{file_id}/{filename}`；跳过 `.thumbnails`、`.hls`、`.chunked`。`spawn_orphan_storage_files_cleanup`，默认每 600 秒、每轮最多删 500 个文件。
+
 ---
 
 ### 14) Tokio runtime 参数化（学习/压测调参入口）
@@ -375,6 +379,32 @@
 - `src/api/files.rs`：路由 `GET /:id/thumbnail`
 
 **前端**（同次改动）：列表 `LazyThumbnail` 使用 `fetchThumbnailBlob` 请求 `/thumbnail`；404/415 时返回 `null` 显示占位图标。
+
+---
+
+### 18) 超大视频 HLS 转码（>100MB 流式预览）
+
+**目标**：对超过阈值的视频（默认 100MB）转成 HLS（`.m3u8` + `.ts`），前端用 hls.js 按段加载，省带宽、支持 seek、避免整文件进内存。
+
+**已落地**：
+
+- **配置**：`HLS_THRESHOLD_BYTES`（默认 104857600 = 100MB），超过则走 HLS；输出目录 `{storage_path}/.hls/{file_id}/`。
+- **转码**：仅 **local 存储**；首次请求 `GET /api/files/:id/hls` 时若未生成则 `spawn_blocking` 调用 `ffmpeg -c copy -hls_time 6 -f hls` 生成 `playlist.m3u8` 与 `segment*.ts`，再返回 playlist；后续请求直接读盘。
+- **路由**：`GET /api/files/:id/hls` 返回主列表；`GET /api/files/:id/hls/:filename` 返回分片（仅允许 `segment*.ts` / `playlist.m3u8`，防路径穿越）。
+- **鉴权**：与预览一致，`AuthenticatedUserQuery`（query token 或 Authorization）。
+- **删除联动**：单文件/批量删除时 `delete_hls(file_id)` 清理 `.hls/{file_id}/`。
+
+**依赖**：服务器需安装 **ffmpeg**；S3 存储暂不支持（可扩展为先下载到临时路径再转码）。
+
+**涉及文件**：
+
+- `src/config.rs`：`hls_threshold_bytes`
+- `src/services/file/hls.rs`：`ensure_hls_ready`、`delete_hls`、`should_use_hls`
+- `src/services/file/delete.rs`：删除时调用 `delete_hls`
+- `src/handlers/files/download/mod.rs`：`hls_playlist_handler`、`hls_asset_handler`
+- `src/api/files.rs`：路由 `/:id/hls`、`/:id/hls/:filename`
+
+**前端**：`file_size >= 100MB` 时请求 `getHlsUrl(id)`，用 hls.js 加载 m3u8；否则仍用直连 preview URL。
 
 ---
 
