@@ -23,8 +23,9 @@ use crate::handlers::files::{
     batch_get_handler, batch_move_handler, categories_handler,
     chunked_upload_abort_handler, chunked_upload_chunk_handler, chunked_upload_complete_handler,
     chunked_upload_init_handler, chunked_upload_status_handler, delete_file_handler,
-    download_file_handler, hls_asset_handler, hls_playlist_handler, list_files_handler,
-    preview_file_handler, storage_usage_handler, thumbnail_file_handler, upload_file_handler,
+    download_file_handler, hls_asset_handler, hls_playlist_handler, instant_upload_handler,
+    list_files_handler, preview_file_handler, storage_usage_handler, thumbnail_file_handler,
+    upload_file_handler,
 };
 use crate::AppState;
 
@@ -50,6 +51,9 @@ use crate::AppState;
 /// - `GET /upload/chunked/:id/status`: 查询上传状态
 /// - `POST /upload/chunked/:id/complete`: 完成上传
 /// - `DELETE /upload/chunked/:id/abort`: 取消上传
+///
+/// ## 秒传（文件指纹）
+/// - `POST /upload/instant`: 按 content_sha256 + file_size 秒传，已有则复用存储
 ///
 /// ## 其他
 /// - `GET /storage-usage`: 获取存储使用情况
@@ -96,6 +100,7 @@ pub fn create_router() -> Router<AppState> {
                         .layer(ConcurrencyLimitLayer::new(UPLOAD_CONCURRENCY)),
                 ),
         )
+        .route("/upload/instant", post(instant_upload_handler))
         .route(
             "/upload/chunked/init",
             post(chunked_upload_init_handler).layer(

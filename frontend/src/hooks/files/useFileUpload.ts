@@ -1,8 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { fileService } from '../../services/files';
 import { getErrorMessage } from '../../utils/error';
-import { validateFile, getMaxBatchCount } from '../../utils/uploadValidation';
-import { UPLOAD_QUEUE } from '../../constants';
+import {
+  validateFile,
+  getMaxBatchCount,
+  isLargeFileForConcurrentLimit,
+} from '../../utils/uploadValidation';
+import { UPLOAD_QUEUE, LARGE_FILE_UPLOAD } from '../../constants';
 import { UploadQueue } from '../../utils/uploadQueue';
 import type { UploadFile } from '../../components/files/upload/UploadFileItem';
 
@@ -60,24 +64,67 @@ export function useFileUpload(
     []
   );
 
-  // 添加文件
+  const fileDedupKey = (f: File) => `${f.name}-${f.size}-${f.lastModified}`;
+
   const addFiles = useCallback(
     (files: File[]) => {
       if (files.length === 0) return;
       setBatchLimitWarning('');
 
       const currentFiles = uploadFilesRef.current;
-      const remainingSlots = maxBatchCount - currentFiles.length;
-      if (remainingSlots <= 0) {
-        setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
+      const currentKeys = new Set(
+        currentFiles.filter((f) => f.file).map((f) => fileDedupKey(f.file!))
+      );
+      const seen = new Set<string>();
+      const deduped: File[] = [];
+      let duplicateCount = 0;
+      for (const file of files) {
+        const key = fileDedupKey(file);
+        if (currentKeys.has(key) || seen.has(key)) {
+          duplicateCount++;
+        } else {
+          seen.add(key);
+          deduped.push(file);
+        }
+      }
+      if (deduped.length === 0) {
+        if (duplicateCount > 0) {
+          setBatchLimitWarning(`已忽略 ${duplicateCount} 个重复文件（同名同大小）`);
+        }
         return;
       }
 
-      const filesToAdd = files.slice(0, remainingSlots);
-      const skippedCount = files.length - filesToAdd.length;
-      if (skippedCount > 0) {
-        setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
+      const currentLargeCount = currentFiles.filter(
+        (f) => f.file && isLargeFileForConcurrentLimit(f.file.size)
+      ).length;
+      const remainingTotalSlots = maxBatchCount - currentFiles.length;
+      if (remainingTotalSlots <= 0) {
+        setBatchLimitWarning(`单次最多 ${maxBatchCount} 个文件，当前已满。请先完成或取消后再添加。`);
+        return;
       }
+
+      const remainingLargeSlots = LARGE_FILE_UPLOAD.MAX_CONCURRENT - currentLargeCount;
+      const [largeFiles, smallFiles] = [
+        deduped.filter((f) => isLargeFileForConcurrentLimit(f.size)),
+        deduped.filter((f) => !isLargeFileForConcurrentLimit(f.size)),
+      ];
+      const largeToAdd = largeFiles.slice(0, Math.max(0, remainingLargeSlots));
+      const largeSkipped = largeFiles.length - largeToAdd.length;
+      const smallToAdd = smallFiles.slice(0, Math.max(0, remainingTotalSlots - largeToAdd.length));
+      const filesToAdd = [...largeToAdd, ...smallToAdd].slice(0, remainingTotalSlots);
+
+      const totalSkipped = deduped.length - filesToAdd.length;
+      const totalMsg =
+        totalSkipped > 0
+          ? `单次最多 ${maxBatchCount} 个文件（含大文件），${totalSkipped} 个文件未添加。`
+          : '';
+      const largeMsg =
+        largeSkipped > 0
+          ? `大文件（≥100MB）最多 ${LARGE_FILE_UPLOAD.MAX_CONCURRENT} 个，${largeSkipped} 个大文件未添加。请先完成或取消后再添加。`
+          : '';
+      const dupMsg =
+        duplicateCount > 0 ? `已忽略 ${duplicateCount} 个重复文件（同名同大小）。` : '';
+      setBatchLimitWarning([dupMsg, totalMsg, largeMsg].filter(Boolean).join('\n'));
 
       const baseId = Date.now();
       const newEntries: UploadFile[] = filesToAdd.map((file, index) => {
@@ -107,10 +154,8 @@ export function useFileUpload(
     [updateUploadFiles]
   );
 
-  // 开始上传
+  // 开始上传（可多次点击：已有文件上传中时，新加入的 pending 可再次点击开始）
   const startUpload = useCallback(async () => {
-    if (isUploadingRef.current) return;
-
     const currentFiles = uploadFilesRef.current;
     const pendingFiles = currentFiles.filter((f) => f.status === 'pending' && f.file);
     if (pendingFiles.length === 0) return;
@@ -134,23 +179,22 @@ export function useFileUpload(
 
         const file = uploadFile.file;
         const taskId = uploadFile.id;
-        const isVideo = file.type.startsWith('video/');
-        const useChunked = isVideo || file.size >= fileService.CHUNK_THRESHOLD;
         const priority = totalPending - index;
 
-        const updateProgress = (progress: number) => {
+        const updateProgress = (progress: number, statusMessage?: string) => {
           updateUploadFiles((prev) =>
-            prev.map((f) => (f.id === taskId ? { ...f, progress } : f))
+            prev.map((f) =>
+              f.id === taskId
+                ? { ...f, progress, ...(statusMessage !== undefined && { statusMessage }) }
+                : f
+            )
           );
         };
 
         try {
           await uploadQueue.add(
             taskId,
-            () =>
-              useChunked
-                ? fileService.uploadFileChunked(file, updateProgress)
-                : fileService.uploadFile(file, updateProgress),
+            () => fileService.uploadFileWithInstant(file, updateProgress),
             { fileSize: file.size, priority }
           );
 

@@ -74,7 +74,17 @@ fn get_client_ip(headers: &HeaderMap) -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
+/// 分片上传路径：请求量大（每块一次），不参与通用限流计数，由各端点的 ConcurrencyLimit 保护即可。
+fn is_chunked_upload_path(path: &str) -> bool {
+    path.contains("upload/chunked")
+}
+
 pub async fn rate_limit_middleware(state: RateLimitState, req: Request, next: Next) -> Response {
+    let path = req.uri().path();
+    if is_chunked_upload_path(path) {
+        return next.run(req).await;
+    }
+
     let key = get_client_ip(req.headers());
 
     if !state.check_rate_limit(&key).await {

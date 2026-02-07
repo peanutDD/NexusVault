@@ -9,6 +9,7 @@ import { downloadBlob } from '../utils/downloadBlob';
 import { API_BASE_URL } from '../config/env';
 import { CHUNKED_UPLOAD, REQUEST } from '../constants';
 import { BatchRequestManager } from '../utils/batchRequest';
+import { sha256FileHex } from '../utils/sha256';
 import { useAuthStore } from '../store/authStore';
 import type { FileMetadata, FileListResponse, FileListQuery } from '../types';
 
@@ -129,6 +130,66 @@ export const fileService = {
     );
     
     return response.data;
+  },
+
+  /**
+   * 秒传：服务器已有相同内容（同 SHA-256 + 同大小）则直接创建记录，不传文件内容。
+   * 未命中时后端返回 200 + { instant: false }（不再用 404），避免浏览器 console 标红。
+   * @returns 201 时返回 { file }；200 + instant: false 时返回 null（需走普通/分片上传）
+   */
+  async uploadInstant(params: {
+    content_sha256: string;
+    filename: string;
+    file_size: number;
+    mime_type: string;
+    folder_id?: string | null;
+  }): Promise<{ file: FileMetadata } | null> {
+    const res = await api.post<{ file?: FileMetadata; instant?: boolean }>(
+      '/api/files/upload/instant',
+      {
+        content_sha256: params.content_sha256,
+        filename: params.filename,
+        file_size: params.file_size,
+        mime_type: params.mime_type,
+        folder_id: params.folder_id ?? null,
+      },
+      { validateStatus: (status) => status === 200 || status === 201 }
+    );
+    if (res.status === 200 && res.data?.instant === false) return null;
+    if (res.data?.file) return { file: res.data.file };
+    return null;
+  },
+
+  /**
+   * 先秒传再普通/分片：计算文件 SHA-256，调秒传接口；404 时走普通或分片上传。
+   * @param file 要上传的文件
+   * @param onProgress 上传进度回调，可传 (percent, message?) 用于展示「秒传未命中，正在上传…」等提示
+   */
+  async uploadFileWithInstant(
+    file: globalThis.File,
+    onProgress?: (percent: number, message?: string) => void
+  ): Promise<{ file: FileMetadata }> {
+    const useChunked =
+      file.type.startsWith('video/') || file.size >= this.CHUNK_THRESHOLD;
+    onProgress?.(0, '计算指纹…');
+    const content_sha256 = await sha256FileHex(file);
+    const result = await this.uploadInstant({
+      content_sha256,
+      filename: file.name,
+      file_size: file.size,
+      mime_type: file.type || 'application/octet-stream',
+      folder_id: null,
+    });
+    if (result === null) {
+      console.info('[秒传] 服务器暂无相同文件，将走普通/分片上传');
+      onProgress?.(0, '秒传未命中，正在上传…');
+      const progressOnly = (p: number) => onProgress?.(p);
+      return useChunked
+        ? this.uploadFileChunked(file, progressOnly)
+        : this.uploadFile(file, progressOnly);
+    }
+    onProgress?.(100);
+    return result;
   },
 
   /**

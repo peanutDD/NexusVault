@@ -101,7 +101,19 @@ pub trait FilesRepository: Send + Sync {
         file_size: u64,
         mime_type: &str,
         storage_backend: &str,
+        content_sha256: Option<&str>,
+        folder_id: Option<Uuid>,
     ) -> Result<File, AppError>;
+
+    /// 按内容哈希与大小查找任意一条记录（用于秒传复用存储）
+    async fn find_by_content_hash_and_size(
+        &self,
+        content_sha256: &str,
+        file_size: u64,
+    ) -> Result<Option<File>, AppError>;
+
+    /// 统计引用同一 file_path 的记录数（删除时仅当为 0 才删物理文件）
+    async fn count_by_file_path(&self, file_path: &str) -> Result<u64, AppError>;
 
     /// 根据 ID 和用户 ID 查询文件
     async fn find_by_id(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError>;

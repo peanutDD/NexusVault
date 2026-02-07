@@ -1,8 +1,13 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { fileService } from '../../../services/files';
 import { getErrorMessage } from '../../../utils/error';
-import { validateFile, getMaxFileSizeGB, getMaxBatchCount } from '../../../utils/uploadValidation';
-import { UPLOAD_QUEUE } from '../../../constants';
+import {
+  validateFile,
+  getMaxFileSizeGB,
+  getMaxBatchCount,
+  isLargeFileForConcurrentLimit,
+} from '../../../utils/uploadValidation';
+import { UPLOAD_QUEUE, LARGE_FILE_UPLOAD } from '../../../constants';
 import { UploadQueue } from '../../../utils/uploadQueue';
 import { cn } from '../../../utils/cn';
 import UploadFileItem, { type UploadFile } from './UploadFileItem';
@@ -54,28 +59,79 @@ export default function UploadDialog({
   }, [open, onClose]);
 
   const maxBatchCount = getMaxBatchCount();
-  const [batchLimitWarning, setBatchLimitWarning] = useState('');
+  /** 总文件数（20）超限时的提醒 */
+  const [totalLimitWarning, setTotalLimitWarning] = useState('');
+  /** 大文件数（5）超限时的提醒 */
+  const [largeLimitWarning, setLargeLimitWarning] = useState('');
+  /** 重复文件（同名同大小）已忽略的提醒 */
+  const [duplicateWarning, setDuplicateWarning] = useState('');
 
-  /** 唯一写入口：把 File[] 追加到上传列表（拖拽与点选都经此） */
+  /** 文件唯一键：同名 + 同大小 + 同修改时间视为同一文件，用于去重 */
+  const fileDedupKey = (f: File) => `${f.name}-${f.size}-${f.lastModified}`;
+
+  /** 唯一写入口：把 File[] 追加到上传列表。逻辑：先按同名同大小去重，再总数量最多 20、大文件最多 5，分开提醒。 */
   const appendFilesToState = useCallback(
     (files: File[]) => {
       if (files.length === 0) return;
-      setBatchLimitWarning('');
-      
-      // 使用 ref 获取真实的当前状态，绕过 StrictMode 双重调用问题
+      setTotalLimitWarning('');
+      setLargeLimitWarning('');
+      setDuplicateWarning('');
+
       const currentFiles = uploadFilesRef.current;
-      const remainingSlots = maxBatchCount - currentFiles.length;
-      if (remainingSlots <= 0) {
-        setBatchLimitWarning(`已达到单次上传上限 ${maxBatchCount} 个文件`);
+      const currentKeys = new Set(
+        currentFiles.filter((f) => f.file).map((f) => fileDedupKey(f.file!))
+      );
+      const seen = new Set<string>();
+      const deduped: File[] = [];
+      let duplicateCount = 0;
+      for (const file of files) {
+        const key = fileDedupKey(file);
+        if (currentKeys.has(key) || seen.has(key)) {
+          duplicateCount++;
+        } else {
+          seen.add(key);
+          deduped.push(file);
+        }
+      }
+      if (duplicateCount > 0) {
+        setDuplicateWarning(`已忽略 ${duplicateCount} 个重复文件（同名同大小）`);
+      }
+      if (deduped.length === 0) return;
+
+      const currentLargeCount = currentFiles.filter(
+        (f) => f.file && isLargeFileForConcurrentLimit(f.file.size)
+      ).length;
+      const remainingTotalSlots = maxBatchCount - currentFiles.length;
+      if (remainingTotalSlots <= 0) {
+        setTotalLimitWarning(`单次最多上传 ${maxBatchCount} 个文件，当前已满。请先完成或取消后再添加。`);
         return;
       }
-      
-      const filesToAdd = files.slice(0, remainingSlots);
-      const skippedCount = files.length - filesToAdd.length;
-      if (skippedCount > 0) {
-        setBatchLimitWarning(`已达到上限，${skippedCount} 个文件被跳过（最多 ${maxBatchCount} 个）`);
+
+      const remainingLargeSlots = LARGE_FILE_UPLOAD.MAX_CONCURRENT - currentLargeCount;
+      const [largeFiles, smallFiles] = [
+        deduped.filter((f) => isLargeFileForConcurrentLimit(f.size)),
+        deduped.filter((f) => !isLargeFileForConcurrentLimit(f.size)),
+      ];
+      const largeToAdd = largeFiles.slice(0, Math.max(0, remainingLargeSlots));
+      const largeSkipped = largeFiles.length - largeToAdd.length;
+      const smallToAdd = smallFiles.slice(0, Math.max(0, remainingTotalSlots - largeToAdd.length));
+      const smallSkipped = smallFiles.length - smallToAdd.length;
+      const filesToAdd = [...largeToAdd, ...smallToAdd].slice(0, remainingTotalSlots);
+
+      if (largeSkipped > 0) {
+        setLargeLimitWarning(
+          `大文件（≥100MB）最多 ${LARGE_FILE_UPLOAD.MAX_CONCURRENT} 个，${largeSkipped} 个大文件未添加。请先完成或取消后再添加。`
+        );
       }
-      
+      if (smallSkipped > 0 || filesToAdd.length < deduped.length) {
+        const totalSkipped = deduped.length - filesToAdd.length;
+        if (totalSkipped > 0) {
+          setTotalLimitWarning(
+            `单次最多 ${maxBatchCount} 个文件（含大文件），${totalSkipped} 个文件未添加。`
+          );
+        }
+      }
+
       const baseId = Date.now();
       const newEntries: UploadFile[] = filesToAdd.map((file, index) => {
         const validation = validateFile(file);
@@ -90,8 +146,7 @@ export default function UploadDialog({
           file: validation.ok ? file : undefined,
         };
       });
-      
-      // 使用 wrapper 同时更新 ref 和 state
+
       updateUploadFiles([...currentFiles, ...newEntries]);
     },
     [maxBatchCount, updateUploadFiles]
@@ -114,10 +169,8 @@ export default function UploadDialog({
     }
   }, [open]);
 
-  // 开始上传所有 pending 文件
+  // 开始上传所有 pending 文件（可多次点击：大文件上传中时新加入的文件可再次点击开始上传）
   const startUpload = useCallback(async () => {
-    if (isUploadingRef.current) return;
-
     // 使用 ref 获取最新状态，避免闭包捕获旧的 uploadFiles
     const currentFiles = uploadFilesRef.current;
     const pendingFiles = currentFiles.filter((f) => f.status === 'pending' && f.file);
@@ -150,24 +203,23 @@ export default function UploadDialog({
 
         const file = uploadFile.file;
         const taskId = uploadFile.id;
-        const isVideo = file.type.startsWith('video/');
-        const useChunked = isVideo || file.size >= fileService.CHUNK_THRESHOLD;
         // 先添加的文件优先上传（列表中靠前的优先级更高）
         const priority = totalPending - index;
 
-        const updateProgress = (progress: number) => {
+        const updateProgress = (progress: number, statusMessage?: string) => {
           updateUploadFiles((prev) =>
-            prev.map((f) => (f.id === taskId ? { ...f, progress } : f))
+            prev.map((f) =>
+              f.id === taskId
+                ? { ...f, progress, ...(statusMessage !== undefined && { statusMessage }) }
+                : f
+            )
           );
         };
 
         try {
           await uploadQueue.add(
             taskId,
-            () =>
-              useChunked
-                ? fileService.uploadFileChunked(file, updateProgress)
-                : fileService.uploadFile(file, updateProgress),
+            () => fileService.uploadFileWithInstant(file, updateProgress),
             { fileSize: file.size, priority }
           );
 
@@ -365,35 +417,52 @@ export default function UploadDialog({
     [addFiles]
   );
 
-  // 关闭时清理（含 input，便于下次选择不残留）
+  // 关闭时清理（含 input）；有文件正在上传时不允许关闭
+  const uploadStatsForClose = useMemo(
+    () => uploadFiles.some((f) => f.status === 'uploading'),
+    [uploadFiles]
+  );
   const handleClose = useCallback(() => {
-    if (!isUploadingRef.current) {
-      updateUploadFiles([]);
-      setUrlInput('');
-      setBatchLimitWarning('');
-      if (inputRef.current) inputRef.current.value = '';
-      onClose();
-    }
-  }, [onClose, updateUploadFiles]);
+    if (uploadStatsForClose) return;
+    updateUploadFiles([]);
+    setUrlInput('');
+    setTotalLimitWarning('');
+    setLargeLimitWarning('');
+    setDuplicateWarning('');
+    if (inputRef.current) inputRef.current.value = '';
+    onClose();
+  }, [onClose, updateUploadFiles, uploadStatsForClose]);
 
   const maxGB = getMaxFileSizeGB();
   
-  // 使用 useMemo + reduce 合并多个 filter/some 为单次遍历（放在 handleAttach 之前）
-  const uploadStats = useMemo(() => uploadFiles.reduce(
-    (acc, f) => {
-      if (f.status === 'pending') {
-        acc.pendingCount++;
-        if (f.file) acc.pendingWithFile.push(f);
-      }
-      if (f.status === 'uploading') acc.uploadingCount++;
-      if (f.status === 'success') acc.successCount++;
-      return acc;
-    },
-    { pendingCount: 0, uploadingCount: 0, successCount: 0, pendingWithFile: [] as UploadFile[] }
-  ), [uploadFiles]);
-  
+  const uploadStats = useMemo(
+    () =>
+      uploadFiles.reduce(
+        (acc, f) => {
+          if (f.status === 'pending') {
+            acc.pendingCount++;
+            if (f.file) acc.pendingWithFile.push(f);
+          }
+          if (f.status === 'uploading') acc.uploadingCount++;
+          if (f.status === 'success') acc.successCount++;
+          if (f.file && isLargeFileForConcurrentLimit(f.file.size)) acc.largeFileCount++;
+          return acc;
+        },
+        {
+          pendingCount: 0,
+          uploadingCount: 0,
+          successCount: 0,
+          pendingWithFile: [] as UploadFile[],
+          largeFileCount: 0,
+        }
+      ),
+    [uploadFiles]
+  );
+
   const isUploading = uploadStats.uploadingCount > 0;
   const hasPending = uploadStats.pendingCount > 0;
+  const totalAtLimit = uploadFiles.length >= maxBatchCount;
+  const largeAtLimit = uploadStats.largeFileCount >= LARGE_FILE_UPLOAD.MAX_CONCURRENT;
 
   // 完成按钮点击（使用 uploadStats 避免重复遍历）
   const handleAttach = useCallback(() => {
@@ -413,27 +482,30 @@ export default function UploadDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={handleClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="upload-dialog-title"
     >
-      <div
-        className="w-full max-w-md animate-fade-in rounded-2xl bg-[#1C1C28] p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 标题栏：与导航栏标题字体一致 */}
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="font-brand text-lg font-normal tracking-widest text-white">Upload Files</h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isUploading}
-            aria-label="关闭"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <CloseIcon />
-          </button>
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[#1C1C28] shadow-2xl animate-fade-in">
+        {/* 头部：固定，不参与滚动 */}
+        <div className="flex-shrink-0 p-6 pb-0">
+          <div className="mb-1 flex items-center justify-between">
+            <h2 id="upload-dialog-title" className="font-brand text-lg font-normal tracking-widest text-white">Upload Files</h2>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isUploading}
+              aria-label="关闭"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+          <p className="font-brand mb-5 text-sm font-normal tracking-widest text-gray-500">Uploaded project attachments</p>
         </div>
-        <p className="font-brand mb-5 text-sm font-normal tracking-widest text-gray-500">Uploaded project attachments</p>
 
+        {/* 中间：可滚动，避免把底部按钮顶出视野 */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6">
         {/* 拖拽区域 */}
         <div
           onDragEnter={handleDrag}
@@ -522,10 +594,46 @@ export default function UploadDialog({
           </div>
         </div>
 
-        {/* 批量限制警告 */}
-        {batchLimitWarning && (
+        {/* 总文件数 / 大文件数：分开显示、分开提醒 */}
+        {uploadFiles.length > 0 && (
+          <div className="font-brand mb-3 space-y-2">
+            <div className="flex items-center justify-between rounded-lg bg-[#2A2A3C] px-3 py-2 text-xs font-normal tracking-widest text-gray-400">
+              <span>文件数量</span>
+              <span className={totalAtLimit ? 'text-amber-400' : 'text-gray-500'}>
+                {uploadFiles.length} / {maxBatchCount} 个
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-[#2A2A3C] px-3 py-2 text-xs font-normal tracking-widest text-gray-400">
+              <span>大文件（≥100MB）</span>
+              <span className={largeAtLimit ? 'text-amber-400' : 'text-gray-500'}>
+                {uploadStats.largeFileCount} / {LARGE_FILE_UPLOAD.MAX_CONCURRENT} 个
+              </span>
+            </div>
+          </div>
+        )}
+        {totalLimitWarning && (
           <div className="font-brand mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
-            {batchLimitWarning}
+            {totalLimitWarning}
+          </div>
+        )}
+        {largeLimitWarning && (
+          <div className="font-brand mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
+            {largeLimitWarning}
+          </div>
+        )}
+        {duplicateWarning && (
+          <div className="font-brand mb-3 rounded-lg bg-gray-500/10 px-3 py-2 text-xs font-normal tracking-widest text-gray-400">
+            {duplicateWarning}
+          </div>
+        )}
+        {uploadFiles.length > 0 && totalAtLimit && !totalLimitWarning && (
+          <div className="font-brand mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
+            单次最多 {maxBatchCount} 个文件，当前已满。请先完成或取消后再添加。
+          </div>
+        )}
+        {uploadFiles.length > 0 && largeAtLimit && !largeLimitWarning && (
+          <div className="font-brand mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
+            大文件（≥100MB）最多 {LARGE_FILE_UPLOAD.MAX_CONCURRENT} 个，当前已满。请先完成或取消后再添加。
           </div>
         )}
 
@@ -534,7 +642,6 @@ export default function UploadDialog({
           <div className="mb-5">
             <div className="mb-3 flex items-center justify-between">
               <p className="font-brand text-sm font-normal tracking-widest text-white">Uploaded Files</p>
-              <span className="font-brand text-xs font-normal tracking-widest text-gray-500">{uploadFiles.length} / {maxBatchCount}</span>
             </div>
             <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
               {uploadFiles.map((file) => (
@@ -548,29 +655,32 @@ export default function UploadDialog({
             </div>
           </div>
         )}
+        </div>
 
-        {/* 底部按钮 */}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isUploading}
-            className="font-brand flex-1 rounded-full bg-[#2A2A3C] py-3 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#3A3A4D] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleAttach}
-            disabled={uploadFiles.length === 0 || isUploading}
-            className="font-brand flex-1 rounded-full bg-[#6C5DD3] py-3 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isUploading
-              ? 'Uploading...'
-              : hasPending
+        {/* 底部按钮：固定，始终在视野内 */}
+        <div className="flex-shrink-0 p-6 pt-4">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isUploading}
+              className="font-brand flex-1 rounded-lg bg-[#2A2A3C] px-4 py-2 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#3A3A4D] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAttach}
+              disabled={uploadFiles.length === 0 || (isUploading && !hasPending)}
+              className="font-brand flex-1 rounded-lg bg-[#6C5DD3] px-4 py-2 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {hasPending
                 ? 'Start Upload'
-                : 'Attach files'}
-          </button>
+                : isUploading
+                  ? 'Uploading...'
+                  : 'Attach files'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

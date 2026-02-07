@@ -216,8 +216,8 @@ pub async fn thumbnail_file_handler(
 
     let w = q.w.clamp(64, 800);
 
-    // 方案 B：先读已存在的缩略图
-    if let Ok(cached) = file_service.get_thumbnail(file_id).await {
+    // 方案 B：先读已存在的缩略图（按用户隔离）
+    if let Ok(cached) = file_service.get_thumbnail(file_id, user_id).await {
         return file_response(cached, "thumb.jpg", "image/jpeg", true)
             .map_err(|_| AppError::Internal);
     }
@@ -229,13 +229,14 @@ pub async fn thumbnail_file_handler(
         .await
         .map_err(|_| AppError::Internal)??;
 
-    let _ = file_service.save_thumbnail(file_id, &buf).await;
+    let _ = file_service.save_thumbnail(file_id, user_id, &buf).await;
 
     file_response(buf, "thumb.jpg", "image/jpeg", true)
         .map_err(|_| AppError::Internal)
 }
 
 /// 返回 HLS 主列表（playlist.m3u8），供前端 hls.js 加载。仅对超过阈值的视频生效。
+/// 将 m3u8 内的 segment*.ts 引用重写为 hls/segment*.ts，使相对 URL 解析到 /api/files/:id/hls/segment*.ts。
 pub async fn hls_playlist_handler(
     State(state): State<AppState>,
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
@@ -248,13 +249,34 @@ pub async fn hls_playlist_handler(
     let data = tokio::fs::read(&playlist_path)
         .await
         .map_err(|e| AppError::File(format!("读取 HLS 列表失败: {}", e)))?;
+    // 重写 segment 引用：segment000.ts -> hls/segment000.ts，使相对 base .../hls 解析到 .../hls/segment000.ts
+    let rewritten = rewrite_hls_segment_refs(&data);
     crate::utils::response::file_response(
-        data,
+        rewritten,
         "playlist.m3u8",
         "application/vnd.apple.mpegurl",
         true,
     )
     .map_err(|_| AppError::Internal)
+}
+
+/// 将 m3u8 内容中的 segment*.ts 行改为 hls/segment*.ts，供相对 URL 正确解析。
+fn rewrite_hls_segment_refs(data: &[u8]) -> Vec<u8> {
+    use std::io::{BufRead, BufReader, Write};
+    let mut out = Vec::with_capacity(data.len() + 64);
+    for line in BufReader::new(data).lines().flatten() {
+        let trimmed = line.trim();
+        if !trimmed.is_empty()
+            && !trimmed.starts_with('#')
+            && trimmed.ends_with(".ts")
+            && trimmed.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
+        {
+            let _ = write!(out, "hls/{}\n", trimmed);
+        } else {
+            let _ = writeln!(out, "{}", line);
+        }
+    }
+    out
 }
 
 /// 返回 HLS 分片（segment*.ts）或 playlist.m3u8。仅允许安全文件名，防止路径穿越。

@@ -168,12 +168,18 @@ export default function FilePreview({
   }, [blobUrl]);
 
   // 超大视频：hls.js 加载 m3u8；Safari 等原生支持 HLS 则直接用 src
+  // 分片请求由 hls.js 直接发起，不会带 playlist URL 的 query token，需在 xhrSetup 里统一加 Authorization
   useEffect(() => {
     if (!kind.isVideo || !useHls || !blobUrl) return;
     const video = videoRef.current;
     if (!video) return;
     if (Hls.isSupported()) {
-      const hls = new Hls();
+      const token = useAuthStore.getState().token ?? localStorage.getItem('token');
+      const hls = new Hls({
+        xhrSetup(xhr) {
+          if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        },
+      });
       hls.loadSource(blobUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.ERROR, (_, data) => {

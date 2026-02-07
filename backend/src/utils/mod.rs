@@ -23,7 +23,7 @@ pub mod validation;
 pub use error::AppError;
 
 // Crypto
-pub use crypto::{generate_random_token, hash_password, verify_password};
+pub use crypto::{generate_random_token, hash_password, sha256_file_hex, sha256_hex, verify_password};
 
 // Time
 pub use time::{calculate_expiration, now_timestamp, parse_jwt_expiry};

@@ -36,10 +36,12 @@ impl FilesRepository for SqlxFilesRepo {
         file_size: u64,
         mime_type: &str,
         storage_backend: &str,
+        content_sha256: Option<&str>,
+        folder_id: Option<Uuid>,
     ) -> Result<File, AppError> {
         sqlx::query_as::<_, File>(
-            "INSERT INTO files (id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+            "INSERT INTO files (id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, content_sha256, folder_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *",
         )
         .bind(file_id)
         .bind(user_id)
@@ -49,9 +51,34 @@ impl FilesRepository for SqlxFilesRepo {
         .bind(file_size as i64)
         .bind(mime_type)
         .bind(storage_backend)
+        .bind(content_sha256)
+        .bind(folder_id)
         .fetch_one(&self.pool)
         .await
         .map_err(AppError::from)
+    }
+
+    async fn find_by_content_hash_and_size(
+        &self,
+        content_sha256: &str,
+        file_size: u64,
+    ) -> Result<Option<File>, AppError> {
+        sqlx::query_as::<_, File>(
+            "SELECT * FROM files WHERE content_sha256 = $1 AND file_size = $2 LIMIT 1",
+        )
+        .bind(content_sha256)
+        .bind(file_size as i64)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(AppError::from)
+    }
+
+    async fn count_by_file_path(&self, file_path: &str) -> Result<u64, AppError> {
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*)::BIGINT FROM files WHERE file_path = $1")
+            .bind(file_path)
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(count.0 as u64)
     }
 
     async fn find_by_id(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError> {
@@ -244,12 +271,13 @@ impl FilesRepository for SqlxFilesRepo {
             }
         });
 
-        let folder_id_filter: Option<Option<Uuid>> = query.folder_id.as_ref().map(|s| {
+        // 根目录（null/root/空）不按 folder_id 过滤，列表页展示该用户全部文件；传具体 folder UUID 时只返回该文件夹下文件。
+        let folder_id_filter: Option<Option<Uuid>> = query.folder_id.as_ref().and_then(|s| {
             let t = s.trim();
             if t.is_empty() || t.to_lowercase() == "null" || t == "root" {
-                None
+                None // 不传条件，返回全部
             } else {
-                Uuid::parse_str(t).ok()
+                Uuid::parse_str(t).ok().map(Some)
             }
         });
 
@@ -304,7 +332,7 @@ impl FilesRepository for SqlxFilesRepo {
 
         // ---- build SQL ----
         let mut qb: QueryBuilder<sqlx::Postgres> = QueryBuilder::new(
-            "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, created_at, updated_at, COUNT(*) OVER() AS total_count FROM files WHERE user_id = ",
+            "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at, COUNT(*) OVER() AS total_count FROM files WHERE user_id = ",
         );
         qb.push_bind(user_id);
 

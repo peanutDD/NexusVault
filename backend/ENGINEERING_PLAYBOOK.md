@@ -29,8 +29,8 @@
 
 落地结构：
 
-- `src/handlers/files/`：按业务拆分（upload/list/delete/batch/chunked_upload/download/* 等）
-- `src/services/file/`：按业务能力拆分（upload/list/read/delete/batch_zip/quota/categories/chunked_upload）
+- `src/handlers/files/`：按业务拆分（upload/instant_upload/chunked_upload/list/delete/batch/download/* 等）
+- `src/services/file/`：按业务能力拆分（upload/instant_upload/chunked_upload/list/read/delete/batch_zip/quota/categories）
 - `src/repositories/`：数据访问层（`files`/`users`/`upload_sessions`）
 
 带来的直接收益：
@@ -53,7 +53,7 @@
 
 - **列表**：`LIST_CONCURRENCY`
 - **普通上传**：`UPLOAD_CONCURRENCY`
-- **分块上传 chunk**：`CHUNK_CONCURRENCY`
+- **分块上传 chunk**：`CHUNK_CONCURRENCY`（当前 10，同时处理的分片请求数）
 - **分块完成合并**：`COMPLETE_CONCURRENCY`
 
 > 调参建议：在单机 10 核、`max_connections=20` 的前提下，先保持“保守值”，压测稳定后再逐步上调并观察 P95/P99 延迟和错误率。
@@ -222,6 +222,8 @@
 - `src/middleware/rate_limit.rs`
 - `src/main.rs`（`create_rate_limit_middleware(… , max_keys)`）
 
+**分片上传单独处理**：路径包含 `upload/chunked` 的请求（init/chunk/status/complete/abort）**不参与**通用 500/分钟 限流计数，否则大文件分片（每块一请求）极易触发 429。该路径仍由各端点的 `ConcurrencyLimitLayer`（如 chunk 12 并发）保护。
+
 ---
 
 ### 9) 全局稳定性：捕获 panic + 优雅关闭
@@ -303,7 +305,20 @@
 
 **13.1) 孤儿存储文件清理（存储 → DB 反向检查）**
 
-与「DB 记录对应文件是否还在」相反：扫描本地存储目录，若某文件在磁盘上存在但 `files` 表无对应记录，则删除该文件（多为上传落盘成功、落库失败或未完成）。仅当 `storage_backend == "local"` 时启动；目录结构假定为 `{storage_path}/{user_id}/{file_id}/{filename}`；跳过 `.thumbnails`、`.hls`、`.chunked`。`spawn_orphan_storage_files_cleanup`，默认每 600 秒、每轮最多删 500 个文件。
+与「DB 记录对应文件是否还在」相反：扫描本地存储目录，若某文件在磁盘上存在但 `files` 表无对应记录，则删除该文件（多为上传落盘成功、落库失败或未完成）。仅当 `storage_backend == "local"` 时启动；目录结构为 `{storage_path}/{user_id}/[可多层嵌套]/<file_id>/<文件名>`，递归扫描；跳过 `.thumbnails`、`.hls`、`.chunked`。`spawn_orphan_storage_files_cleanup`，默认每 600 秒、每轮最多删 500 个文件。
+
+**13.2) 排查磁盘文件归属与孤儿（check_file_owners）**
+
+用于确认「磁盘上某路径对应的 file_id 在库里是否存在、归属哪个 user_id」，区分「其他账号下的文件」与「无记录的孤儿文件」。
+
+- **Rust 小工具**：`cargo run --bin check_file_owners`（需在 backend 目录且配置 `.env` 的 `DATABASE_URL`）
+  - 列出所有用户（id、email），并标出磁盘路径中的 user_id（如 `e2e3520f-...`）
+  - 查询指定 file_id（如 `7d4e5d64-...`、`fc134d71-...`）在 `files` 表中的记录：user_id、file_path、original_filename、created_at，并标注是否「与磁盘路径 user_id 一致」或「属其他账号」
+  - 无记录时输出「无记录（孤儿文件）」
+  - 统计该 user 在 `files` 表中的总条数
+- **SQL 脚本**：`scripts/check_file_owners.sql`，可用 `psql $DATABASE_URL -f scripts/check_file_owners.sql` 执行；也可在任意客户端执行其中的 `SELECT` 查询。
+
+修改/扩展：在 `src/bin/check_file_owners.rs` 中调整 `file_ids`、`storage_user_id`；在 `scripts/check_file_owners.sql` 中调整 `WHERE id IN (...)` 与 user_id 常量。
 
 ---
 
@@ -360,10 +375,11 @@
 - **方案 B 流程**：
   1. 先 `get_thumbnail(file_id)` 读已存在的缩略图；有则直接返回（快路径）。
   2. 无则读原图 → 在 **`tokio::task::spawn_blocking`** 中执行解码 → 缩略图 → 编码 JPEG（避免长时间占用 async 工作线程导致超时或无法正确返回）→ 写盘 `save_thumbnail` → 再返回同一份 JPEG。
-- **存储**：
-  - **Local**：`{base_path}/.thumbnails/{file_id}.jpg`
-  - **S3**：key 为 `.thumbnails/{file_id}.jpg`
-- **删除联动**：单文件删除 / 批量删除时顺带 `delete_thumbnail(file_id)`（best-effort，忽略不存在）。
+- **存储（按用户隔离）**：
+  - **Local**：`{base_path}/{user_id}/.thumbnails/{file_id}.jpg`
+  - **S3**：key 为 `{user_id}/.thumbnails/{file_id}.jpg`
+- **旧版兼容（已上传文件的缩略图）**：读缩略图时先查新路径，若无则查旧路径（Local：`{base_path}/.thumbnails/{file_id}.jpg`，S3：`.thumbnails/{file_id}.jpg`）；若在旧路径命中则复制到新路径并返回，并 best-effort 删除旧路径，实现「读时迁移」。发生迁移时会打一条 **info** 日志：`thumbnail migrated from legacy path/key to per-user path/key`，并带 `backend=local|s3`、`file_id`、`user_id`，便于排查与统计迁移次数。
+- **删除联动**：单文件删除 / 批量删除时顺带 `delete_thumbnail(file_id, user_id)`（best-effort，忽略不存在）。
 - **GIF**：仅解码第一帧（`gif` crate + `DecodeOptions::set_color_output(RGBA)`），大 GIF 不整文件解码，节省时间和内存。
 - **多格式**：`image` 使用默认 feature，支持 jpeg/png/gif/webp/bmp/ico/tiff/tga/pnm 等；GIF 仍走独立第一帧逻辑。
 - **编译修复**：`gif::Frame` 的 `width`/`height` 为字段，使用 `frame.width`、`frame.height`。
@@ -405,6 +421,60 @@
 - `src/api/files.rs`：路由 `/:id/hls`、`/:id/hls/:filename`
 
 **前端**：`file_size >= 100MB` 时请求 `getHlsUrl(id)`，用 hls.js 加载 m3u8；否则仍用直连 preview URL。
+
+---
+
+### 19) 分片上传 + 断点续传 与 秒传（文件指纹）
+
+**目标**：大文件分块上传、记录进度、失败可单块重传；相同内容文件通过内容哈希（SHA-256）秒传，减少重复传输。
+
+#### 分片上传 + 断点续传
+
+- **流程**：
+  1. `POST /upload/chunked/init`：提交 `filename`、`mime_type`、`total_size`，返回 `upload_id`、`chunk_size`（固定 2 MiB）、`total_parts`。
+  2. `PUT /upload/chunked/:id/chunk?part=N`：按 part 从 1 到 total_parts 上传每块二进制；可乱序、可重传，已上传的 part 会幂等跳过。
+  3. `GET /upload/chunked/:id/status`：返回 `uploaded_parts`、`total_parts`，前端据此做进度条并只传缺失块（断点续传）。
+  4. `POST /upload/chunked/:id/complete`：服务端流式合并分块、校验大小、落库并清理临时文件。
+  5. `DELETE /upload/chunked/:id/abort`：取消上传，删除会话与临时文件。
+
+- **可选分块校验**：上传某块时请求头可带 `X-Part-SHA256: <该块内容的 SHA-256 十六进制>`；服务端校验通过才写入并记录该 part，不匹配返回 400。不传则兼容原有行为。
+
+- **同时进行数量上限**：每用户同时进行的分片上传（未完成/未取消）不能超过 **5 个**（`MAX_CONCURRENT_CHUNKED_UPLOADS`），init 时若已达上限则返回 400。与前端约定：单次上传队列总文件数最多 **20**，其中大文件（≥100MB）最多 **5**（即最多 5 大 + 15 小）；前端**分开校验、分开提醒**（两行统计「文件数量 x/20」「大文件 y/5」及对应两条提示）。init 响应中返回 `max_concurrent_chunked_uploads` 供前端展示。
+
+- **完成时写入 content_sha256**：分片合并完成后对合并文件计算 SHA-256，写入 `files.content_sha256`，供秒传使用。
+
+- **位置**：
+  - `src/handlers/files/chunked_upload.rs`（init/chunk/status/complete/abort，chunk 时读取 `X-Part-SHA256`）
+  - `src/services/file/chunked_upload.rs`（会话校验、分块落盘、块 SHA256 校验、流式合并、完成时算 SHA256）
+
+#### 秒传（文件指纹）
+
+- **接口**：`POST /upload/instant`  
+  - 请求体：`content_sha256`（64 位十六进制）、`filename`、`file_size`、`mime_type`、`folder_id`（可选）。
+  - 若存在同 `content_sha256` 且同 `file_size` 的任意一条文件记录：为当前用户新建一条文件记录并**复用同一 `file_path`**（不拷贝文件），返回 201 与新建 file。
+  - 若无：返回 **404**，前端应走普通上传或分片上传。
+
+- **落库**：普通上传、分片完成时都会计算并写入 `content_sha256`，之后同内容文件即可秒传。
+
+- **删除与引用**：秒传会复用同一物理文件；删除时先查「引用同一 `file_path` 的记录数」，仅当引用数为 0 时才删除物理文件（单文件删除与批量删除均已按此逻辑实现）。
+
+- **位置**：
+  - `src/handlers/files/instant_upload.rs`
+  - `src/services/file/instant_upload.rs`
+  - `src/services/file/delete.rs`（`count_by_file_path`，仅 ref_count==0 时删物理文件）
+  - `src/repositories/files.rs`（`find_by_content_hash_and_size`、`count_by_file_path`）
+
+#### 数据库与工具
+
+- **迁移**：`012_add_content_sha256_to_files.sql`，为 `files` 增加 `content_sha256 VARCHAR(64) NULL` 及索引。
+- **工具**：`src/utils/crypto.rs` 中 `sha256_hex(bytes)`、`sha256_file_hex(path)`（用于块校验与完成时整文件哈希）。
+
+#### 前端实现（已接入）
+
+- **秒传**：已实现。`fileService.uploadFileWithInstant(file, onProgress)` 为统一上传入口：先用 `utils/sha256.ts` 的 `sha256FileHex(file)`（Web Crypto）计算 SHA-256，再调 `POST /upload/instant`；201 则直接完成，404 则内部自动走普通上传或分片上传（按是否视频/超过分片阈值判断）。UploadDialog 与 useFileUpload 均调用此方法。
+- **分片 + 断点续传**：init 后根据 status 的 `uploaded_parts` 只传未上传的 part（可带 `X-Part-SHA256` 做块校验），最后 complete。
+
+**API 对接文档**：请求/响应格式与推荐流程见 `docs/UPLOAD_API.md`。
 
 ---
 

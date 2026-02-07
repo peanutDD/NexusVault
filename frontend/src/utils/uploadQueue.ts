@@ -240,9 +240,9 @@ export class UploadQueue {
   }
 
   /**
-   * 处理循环：持续处理队列直到无法继续
+   * 处理循环：在 cost 容量内尽可能多地启动任务（并行），每个任务完成后再调度下一批
    */
-  private async processLoop(): Promise<void> {
+  private processLoop(): void {
     while (true) {
       const item = this.pickNext();
       if (!item) {
@@ -250,27 +250,24 @@ export class UploadQueue {
         return;
       }
 
-      // 跳过已取消的任务（理论上不应该发生，因为 cancel 会从堆中移除）
-      if (item.cancelled) {
-        continue;
-      }
+      if (item.cancelled) continue;
 
-      this.runningCost += item.cost;
       const cost = item.cost;
+      this.runningCost += cost;
 
-      try {
-        const result = await item.task();
-        if (!item.cancelled) {
-          item.resolve(result);
-        }
-      } catch (err) {
-        if (!item.cancelled) {
-          item.reject(err);
-        }
-      } finally {
-        this.runningCost -= cost;
-        this.itemsById.delete(item.id);
-      }
+      item
+        .task()
+        .then((result) => {
+          if (!item.cancelled) item.resolve(result);
+        })
+        .catch((err) => {
+          if (!item.cancelled) item.reject(err);
+        })
+        .finally(() => {
+          this.runningCost -= cost;
+          this.itemsById.delete(item.id);
+          this.scheduleProcess();
+        });
     }
   }
 

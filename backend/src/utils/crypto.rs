@@ -11,9 +11,38 @@
 //! let is_valid = verify_password("my_password", &hash)?;
 //! ```
 
+use std::io::Read;
+use std::path::Path;
+
 use bcrypt::{hash, verify, DEFAULT_COST};
+use sha2::{Digest, Sha256};
 
 use crate::utils::AppError;
+
+/// 计算字节的 SHA-256 并返回十六进制字符串（64 字符）
+pub fn sha256_hex(data: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    format!("{:x}", hasher.finalize())
+}
+
+/// 计算文件的 SHA-256（十六进制），适用于阻塞上下文或 spawn_blocking
+pub fn sha256_file_hex(path: &Path) -> Result<String, AppError> {
+    let mut f = std::fs::File::open(path)
+        .map_err(|e| AppError::File(format!("Failed to open file for hashing: {}", e)))?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = f
+            .read(&mut buf)
+            .map_err(|e| AppError::File(format!("Failed to read file for hashing: {}", e)))?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
 
 /// 哈希密码
 ///

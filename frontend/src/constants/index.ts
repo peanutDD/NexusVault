@@ -50,11 +50,22 @@ export const CHUNKED_UPLOAD = {
 } as const;
 
 /**
+ * 大文件（分片上传）数量限制，与后端约定一致
+ * 超过 100MB 视为大文件，最多同时 5 个在队列中
+ */
+export const LARGE_FILE_UPLOAD = {
+  /** 视为大文件的体积阈值（字节），≥ 此值走分片上传且计入大文件数量 */
+  SIZE_THRESHOLD_BYTES: 100 * 1024 * 1024,
+  /** 每用户同时进行的大文件（分片）上传数量上限 */
+  MAX_CONCURRENT: 5,
+} as const;
+
+/**
  * 上传队列：按成本限制并发（大文件占更多槽位），支持优先级
  */
 export const UPLOAD_QUEUE = {
-  /** 总成本上限：小文件 cost=1，大文件 cost=3，同时最多 3 成本（即 3 小或 1 大） */
-  MAX_COST: 3,
+  /** 总成本上限：小文件 cost=1，大文件 cost=3。设为 5 可同时跑 1 大(3)+2 小(1+1)，大文件上传时小文件不阻塞 */
+  MAX_COST: 5,
   /** 大于等于此大小视为大文件，占用 3 成本；否则 1 成本 */
   LARGE_FILE_THRESHOLD_BYTES: 10 * 1024 * 1024,
 } as const;

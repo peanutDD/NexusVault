@@ -9,7 +9,7 @@ use crate::utils::AppError;
 
 use super::FileService;
 
-fn build_storage_filename(file_id: Uuid, original_filename: &str) -> Result<String, AppError> {
+pub(crate) fn build_storage_filename(file_id: Uuid, original_filename: &str) -> Result<String, AppError> {
     let sanitized_filename = crate::utils::validation::sanitize_filename(original_filename)?;
     Ok(format!("{}_{}", file_id, sanitized_filename))
 }
@@ -48,6 +48,8 @@ impl FileService {
                 file_size,
                 &mime_type,
                 &self.config.storage_backend,
+                None,
+                None,
             )
             .await
             .map(FileResponse::from);
@@ -60,6 +62,7 @@ impl FileService {
         inserted
     }
 
+    /// 从本地路径创建文件，可选传入已计算的内容 SHA256（用于秒传落库）
     pub async fn create_file_from_path(
         &self,
         user_id: Uuid,
@@ -67,6 +70,7 @@ impl FileService {
         mime_type: String,
         file_size: u64,
         source_path: &Path,
+        content_sha256: Option<&str>,
     ) -> Result<FileResponse, AppError> {
         self.ensure_can_store_detailed(user_id, &mime_type, file_size)
             .await?;
@@ -91,6 +95,8 @@ impl FileService {
                 file_size,
                 &mime_type,
                 &self.config.storage_backend,
+                content_sha256,
+                None,
             )
             .await
             .map(FileResponse::from);

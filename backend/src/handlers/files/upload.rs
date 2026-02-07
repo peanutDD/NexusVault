@@ -116,9 +116,23 @@ pub async fn upload_file_handler(
     let (original_filename, mime_type, file_size, tmp_path) =
         file_meta.ok_or_else(|| AppError::File("No file provided".to_string()))?;
 
-    // 创建文件（优先走 from-path，避免大文件占用内存）
+    let content_sha256 = tokio::task::spawn_blocking({
+        let p = tmp_path.clone();
+        move || crate::utils::sha256_file_hex(&p).ok()
+    })
+    .await
+    .ok()
+    .flatten();
+
     let file = match file_service
-        .create_file_from_path(user_id, original_filename, mime_type, file_size, &tmp_path)
+        .create_file_from_path(
+            user_id,
+            original_filename,
+            mime_type,
+            file_size,
+            &tmp_path,
+            content_sha256.as_deref(),
+        )
         .await
     {
         Ok(file) => file,

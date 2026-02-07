@@ -13,6 +13,8 @@ export interface UploadFile {
   status: 'pending' | 'uploading' | 'success' | 'error';
   progress: number;
   error?: string;
+  /** 上传阶段提示，如「秒传未命中，正在上传…」 */
+  statusMessage?: string;
   startTime?: number;
   file?: File;
 }
@@ -117,6 +119,9 @@ const UploadFileItem = memo(function UploadFileItem({
             {formatFileSize(file.size)}
             <span className="mx-1.5 text-gray-600">|</span>
             <span className="text-white">{file.progress}%</span>
+            {file.statusMessage && (
+              <span className="ml-1.5 text-gray-400">{file.statusMessage}</span>
+            )}
             {remainingTime && (
               <>
                 <span className="mx-1.5 text-gray-600">·</span>

@@ -39,6 +39,8 @@ pub struct File {
     pub category: Option<String>,
     /// 所属文件夹 ID（NULL 表示根目录）
     pub folder_id: Option<Uuid>,
+    /// 文件内容 SHA-256（十六进制），用于秒传与去重
+    pub content_sha256: Option<String>,
     /// 创建时间
     pub created_at: DateTime<Utc>,
     /// 更新时间
@@ -112,6 +114,21 @@ pub struct FileListQuery {
     pub sort_order: Option<String>,
 }
 
+
+/// 秒传请求：客户端已计算文件 SHA-256，若服务器已有相同内容则直接创建记录、不传文件
+#[derive(Debug, Deserialize)]
+pub struct InstantUploadRequest {
+    /// 文件内容 SHA-256（十六进制，64 字符）
+    pub content_sha256: String,
+    /// 用户可见文件名
+    pub filename: String,
+    /// 文件大小（字节），用于与 content_sha256 一起匹配已有文件
+    pub file_size: u64,
+    /// MIME 类型
+    pub mime_type: String,
+    /// 目标文件夹 ID，不传或 null 表示根目录
+    pub folder_id: Option<Uuid>,
+}
 
 /// 批量删除请求
 #[derive(Debug, Deserialize)]

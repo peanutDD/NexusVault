@@ -32,6 +32,7 @@ mod categories;
 mod chunked_upload;
 mod delete;
 mod download;
+mod instant_upload;
 mod list;
 mod storage;
 mod upload;
@@ -46,6 +47,7 @@ pub use chunked_upload::{
     chunked_upload_init_handler, chunked_upload_status_handler,
 };
 pub use delete::delete_file_handler;
+pub use instant_upload::instant_upload_handler;
 pub use download::{
     download_file_handler, hls_asset_handler, hls_playlist_handler, preview_file_handler,
     thumbnail_file_handler,

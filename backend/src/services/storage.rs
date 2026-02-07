@@ -68,14 +68,14 @@ pub trait StorageBackend: Send + Sync {
 
     async fn delete_file(&self, file_path: &str) -> Result<(), AppError>;
 
-    /// 读取已生成的缩略图（若存在）。用于方案 B：先读盘，无则再生成并写盘。
-    async fn get_thumbnail(&self, file_id: Uuid) -> Result<Vec<u8>, AppError>;
+    /// 读取已生成的缩略图（若存在）。按用户隔离：Local 为 {base}/{user_id}/.thumbnails/{file_id}.jpg，S3 为 {user_id}/.thumbnails/{file_id}.jpg。
+    async fn get_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<Vec<u8>, AppError>;
 
-    /// 保存缩略图到磁盘，路径由后端约定（如 .thumbnails/{file_id}.jpg）。
-    async fn save_thumbnail(&self, file_id: Uuid, data: &[u8]) -> Result<(), AppError>;
+    /// 保存缩略图，按用户隔离存放。
+    async fn save_thumbnail(&self, file_id: Uuid, user_id: Uuid, data: &[u8]) -> Result<(), AppError>;
 
     /// 删除缩略图（如原文件删除时）。若本就不存在则忽略。
-    async fn delete_thumbnail(&self, file_id: Uuid) -> Result<(), AppError>;
+    async fn delete_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError>;
 
     /// 健康检查
     ///
@@ -99,7 +99,15 @@ impl LocalStorage {
             .join(filename)
     }
 
-    fn get_thumbnail_path(&self, file_id: Uuid) -> std::path::PathBuf {
+    fn get_thumbnail_path(&self, file_id: Uuid, user_id: Uuid) -> std::path::PathBuf {
+        Path::new(&self.base_path)
+            .join(user_id.to_string())
+            .join(THUMBNAIL_DIR)
+            .join(format!("{}.{}", file_id, THUMBNAIL_EXT))
+    }
+
+    /// 旧版缩略图路径（迁移前：根目录下 .thumbnails/{file_id}.jpg）
+    fn get_thumbnail_path_legacy(&self, file_id: Uuid) -> std::path::PathBuf {
         Path::new(&self.base_path)
             .join(THUMBNAIL_DIR)
             .join(format!("{}.{}", file_id, THUMBNAIL_EXT))
@@ -217,19 +225,36 @@ impl StorageBackend for LocalStorage {
         Ok(())
     }
 
-    async fn get_thumbnail(&self, file_id: Uuid) -> Result<Vec<u8>, AppError> {
-        let path = self.get_thumbnail_path(file_id);
-        tokio::fs::read(&path).await.map_err(|e| {
-            if e.kind() == ErrorKind::NotFound {
-                AppError::NotFound
-            } else {
-                AppError::File(format!("Failed to read thumbnail: {}", e))
+    async fn get_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<Vec<u8>, AppError> {
+        let path = self.get_thumbnail_path(file_id, user_id);
+        match tokio::fs::read(&path).await {
+            Ok(data) => Ok(data),
+            Err(e) if e.kind() == ErrorKind::NotFound => {
+                // 兼容：之前已生成的缩略图在根目录 .thumbnails/ 下，读时迁移到按用户路径
+                let legacy = self.get_thumbnail_path_legacy(file_id);
+                let data = tokio::fs::read(&legacy).await.map_err(|e| {
+                    if e.kind() == ErrorKind::NotFound {
+                        AppError::NotFound
+                    } else {
+                        AppError::File(format!("Failed to read thumbnail: {}", e))
+                    }
+                })?;
+                let _ = self.save_thumbnail(file_id, user_id, &data).await;
+                let _ = tokio::fs::remove_file(&legacy).await;
+                tracing::info!(
+                    backend = "local",
+                    file_id = %file_id,
+                    user_id = %user_id,
+                    "thumbnail migrated from legacy path to per-user path"
+                );
+                Ok(data)
             }
-        })
+            Err(e) => Err(AppError::File(format!("Failed to read thumbnail: {}", e))),
+        }
     }
 
-    async fn save_thumbnail(&self, file_id: Uuid, data: &[u8]) -> Result<(), AppError> {
-        let path = self.get_thumbnail_path(file_id);
+    async fn save_thumbnail(&self, file_id: Uuid, user_id: Uuid, data: &[u8]) -> Result<(), AppError> {
+        let path = self.get_thumbnail_path(file_id, user_id);
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent)
                 .await
@@ -241,8 +266,8 @@ impl StorageBackend for LocalStorage {
         Ok(())
     }
 
-    async fn delete_thumbnail(&self, file_id: Uuid) -> Result<(), AppError> {
-        let path = self.get_thumbnail_path(file_id);
+    async fn delete_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        let path = self.get_thumbnail_path(file_id, user_id);
         if let Err(e) = tokio::fs::remove_file(&path).await {
             if e.kind() != ErrorKind::NotFound {
                 return Err(AppError::File(format!("Failed to delete thumbnail: {}", e)));
@@ -292,7 +317,11 @@ impl S3Storage {
         format!("{}/{}/{}", user_id, file_id, filename)
     }
 
-    fn get_thumbnail_key(&self, file_id: Uuid) -> String {
+    fn get_thumbnail_key(&self, file_id: Uuid, user_id: Uuid) -> String {
+        format!("{}/{}/{}.{}", user_id, THUMBNAIL_DIR, file_id, THUMBNAIL_EXT)
+    }
+
+    fn get_thumbnail_key_legacy(&self, file_id: Uuid) -> String {
         format!("{}/{}.{}", THUMBNAIL_DIR, file_id, THUMBNAIL_EXT)
     }
 }
@@ -412,26 +441,67 @@ impl StorageBackend for S3Storage {
         Ok(())
     }
 
-    async fn get_thumbnail(&self, file_id: Uuid) -> Result<Vec<u8>, AppError> {
-        let key = self.get_thumbnail_key(file_id);
+    async fn get_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<Vec<u8>, AppError> {
+        let key = self.get_thumbnail_key(file_id, user_id);
         let response = self
             .client
             .get_object()
             .bucket(&self.bucket)
             .key(&key)
             .send()
-            .await
-            .map_err(|e| s3_to_app_error(&e, "get thumbnail"))?;
-        let data = response
-            .body
-            .collect()
-            .await
-            .map_err(|e| AppError::File(format!("Failed to read thumbnail: {}", e)))?;
-        Ok(data.to_vec())
+            .await;
+        match response {
+            Ok(resp) => {
+                let data = resp
+                    .body
+                    .collect()
+                    .await
+                    .map_err(|e| AppError::File(format!("Failed to read thumbnail: {}", e)))?;
+                Ok(data.to_vec())
+            }
+            Err(e) => {
+                let msg = e.to_string();
+                let is_not_found = msg.contains("NoSuchKey") || msg.contains("No Such Key");
+                if !is_not_found {
+                    return Err(s3_to_app_error(&e, "get thumbnail"));
+                }
+                // 兼容：旧版缩略图在 .thumbnails/{file_id}.jpg，读时迁移到按用户路径
+                let legacy_key = self.get_thumbnail_key_legacy(file_id);
+                let legacy_resp = self
+                    .client
+                    .get_object()
+                    .bucket(&self.bucket)
+                    .key(&legacy_key)
+                    .send()
+                    .await
+                    .map_err(|e| s3_to_app_error(&e, "get thumbnail (legacy)"))?;
+                let data = legacy_resp
+                    .body
+                    .collect()
+                    .await
+                    .map_err(|e| AppError::File(format!("Failed to read thumbnail: {}", e)))?;
+                let data = data.to_vec();
+                let _ = self.save_thumbnail(file_id, user_id, &data).await;
+                let _ = self
+                    .client
+                    .delete_object()
+                    .bucket(&self.bucket)
+                    .key(&legacy_key)
+                    .send()
+                    .await;
+                tracing::info!(
+                    backend = "s3",
+                    file_id = %file_id,
+                    user_id = %user_id,
+                    "thumbnail migrated from legacy key to per-user key"
+                );
+                Ok(data)
+            }
+        }
     }
 
-    async fn save_thumbnail(&self, file_id: Uuid, data: &[u8]) -> Result<(), AppError> {
-        let key = self.get_thumbnail_key(file_id);
+    async fn save_thumbnail(&self, file_id: Uuid, user_id: Uuid, data: &[u8]) -> Result<(), AppError> {
+        let key = self.get_thumbnail_key(file_id, user_id);
         self.client
             .put_object()
             .bucket(&self.bucket)
@@ -444,8 +514,8 @@ impl StorageBackend for S3Storage {
         Ok(())
     }
 
-    async fn delete_thumbnail(&self, file_id: Uuid) -> Result<(), AppError> {
-        let key = self.get_thumbnail_key(file_id);
+    async fn delete_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        let key = self.get_thumbnail_key(file_id, user_id);
         if let Err(e) = self
             .client
             .delete_object()

@@ -89,4 +89,15 @@ impl<'a> UploadSessionsRepo<'a> {
             .await?;
         Ok(())
     }
+
+    /// 统计该用户当前未过期的分片上传会话数（用于限制同时进行的大文件数量）
+    pub async fn count_active_sessions_by_user(&self, user_id: Uuid) -> Result<i64, AppError> {
+        let row: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*)::BIGINT FROM upload_sessions WHERE user_id = $1 AND expires_at > NOW()",
+        )
+        .bind(user_id)
+        .fetch_one(self.pool)
+        .await?;
+        Ok(row.0)
+    }
 }

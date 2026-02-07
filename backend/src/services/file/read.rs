@@ -57,18 +57,18 @@ impl FileService {
             .await
     }
 
-    /// 读取已生成的缩略图（方案 B：先读盘）
-    pub async fn get_thumbnail(&self, file_id: Uuid) -> Result<Vec<u8>, AppError> {
-        self.storage.get_thumbnail(file_id).await
+    /// 读取已生成的缩略图（方案 B：先读盘），按用户隔离存放。
+    pub async fn get_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<Vec<u8>, AppError> {
+        self.storage.get_thumbnail(file_id, user_id).await
     }
 
-    /// 保存缩略图到磁盘（方案 B：首次生成后写盘）
-    pub async fn save_thumbnail(&self, file_id: Uuid, data: &[u8]) -> Result<(), AppError> {
-        self.storage.save_thumbnail(file_id, data).await
+    /// 保存缩略图（方案 B：首次生成后写盘），按用户隔离存放。
+    pub async fn save_thumbnail(&self, file_id: Uuid, user_id: Uuid, data: &[u8]) -> Result<(), AppError> {
+        self.storage.save_thumbnail(file_id, user_id, data).await
     }
 
     /// 删除缩略图（如原文件删除时）
-    pub async fn delete_thumbnail(&self, file_id: Uuid) -> Result<(), AppError> {
-        self.storage.delete_thumbnail(file_id).await
+    pub async fn delete_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        self.storage.delete_thumbnail(file_id, user_id).await
     }
 }

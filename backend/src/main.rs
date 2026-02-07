@@ -53,7 +53,7 @@ use middleware::metrics::metrics_middleware;
 use middleware::rate_limit;
 use services::file::create_storage;
 use services::maintenance::{
-    spawn_files_consistency_checker, spawn_orphan_storage_files_cleanup,
+    run_orphan_cleanup_once, spawn_files_consistency_checker, spawn_orphan_storage_files_cleanup,
     spawn_upload_session_cleanup,
 };
 
@@ -113,6 +113,14 @@ async fn async_main() -> anyhow::Result<()> {
     let storage = create_storage(config.clone())
         .await
         .map_err(|e| anyhow::anyhow!("Failed to create storage backend: {}", e))?;
+
+    // 若设置 RUN_ORPHAN_CLEANUP_ONCE=1，仅执行一轮孤儿文件清理后退出（用于手动/脚本触发）
+    if std::env::var("RUN_ORPHAN_CLEANUP_ONCE").as_deref() == Ok("1") {
+        let storage_path = config.storage_path.clone();
+        let n = run_orphan_cleanup_once(&pool, &storage_path, 500).await?;
+        tracing::info!("orphan cleanup once done, removed {} file(s), exiting", n);
+        return Ok(());
+    }
 
     // Build application state
     let app_state = AppState::new(config.clone(), pool, storage);

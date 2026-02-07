@@ -58,14 +58,17 @@ pub const MAX_RANGES: usize = 8;
 /// 文件列表接口最大并发数
 pub const LIST_CONCURRENCY: usize = 12;
 
-/// 普通上传接口最大并发数
-pub const UPLOAD_CONCURRENCY: usize = 4;
+/// 普通上传接口最大并发数（批量上传时前端可能并行多路，适当提高避免 503）
+pub const UPLOAD_CONCURRENCY: usize = 10;
 
-/// 分块上传接口最大并发数
-pub const CHUNK_CONCURRENCY: usize = 12;
+/// 分块上传接口最大并发数（同时处理的分片 PUT 请求数）
+pub const CHUNK_CONCURRENCY: usize = 10;
 
 /// 分块完成接口最大并发数
 pub const COMPLETE_CONCURRENCY: usize = 2;
+
+/// 每用户同时进行的分片上传数量上限（与前端约定一致，大文件一次最多 N 个）
+pub const MAX_CONCURRENT_CHUNKED_UPLOADS: i64 = 5;
 
 // ============================================================================
 // HTTP 响应头
