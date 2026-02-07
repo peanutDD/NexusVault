@@ -1,8 +1,19 @@
 use async_trait::async_trait;
+use std::io::ErrorKind;
 use std::path::Path;
 use uuid::Uuid;
 
 use crate::utils::AppError;
+
+/// 将 S3 错误映射为 AppError：对象不存在时返回 NotFound(404)，其余为 File 错误。
+fn s3_to_app_error<E: std::fmt::Display>(e: &E, op: &str) -> AppError {
+    let msg = e.to_string();
+    if msg.contains("NoSuchKey") || msg.contains("No Such Key") {
+        AppError::NotFound
+    } else {
+        AppError::File(format!("Failed to {} from S3: {}", op, msg))
+    }
+}
 
 /// 用于下载/预览的流式读取句柄。
 ///
@@ -140,16 +151,24 @@ impl StorageBackend for LocalStorage {
 
     async fn get_file(&self, file_path: &str) -> Result<Vec<u8>, AppError> {
         let path = Path::new(file_path);
-        tokio::fs::read(path)
-            .await
-            .map_err(|e| AppError::File(format!("Failed to read file: {}", e)))
+        tokio::fs::read(path).await.map_err(|e| {
+            if e.kind() == ErrorKind::NotFound {
+                AppError::NotFound
+            } else {
+                AppError::File(format!("Failed to read file: {}", e))
+            }
+        })
     }
 
     async fn open_read_stream(&self, file_path: &str) -> Result<StorageReadStream, AppError> {
         let path = Path::new(file_path);
-        let file = tokio::fs::File::open(path)
-            .await
-            .map_err(|e| AppError::File(format!("Failed to open file: {}", e)))?;
+        let file = tokio::fs::File::open(path).await.map_err(|e| {
+            if e.kind() == ErrorKind::NotFound {
+                AppError::NotFound
+            } else {
+                AppError::File(format!("Failed to open file: {}", e))
+            }
+        })?;
         Ok(StorageReadStream::Local(file))
     }
 
@@ -281,7 +300,7 @@ impl StorageBackend for S3Storage {
             .key(file_path)
             .send()
             .await
-            .map_err(|e| AppError::File(format!("Failed to get file from S3: {}", e)))?;
+            .map_err(|e| s3_to_app_error(&e, "get file"))?;
 
         let data = response
             .body
@@ -300,7 +319,7 @@ impl StorageBackend for S3Storage {
             .key(file_path)
             .send()
             .await
-            .map_err(|e| AppError::File(format!("Failed to get file from S3: {}", e)))?;
+            .map_err(|e| s3_to_app_error(&e, "open stream"))?;
 
         Ok(StorageReadStream::S3(response.body))
     }
@@ -320,7 +339,7 @@ impl StorageBackend for S3Storage {
             .range(range)
             .send()
             .await
-            .map_err(|e| AppError::File(format!("Failed to get ranged file from S3: {}", e)))?;
+            .map_err(|e| s3_to_app_error(&e, "get ranged file"))?;
 
         Ok(StorageReadStream::S3(response.body))
     }
