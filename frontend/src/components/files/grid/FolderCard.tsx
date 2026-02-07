@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useEffect } from 'react';
-import { FolderOpen, Pencil, Trash2, MoreVertical } from 'lucide-react';
+import { FolderOpen, PencilLine, Trash2, MoreVertical } from 'lucide-react';
 import type { Folder } from '../../../types';
 import { cn } from '../../../utils/cn';
 import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
@@ -120,7 +120,7 @@ const FolderCard = memo(function FolderCard({
             isSelected={isSelected}
             onClick={handleSelect}
           />
-          <i className="bi bi-folder2 text-[clamp(1.5rem,3.2vw,2.25rem)] text-purple-400" aria-hidden />
+          <i className="bi bi-folder-fill text-[clamp(1.5rem,3.2vw,2.25rem)] text-purple-400" aria-hidden />
         </div>
 
         {/* 文件夹名称 + 设置按钮 */}
@@ -150,42 +150,42 @@ const FolderCard = memo(function FolderCard({
                   className="fixed inset-0 z-40"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-white/30 bg-white/20 px-0 py-1 pr-[16%] shadow-xl backdrop-blur-2xl sm:scale-90 md:scale-100">
+                <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-violet-950 bg-violet-950 py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
                   <button
                     type="button"
-                    className="flex w-full items-center justify-center gap-1 rounded px-0 py-0 text-center text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-white/20"
+                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowMenu(false);
                       onOpen(folder);
                     }}
                   >
-                    <FolderOpen className="scale-50 text-amber-300" />
+                    <FolderOpen className="scale-50 shrink-0 text-white" />
                     <span className="whitespace-nowrap">打开</span>
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-center gap-1 rounded px-0 py-0 text-center text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-white/20"
+                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowMenu(false);
                       onRename(folder);
                     }}
                   >
-                    <Pencil className="scale-50 text-blue-300" />
+                    <PencilLine className="scale-50 shrink-0 text-white" />
                     <span className="whitespace-nowrap">重命名</span>
                   </button>
-                  <div className="my-0.5 border-t border-white/20" />
+                  <div className="my-0.5 border-t border-violet-900" />
                   <button
                     type="button"
-                    className="flex w-full items-center justify-center gap-1 rounded px-0 py-0 text-center text-[clamp(8px,2.2vw,10px)] text-rose-300 transition-colors hover:bg-white/20"
+                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowMenu(false);
                       onDelete(folder.id);
                     }}
                   >
-                    <Trash2 className="scale-50" />
+                    <Trash2 className="scale-50 shrink-0 text-white" />
                     <span className="whitespace-nowrap">删除</span>
                   </button>
                 </div>

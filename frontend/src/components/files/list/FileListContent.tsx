@@ -476,6 +476,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
             loadingMore={loadingMore}
             onLoadMore={loadMore}
             requireUserScroll
+            listSize={files.length}
           />
           <FileListPagination
             page={page}

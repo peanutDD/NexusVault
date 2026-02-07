@@ -155,42 +155,42 @@ const FileCard = memo(
                     className="fixed inset-0 z-40"
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-white/30 bg-white/20 px-0 py-1 pr-[16%] shadow-xl backdrop-blur-2xl sm:scale-90 md:scale-100">
+                  <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-violet-950 bg-violet-950 py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
                     <button
                       type="button"
-                      className="flex w-full items-center justify-center gap-1 rounded px-0 py-0 text-center text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-white/20"
+                      className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowMenu(false);
                         onDownload(file);
                       }}
                     >
-                      <Download className="scale-50 text-purple-300" />
+                      <Download className="scale-50 shrink-0 text-white" />
                       <span className="whitespace-nowrap">下载</span>
                     </button>
                     <button
                       type="button"
-                      className="flex w-full items-center justify-center gap-1 rounded px-0 py-0 text-center text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-white/20"
+                      className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowMenu(false);
                         onShare(file);
                       }}
                     >
-                      <Send className="scale-50 text-blue-300" />
+                      <Send className="scale-50 shrink-0 text-white" />
                       <span className="whitespace-nowrap">分享</span>
                     </button>
-                    <div className="my-0.5 border-t border-white/20" />
+                    <div className="my-0.5 border-t border-violet-900" />
                     <button
                       type="button"
-                      className="flex w-full items-center justify-center gap-1 rounded px-0 py-0 text-center text-[clamp(8px,2.2vw,10px)] text-rose-300 transition-colors hover:bg-white/20"
+                      className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowMenu(false);
                         onDelete(file.id);
                       }}
                     >
-                      <Trash2 className="scale-50" />
+                      <Trash2 className="scale-50 shrink-0 text-white" />
                       <span className="whitespace-nowrap">删除</span>
                     </button>
                   </div>

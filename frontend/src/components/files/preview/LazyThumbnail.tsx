@@ -3,6 +3,7 @@ import { fileService } from '../../../services/files';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { cn } from '../../../utils/cn';
 import { isImageType, isVideoType, isPdfType, isAudioType } from '../../../utils/mimeType';
+import { getCachedThumbnailUrl, setCachedThumbnailUrl } from '../../../utils/thumbnailBlobCache';
 
 interface LazyThumbnailProps {
   fileId: string;
@@ -162,30 +163,48 @@ function getFileTypeDisplay(mimeType: string) {
   };
 }
 
+const SHOW_LOADING_DELAY_MS = 100; // 延迟显示加载骨架，缓存命中或快速响应时不再闪一下
+
 export default function LazyThumbnail({
   fileId,
   mimeType,
   filename,
   className = '',
 }: LazyThumbnailProps) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(() =>
+    isImageType(mimeType) ? getCachedThumbnailUrl(fileId) ?? null : null
+  );
   const [loading, setLoading] = useState(false);
+  const [showLoadingUi, setShowLoadingUi] = useState(false);
   const [error, setError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
+  const loadingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
     };
   }, []);
 
+  // fileId / mimeType 变化时从缓存同步并重置状态，避免虚拟列表复用时闪上一项或错误态
   useEffect(() => {
-    return () => {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    };
-  }, [blobUrl]);
+    if (!isImageType(mimeType)) return;
+    const cached = getCachedThumbnailUrl(fileId);
+    if (cached) {
+      setBlobUrl(cached);
+      setError(false);
+      setShowLoadingUi(false);
+    } else {
+      setBlobUrl(null);
+      setError(false);
+      setShowLoadingUi(false);
+    }
+  }, [fileId, mimeType]);
+
+  // Blob URL 由 thumbnailBlobCache 统一管理，淘汰时再 revoke，此处不再 revoke 避免与缓存冲突
 
   useEffect(() => {
     if (!isImageType(mimeType)) return;
@@ -195,7 +214,19 @@ export default function LazyThumbnail({
     if (!observer || !el) return;
 
     observeCallbacks.set(el, () => {
+      const cached = getCachedThumbnailUrl(fileId);
+      if (cached) {
+        setBlobUrl(cached);
+        observeCallbacks.delete(el);
+        observer.unobserve(el);
+        return;
+      }
       setLoading(true);
+      if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
+      loadingDelayRef.current = setTimeout(() => {
+        loadingDelayRef.current = null;
+        if (mountedRef.current) setShowLoadingUi(true);
+      }, SHOW_LOADING_DELAY_MS);
       observeCallbacks.delete(el);
       observer.unobserve(el);
     });
@@ -203,13 +234,17 @@ export default function LazyThumbnail({
     observer.observe(el);
     return () => {
       observeCallbacks.delete(el);
+      if (loadingDelayRef.current) {
+        clearTimeout(loadingDelayRef.current);
+        loadingDelayRef.current = null;
+      }
       try {
         observer.unobserve(el);
       } catch {
         // ignore
       }
     };
-  }, [mimeType]);
+  }, [fileId, mimeType]);
 
   useEffect(() => {
     if (!isImageType(mimeType) || !loading || blobUrl || error) return;
@@ -220,13 +255,17 @@ export default function LazyThumbnail({
       .then((blob) => {
         if (!mountedRef.current || revoked) return;
         const url = URL.createObjectURL(blob);
+        setCachedThumbnailUrl(fileId, url);
         setBlobUrl(url);
       })
       .catch(() => {
         if (mountedRef.current && !revoked) setError(true);
       })
       .finally(() => {
-        if (mountedRef.current) setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+          setShowLoadingUi(false);
+        }
       });
 
     return () => {
@@ -238,12 +277,11 @@ export default function LazyThumbnail({
     <div
       ref={containerRef}
       className={cn(
-        // 图片类与加载中占位：使用与视频卡片一致的紫色背景
         'flex items-center justify-center bg-purple-900/30 dark:bg-purple-900/40 rounded overflow-hidden shrink-0',
         className
       )}
     >
-      {loading ? (
+      {showLoadingUi ? (
         <div className="w-full h-full animate-pulse bg-gray-600 dark:bg-gray-500" />
       ) : isImageType(mimeType) ? (
         <ImageIcon className="w-8 h-8" />

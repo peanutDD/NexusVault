@@ -1,12 +1,6 @@
 /**
- * InfiniteScrollSentinel 组件
- * 
- * 无限滚动哨兵组件，当进入视口时触发加载更多数据
- * 
- * @param props 组件属性
- * @param props.hasMore 是否有更多数据
- * @param props.loadingMore 是否正在加载更多数据
- * @param props.onLoadMore 加载更多数据的回调函数
+ * InfiniteScrollSentinel：滚到底部时触发加载更多。
+ * 仅当「当前列表长度 > 上次触发时的列表长度」时才允许触发，避免单纯滚动上下就重复发请求。
  */
 import React, { useEffect, useRef } from 'react';
 
@@ -14,8 +8,8 @@ interface InfiniteScrollSentinelProps {
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
-  /** 仅在用户最近有滚动行为时才允许触发 */
   requireUserScroll?: boolean;
+  listSize?: number;
 }
 
 const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
@@ -23,19 +17,26 @@ const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
   loadingMore,
   onLoadMore,
   requireUserScroll = false,
+  listSize = 0,
 }) => {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const hasMoreRef = useRef(hasMore);
   const loadingMoreRef = useRef(loadingMore);
   const onLoadMoreRef = useRef(onLoadMore);
-  const wasIntersectingRef = useRef(false);
   const userScrolledRecentlyRef = useRef(!requireUserScroll);
+  const listSizeRef = useRef(listSize);
+  /** 上次触发 loadMore 时的列表长度，只有 listSize > 此值时才允许再次触发 */
+  const lastTriggeredListSizeRef = useRef(-1);
 
   useEffect(() => {
     hasMoreRef.current = hasMore;
     loadingMoreRef.current = loadingMore;
     onLoadMoreRef.current = onLoadMore;
-  }, [hasMore, loadingMore, onLoadMore]);
+    listSizeRef.current = listSize;
+    if (listSize < lastTriggeredListSizeRef.current) {
+      lastTriggeredListSizeRef.current = -1;
+    }
+  }, [hasMore, loadingMore, onLoadMore, listSize]);
 
   useEffect(() => {
     if (!requireUserScroll) {
@@ -53,22 +54,19 @@ const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
   }, [requireUserScroll]);
 
   useEffect(() => {
+    if (!hasMore) return;
     const el = sentinelRef.current;
     if (!el) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
-        if (!entry) return;
-        if (!entry.isIntersecting) {
-          wasIntersectingRef.current = false;
-          return;
-        }
-        // 仅在“从未相交 -> 相交”的跃迁时触发，避免连续触发
-        if (wasIntersectingRef.current) return;
-        wasIntersectingRef.current = true;
+        if (!entry?.isIntersecting) return;
         if (!hasMoreRef.current || loadingMoreRef.current) return;
         if (requireUserScroll && !userScrolledRecentlyRef.current) return;
+        const size = listSizeRef.current;
+        if (size <= lastTriggeredListSizeRef.current) return;
+        lastTriggeredListSizeRef.current = size;
         onLoadMoreRef.current();
       },
       { rootMargin: '200px', threshold: 0 }
@@ -76,7 +74,7 @@ const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [hasMore, requireUserScroll]);
 
   if (!hasMore) return null;
   return <div ref={sentinelRef} className="h-1 w-full" aria-hidden />;
