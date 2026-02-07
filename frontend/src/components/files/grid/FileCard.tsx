@@ -70,12 +70,6 @@ const FileCard = memo(
     const mimeTypeLabel = getMimeTypeLabel(file.mime_type);
 
     const handleMouseEnter = () => {
-      // 调试 hover 是否第一时间触发
-      // 在控制台可以看到时间戳
-      // 例如： [hover] file-card xxx 12345.67
-      // 不影响正式逻辑
-      // eslint-disable-next-line no-console
-      console.log('[hover] file-card', file.id, performance.now());
       schedulePreload(file.id);
     };
 

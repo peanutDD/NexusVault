@@ -179,9 +179,9 @@ where
     // 配置 CORS
     let cors = create_cors_layer(config);
 
-    // 配置速率限制：每分钟 300 个请求（提高以支持缩略图批量加载）
+    // 配置速率限制：每分钟 500 个请求（缩略图/预览预加载较多时易触发 429，适当放宽）
     // 增加 max_keys 上限，避免高并发/攻击场景下 key 无限增长导致内存膨胀
-    let rate_limit_state = rate_limit::create_rate_limit_middleware(300, 60, 20_000);
+    let rate_limit_state = rate_limit::create_rate_limit_middleware(500, 60, 20_000);
 
     // 构建中间件栈
     let middleware_stack = ServiceBuilder::new()

@@ -97,12 +97,6 @@ const FolderCard = memo(function FolderCard({
     onSelect(folder.id);
   }, [folder.id, onSelect]);
 
-  const handleMouseEnter = () => {
-    // 调试 hover 是否第一时间触发
-    // eslint-disable-next-line no-console
-    console.log('[hover] folder-card', folder.id, performance.now());
-  };
-
   return (
     <div
       className={cn(
@@ -117,7 +111,6 @@ const FolderCard = memo(function FolderCard({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onMouseEnter={handleMouseEnter}
       onDoubleClick={handleDoubleClick}
     >
       <div className="p-3">

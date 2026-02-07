@@ -113,7 +113,7 @@ export function getErrorDetails(err: unknown, fallback: string): ErrorDetails {
     // 处理网络错误（无法连接到服务器）
     if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
       return {
-        message: '无法连接到服务器，请确保后端服务正在运行（http://localhost:3000）',
+        message: `无法连接到服务器，请确保后端服务正在运行（${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}）`,
         code: 'NETWORK_ERROR',
       };
     }
@@ -134,7 +134,7 @@ export function getErrorDetails(err: unknown, fallback: string): ErrorDetails {
     // 处理网络错误
     if (err.message === 'Network Error' || err.message.includes('ERR_NETWORK')) {
       return {
-        message: '无法连接到服务器，请确保后端服务正在运行（http://localhost:3000）',
+        message: `无法连接到服务器，请确保后端服务正在运行（${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}）`,
         code: 'NETWORK_ERROR',
       };
     }

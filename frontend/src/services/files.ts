@@ -2,6 +2,7 @@
  * 文件服务
  * 提供文件上传、下载、列表查询、预览等功能
  */
+import axios from 'axios';
 import api, { limitedApi } from './api';
 import { buildQueryParams } from '../utils/queryParams';
 import { downloadBlob } from '../utils/downloadBlob';
@@ -561,11 +562,27 @@ export const fileService = {
     options?: { signal?: AbortSignal }
   ): Promise<Blob> {
     return previewQueue.run(async () => {
-      const { data } = await api.get<Blob>(`/api/files/${fileId}/preview`, {
-        responseType: 'blob',
-        signal: options?.signal,
-      });
-      return data;
+      const doFetch = () =>
+        api.get<Blob>(`/api/files/${fileId}/preview`, {
+          responseType: 'blob',
+          signal: options?.signal,
+        });
+      try {
+        const { data } = await doFetch();
+        return data;
+      } catch (err) {
+        // 429 时重试一次（延迟 2s），避免缩略图/预加载集中请求被限流后直接失败
+        if (
+          axios.isAxiosError(err) &&
+          err.response?.status === 429 &&
+          !options?.signal?.aborted
+        ) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const { data } = await doFetch();
+          return data;
+        }
+        throw err;
+      }
     });
   },
 
