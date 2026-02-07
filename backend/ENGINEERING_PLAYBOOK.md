@@ -344,6 +344,40 @@
 - 使用 SQL 原子追加：`array_append(uploaded_parts, $1)` 并加 `NOT ($1 = ANY(uploaded_parts))` 保护幂等
   - 位置：`src/repositories/upload_sessions.rs`（`UploadSessionsRepo::append_uploaded_part`）
 
+---
+
+### 17) 缩略图（Thumbnail）方案 B：先读盘再按需生成写盘（2026-02-07 备注）
+
+**目标**：列表卡片用缩略图减轻加载，避免每次请求都在内存里解码/缩放/编码导致耗时长、内存峰值高；首次生成后落盘，后续请求直接读盘返回。
+
+**已落地**：
+
+- **接口**：`GET /api/files/:id/thumbnail?w=400`（仅 `image/*`，返回 JPEG 缩略图，`w` 默认 400、范围 64～800）。
+- **方案 B 流程**：
+  1. 先 `get_thumbnail(file_id)` 读已存在的缩略图；有则直接返回（快路径）。
+  2. 无则读原图 → 在 **`tokio::task::spawn_blocking`** 中执行解码 → 缩略图 → 编码 JPEG（避免长时间占用 async 工作线程导致超时或无法正确返回）→ 写盘 `save_thumbnail` → 再返回同一份 JPEG。
+- **存储**：
+  - **Local**：`{base_path}/.thumbnails/{file_id}.jpg`
+  - **S3**：key 为 `.thumbnails/{file_id}.jpg`
+- **删除联动**：单文件删除 / 批量删除时顺带 `delete_thumbnail(file_id)`（best-effort，忽略不存在）。
+- **GIF**：仅解码第一帧（`gif` crate + `DecodeOptions::set_color_output(RGBA)`），大 GIF 不整文件解码，节省时间和内存。
+- **多格式**：`image` 使用默认 feature，支持 jpeg/png/gif/webp/bmp/ico/tiff/tga/pnm 等；GIF 仍走独立第一帧逻辑。
+- **编译修复**：`gif::Frame` 的 `width`/`height` 为字段，使用 `frame.width`、`frame.height`。
+
+**涉及文件**：
+
+- `Cargo.toml`：`image = "0.25"`（默认格式）、`gif = "0.13"`
+- `src/utils/thumbnail.rs`：`decode_image_for_thumbnail`、`generate_thumbnail_jpeg`（供 `spawn_blocking` 调用）
+- `src/services/storage.rs`：`get_thumbnail` / `save_thumbnail` / `delete_thumbnail`（Local + S3）
+- `src/services/file/read.rs`：`get_thumbnail` / `save_thumbnail` / `delete_thumbnail` 转发
+- `src/services/file/delete.rs`：删除文件后调用 `delete_thumbnail`
+- `src/handlers/files/download/mod.rs`：`thumbnail_file_handler`（先读盘 → 无则 spawn_blocking 生成 → 写盘 → 返回）
+- `src/api/files.rs`：路由 `GET /:id/thumbnail`
+
+**前端**（同次改动）：列表 `LazyThumbnail` 使用 `fetchThumbnailBlob` 请求 `/thumbnail`；404/415 时返回 `null` 显示占位图标。
+
+---
+
 ## 压测与观测建议（推荐后续补齐）
 
 - **指标**：

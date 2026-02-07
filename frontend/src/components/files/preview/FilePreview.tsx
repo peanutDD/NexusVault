@@ -293,9 +293,9 @@ export default function FilePreview({
         </>
       )}
 
-      {/* 顶部工具栏（仅显示文件计数器，玻璃拟态胶囊） */}
+      {/* 顶部工具栏（仅显示文件计数器，玻璃拟态胶囊）- z-20 确保始终在预览内容之上 */}
       <div
-        className="relative z-10 flex shrink-0 items-center justify-between bg-gradient-to-b from-black/70 via-black/40 to-transparent px-4 py-3"
+        className="relative z-20 flex shrink-0 items-center justify-between bg-gradient-to-b from-black/70 via-black/40 to-transparent px-4 py-3"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3" />
@@ -434,9 +434,9 @@ export default function FilePreview({
         </div>
       </div>
 
-      {/* 主内容区：点击本层或冒泡上来的点击即关闭；子内容（图片/PDF/加载态等）已 stopPropagation，控制区为兄弟节点不冒泡到此 */}
+      {/* 主内容区：z-0 置于顶栏之下；预留顶部/底部空间，图片与视频不遮挡 23/60 与底部；高度随视窗 */}
       <div
-        className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-16 py-2"
+        className="relative z-0 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-16 pt-[clamp(2rem,6vh,4rem)] pb-2"
         onClick={onClose}
       >
         {/* 加载状态：恢复为原来的圆形旋转 Loading */}
@@ -467,14 +467,14 @@ export default function FilePreview({
           </div>
         )}
 
-        {/* 统一预览容器 - 固定尺寸确保一致性 */}
+        {/* 统一预览容器 - 最大高度 82vh 留出顶/底栏空间，不遮挡 23/60 与底部，随视窗变化 */}
         {!loading && !error && supported && (
           <div
-            className="flex h-[calc(100vh-180px)] w-full max-w-5xl items-center justify-center"
+            className="flex min-h-0 w-full max-w-5xl flex-1 items-center justify-center max-h-[82vh]"
           >
             {/* 图片预览 */}
             {isImage && blobUrl && (
-              <div className="relative flex h-full w-full items-center justify-center pointer-events-none">
+              <div className="relative flex h-full max-h-full w-full items-center justify-center pointer-events-none">
                 <div
                   ref={imageTransformRef}
                   className={cn(
@@ -486,7 +486,7 @@ export default function FilePreview({
                   <ResponsivePicture
                     src={blobUrl}
                     alt={file.original_filename}
-                    className="max-h-[calc(100vh-200px)] max-w-full object-contain"
+                    className="max-h-full max-w-full object-contain"
                     decoding="async"
                     fetchPriority="high"
                     onLoad={() => setImageLoaded(true)}
@@ -518,12 +518,12 @@ export default function FilePreview({
 
             {/* 视频预览 */}
             {isVideo && blobUrl && (
-              <div className="flex h-full w-full items-center justify-center pointer-events-none">
+              <div className="flex h-full max-h-full w-full items-center justify-center pointer-events-none">
                 <video
                   src={blobUrl}
                   controls
                   autoPlay
-                  className="pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl"
+                  className="pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl object-contain min-h-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <track kind="captions" />
@@ -614,9 +614,9 @@ export default function FilePreview({
         )}
       </div>
 
-      {/* 底部文件信息（尺寸基于视口） */}
+      {/* 底部文件信息（尺寸基于视口）- z-20 确保始终在预览内容之上 */}
       <div
-        className="relative z-10 shrink-0 bg-gradient-to-t from-black/70 to-transparent px-[clamp(0.8rem,2vw,1rem)] pt-[clamp(0.8rem,2vw,1rem)] pb-[clamp(1rem,2.5vw,1.5rem)]"
+        className="relative z-20 shrink-0 bg-gradient-to-t from-black/70 to-transparent px-[clamp(0.8rem,2vw,1rem)] pt-[clamp(0.8rem,2vw,1rem)] pb-[clamp(1rem,2.5vw,1.5rem)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto max-w-3xl">

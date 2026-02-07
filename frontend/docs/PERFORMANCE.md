@@ -2,6 +2,12 @@
 
 > 基于十年前端开发经验，对本项目进行全面的性能审计与优化方案
 
+## 近期变更（2026-02-07）
+
+- **列表缩略图**：列表卡片图片改为请求后端 `GET /api/files/:id/thumbnail`（压缩后 JPEG），不再用预览原图接口，减轻加载与带宽；`fileService.fetchThumbnailBlob` 在 404/415 时返回 `null`，前端显示占位图标。详见后端 `ENGINEERING_PLAYBOOK.md` 第 17 节。
+
+---
+
 ## 目录
 
 - [一、问题总览](#一问题总览)

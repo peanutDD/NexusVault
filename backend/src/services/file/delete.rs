@@ -10,6 +10,7 @@ impl FileService {
     pub async fn delete_file(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
         let file = self.get_file(file_id, user_id).await?;
         self.storage.delete_file(&file.file_path).await?;
+        let _ = self.delete_thumbnail(file_id).await;
         self.files_repo.delete(file_id, user_id).await?;
         Ok(())
     }
@@ -27,6 +28,7 @@ impl FileService {
                 let _ = self.files_repo.delete_batch(&deleted_ids, user_id).await;
                 return Err(e);
             }
+            let _ = self.delete_thumbnail(id).await;
             deleted_ids.push(id);
         }
 

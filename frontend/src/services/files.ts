@@ -547,10 +547,42 @@ export const fileService = {
   },
 
   /**
-   * 带鉴权的预览 blob，供缩略图/预览用（img/iframe 无法带 Authorization）
+   * 获取图片缩略图 Blob（仅 image/*，列表卡片用，压缩后体积小）
    * @param fileId 文件 ID
-   * @returns 预览 Blob 数据
+   * @param options 可选配置（支持 AbortSignal、width 最长边像素，默认 400）
+   * @returns 缩略图 Blob（JPEG），404/415 时返回 null（无缩略图，前端显示占位）
    */
+  async fetchThumbnailBlob(
+    fileId: string,
+    options?: { signal?: AbortSignal; width?: number }
+  ): Promise<Blob | null> {
+    return previewQueue.run(async () => {
+      const w = options?.width ?? 400;
+      const doFetch = () =>
+        api.get<Blob>(`/api/files/${fileId}/thumbnail?w=${w}`, {
+          responseType: 'blob',
+          signal: options?.signal,
+        });
+      try {
+        const { data } = await doFetch();
+        return data;
+      } catch (err) {
+        const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+        if (status === 404 || status === 415) return null;
+        if (
+          axios.isAxiosError(err) &&
+          err.response?.status === 429 &&
+          !options?.signal?.aborted
+        ) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const { data } = await doFetch();
+          return data;
+        }
+        throw err;
+      }
+    });
+  },
+
   /**
    * 获取文件预览 Blob
    * @param fileId 文件 ID

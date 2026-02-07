@@ -5,6 +5,9 @@ use uuid::Uuid;
 
 use crate::utils::AppError;
 
+const THUMBNAIL_DIR: &str = ".thumbnails";
+const THUMBNAIL_EXT: &str = "jpg";
+
 /// 将 S3 错误映射为 AppError：对象不存在时返回 NotFound(404)，其余为 File 错误。
 fn s3_to_app_error<E: std::fmt::Display>(e: &E, op: &str) -> AppError {
     let msg = e.to_string();
@@ -65,6 +68,15 @@ pub trait StorageBackend: Send + Sync {
 
     async fn delete_file(&self, file_path: &str) -> Result<(), AppError>;
 
+    /// 读取已生成的缩略图（若存在）。用于方案 B：先读盘，无则再生成并写盘。
+    async fn get_thumbnail(&self, file_id: Uuid) -> Result<Vec<u8>, AppError>;
+
+    /// 保存缩略图到磁盘，路径由后端约定（如 .thumbnails/{file_id}.jpg）。
+    async fn save_thumbnail(&self, file_id: Uuid, data: &[u8]) -> Result<(), AppError>;
+
+    /// 删除缩略图（如原文件删除时）。若本就不存在则忽略。
+    async fn delete_thumbnail(&self, file_id: Uuid) -> Result<(), AppError>;
+
     /// 健康检查
     ///
     /// 验证存储后端是否可用。
@@ -85,6 +97,12 @@ impl LocalStorage {
             .join(user_id.to_string())
             .join(file_id.to_string())
             .join(filename)
+    }
+
+    fn get_thumbnail_path(&self, file_id: Uuid) -> std::path::PathBuf {
+        Path::new(&self.base_path)
+            .join(THUMBNAIL_DIR)
+            .join(format!("{}.{}", file_id, THUMBNAIL_EXT))
     }
 }
 
@@ -199,6 +217,40 @@ impl StorageBackend for LocalStorage {
         Ok(())
     }
 
+    async fn get_thumbnail(&self, file_id: Uuid) -> Result<Vec<u8>, AppError> {
+        let path = self.get_thumbnail_path(file_id);
+        tokio::fs::read(&path).await.map_err(|e| {
+            if e.kind() == ErrorKind::NotFound {
+                AppError::NotFound
+            } else {
+                AppError::File(format!("Failed to read thumbnail: {}", e))
+            }
+        })
+    }
+
+    async fn save_thumbnail(&self, file_id: Uuid, data: &[u8]) -> Result<(), AppError> {
+        let path = self.get_thumbnail_path(file_id);
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| AppError::Storage(format!("Failed to create thumbnail dir: {}", e)))?;
+        }
+        tokio::fs::write(&path, data)
+            .await
+            .map_err(|e| AppError::Storage(format!("Failed to write thumbnail: {}", e)))?;
+        Ok(())
+    }
+
+    async fn delete_thumbnail(&self, file_id: Uuid) -> Result<(), AppError> {
+        let path = self.get_thumbnail_path(file_id);
+        if let Err(e) = tokio::fs::remove_file(&path).await {
+            if e.kind() != ErrorKind::NotFound {
+                return Err(AppError::File(format!("Failed to delete thumbnail: {}", e)));
+            }
+        }
+        Ok(())
+    }
+
     async fn health_check(&self) -> Result<(), AppError> {
         // 检查存储目录是否可访问
         let path = Path::new(&self.base_path);
@@ -238,6 +290,10 @@ impl S3Storage {
 
     fn get_s3_key(&self, user_id: Uuid, file_id: Uuid, filename: &str) -> String {
         format!("{}/{}/{}", user_id, file_id, filename)
+    }
+
+    fn get_thumbnail_key(&self, file_id: Uuid) -> String {
+        format!("{}/{}.{}", THUMBNAIL_DIR, file_id, THUMBNAIL_EXT)
     }
 }
 
@@ -353,6 +409,56 @@ impl StorageBackend for S3Storage {
             .await
             .map_err(|e| AppError::File(format!("Failed to delete file from S3: {}", e)))?;
 
+        Ok(())
+    }
+
+    async fn get_thumbnail(&self, file_id: Uuid) -> Result<Vec<u8>, AppError> {
+        let key = self.get_thumbnail_key(file_id);
+        let response = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(&key)
+            .send()
+            .await
+            .map_err(|e| s3_to_app_error(&e, "get thumbnail"))?;
+        let data = response
+            .body
+            .collect()
+            .await
+            .map_err(|e| AppError::File(format!("Failed to read thumbnail: {}", e)))?;
+        Ok(data.to_vec())
+    }
+
+    async fn save_thumbnail(&self, file_id: Uuid, data: &[u8]) -> Result<(), AppError> {
+        let key = self.get_thumbnail_key(file_id);
+        self.client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(&key)
+            .content_type("image/jpeg")
+            .body(aws_sdk_s3::primitives::ByteStream::from(data.to_vec()))
+            .send()
+            .await
+            .map_err(|e| AppError::Storage(format!("Failed to save thumbnail to S3: {}", e)))?;
+        Ok(())
+    }
+
+    async fn delete_thumbnail(&self, file_id: Uuid) -> Result<(), AppError> {
+        let key = self.get_thumbnail_key(file_id);
+        if let Err(e) = self
+            .client
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(&key)
+            .send()
+            .await
+        {
+            let msg = e.to_string();
+            if !msg.contains("NoSuchKey") && !msg.contains("No Such Key") {
+                return Err(AppError::File(format!("Failed to delete thumbnail from S3: {}", e)));
+            }
+        }
         Ok(())
     }
 

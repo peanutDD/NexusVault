@@ -46,7 +46,9 @@ pub use chunked_upload::{
     chunked_upload_init_handler, chunked_upload_status_handler,
 };
 pub use delete::delete_file_handler;
-pub use download::{download_file_handler, preview_file_handler};
+pub use download::{
+    download_file_handler, preview_file_handler, thumbnail_file_handler,
+};
 pub use list::list_files_handler;
 pub use storage::storage_usage_handler;
 pub use upload::upload_file_handler;

@@ -15,6 +15,7 @@ pub mod crypto;
 pub mod error;
 pub mod parse;
 pub mod response;
+pub mod thumbnail;
 pub mod time;
 pub mod validation;
 

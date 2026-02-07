@@ -251,9 +251,10 @@ export default function LazyThumbnail({
 
     let revoked = false;
     fileService
-      .fetchPreviewBlob(fileId)
+      .fetchThumbnailBlob(fileId)
       .then((blob) => {
         if (!mountedRef.current || revoked) return;
+        if (blob === null) return; // 404/415 无缩略图，保持占位
         const url = URL.createObjectURL(blob);
         setCachedThumbnailUrl(fileId, url);
         setBlobUrl(url);

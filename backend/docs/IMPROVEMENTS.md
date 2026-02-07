@@ -1,5 +1,19 @@
 # 后端改进记录
 
+## 2026-02-07 缩略图方案 B 与多格式支持（今日变更备注）
+
+- **缩略图接口**：新增 `GET /api/files/:id/thumbnail?w=400`，仅对 `image/*` 返回 JPEG 缩略图；列表卡片使用该接口，与预览原图分离，减轻加载。
+- **方案 B（先读盘再按需生成）**：优先读已存在的缩略图（`.thumbnails/{file_id}.jpg`）；无则从原图生成并写盘后返回，后续请求直接读盘。
+- **GIF 只解第一帧**：使用 `gif` crate 仅解码第一帧生成缩略图，大 GIF 不整文件解码。
+- **多格式解码**：`image` 使用默认 feature，支持 jpeg/png/gif/webp/bmp/ico/tiff/tga/pnm 等。
+- **长时间压缩不阻塞**：解码→缩略图→编码在 `tokio::task::spawn_blocking` 中执行，避免占用 async 工作线程导致超时或无法正确返回响应；响应仅在压缩完成并写盘后返回。
+- **删除联动**：单文件/批量删除时顺带删除对应缩略图。
+- **涉及**：`utils/thumbnail.rs`、`services/storage.rs`（get/save/delete_thumbnail）、`handlers/files/download/mod.rs`、`api/files.rs`、`services/file/read.rs`、`services/file/delete.rs`；前端 `LazyThumbnail` 使用 `fetchThumbnailBlob`，404/415 时显示占位。
+
+详细设计见 `ENGINEERING_PLAYBOOK.md` 第 17 节。
+
+---
+
 ## 改进概述
 
 本次改进按优先级从高到低完成，涵盖安全性、架构、可观测性和代码质量多个方面。

@@ -16,13 +16,15 @@ mod multipart;
 mod ranges;
 mod responses;
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, Method};
 use axum::response::Response;
 use uuid::Uuid;
 
 use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
 use crate::services::file::FileService;
+use crate::utils::response::file_response;
+use crate::utils::thumbnail::generate_thumbnail_jpeg;
 use crate::utils::AppError;
 use crate::AppState;
 
@@ -183,4 +185,52 @@ pub async fn preview_file_handler(
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
     file_get_or_head_response(&state, user_id, method, headers, file_id, true).await
+}
+
+/// 缩略图查询参数：最大边长（像素），默认 400，范围 64..=800
+#[derive(serde::Deserialize)]
+pub struct ThumbnailQuery {
+    #[serde(default = "default_thumb_size")]
+    pub w: u32,
+}
+
+fn default_thumb_size() -> u32 {
+    400
+}
+
+/// 图片缩略图（方案 B：先读盘，无则生成并写盘；GIF 只解第一帧）
+///
+/// 仅支持 `image/*` 类型，返回 JPEG 缩略图（最长边不超过 `w`），用于列表卡片等场景。
+pub async fn thumbnail_file_handler(
+    State(state): State<AppState>,
+    AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
+    Path(file_id): Path<Uuid>,
+    Query(q): Query<ThumbnailQuery>,
+) -> Result<Response, AppError> {
+    let file_service = FileService::from_state(&state);
+    let file = file_service.get_file(file_id, user_id).await?;
+
+    if !file.mime_type.starts_with("image/") {
+        return Err(AppError::NotFound);
+    }
+
+    let w = q.w.clamp(64, 800);
+
+    // 方案 B：先读已存在的缩略图
+    if let Ok(cached) = file_service.get_thumbnail(file_id).await {
+        return file_response(cached, "thumb.jpg", "image/jpeg", true)
+            .map_err(|_| AppError::Internal);
+    }
+
+    // 无缓存：在阻塞线程中生成缩略图，避免长时间占用 async 工作线程导致超时或无法正确返回
+    let data = file_service.get_file_data(&file).await?;
+    let mime_type = file.mime_type.clone();
+    let buf = tokio::task::spawn_blocking(move || generate_thumbnail_jpeg(data, mime_type, w))
+        .await
+        .map_err(|_| AppError::Internal)??;
+
+    let _ = file_service.save_thumbnail(file_id, &buf).await;
+
+    file_response(buf, "thumb.jpg", "image/jpeg", true)
+        .map_err(|_| AppError::Internal)
 }
