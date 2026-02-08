@@ -246,7 +246,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                       <span
                         aria-hidden
                         className={`
-                          inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center rounded-md
+                          inline-flex h-4 min-h-4 w-4 min-w-4 shrink-0 items-center justify-center overflow-hidden rounded-sm
                           border transition-all duration-200
                           ${allFilesSelected
                             ? 'border-white/30 bg-white/15 text-white'
@@ -254,9 +254,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
                           }
                         `}
                       >
-                        {allFilesSelected ? (
-                          <i className="bi bi-check-lg text-[0.5rem] font-bold leading-none" aria-hidden />
-                        ) : null}
+                        <i
+                          className={`bi bi-check-lg block text-[0.55rem] font-bold leading-none ${allFilesSelected ? '' : 'invisible'}`}
+                          aria-hidden
+                        />
                       </span>
                       <span className="select-none">All Files</span>
                     </label>
@@ -303,7 +304,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     <span
                       aria-hidden
                       className={`
-                        inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center rounded-md
+                        inline-flex h-4 min-h-4 w-4 min-w-4 shrink-0 items-center justify-center overflow-hidden rounded-sm
                         border transition-all duration-200
                         ${allFilesSelected
                           ? 'border-white/30 bg-white/15 text-white'
@@ -311,9 +312,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
                         }
                       `}
                     >
-                      {allFilesSelected ? (
-                        <i className="bi bi-check-lg text-[0.5rem] font-bold leading-none" aria-hidden />
-                      ) : null}
+                      <i
+                        className={`bi bi-check-lg block text-[0.625rem] font-bold leading-none ${allFilesSelected ? '' : 'invisible'}`}
+                        aria-hidden
+                      />
                     </span>
                     <span className="select-none">All Files</span>
                   </label>

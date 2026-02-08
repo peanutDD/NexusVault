@@ -53,13 +53,8 @@ const FileListBatchActions = memo(function FileListBatchActions({
   return (
     <div className={wrapperClass}>
       <div className="flex min-w-0 items-center gap-2 whitespace-nowrap text-[0.625rem]">
-        <span
-          aria-hidden
-          className="inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center rounded-md border border-white/30 bg-white/15 text-white transition-all duration-200"
-        >
-          <i className="bi bi-check-lg text-[0.5rem] font-bold leading-none" aria-hidden />
-        </span>
-        <span className={`min-w-0 truncate text-gray-300 ${rowClass} hidden sm:inline`}>
+        <span className="inline-block h-4 w-4 shrink-0 rounded-sm" aria-hidden />
+        <span className="font-brand min-w-0 shrink truncate font-normal tracking-widest leading-none text-gray-300 text-[clamp(0.5rem,1.2vw,0.625rem)]">
           Already selected {getSelectionText()}
         </span>
       </div>
