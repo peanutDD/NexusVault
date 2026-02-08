@@ -27,4 +27,29 @@ export const authService = {
     );
     return response.data;
   },
+
+  async updateProfile(data: {
+    username: string;
+    email: string;
+  }): Promise<{ user: User }> {
+    const response = await api.put<{ user: User }>(
+      '/api/auth/update-profile',
+      data
+    );
+    return response.data;
+  },
+
+  async checkProfileAvailability(params: {
+    username: string;
+    email: string;
+  }): Promise<{
+    username_available: boolean;
+    email_available: boolean;
+  }> {
+    const response = await api.get<{
+      username_available: boolean;
+      email_available: boolean;
+    }>('/api/auth/check-profile-availability', { params });
+    return response.data;
+  },
 };

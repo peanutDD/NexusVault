@@ -11,7 +11,6 @@ use serde_json::json;
 
 use crate::extractors::AuthenticatedUser;
 use crate::models::file::InstantUploadRequest;
-use crate::services::file::FileService;
 use crate::utils::AppError;
 use crate::AppState;
 
@@ -35,8 +34,7 @@ pub async fn instant_upload_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<InstantUploadRequest>,
 ) -> Result<axum::response::Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    let result = file_service.instant_upload(user_id, req).await?;
+    let result = state.file_service.instant_upload(user_id, req).await?;
     match result {
         Some(file) => Ok((StatusCode::CREATED, Json(json!({ "file": file }))).into_response()),
         None => Ok((StatusCode::OK, Json(json!({ "instant": false }))).into_response()),

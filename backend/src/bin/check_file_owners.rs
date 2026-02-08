@@ -38,7 +38,8 @@ async fn main() -> anyhow::Result<()> {
 
     println!("\n=== 指定 file_id 在 files 表中的记录 ===\n");
     for id_str in &file_ids {
-        let id = Uuid::parse_str(id_str).unwrap();
+        let id = Uuid::parse_str(id_str)
+            .map_err(|e| anyhow::anyhow!("invalid UUID for file_id {:?}: {}", id_str, e))?;
         let row = sqlx::query(
             "SELECT id, user_id, file_path, original_filename, created_at FROM files WHERE id = $1",
         )
@@ -66,7 +67,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     println!("\n=== 用户 {} 名下的文件数量 ===\n", storage_user_id);
-    let uid = Uuid::parse_str(storage_user_id).unwrap();
+    let uid = Uuid::parse_str(storage_user_id)
+        .map_err(|e| anyhow::anyhow!("invalid UUID for storage_user_id {:?}: {}", storage_user_id, e))?;
     let count: (i64,) =
         sqlx::query_as("SELECT COUNT(*) FROM files WHERE user_id = $1")
             .bind(uid)

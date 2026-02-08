@@ -37,6 +37,14 @@ pub struct ChangePasswordRequest {
     pub new_password: String,
 }
 
+#[derive(Debug, Deserialize, validator::Validate)]
+pub struct UpdateProfileRequest {
+    #[validate(length(min = 3, max = 50))]
+    pub username: String,
+    #[validate(email)]
+    pub email: String,
+}
+
 #[derive(Debug, Serialize)]
 #[allow(dead_code)]
 pub struct AuthResponse {

@@ -11,7 +11,6 @@ use uuid::Uuid;
 
 use crate::constants::DISK_RESERVE_UPLOAD;
 use crate::extractors::AuthenticatedUser;
-use crate::services::file::FileService;
 use crate::utils::{json_response, AppError};
 use crate::AppState;
 
@@ -39,8 +38,6 @@ pub async fn upload_file_handler(
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
     use tokio::io::AsyncWriteExt;
-
-    let file_service = FileService::from_state(&state);
 
     // 解析 multipart 表单：以流式方式写入临时文件，避免把整个文件载入内存
     let mut file_meta: Option<(String, String, u64, std::path::PathBuf)> = None;
@@ -124,7 +121,7 @@ pub async fn upload_file_handler(
     .ok()
     .flatten();
 
-    let file = match file_service
+    let file = match state.file_service
         .create_file_from_path(
             user_id,
             original_filename,

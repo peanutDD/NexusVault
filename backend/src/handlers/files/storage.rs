@@ -5,7 +5,6 @@ use axum::response::Response;
 use serde_json::json;
 
 use crate::extractors::AuthenticatedUser;
-use crate::services::file::FileService;
 use crate::utils::{json_response, AppError};
 use crate::AppState;
 
@@ -16,10 +15,8 @@ pub async fn storage_usage_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-
-    let (total_size, file_count) = file_service.get_storage_usage(user_id).await?;
-    let quota = file_service.get_storage_quota(user_id).await?;
+    let (total_size, file_count) = state.file_service.get_storage_usage(user_id).await?;
+    let quota = state.file_service.get_storage_quota(user_id).await?;
 
     // 计算配额信息（MB）
     let quota_mb = quota.map(|q| (q as f64 / 1_048_576.0).round() as i64);

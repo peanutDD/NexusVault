@@ -93,7 +93,7 @@ impl FileService {
             status
         })
         .await
-        .map_err(|e| AppError::Internal)?;
+        .map_err(|_e| AppError::Internal)?;
 
         if !result.map(|s| s.success()).unwrap_or(false) {
             let _ = tokio::fs::remove_dir_all(&out_dir).await;

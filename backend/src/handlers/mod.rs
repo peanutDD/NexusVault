@@ -17,9 +17,11 @@
 //! - `folders`: 文件夹管理相关（创建、移动、删除、路径导航）
 //! - `share`: 文件分享相关（创建分享、访问分享）
 //! - `api_token`: API Token 管理相关
+//! - `health`: 健康检查与存活检查（/health、/livez、/readyz）
 
 pub mod api_token;
 pub mod auth;
 pub mod files;
 pub mod folders;
+pub mod health;
 pub mod share;

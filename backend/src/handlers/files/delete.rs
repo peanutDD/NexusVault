@@ -5,7 +5,6 @@ use axum::response::Response;
 use uuid::Uuid;
 
 use crate::extractors::AuthenticatedUser;
-use crate::services::file::FileService;
 use crate::utils::{success_response, AppError};
 use crate::AppState;
 
@@ -15,7 +14,6 @@ pub async fn delete_file_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    file_service.delete_file(file_id, user_id).await?;
+    state.file_service.delete_file(file_id, user_id).await?;
     Ok(success_response("File deleted successfully"))
 }

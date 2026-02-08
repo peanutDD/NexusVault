@@ -6,7 +6,6 @@ use serde_json::json;
 
 use crate::extractors::AuthenticatedUser;
 use crate::models::file::FileListQuery;
-use crate::services::file::FileService;
 use crate::utils::{json_response, AppError};
 use crate::AppState;
 
@@ -39,13 +38,11 @@ pub async fn list_files_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Query(query): Query<FileListQuery>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-
     // 提取分页参数（在移动 query 之前）
     let page = query.page.unwrap_or(1);
     let limit = query.limit.unwrap_or(20);
 
-    let (files, total) = file_service.list_files(user_id, query).await?;
+    let (files, total) = state.file_service.list_files(user_id, query).await?;
 
     Ok(json_response(json!({
         "files": files,

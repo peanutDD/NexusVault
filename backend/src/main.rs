@@ -5,62 +5,74 @@
 //! ## 架构
 //!
 //! - `api/`: 路由定义
+//! - `app.rs`: 应用构建（CORS、中间件、路由挂载）
 //! - `handlers/`: HTTP 请求处理
 //! - `services/`: 业务逻辑层
 //! - `models/`: 数据模型
-//! - `middleware/`: 中间件
+//! - `middleware/`: 中间件（认证、限流、指标、panic、请求日志）
 //! - `extractors/`: Axum extractors（认证等）
 //! - `database/`: 数据库连接池
 //! - `utils/`: 工具函数
 //! - `config.rs`: 配置管理
 
-mod api;
-mod config;
-mod constants;
-mod database;
-mod extractors;
-mod handlers;
-mod middleware;
-mod models;
-mod repositories;
-mod services;
-mod state;
-mod utils;
+// =============================================================================
+// 模块声明：按功能划分的 crate 内部模块
+// =============================================================================
 
+mod api;         // HTTP 路由注册（auth、files、folders、share、tokens 等）
+mod app;         // 应用组装：CORS、中间件栈、路由挂载、全局错误处理
+mod config;      // 配置：从环境变量加载（数据库、JWT、存储、端口等）
+mod constants;   // 常量（上传大小、并发数、分片参数等）
+mod database;    // 数据库连接池（SQLx PgPool 创建与配置）
+mod extractors;  // Axum 提取器（认证用户、Query token 等）
+mod handlers;    // HTTP 处理器（认证、文件、文件夹、分享、API Token）
+mod middleware; // 中间件（认证、限流、指标、panic 捕获、请求日志）
+mod models;      // 数据模型与 DTO（User、File、Folder、Share 等）
+mod repositories; // 数据访问层（users、files、folders、shares、upload_sessions）
+mod services;    // 业务逻辑层（auth、file、folder、share、maintenance）
+mod state;       // 应用状态 AppState（config、pool、storage 等共享）
+mod utils;       // 工具（错误类型、响应构造、加密、校验等）
+
+// 对外暴露应用状态类型，供 handler 与中间件通过 State<T> 注入
 pub use state::AppState;
 
-use axum::{
-    error_handling::HandleErrorLayer, extract::Request, http::StatusCode, middleware::Next,
-    response::Response, routing::get, Json, Router,
-};
-use serde_json::json;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError, ServiceBuilder};
-use tower_http::{
-    catch_panic::CatchPanicLayer,
-    cors::{Any, AllowOrigin, CorsLayer},
-    timeout::TimeoutLayer,
-    trace::TraceLayer,
-};
-// use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
-// use std::net::IpAddr;
+// =============================================================================
+// 标准库与第三方 use
+// =============================================================================
 
-use api::openapi::create_openapi_router;
-use config::Config;
-use database::pool::create_pool;
-use middleware::metrics::metrics_middleware;
-use middleware::rate_limit;
-use services::file::create_storage;
-use services::maintenance::{
-    run_orphan_cleanup_once, spawn_files_consistency_checker, spawn_orphan_storage_files_cleanup,
+use std::sync::Arc;   // 多线程共享配置与连接池的引用计数指针
+use std::time::Duration; // 定时任务间隔（如清理周期）
+
+use config::Config;                           // 应用配置
+use database::pool::create_pool;              // 创建 PostgreSQL 连接池
+use services::file::create_storage;           // 根据配置创建存储后端（本地 / S3）
+use services::maintenance::{                  // 维护任务：孤儿清理、一致性检查、上传会话清理
+    run_orphan_cleanup_once,
+    spawn_files_consistency_checker,
+    spawn_orphan_storage_files_cleanup,
     spawn_upload_session_cleanup,
 };
 
+// =============================================================================
+// 程序入口
+// =============================================================================
+
+/// 同步入口：构建运行时并在其上执行异步主逻辑
 fn main() -> anyhow::Result<()> {
-    // 允许通过环境变量调优 Tokio runtime（学习/压测非常有用）
-    // - TOKIO_WORKER_THREADS：CPU 密集型任务并发（默认=可用 CPU 核心数）
-    // - TOKIO_MAX_BLOCKING_THREADS：阻塞任务池上限（默认=512，影响 tokio::fs/CPU-heavy blocking）
+    let runtime = build_runtime()?;  // 创建多线程 Tokio 运行时
+    runtime.block_on(async_main())   // 阻塞直到 async_main 完成
+}
+
+// =============================================================================
+// 运行时构建
+// =============================================================================
+
+/// 构建 Tokio 多线程运行时，可通过环境变量调优。
+///
+/// - `TOKIO_WORKER_THREADS`: 工作线程数，默认 = CPU 核心数
+/// - `TOKIO_MAX_BLOCKING_THREADS`: 阻塞线程池上限，默认 512
+fn build_runtime() -> anyhow::Result<tokio::runtime::Runtime> {
+    // 工作线程数：优先读环境变量，否则取 CPU 核心数，兜底 10
     let worker_threads = std::env::var("TOKIO_WORKER_THREADS")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
@@ -70,110 +82,141 @@ fn main() -> anyhow::Result<()> {
                 .unwrap_or(10)
         });
 
+    // 阻塞线程池上限：用于 spawn_blocking，默认 512
     let max_blocking_threads = std::env::var("TOKIO_MAX_BLOCKING_THREADS")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(512);
 
+    // 构建多线程运行时并启用 IO/时间驱动
     tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
+        .enable_all()                      // 启用 io、time 等
         .worker_threads(worker_threads)
         .max_blocking_threads(max_blocking_threads)
-        .build()?
-        .block_on(async_main())
+        .build()
+        .map_err(Into::into)
 }
 
+// =============================================================================
+// 异步主流程：初始化 → 状态 → 后台任务 → 启动 HTTP
+// =============================================================================
+
 async fn async_main() -> anyhow::Result<()> {
-    // Initialize tracing
+    // ---------- 日志 ----------
+    init_tracing();
+
+    // ---------- 指标（Prometheus） ----------
+    let metrics_renderer = middleware::metrics::init_metrics()
+        .map_err(|e| anyhow::anyhow!("Failed to install Prometheus recorder: {}", e))?;
+    tracing::info!("Prometheus metrics initialized");
+
+    // ---------- 配置与数据源 ----------
+    dotenv::dotenv().ok();                          // 加载 .env，忽略缺失
+    let config = Arc::new(Config::from_env()?);      // 从环境变量构建配置并共享
+    let pool = create_pool(&config.database_url).await?;  // 创建 SQLx 连接池
+
+    // 执行 migrations 目录下的 SQL 迁移
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to run migrations: {}", e))?;
+
+    // 根据 STORAGE_BACKEND 创建本地或 S3 存储实现
+    let storage = create_storage(config.clone())
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to create storage backend: {}", e))?;
+
+    // ---------- 可选：单次孤儿清理后退出 ----------
+    // 用于一次性运维任务：清理 DB 无引用或磁盘孤立的文件后退出
+    if std::env::var("RUN_ORPHAN_CLEANUP_ONCE").as_deref() == Ok("1") {
+        let n = run_orphan_cleanup_once(
+            &pool,
+            &config.storage_path,
+            config.orphan_cleanup_batch_limit,
+        )
+        .await?;
+        tracing::info!("orphan cleanup once done, removed {} file(s), exiting", n);
+        return Ok(());
+    }
+
+    // ---------- 应用状态（注入到路由与 handler） ----------
+    let app_state = AppState::new(config.clone(), pool, storage);
+
+    // ---------- 后台维护任务（常驻定时） ----------
+    // 定期清理过期的分片上传会话与临时文件
+    spawn_upload_session_cleanup(
+        app_state.pool.clone(),
+        Duration::from_secs(config.upload_session_cleanup_interval_secs),
+        config.upload_session_cleanup_batch_size,
+    );
+    // 定期检查 DB 与存储一致性，修复孤立记录
+    spawn_files_consistency_checker(
+        app_state.pool.clone(),
+        app_state.storage.clone(),
+        Duration::from_secs(config.files_consistency_check_interval_secs),
+        config.files_consistency_check_batch_size,
+    );
+    // 仅本地存储时：定期清理磁盘上无 DB 引用的文件
+    if config.storage_backend == "local" {
+        spawn_orphan_storage_files_cleanup(
+            app_state.pool.clone(),
+            config.storage_path.clone(),
+            Duration::from_secs(config.orphan_cleanup_interval_secs),
+            config.orphan_cleanup_batch_limit,
+        );
+        tracing::info!(
+            "orphan storage files cleanup started (interval={}s, batch_limit={})",
+            config.orphan_cleanup_interval_secs,
+            config.orphan_cleanup_batch_limit
+        );
+    }
+
+    // ---------- 构建 Axum 应用并启动 HTTP 服务 ----------
+    let app = app::create_app(app_state, &config, metrics_renderer).await;
+    let addr = format!("0.0.0.0:{}", config.port);  // 监听所有网卡
+    tracing::info!("Server listening on {}", addr);
+
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())  // 收到 SIGINT/SIGTERM 后优雅关闭
+        .await?;
+
+    Ok(())
+}
+
+// =============================================================================
+// 日志初始化
+// =============================================================================
+
+/// 初始化 tracing 日志；未设置 RUST_LOG 时默认 `file_storage_backend=debug,axum=info`。
+/// 生产环境建议设置 `RUST_LOG=info` 或按模块细化。
+fn init_tracing() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "file_storage_backend=debug,axum=info".into()),
         )
         .init();
-
-    // Initialize Prometheus metrics
-    let metrics_renderer = middleware::metrics::init_metrics();
-    tracing::info!("Prometheus metrics initialized");
-
-    // Load configuration
-    dotenv::dotenv().ok();
-    let config = Arc::new(Config::from_env()?);
-
-    // Create database pool
-    let pool = create_pool(&config.database_url).await?;
-
-    // Run migrations
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to run migrations: {}", e))?;
-
-    // Create storage once at startup (shared across requests)
-    let storage = create_storage(config.clone())
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to create storage backend: {}", e))?;
-
-    // 若设置 RUN_ORPHAN_CLEANUP_ONCE=1，仅执行一轮孤儿文件清理后退出（用于手动/脚本触发）
-    if std::env::var("RUN_ORPHAN_CLEANUP_ONCE").as_deref() == Ok("1") {
-        let storage_path = config.storage_path.clone();
-        let n = run_orphan_cleanup_once(&pool, &storage_path, 500).await?;
-        tracing::info!("orphan cleanup once done, removed {} file(s), exiting", n);
-        return Ok(());
-    }
-
-    // Build application state
-    let app_state = AppState::new(config.clone(), pool, storage);
-
-    // 后台维护任务：清理过期分块上传会话与临时目录（防止磁盘长期堆积）
-    spawn_upload_session_cleanup(app_state.pool.clone(), Duration::from_secs(300), 200);
-
-    // 后台维护任务：定期检测 DB 记录对应的物理文件是否存在，若已丢失则删除 DB 记录，避免读路径出错
-    spawn_files_consistency_checker(
-        app_state.pool.clone(),
-        app_state.storage.clone(),
-        Duration::from_secs(600),
-        500,
-    );
-
-    // 后台维护任务（仅 local 存储）：扫描存储目录，删除「磁盘有文件但 DB 无记录」的孤儿文件
-    if config.storage_backend == "local" {
-        spawn_orphan_storage_files_cleanup(
-            app_state.pool.clone(),
-            config.storage_path.clone(),
-            Duration::from_secs(600),
-            500,
-        );
-        tracing::info!(
-            "orphan storage files cleanup task started (storage_path={}, interval=600s, batch_limit=500)",
-            config.storage_path
-        );
-    }
-
-    // Build application
-    let app = create_app(app_state, &config, metrics_renderer).await;
-
-    let addr = format!("0.0.0.0:{}", config.port);
-    tracing::info!("Server listening on {}", addr);
-
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
-
-    Ok(())
 }
 
+// =============================================================================
+// 优雅关闭
+// =============================================================================
+
+/// 等待进程终止信号（Ctrl+C 或 SIGTERM），用于 graceful shutdown。
+/// Unix 下同时监听 SIGTERM，非 Unix 仅监听 Ctrl+C。
 async fn shutdown_signal() {
+    // Ctrl+C (SIGINT)
     let ctrl_c = async {
         let _ = tokio::signal::ctrl_c().await;
     };
 
+    // Unix: SIGTERM（如 systemd stop、docker stop）
     #[cfg(unix)]
     let terminate = async {
         use tokio::signal::unix::{signal, SignalKind};
-        if let Ok(mut sigterm) = signal(SignalKind::terminate()) {
-            sigterm.recv().await;
+        if let Ok(mut sig) = signal(SignalKind::terminate()) {
+            sig.recv().await;
         }
     };
 
@@ -181,227 +224,8 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        _ = ctrl_c => {}
+        _ = terminate => {}
     }
-
     tracing::info!("Shutdown signal received");
-}
-
-/// 创建并配置 Axum 应用
-///
-/// # 参数
-/// - `app_state`: 应用共享状态
-/// - `config`: 应用配置（用于 CORS 配置）
-/// - `metrics_renderer`: Prometheus metrics 渲染器
-///
-/// # 返回
-/// 配置完成的 Axum Router
-async fn create_app<F>(app_state: AppState, config: &Config, metrics_renderer: F) -> Router
-where
-    F: Fn() -> String + Clone + Send + Sync + 'static,
-{
-    // 配置 CORS
-    let cors = create_cors_layer(config);
-
-    // 配置速率限制：每分钟 500 个请求（缩略图/预览预加载较多时易触发 429，适当放宽）
-    // 增加 max_keys 上限，避免高并发/攻击场景下 key 无限增长导致内存膨胀
-    let rate_limit_state = rate_limit::create_rate_limit_middleware(500, 60, 20_000);
-
-    // 构建中间件栈
-    let middleware_stack = ServiceBuilder::new()
-        // 全局过载保护：限制 in-flight request 总数并快速拒绝，防止极端并发把进程拖死
-        .layer(HandleErrorLayer::new(|err: BoxError| async move {
-            tracing::warn!("global overload triggered: {}", err);
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({
-                    "error": "service overloaded",
-                    "message": "服务器繁忙，请稍后重试",
-                    "code": "SERVICE_OVERLOADED"
-                })),
-            )
-        }))
-        .layer(LoadShedLayer::new())
-        .layer(ConcurrencyLimitLayer::new(512))
-        .layer(CatchPanicLayer::new()) // 捕获 panic，避免因意外 panic 导致进程退出（panic=unwind 时尤为有用）
-        .layer(TraceLayer::new_for_http()) // HTTP 请求追踪
-        .layer(TimeoutLayer::new(Duration::from_secs(120))) // 120 秒超时（上传大文件更稳）
-        .layer(cors) // CORS 支持
-        .into_inner();
-
-    // Metrics 端点处理器
-    let metrics_handler = {
-        let renderer = metrics_renderer.clone();
-        move || {
-            let r = renderer.clone();
-            async move { r() }
-        }
-    };
-
-    // 构建路由
-    Router::new()
-        // 健康检查端点（完整检查：数据库 + 存储）
-        .route("/health", get(health_check))
-        // 存活检查端点（轻量级，用于 k8s liveness probe）
-        .route("/livez", get(liveness_check))
-        // Prometheus metrics 端点
-        .route("/metrics", get(metrics_handler))
-        // 就绪检查端点（与 /health 相同，用于 k8s readiness probe）
-        .route("/readyz", get(health_check))
-        // OpenAPI/Swagger 文档
-        .merge(create_openapi_router())
-        // API v1 路由（当前版本）
-        .nest("/api/v1/auth", api::auth::create_router())
-        .nest("/api/v1/files", api::files::create_router())
-        .nest("/api/v1/folders", api::folders::create_router())
-        .nest("/api/v1/shares", api::share::create_router())
-        .nest("/api/v1/tokens", api::api_token::create_router())
-        // 向后兼容：旧路由重定向到 v1（可选，可在迁移后移除）
-        .nest("/api/auth", api::auth::create_router())
-        .nest("/api/files", api::files::create_router())
-        .nest("/api/folders", api::folders::create_router())
-        .nest("/api/shares", api::share::create_router())
-        .nest("/api/tokens", api::api_token::create_router())
-        // 注入应用状态（使用 State<AppState> 替代多个 Extension）
-        .with_state(app_state)
-        // 应用中间件（从外到内执行）
-        .layer(axum::middleware::from_fn(metrics_middleware)) // HTTP 请求指标追踪
-        .layer(axum::middleware::from_fn(move |req, next| {
-            let state = rate_limit_state.clone();
-            rate_limit::rate_limit_middleware(state, req, next)
-        }))
-        .layer(axum::middleware::from_fn(request_logger))
-        .layer(middleware_stack)
-}
-
-/// 创建 CORS 中间件层
-///
-/// 根据配置创建适当的 CORS 策略。
-fn create_cors_layer(config: &Config) -> CorsLayer {
-    let cors_origin: AllowOrigin = {
-        let raw = config.cors_origin.trim();
-        if raw == "*" {
-            Any.into()
-        } else {
-            let origins: Vec<axum::http::HeaderValue> = raw
-                .split(',')
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .filter_map(|s| s.parse::<axum::http::HeaderValue>().ok())
-                .collect();
-            if origins.is_empty() {
-                Any.into()
-            } else {
-                AllowOrigin::list(origins)
-            }
-        }
-    };
-
-    CorsLayer::new()
-        .allow_origin(cors_origin)
-        .allow_methods([
-            axum::http::Method::GET,
-            axum::http::Method::POST,
-            axum::http::Method::DELETE,
-            axum::http::Method::PUT,
-            axum::http::Method::OPTIONS,
-        ])
-        .allow_headers([
-            axum::http::header::CONTENT_TYPE,
-            axum::http::header::AUTHORIZATION,
-            axum::http::header::ACCEPT,
-            axum::http::header::ORIGIN,
-            axum::http::header::RANGE,
-        ])
-        .allow_credentials(config.cors_origin.trim() != "*")
-}
-
-/// 健康检查端点
-///
-/// 用于监控和负载均衡器健康检查。
-/// 检查数据库连接和存储后端状态。
-async fn health_check(
-    axum::extract::State(state): axum::extract::State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let mut status = "healthy";
-    let mut checks = serde_json::Map::new();
-
-    // 检查数据库连接
-    let db_check = sqlx::query("SELECT 1")
-        .execute(&state.pool)
-        .await;
-    let db_status = match db_check {
-        Ok(_) => {
-            checks.insert("database".to_string(), json!({ "status": "up" }));
-            true
-        }
-        Err(e) => {
-            tracing::error!("Health check: database connection failed: {}", e);
-            checks.insert("database".to_string(), json!({
-                "status": "down",
-                "error": "connection failed"
-            }));
-            status = "unhealthy";
-            false
-        }
-    };
-
-    // 检查存储后端
-    let storage_status = state.storage.health_check().await;
-    let storage_ok = match &storage_status {
-        Ok(_) => {
-            checks.insert("storage".to_string(), json!({ "status": "up" }));
-            true
-        }
-        Err(e) => {
-            tracing::error!("Health check: storage backend failed: {}", e);
-            checks.insert("storage".to_string(), json!({
-                "status": "down",
-                "error": format!("{}", e)
-            }));
-            status = "unhealthy";
-            false
-        }
-    };
-
-    let response = json!({
-        "status": status,
-        "timestamp": chrono::Utc::now().to_rfc3339(),
-        "checks": checks
-    });
-
-    if db_status && storage_ok {
-        Ok(Json(response))
-    } else {
-        Err((StatusCode::SERVICE_UNAVAILABLE, Json(response)))
-    }
-}
-
-/// 轻量级存活检查（用于 k8s liveness probe）
-async fn liveness_check() -> &'static str {
-    "OK"
-}
-
-/// 请求日志中间件
-///
-/// 记录每个 HTTP 请求的详细信息，包括：
-/// - HTTP 方法
-/// - 请求路径
-/// - 响应状态码
-/// - 处理耗时（毫秒）
-async fn request_logger(req: Request, next: Next) -> Response {
-    let method = req.method().clone();
-    let path = req.uri().path().to_string();
-    let start = Instant::now();
-    let res = next.run(req).await;
-    let status = res.status();
-    tracing::info!(
-        method = %method,
-        path = %path,
-        status = %status,
-        elapsed_ms = start.elapsed().as_millis(),
-        "request"
-    );
-    res
 }

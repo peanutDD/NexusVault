@@ -1,54 +1,104 @@
+import { useEffect } from 'react';
+import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 
 interface ErrorMessageProps {
   message: string;
   onClose?: () => void;
   type?: 'error' | 'warning' | 'info';
+  /** 多少毫秒后自动关闭，不传则不自动关闭 */
+  autoDismissMs?: number;
 }
 
-const typeClasses = {
-  error: 'bg-red-500/20 dark:bg-red-600/20 border-red-500/50 dark:border-red-600/50 text-red-200 dark:text-red-300',
-  warning: 'bg-yellow-500/20 dark:bg-yellow-600/20 border-yellow-500/50 dark:border-yellow-600/50 text-yellow-200 dark:text-yellow-300',
-  info: 'bg-blue-500/20 dark:bg-blue-600/20 border-blue-500/50 dark:border-blue-600/50 text-blue-200 dark:text-blue-300',
+const typeConfig = {
+  error: {
+    icon: AlertCircle,
+    iconClass: 'text-rose-400',
+    borderClass: 'border-rose-400/50',
+    accentClass: 'from-rose-500/15 via-transparent to-transparent',
+    hairlineClass: 'via-rose-400/50',
+  },
+  warning: {
+    icon: AlertCircle,
+    iconClass: 'text-amber-400',
+    borderClass: 'border-amber-400/50',
+    accentClass: 'from-amber-500/15 via-transparent to-transparent',
+    hairlineClass: 'via-amber-400/50',
+  },
+  info: {
+    icon: CheckCircle2,
+    iconClass: 'text-emerald-400',
+    borderClass: 'border-emerald-400/50',
+    accentClass: 'from-emerald-500/15 via-transparent to-cyan-500/15',
+    hairlineClass: 'via-emerald-300/50',
+  },
 } as const;
 
 export default function ErrorMessage({
   message,
   onClose,
   type = 'error',
+  autoDismissMs,
 }: ErrorMessageProps) {
+  const config = typeConfig[type];
+  const Icon = config.icon;
+
+  useEffect(() => {
+    if (autoDismissMs != null && autoDismissMs > 0 && onClose) {
+      const timer = window.setTimeout(onClose, autoDismissMs);
+      return () => window.clearTimeout(timer);
+    }
+  }, [autoDismissMs, onClose]);
+
   return (
     <div
       className={cn(
-        'mb-4 p-4 border rounded-[2px] flex items-start gap-3 animate-fade-in transition-all duration-200',
-        typeClasses[type]
+        'relative mb-4 w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4',
+        'bg-slate-900/80 backdrop-blur-xl',
+        'shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.5)]',
+        config.borderClass,
+        'animate-fade-in transition-all duration-200'
       )}
       role="alert"
     >
-      <div className="flex-1">
-        <p className="text-sm font-medium">{message}</p>
-      </div>
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="flex-shrink-0 text-current opacity-70 hover:opacity-100 transition-opacity"
-          aria-label="关闭错误提示"
+      {/* Glassmorphism ambient glow */}
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-0 bg-gradient-to-r',
+          config.accentClass
+        )}
+      />
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent',
+          config.hairlineClass
+        )}
+      />
+
+      <div className="relative z-10 flex items-center gap-3">
+        <div
+          className={cn(
+            'shrink-0 rounded-xl border border-current/10 bg-current/5 p-2',
+            config.iconClass
+          )}
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <Icon className="h-5 w-5 text-current" aria-hidden="true" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={cn('text-sm font-medium tracking-wide', config.iconClass)}>
+            {message}
+          </p>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-slate-200"
+            aria-label="关闭"
           >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      )}
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

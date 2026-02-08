@@ -22,7 +22,6 @@ use axum::response::Response;
 use uuid::Uuid;
 
 use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
-use crate::services::file::FileService;
 use crate::utils::response::file_response;
 use crate::utils::thumbnail::generate_thumbnail_jpeg;
 use crate::utils::AppError;
@@ -48,8 +47,7 @@ async fn file_get_or_head_response(
     use httpdate::{fmt_http_date, parse_http_date};
     use std::time::{Duration, SystemTime};
 
-    let file_service = FileService::from_state(state);
-    let file = file_service.get_file(file_id, user_id).await?;
+    let file = state.file_service.get_file(file_id, user_id).await?;
 
     let total_size = file.file_size.max(0) as u64;
     let etag_str = compute_etag(file.id, file.updated_at.timestamp(), total_size);
@@ -98,7 +96,7 @@ async fn file_get_or_head_response(
     // 但在返回 304 之前，先验证文件是否真实存在且非空
     if range_header.is_none() && if_none_match == Some(entity_headers.etag_str.as_str()) {
         // 验证文件是否存在，防止数据库记录存在但文件缺失的情况
-        if file_service.verify_file_exists(&file).await.is_ok() {
+        if state.file_service.verify_file_exists(&file).await.is_ok() {
             return Ok(not_modified_response(&entity_headers));
         }
         // 文件不存在，继续处理以返回错误或重新生成内容
@@ -115,7 +113,7 @@ async fn file_get_or_head_response(
                     .as_secs();
                 if updated_ts <= t_ts {
                     // 同样验证文件是否存在
-                    if file_service.verify_file_exists(&file).await.is_ok() {
+                    if state.file_service.verify_file_exists(&file).await.is_ok() {
                         return Ok(not_modified_response(&entity_headers));
                     }
                 }
@@ -207,8 +205,7 @@ pub async fn thumbnail_file_handler(
     Path(file_id): Path<Uuid>,
     Query(q): Query<ThumbnailQuery>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    let file = file_service.get_file(file_id, user_id).await?;
+    let file = state.file_service.get_file(file_id, user_id).await?;
 
     if !file.mime_type.starts_with("image/") {
         return Err(AppError::NotFound);
@@ -217,19 +214,19 @@ pub async fn thumbnail_file_handler(
     let w = q.w.clamp(64, 800);
 
     // 方案 B：先读已存在的缩略图（按用户隔离）
-    if let Ok(cached) = file_service.get_thumbnail(file_id, user_id).await {
+    if let Ok(cached) = state.file_service.get_thumbnail(file_id, user_id).await {
         return file_response(cached, "thumb.jpg", "image/jpeg", true)
             .map_err(|_| AppError::Internal);
     }
 
     // 无缓存：在阻塞线程中生成缩略图，避免长时间占用 async 工作线程导致超时或无法正确返回
-    let data = file_service.get_file_data(&file).await?;
+    let data = state.file_service.get_file_data(&file).await?;
     let mime_type = file.mime_type.clone();
     let buf = tokio::task::spawn_blocking(move || generate_thumbnail_jpeg(data, mime_type, w))
         .await
         .map_err(|_| AppError::Internal)??;
 
-    let _ = file_service.save_thumbnail(file_id, user_id, &buf).await;
+    let _ = state.file_service.save_thumbnail(file_id, user_id, &buf).await;
 
     file_response(buf, "thumb.jpg", "image/jpeg", true)
         .map_err(|_| AppError::Internal)
@@ -242,9 +239,8 @@ pub async fn hls_playlist_handler(
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    let file = file_service.get_file(file_id, user_id).await?;
-    let out_dir = file_service.ensure_hls_ready(&file).await?;
+    let file = state.file_service.get_file(file_id, user_id).await?;
+    let out_dir = state.file_service.ensure_hls_ready(&file).await?;
     let playlist_path = out_dir.join("playlist.m3u8");
     let data = tokio::fs::read(&playlist_path)
         .await
@@ -285,12 +281,11 @@ pub async fn hls_asset_handler(
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
     Path((file_id, filename)): Path<(Uuid, String)>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    let file = file_service.get_file(file_id, user_id).await?;
-    if !file_service.should_use_hls(&file) {
+    let file = state.file_service.get_file(file_id, user_id).await?;
+    if !state.file_service.should_use_hls(&file) {
         return Err(AppError::NotFound);
     }
-    let out_dir = file_service.ensure_hls_ready(&file).await?;
+    let out_dir = state.file_service.ensure_hls_ready(&file).await?;
     let safe_name = filename
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')

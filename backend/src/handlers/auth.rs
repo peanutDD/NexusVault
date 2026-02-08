@@ -12,12 +12,15 @@
 //! 2. **业务逻辑分离**: 所有业务逻辑都在 `AuthService` 中
 //! 3. **错误处理**: 使用 `AppError` 统一错误响应
 
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::response::Response;
+use serde::Deserialize;
 use serde_json::json;
 
 use crate::extractors::AuthenticatedUser;
-use crate::models::user::{ChangePasswordRequest, LoginRequest, RegisterRequest};
+use crate::models::user::{
+    ChangePasswordRequest, LoginRequest, RegisterRequest, UpdateProfileRequest,
+};
 use crate::services::auth::AuthService;
 use crate::utils::{json_response, success_response, AppError};
 use crate::AppState;
@@ -135,4 +138,69 @@ pub async fn change_password_handler(
         .await?;
 
     Ok(success_response("Password changed successfully"))
+}
+
+/// 更新用户资料（用户名、邮箱）
+///
+/// # 请求体
+/// ```json
+/// {
+///   "username": "new_username",
+///   "email": "new@example.com"
+/// }
+/// ```
+///
+/// # 响应
+/// ```json
+/// {
+///   "user": {
+///     "id": "...",
+///     "username": "new_username",
+///     "email": "new@example.com",
+///     "created_at": "..."
+///   }
+/// }
+/// ```
+pub async fn update_profile_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    axum::Json(req): axum::Json<UpdateProfileRequest>,
+) -> Result<Response, AppError> {
+    let auth_service = AuthService::from_state(&state);
+    let user = auth_service.update_profile(user_id, req).await?;
+    Ok(json_response(json!({ "user": user })))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CheckProfileAvailabilityQuery {
+    pub username: String,
+    pub email: String,
+}
+
+/// 检查用户名和邮箱是否可用（排除当前用户）
+///
+/// # Query
+/// - `username`: 待检查的用户名
+/// - `email`: 待检查的邮箱
+///
+/// # 响应
+/// ```json
+/// {
+///   "username_available": true,
+///   "email_available": false
+/// }
+/// ```
+pub async fn check_profile_availability_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    Query(params): Query<CheckProfileAvailabilityQuery>,
+) -> Result<Response, AppError> {
+    let auth_service = AuthService::from_state(&state);
+    let (username_available, email_available) = auth_service
+        .check_profile_availability(user_id, &params.username, &params.email)
+        .await?;
+    Ok(json_response(json!({
+        "username_available": username_available,
+        "email_available": email_available
+    })))
 }

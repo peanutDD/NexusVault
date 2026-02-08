@@ -64,6 +64,40 @@ impl UsersRepository for SqlxUsersRepo {
         Ok(result.is_some())
     }
 
+    async fn exists_by_email_or_username_excluding(
+        &self,
+        exclude_user_id: Uuid,
+        email: &str,
+        username: &str,
+    ) -> Result<bool, AppError> {
+        let result: Option<(Uuid,)> = sqlx::query_as(
+            "SELECT id FROM users WHERE id != $1 AND (email = $2 OR username = $3)",
+        )
+        .bind(exclude_user_id)
+        .bind(email)
+        .bind(username)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(result.is_some())
+    }
+
+    async fn update_profile(
+        &self,
+        user_id: Uuid,
+        username: &str,
+        email: &str,
+        updated_at: DateTime<Utc>,
+    ) -> Result<(), AppError> {
+        sqlx::query("UPDATE users SET username = $1, email = $2, updated_at = $3 WHERE id = $4")
+            .bind(username)
+            .bind(email)
+            .bind(updated_at)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     async fn get_storage_quota(&self, user_id: Uuid) -> Result<Option<i64>, AppError> {
         let result: Option<(Option<i64>,)> =
             sqlx::query_as("SELECT storage_quota FROM users WHERE id = $1")

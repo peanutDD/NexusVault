@@ -35,10 +35,12 @@ impl FileService {
 
         let affected = self.files_repo.delete_batch(&deleted_ids, user_id).await?;
 
-        for file_path in unique_paths {
-            let ref_count = self.files_repo.count_by_file_path(&file_path).await?;
-            if ref_count == 0 {
-                let _ = self.storage.delete_file(&file_path).await;
+        // 一次查询所有路径的当前引用数，仅当为 0 时删物理文件（避免 N 次 count_by_file_path）
+        let paths_vec: Vec<String> = unique_paths.into_iter().collect();
+        let ref_counts = self.files_repo.count_by_file_paths(&paths_vec).await?;
+        for path in paths_vec {
+            if ref_counts.get(&path).copied().unwrap_or(0) == 0 {
+                let _ = self.storage.delete_file(&path).await;
             }
         }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/auth';
@@ -7,6 +7,7 @@ import { apiTokenService } from '../services/apiTokens';
 import type { ApiToken } from '../services/apiTokens';
 import type { StorageUsage } from '../types';
 import { getErrorMessage } from '../utils/error';
+import { validateEmail } from '../utils/emailValidation';
 import ErrorMessage from '../components/common/feedback/ErrorMessage';
 import PageLayout from '../components/layout/PageLayout';
 import {
@@ -20,11 +21,14 @@ import { Settings2 } from 'lucide-react';
 export default function Settings() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
+
+  const [profileForm, setProfileForm] = useState({ username: '', email: '' });
 
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -33,12 +37,27 @@ export default function Settings() {
   });
 
   const [apiTokens, setApiTokens] = useState<ApiToken[]>([]);
+  const errorRef = useRef<HTMLDivElement>(null);
   const [tokenForm, setTokenForm] = useState({
     name: '',
     expires: '' as number | '',
     value: null as string | null,
     showValue: false,
   });
+
+  // Sync profile form when user changes
+  useEffect(() => {
+    if (user) {
+      setProfileForm({ username: user.username, email: user.email });
+    }
+  }, [user]);
+
+  // 错误/成功提示出现时滚动到可见区域
+  useEffect(() => {
+    if (error || success) {
+      errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [error, success]);
 
   // Initial load
   useEffect(() => {
@@ -127,6 +146,68 @@ export default function Settings() {
     setSuccess('Token 已复制到剪贴板');
   }, []);
 
+  // Profile update
+  const handleUpdateProfile = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
+      setSuccess(null);
+
+      const errors: string[] = [];
+      const username = profileForm.username.trim();
+      if (!username) {
+        errors.push('请填写用户名');
+      } else if (username.length < 3) {
+        errors.push('用户名至少 3 个字符');
+      } else if (username.length > 50) {
+        errors.push('用户名最多 50 个字符');
+      }
+      const emailResult = validateEmail(profileForm.email);
+      if (!emailResult.valid && emailResult.message) {
+        errors.push(emailResult.message);
+      }
+      if (errors.length > 0) {
+        setError(errors.join('；'));
+        return;
+      }
+
+      const email = profileForm.email.trim();
+      if (user && username === user.username && email === user.email) {
+        setSuccess('未做任何修改');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const { username_available, email_available } =
+          await authService.checkProfileAvailability({
+            username: username,
+            email: email,
+          });
+        const availabilityErrors: string[] = [];
+        if (!username_available) availabilityErrors.push('用户名已被占用');
+        if (!email_available) availabilityErrors.push('邮箱已被占用');
+        if (availabilityErrors.length > 0) {
+          setError(availabilityErrors.join('；'));
+          setLoading(false);
+          return;
+        }
+
+        const { user: newUser } = await authService.updateProfile({
+          username: username,
+          email: email,
+        });
+        updateUser(newUser);
+        setSuccess('账户信息已更新');
+      } catch (err) {
+        setError(getErrorMessage(err, '更新账户信息失败'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [profileForm, user, updateUser]
+  );
+
   // Password update
   const handleChangePassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,6 +248,21 @@ export default function Settings() {
     navigate('/login');
   }, [clearAuth, navigate]);
 
+  // Profile form handlers
+  const handleProfileUsernameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setProfileForm((prev) => ({ ...prev, username: e.target.value }));
+    },
+    []
+  );
+
+  const handleProfileEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setProfileForm((prev) => ({ ...prev, email: e.target.value }));
+    },
+    []
+  );
+
   // Password form handlers
   const handleCurrentPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswordForm((prev) => ({ ...prev, current_password: e.target.value }));
@@ -206,22 +302,6 @@ export default function Settings() {
     >
       {/* Match NavBar width so the logo aligns with page content */}
       <div className="mx-auto max-w-7xl">
-        {error && (
-          <ErrorMessage
-            message={error}
-            onClose={handleCloseError}
-            type="error"
-          />
-        )}
-
-        {success && (
-          <ErrorMessage
-            message={success}
-            onClose={handleCloseSuccess}
-            type="info"
-          />
-        )}
-
         {/* Page header (match Home neon/glass style) */}
         <div className="relative mb-6 overflow-hidden rounded-2xl border border-emerald-300/15 bg-slate-950/30 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-6">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-emerald-400/10" />
@@ -309,7 +389,32 @@ export default function Settings() {
           </aside>
 
           <div className="lg:col-span-8 space-y-6">
-            <UserInfoSection user={user} />
+            <div ref={errorRef}>
+              {error && (
+                <ErrorMessage
+                  message={error}
+                  onClose={handleCloseError}
+                  type="error"
+                  autoDismissMs={5000}
+                />
+              )}
+              {success && (
+                <ErrorMessage
+                  message={success}
+                  onClose={handleCloseSuccess}
+                  type="info"
+                  autoDismissMs={5000}
+                />
+              )}
+            </div>
+            <UserInfoSection
+              user={user}
+              profileForm={profileForm}
+              loading={loading}
+              onUsernameChange={handleProfileUsernameChange}
+              onEmailChange={handleProfileEmailChange}
+              onSubmit={handleUpdateProfile}
+            />
 
             <StorageUsageSection storageUsage={storageUsage} />
 

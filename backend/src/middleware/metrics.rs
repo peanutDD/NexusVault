@@ -2,22 +2,21 @@
 //!
 //! 提供 Prometheus 格式的应用指标。
 
-use axum::{extract::Request, middleware::Next, response::Response};
+use axum::extract::{Request, State};
+use axum::middleware::Next;
+use axum::response::Response;
 use metrics::{counter, gauge, histogram};
 use std::time::Instant;
 
+use crate::AppState;
+
 /// 初始化 Prometheus metrics exporter
 ///
-/// 返回一个可以挂载的 metrics 端点处理器
-pub fn init_metrics() -> impl Fn() -> String + Clone {
-    // 安装 Prometheus exporter
+/// 返回一个可以挂载的 metrics 端点处理器；安装失败时返回错误，由调用方统一处理。
+pub fn init_metrics() -> Result<impl Fn() -> String + Clone, metrics_exporter_prometheus::BuildError> {
     let builder = metrics_exporter_prometheus::PrometheusBuilder::new();
-    let handle = builder
-        .install_recorder()
-        .expect("Failed to install Prometheus recorder");
-
-    // 返回一个获取 metrics 的闭包
-    move || handle.render()
+    let handle = builder.install_recorder()?;
+    Ok(move || handle.render())
 }
 
 /// HTTP 请求 metrics 中间件
@@ -26,7 +25,11 @@ pub fn init_metrics() -> impl Fn() -> String + Clone {
 /// - `http_requests_total`: HTTP 请求总数（按方法、路径、状态码分组）
 /// - `http_request_duration_seconds`: HTTP 请求延迟直方图
 /// - `http_requests_in_flight`: 当前正在处理的请求数
-pub async fn metrics_middleware(req: Request, next: Next) -> Response {
+pub async fn metrics_middleware(
+    State(_): State<AppState>,
+    req: Request,
+    next: Next,
+) -> Response {
     let method = req.method().to_string();
     let path = req.uri().path().to_string();
     

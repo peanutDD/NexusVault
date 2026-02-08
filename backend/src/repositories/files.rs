@@ -1,31 +1,65 @@
 //! # 文件数据访问层 - SQLx 实现
 //!
-//! 提供 `FilesRepository` trait 的 PostgreSQL/SQLx 实现。
+//! 提供 `FilesRepository` trait 的 PostgreSQL/SQLx 实现，封装对 `files` 表的所有读写。
+//!
+//! ## 架构与约定
+//!
+//! - **表名**：`files`，主键 `id`（UUID），外键 `user_id` → `users(id)` ON DELETE CASCADE。
+//! - **多租户**：所有查询均带 `user_id`，保证用户只能访问自己的记录。
+//! - **错误**：SQLx 错误通过 `AppError::from` 转为 `AppError::Database`，由上层统一转 HTTP 状态码。
+//! - **连接**：使用 `PgPool` 复用连接；`list` 内对单次查询使用 `SET LOCAL statement_timeout` 避免慢查询占用连接。
+//!
+//! ## 主要能力
+//!
+//! - 插入/按 ID 查/按内容哈希查（秒传）/按路径计数（去重删除）
+//! - 分页列表（`list`）：支持搜索、MIME、分类、文件夹、日期、大小、排序，使用 `QueryBuilder` 动态拼接 WHERE
+//! - 批量操作：删除、按 ID 取路径、按 ID 取实体、按 ID 汇总大小
+//! - 存储用量、分类列表、批量更新分类
 
-use async_trait::async_trait;
-use chrono::{DateTime, NaiveDateTime, Utc};
-use sqlx::{postgres::PgRow, PgPool, Row};
+// =============================================================================
+// 依赖与类型
+// =============================================================================
+
+use std::collections::HashMap;
+
+use async_trait::async_trait; // 为 trait 方法提供 async fn 语法
+use chrono::{DateTime, NaiveDateTime, Utc}; // 日期解析与存库用 UTC
+use sqlx::{postgres::PgRow, PgPool, Row}; // PgRow 用于 list 中取 total_count
 use uuid::Uuid;
 
-use crate::models::file::{File, FileListQuery};
-use crate::repositories::traits::FilesRepository;
-use crate::utils::AppError;
+use crate::models::file::{File, FileListQuery}; // 实体与列表查询 DTO
+use crate::repositories::traits::FilesRepository; // 本模块实现的 trait
+use crate::utils::AppError; // 统一错误类型，SQLx 错误会转为 Database
+
+// =============================================================================
+// 结构体与构造
+// =============================================================================
 
 /// SQLx 实现的文件仓库
 ///
-/// 持有 `PgPool` 句柄，通过 `Arc<dyn FilesRepository>` 注入到 Service。
+/// 持有 `PgPool` 句柄，通过 `Arc<dyn FilesRepository>` 注入到 Service 层。
+/// 无内部可变状态，方法均为 `&self`，并发安全由连接池与数据库保证。
 pub struct SqlxFilesRepo {
-    pool: PgPool,
+    pool: PgPool, // 连接池，每次操作从池中取连接，用毕归还
 }
 
 impl SqlxFilesRepo {
+    /// 从已有连接池构造仓库，不取得连接所有权，仅持有引用。
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self { pool } // 不 clone pool，Arc 在调用方持有
     }
 }
 
+// =============================================================================
+// 插入与秒传（上传落库、按内容哈希查、按路径计数）
+// =============================================================================
+
 #[async_trait]
 impl FilesRepository for SqlxFilesRepo {
+    /// 插入一条文件记录（上传落库）。
+    ///
+    /// **实现**：单条 `INSERT ... RETURNING *`，`file_size` 以 `i64` 存库。若违反唯一约束会返回
+    /// `AppError::Database`。调用方一般在写入存储成功后调用，失败时需自行清理已写文件。
     async fn insert(
         &self,
         file_id: Uuid,
@@ -43,21 +77,25 @@ impl FilesRepository for SqlxFilesRepo {
             "INSERT INTO files (id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, content_sha256, folder_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *",
         )
-        .bind(file_id)
+        .bind(file_id) // 主键，由调用方生成 UUID
         .bind(user_id)
-        .bind(storage_filename)
-        .bind(original_filename)
-        .bind(file_path)
-        .bind(file_size as i64)
+        .bind(storage_filename) // 存盘文件名（常带 UUID 前缀）
+        .bind(original_filename) // 用户上传时的文件名
+        .bind(file_path) // 存储层返回的路径，Local 或 S3 key
+        .bind(file_size as i64) // 表字段为 BIGINT
         .bind(mime_type)
-        .bind(storage_backend)
-        .bind(content_sha256)
-        .bind(folder_id)
-        .fetch_one(&self.pool)
+        .bind(storage_backend) // "local" | "s3"
+        .bind(content_sha256) // 可选，秒传与去重用
+        .bind(folder_id) // 可选，NULL 表示根目录
+        .fetch_one(&self.pool) // 取 RETURNING 的一行
         .await
-        .map_err(AppError::from)
+        .map_err(AppError::from) // sqlx::Error -> AppError::Database
     }
 
+    /// 按内容 SHA-256 与文件大小查找任意一条匹配记录，用于秒传：相同内容可复用已有存储并只插记录。
+    ///
+    /// **实现**：`WHERE content_sha256 = $1 AND file_size = $2 LIMIT 1`，返回 `Option<File>`。
+    /// 未建 `(content_sha256, file_size)` 索引时可能全表扫描，数据量大时可考虑加索引。
     async fn find_by_content_hash_and_size(
         &self,
         content_sha256: &str,
@@ -66,30 +104,66 @@ impl FilesRepository for SqlxFilesRepo {
         sqlx::query_as::<_, File>(
             "SELECT * FROM files WHERE content_sha256 = $1 AND file_size = $2 LIMIT 1",
         )
-        .bind(content_sha256)
+        .bind(content_sha256) // 十六进制字符串
         .bind(file_size as i64)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&self.pool) // 0 或 1 行
         .await
         .map_err(AppError::from)
     }
 
+    /// 统计引用同一 `file_path` 的记录数。
+    ///
+    /// **用途**：删除或秒传复用存储时，仅当计数为 0 才可安全删除物理文件，避免误删仍被引用的路径。
+    /// **实现**：`COUNT(*)` + `WHERE file_path = $1`，返回 `u64`。
     async fn count_by_file_path(&self, file_path: &str) -> Result<u64, AppError> {
         let count: (i64,) = sqlx::query_as("SELECT COUNT(*)::BIGINT FROM files WHERE file_path = $1")
             .bind(file_path)
             .fetch_one(&self.pool)
             .await?;
-        Ok(count.0 as u64)
+        Ok(count.0 as u64) // 单列元组取 .0，转为无符号
     }
 
+    /// 批量统计多个 `file_path` 的引用数，一次查询减少 round-trip。
+    ///
+    /// **实现**：`SELECT file_path, COUNT(*) FROM files WHERE file_path = ANY($1) GROUP BY file_path`。
+    /// 空 paths 直接返回空 HashMap；未出现在结果中的 path 表示 0 引用。
+    async fn count_by_file_paths(&self, paths: &[String]) -> Result<HashMap<String, u64>, AppError> {
+        if paths.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let rows: Vec<(String, i64)> = sqlx::query_as(
+            "SELECT file_path, COUNT(*)::BIGINT FROM files WHERE file_path = ANY($1) GROUP BY file_path",
+        )
+        .bind(paths)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(p, c)| (p, c as u64))
+            .collect())
+    }
+
+// =============================================================================
+// 单条查询与归属校验（下载/预览/删除前）
+// =============================================================================
+
+    /// 按文件 ID 与用户 ID 查询单条记录，用于下载/预览/删除前校验归属。
+    ///
+    /// **实现**：`SELECT * FROM files WHERE id = $1 AND user_id = $2`，返回 `Option<File>`，
+    /// 不存在或不属于该用户时为 `None`。
     async fn find_by_id(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError> {
         sqlx::query_as::<_, File>("SELECT * FROM files WHERE id = $1 AND user_id = $2")
             .bind(file_id)
-            .bind(user_id)
+            .bind(user_id) // 双重条件防止越权
             .fetch_optional(&self.pool)
             .await
             .map_err(AppError::from)
     }
 
+    /// 判断指定文件是否属于指定用户（仅做存在性检查，不返回实体）。
+    ///
+    /// **实现**：`SELECT id FROM files WHERE id = $1 AND user_id = $2`，有行则 `true`。
+    /// 比 `find_by_id` 更轻量，适合仅做权限/归属判断的场景。
     async fn belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
         let result: Option<Uuid> =
             sqlx::query_scalar("SELECT id FROM files WHERE id = $1 AND user_id = $2")
@@ -97,33 +171,34 @@ impl FilesRepository for SqlxFilesRepo {
                 .bind(user_id)
                 .fetch_optional(&self.pool)
                 .await?;
-        Ok(result.is_some())
+        Ok(result.is_some()) // 有行即属于该用户
     }
 
+// =============================================================================
+// 按文件夹列表（不分页，供文件夹树等场景）
+// =============================================================================
+
+    /// 列出指定用户、指定文件夹下的文件（不分页，按创建时间倒序）。
+    ///
+    /// **实现**：单条 SQL，`folder_id = $2` 与 `$2 IS NULL AND folder_id IS NULL` 统一处理根目录与子文件夹。
     async fn list_by_folder(
         &self,
         user_id: Uuid,
         folder_id: Option<Uuid>,
     ) -> Result<Vec<File>, AppError> {
-        if folder_id.is_some() {
-            sqlx::query_as::<_, File>(
-                "SELECT * FROM files WHERE user_id = $1 AND folder_id = $2 ORDER BY created_at DESC",
-            )
-            .bind(user_id)
-            .bind(folder_id)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(AppError::from)
-        } else {
-            sqlx::query_as::<_, File>(
-                "SELECT * FROM files WHERE user_id = $1 AND folder_id IS NULL ORDER BY created_at DESC",
-            )
-            .bind(user_id)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(AppError::from)
-        }
+        sqlx::query_as::<_, File>(
+            "SELECT * FROM files WHERE user_id = $1 AND ( (folder_id IS NULL AND $2::uuid IS NULL) OR (folder_id = $2) ) ORDER BY created_at DESC",
+        )
+        .bind(user_id)
+        .bind(folder_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(AppError::from)
     }
+
+// =============================================================================
+// 删除（单条 / 批量）
+// =============================================================================
 
     async fn delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
         let result = sqlx::query("DELETE FROM files WHERE id = $1 AND user_id = $2")
@@ -131,45 +206,57 @@ impl FilesRepository for SqlxFilesRepo {
             .bind(user_id)
             .execute(&self.pool)
             .await?;
-        Ok(result.rows_affected())
+        Ok(result.rows_affected()) // 0 或 1
     }
 
     async fn delete_batch(&self, ids: &[Uuid], user_id: Uuid) -> Result<u64, AppError> {
         if ids.is_empty() {
-            return Ok(0);
+            return Ok(0); // 避免 ANY('{}') 语义依赖
         }
         let result = sqlx::query("DELETE FROM files WHERE user_id = $1 AND id = ANY($2)")
             .bind(user_id)
-            .bind(ids)
+            .bind(ids) // PostgreSQL 数组，只删本用户的 id
             .execute(&self.pool)
             .await?;
         Ok(result.rows_affected())
     }
 
+// =============================================================================
+// 存储用量与分类（配额、筛选器、批量更新分类）
+// =============================================================================
+
+    /// 获取指定用户的存储使用量：总字节数、文件数量。
+    ///
+    /// **实现**：`SELECT COALESCE(SUM(file_size), 0), COUNT(*) FROM files WHERE user_id = $1`。
+    /// 聚合无 GROUP BY 时始终返回一行，无文件时为 `(0, 0)`。用于配额展示与上传前校验。
     async fn get_storage_usage(&self, user_id: Uuid) -> Result<(i64, u64), AppError> {
-        let result: Option<(i64, i64)> = sqlx::query_as(
+        let (total_size, file_count): (i64, i64) = sqlx::query_as(
             "SELECT COALESCE(SUM(file_size)::BIGINT, 0), COUNT(*)::BIGINT FROM files WHERE user_id = $1",
         )
         .bind(user_id)
-        .fetch_optional(&self.pool)
+        .fetch_one(&self.pool) // 聚合始终一行
         .await?;
-
-        match result {
-            Some((total_size, file_count)) => Ok((total_size, file_count as u64)),
-            None => Ok((0, 0)),
-        }
+        Ok((total_size, file_count as u64))
     }
 
+    /// 列出该用户下所有出现过的非空分类名（去重、排序），用于筛选器下拉等。
+    ///
+    /// **实现**：`SELECT DISTINCT category ... AND category IS NOT NULL AND TRIM(category) != ''`。
+    /// 分类字段已逐步被 `folder_id` 替代，接口保留兼容。
     async fn list_categories(&self, user_id: Uuid) -> Result<Vec<String>, AppError> {
         sqlx::query_scalar::<_, String>(
             "SELECT DISTINCT category FROM files WHERE user_id = $1 AND category IS NOT NULL AND TRIM(category) != '' ORDER BY category",
         )
         .bind(user_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&self.pool) // 返回单列多行，自动 Vec<String>
         .await
         .map_err(AppError::from)
     }
 
+    /// 批量更新指定文件记录的 `category` 与 `updated_at`。
+    ///
+    /// **实现**：`UPDATE files SET category = $1, updated_at = $2 WHERE user_id = $3 AND id = ANY($4)`。
+    /// 空 ids 直接返回 0。
     async fn update_category(
         &self,
         user_id: Uuid,
@@ -177,10 +264,13 @@ impl FilesRepository for SqlxFilesRepo {
         category: Option<&str>,
         updated_at: DateTime<Utc>,
     ) -> Result<u64, AppError> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
         let result = sqlx::query(
             "UPDATE files SET category = $1, updated_at = $2 WHERE user_id = $3 AND id = ANY($4)",
         )
-        .bind(category)
+        .bind(category) // Option<&str>，可置 NULL
         .bind(updated_at)
         .bind(user_id)
         .bind(ids)
@@ -190,63 +280,101 @@ impl FilesRepository for SqlxFilesRepo {
         Ok(result.rows_affected())
     }
 
+// =============================================================================
+// 批量查询（按 ID 列表：汇总大小、取实体、取路径）
+// =============================================================================
+
+    /// 统计指定 ID 集合中属于该用户的文件数量与总大小（用于批量下载前校验或展示）。
+    ///
+    /// **实现**：`SELECT COUNT(*), COALESCE(SUM(file_size), 0) FROM files WHERE user_id = $1 AND id = ANY($2)`，
+    /// 返回 `(found_count, total_size)`。空 ids 直接返回 `(0, 0)`，避免 ANY('{}') 依赖。
     async fn sum_size_for_ids(&self, user_id: Uuid, ids: &[Uuid]) -> Result<(i64, i64), AppError> {
+        if ids.is_empty() {
+            return Ok((0, 0));
+        }
         let (found_count, total_size): (i64, i64) = sqlx::query_as(
             "SELECT COUNT(*)::BIGINT, COALESCE(SUM(file_size)::BIGINT, 0) \
              FROM files WHERE user_id = $1 AND id = ANY($2)",
         )
         .bind(user_id)
         .bind(ids)
-        .fetch_one(&self.pool)
+        .fetch_one(&self.pool) // 聚合结果始终一行
         .await?;
         Ok((found_count, total_size))
     }
 
+    /// 按 ID 列表批量查询文件实体，仅返回属于该用户的记录，顺序不保证与 `ids` 一致。
+    ///
+    /// **实现**：`SELECT * FROM files WHERE user_id = $1 AND id = ANY($2)`。空 ids 直接返回空 Vec。
     async fn find_by_ids(&self, user_id: Uuid, ids: &[Uuid]) -> Result<Vec<File>, AppError> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
         sqlx::query_as::<_, File>("SELECT * FROM files WHERE user_id = $1 AND id = ANY($2)")
             .bind(user_id)
             .bind(ids)
-            .fetch_all(&self.pool)
+            .fetch_all(&self.pool) // 顺序与 ids 不一定一致
             .await
             .map_err(AppError::from)
     }
 
+    /// 按 ID 列表批量查询 `(id, file_path)`，用于批量删除时先删存储再删 DB，避免 N+1。
+    ///
+    /// **实现**：`SELECT id, file_path FROM files WHERE user_id = $1 AND id = ANY($2)`。空 ids 直接返回空 Vec。
     async fn find_paths_by_ids(
         &self,
         user_id: Uuid,
         ids: &[Uuid],
     ) -> Result<Vec<(Uuid, String)>, AppError> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
         sqlx::query_as::<_, (Uuid, String)>(
             "SELECT id, file_path FROM files WHERE user_id = $1 AND id = ANY($2)",
         )
         .bind(user_id)
         .bind(ids)
-        .fetch_all(&self.pool)
+        .fetch_all(&self.pool) // 仅两列，供批量删存储用
         .await
         .map_err(AppError::from)
     }
 
+// =============================================================================
+// 分页列表（文件列表页：搜索 / MIME / 分类 / 文件夹 / 日期 / 大小 / 排序）
+// =============================================================================
+
+    /// 分页查询文件列表，支持多条件筛选与排序，返回当前页数据与总条数。
+    ///
+    /// **返回值**：`(Vec<File>, total_count)`，`total_count` 由 `COUNT(*) OVER()` 在单次查询中得出，与筛选条件一致。
+    ///
+    /// **实现要点**：
+    /// - 分页：`page` 默认 1，`limit` 默认 20、最大 100，`offset = (page - 1) * limit`。
+    /// - 筛选：搜索（`original_filename`/`filename` ILIKE）、MIME（精确或前缀 `image/%`）、分类、文件夹、日期范围、大小范围；根目录（folder_id 为 null/root/空）不按 folder_id 过滤，返回该用户全部文件。
+    /// - 排序：仅允许 `sort_by` ∈ { created_at, filename, file_size }，`sort_order` ∈ { asc, desc }，否则回退默认（created_at DESC）。
+    /// - SQL 构建：使用 `QueryBuilder` 动态拼接 WHERE，避免手拼字符串与注入；`total_count` 用窗口函数一次查出。
+    /// - 超时：本查询在独立事务中执行并 `SET LOCAL statement_timeout = '3s'`，避免慢查询长时间占用连接池。
     async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<(Vec<File>, i64), AppError> {
         use sqlx::QueryBuilder;
 
-        let page = query.page.unwrap_or(1);
-        let limit = query.limit.unwrap_or(20).min(100);
-        let offset = (page - 1) * limit;
+        let page = query.page.unwrap_or(1); // 页码从 1 开始
+        let limit = query.limit.unwrap_or(20).min(100); // 单页最多 100 条
+        let offset = (page - 1) * limit; // SQL OFFSET 偏移量
 
-        // ---- filters (pre-parse) ----
+        // ---- 筛选条件预解析（空字符串视为未传，不参与 WHERE） ----
         let search_pattern: Option<String> = query
             .search
             .as_deref()
             .filter(|s| !s.is_empty())
-            .map(|s| format!("%{}%", s));
+            .map(|s| format!("%{}%", s)); // ILIKE 用前后 % 包裹
 
+        // MIME：以 / 结尾（如 image/）则按前缀 LIKE，否则精确匹配
         let mime_type_filter: Option<String> = query
             .mime_type
             .as_deref()
             .filter(|s| !s.is_empty())
             .map(|s| {
                 if s.ends_with('/') {
-                    format!("{}%", s)
+                    format!("{}%", s) // 如 image/% 匹配 image/png 等
                 } else {
                     s.to_string()
                 }
@@ -255,19 +383,19 @@ impl FilesRepository for SqlxFilesRepo {
             .mime_type
             .as_deref()
             .map(|s| s.ends_with('/'))
-            .unwrap_or(false);
+            .unwrap_or(false); // 决定下面用 LIKE 还是 =
 
         let category_filter_uncategorized = query
             .category
             .as_deref()
             .map(|s| s.trim().is_empty())
-            .unwrap_or(false);
+            .unwrap_or(false); // 传空字符串表示筛「未分类」
         let category_filter_exact: Option<String> = query.category.as_ref().and_then(|s| {
             let t = s.trim();
             if t.is_empty() {
                 None
             } else {
-                Some(t.to_string())
+                Some(t.to_string()) // 精确分类名
             }
         });
 
@@ -277,10 +405,11 @@ impl FilesRepository for SqlxFilesRepo {
             if t.is_empty() || t.to_lowercase() == "null" || t == "root" {
                 None // 不传条件，返回全部
             } else {
-                Uuid::parse_str(t).ok().map(Some)
+                Uuid::parse_str(t).ok().map(Some) // 解析成功则 Some(Some(uuid))
             }
         });
 
+        // 日期范围：支持 YYYY-MM-DD 或 RFC3339；date_to 解析为当日 23:59:59 以包含整天
         let date_from: Option<DateTime<Utc>> = query
             .date_from
             .as_deref()
@@ -305,7 +434,7 @@ impl FilesRepository for SqlxFilesRepo {
                     .ok()
                     .and_then(|dt| {
                         dt.date()
-                            .and_hms_opt(23, 59, 59)
+                            .and_hms_opt(23, 59, 59) // 当天结束，包含整天
                             .map(|end_of_day| DateTime::<Utc>::from_naive_utc_and_offset(end_of_day, Utc))
                     })
             })
@@ -317,12 +446,12 @@ impl FilesRepository for SqlxFilesRepo {
                 })
             });
 
-        // ---- sort (whitelist) ----
+        // ---- 排序字段与方向（白名单，非法值回退默认） ----
         let sort_column = match query.sort_by.as_deref() {
-            Some("filename") => "original_filename",
+            Some("filename") => "original_filename", // API 用 filename，库列名为 original_filename
             Some("file_size") => "file_size",
             Some("created_at") | None => "created_at",
-            _ => "created_at",
+            _ => "created_at", // 非法值回退默认，仅白名单不引入注入
         };
         let sort_direction = match query.sort_order.as_deref() {
             Some("asc") => "ASC",
@@ -330,11 +459,11 @@ impl FilesRepository for SqlxFilesRepo {
             _ => "DESC",
         };
 
-        // ---- build SQL ----
+        // ---- 动态拼接 SELECT + WHERE + ORDER BY + LIMIT/OFFSET；COUNT(*) OVER() 提供总条数 ----
         let mut qb: QueryBuilder<sqlx::Postgres> = QueryBuilder::new(
             "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at, COUNT(*) OVER() AS total_count FROM files WHERE user_id = ",
         );
-        qb.push_bind(user_id);
+        qb.push_bind(user_id); // 首绑：user_id，后续条件用 push + push_bind 避免 SQL 注入
 
         if category_filter_uncategorized {
             qb.push(" AND (category IS NULL OR category = '' OR TRIM(category) = '')");
@@ -348,7 +477,7 @@ impl FilesRepository for SqlxFilesRepo {
                 qb.push(" AND folder_id = ");
                 qb.push_bind(*fid);
             } else {
-                qb.push(" AND folder_id IS NULL");
+                qb.push(" AND folder_id IS NULL"); // 显式请求根目录时
             }
         }
 
@@ -390,7 +519,7 @@ impl FilesRepository for SqlxFilesRepo {
         }
 
         qb.push(" ORDER BY ");
-        qb.push(sort_column);
+        qb.push(sort_column); // 已白名单，非用户输入
         qb.push(" ");
         qb.push(sort_direction);
         qb.push(" LIMIT ");
@@ -398,23 +527,25 @@ impl FilesRepository for SqlxFilesRepo {
         qb.push(" OFFSET ");
         qb.push_bind(offset as i64);
 
-        // statement_timeout：事务内 SET LOCAL，避免污染连接池
+        // 在独立事务中执行列表查询，并设置 3s 超时，避免慢查询占用连接池影响其他请求
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL statement_timeout = '3s'")
             .execute(&mut *tx)
             .await?;
 
-        let rows: Vec<PgRow> = qb.build().fetch_all(&mut *tx).await?;
-        tx.commit().await?;
+        let rows: Vec<PgRow> = qb.build().fetch_all(&mut *tx).await?; // 执行拼接后的 SQL
+        tx.commit().await?; // 提交事务（SET LOCAL 仅本事务有效，提交后连接归还池）
 
+        // 从首行取窗口函数结果 total_count（每行相同）
         let total: i64 = rows
             .first()
             .and_then(|row| row.try_get::<i64, _>("total_count").ok())
-            .unwrap_or(0);
+            .unwrap_or(0); // 无行时 0
 
+        // 将 PgRow 映射为 File 实体（SELECT 列与 File 字段一致，FromRow 可反序列化）
         let files: Vec<File> = rows
             .into_iter()
-            .map(|row| sqlx::FromRow::from_row(&row).map_err(AppError::Database))
+            .map(|row| sqlx::FromRow::from_row(&row).map_err(AppError::Database)) // 列名与 File 字段对应
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok((files, total))

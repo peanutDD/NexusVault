@@ -4,7 +4,6 @@ use axum::body::Body;
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::response::Response;
 
-use crate::services::file::FileService;
 use crate::services::storage::StorageReadStream;
 use crate::utils::{stream_file_response, AppError};
 
@@ -24,15 +23,18 @@ pub async fn build_get_response(
     use tokio::io::{AsyncReadExt, AsyncSeekExt};
     use tokio_util::io::ReaderStream;
 
-    let file_service = FileService::from_state(state);
-
     if let Some(ranges) = ranges {
         if ranges.is_empty() {
             return range_not_satisfiable_response(total_size, entity_headers);
         }
 
         if ranges.len() > 1 {
-            let (body, boundary) = build_multipart_body(state, file.clone(), total_size, ranges);
+            let (body, boundary) = build_multipart_body(
+                state.file_service.clone(),
+                file.clone(),
+                total_size,
+                ranges,
+            );
 
             let mut res =
                 stream_file_response(body, &file.original_filename, &file.mime_type, inline, None)
@@ -56,7 +58,8 @@ pub async fn build_get_response(
         let end = end.min(total_size.saturating_sub(1));
         let len = end - start + 1;
 
-        let stream = file_service
+        let stream = state
+            .file_service
             .open_file_stream_range(file, start, end)
             .await?;
         let body = match stream {
@@ -92,7 +95,7 @@ pub async fn build_get_response(
         return Ok(res);
     }
 
-    let stream = file_service.open_file_stream(file).await?;
+    let stream = state.file_service.open_file_stream(file).await?;
     let body = match stream {
         StorageReadStream::Local(f) => Body::from_stream(ReaderStream::new(f)),
         StorageReadStream::S3(s) => {

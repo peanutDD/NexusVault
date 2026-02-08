@@ -21,7 +21,7 @@ use uuid::Uuid;
 
 use crate::{
     config::Config,
-    models::user::{LoginRequest, RegisterRequest, UserResponse},
+    models::user::{LoginRequest, RegisterRequest, UpdateProfileRequest, UserResponse},
     repositories::{DynUsersRepo, SqlxUsersRepo},
     utils::{hash_password, now_timestamp, parse_jwt_expiry, verify_password, AppError},
 };
@@ -196,6 +196,96 @@ impl AuthService {
             .await?;
 
         Ok(())
+    }
+
+    /// 更新用户资料（用户名、邮箱）
+    pub async fn update_profile(
+        &self,
+        user_id: Uuid,
+        req: UpdateProfileRequest,
+    ) -> Result<UserResponse, AppError> {
+        validator::Validate::validate(&req)
+            .map_err(|e| AppError::Validation(format!("Validation error: {}", e)))?;
+
+        // 检查用户名是否被其他用户占用
+        if let Some(other) = self.users_repo.find_by_username(&req.username).await? {
+            tracing::info!(
+                "update_profile 用户名检查: username={} 已存在, 占用者 user_id={}, 当前 user_id={}, 冲突={}",
+                req.username,
+                other.id,
+                user_id,
+                other.id != user_id
+            );
+            if other.id != user_id {
+                return Err(AppError::Conflict("用户名已被占用".to_string()));
+            }
+        } else {
+            tracing::info!("update_profile 用户名检查: username={} 未被占用", req.username);
+        }
+        // 检查邮箱是否被其他用户占用
+        if let Some(other) = self.users_repo.find_by_email(&req.email).await? {
+            tracing::info!(
+                "update_profile 邮箱检查: email={} 已存在, 占用者 user_id={}, 当前 user_id={}, 冲突={}",
+                req.email,
+                other.id,
+                user_id,
+                other.id != user_id
+            );
+            if other.id != user_id {
+                return Err(AppError::Conflict("邮箱已被占用".to_string()));
+            }
+        } else {
+            tracing::info!("update_profile 邮箱检查: email={} 未被占用", req.email);
+        }
+
+        let now = Utc::now();
+        self.users_repo
+            .update_profile(user_id, &req.username, &req.email, now)
+            .await?;
+
+        self.get_user(user_id).await
+    }
+
+    /// 检查用户名和邮箱是否可用（排除当前用户）
+    pub async fn check_profile_availability(
+        &self,
+        user_id: Uuid,
+        username: &str,
+        email: &str,
+    ) -> Result<(bool, bool), AppError> {
+        let username_available = match self.users_repo.find_by_username(username).await? {
+            Some(other) => {
+                tracing::info!(
+                    "check_profile_availability: username={} 已存在, 占用者 user_id={}, 当前 user_id={}, 是否本人={}",
+                    username,
+                    other.id,
+                    user_id,
+                    other.id == user_id
+                );
+                other.id == user_id
+            }
+            None => {
+                tracing::info!("check_profile_availability: username={} 未被占用", username);
+                true
+            }
+        };
+        let email_available = match self.users_repo.find_by_email(email).await? {
+            Some(other) => {
+                tracing::info!(
+                    "check_profile_availability: email={} 已存在, 占用者 user_id={}, 当前 user_id={}, 是否本人={}",
+                    email,
+                    other.id,
+                    user_id,
+                    other.id == user_id
+                );
+                other.id == user_id
+            }
+            None => {
+                tracing::info!("check_profile_availability: email={} 未被占用", email);
+                true
+            }
+        };
+        Ok((username_available, email_available))
     }
 
     // ========================================================================

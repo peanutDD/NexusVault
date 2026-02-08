@@ -10,7 +10,9 @@ use std::sync::Arc;
 use sqlx::PgPool;
 
 use crate::config::Config;
+use crate::repositories::{DynFilesRepo, DynUsersRepo, SqlxFilesRepo, SqlxUsersRepo};
 use crate::services::cache::CacheService;
+use crate::services::file::FileService;
 use crate::services::storage::StorageBackend;
 
 /// 应用共享状态
@@ -20,6 +22,7 @@ use crate::services::storage::StorageBackend;
 /// - `pool`: PostgreSQL 数据库连接池
 /// - `storage`: 文件存储后端（本地或 S3）
 /// - `cache`: 内存缓存服务
+/// - `file_service`: 文件服务（统一注入，handlers 直接使用）
 ///
 /// # 使用示例
 ///
@@ -27,8 +30,7 @@ use crate::services::storage::StorageBackend;
 /// async fn my_handler(
 ///     State(state): State<AppState>,
 /// ) -> Result<Response, AppError> {
-///     let service = MyService::from_state(&state);
-///     // ...
+///     state.file_service.some_method(...).await
 /// }
 /// ```
 #[derive(Clone)]
@@ -41,6 +43,8 @@ pub struct AppState {
     pub storage: Arc<dyn StorageBackend>,
     /// 内存缓存服务
     pub cache: CacheService,
+    /// 文件服务（统一构造并注入，避免各 handler 内重复 from_state）
+    pub file_service: Arc<FileService>,
 }
 
 impl AppState {
@@ -51,11 +55,22 @@ impl AppState {
     /// - `pool`: 数据库连接池
     /// - `storage`: 存储后端
     pub fn new(config: Arc<Config>, pool: PgPool, storage: Arc<dyn StorageBackend>) -> Self {
+        let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(pool.clone()));
+        let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(pool.clone()));
+        let file_service = Arc::new(FileService::new(
+            files_repo,
+            users_repo,
+            pool.clone(),
+            storage.clone(),
+            config.clone(),
+        ));
+
         Self {
             config,
             pool,
             storage,
             cache: CacheService::new(),
+            file_service,
         }
     }
 }

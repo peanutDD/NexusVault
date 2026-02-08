@@ -51,13 +51,16 @@ impl ApiTokenService {
 
     /// 使用 HMAC-SHA256 加盐哈希 token
     ///
-    /// 使用服务器密钥作为盐值，防止彩虹表攻击
-    fn hash_token(&self, token: &str) -> String {
+    /// 使用服务器密钥作为盐值，防止彩虹表攻击。secret 为空时返回错误，避免 panic。
+    fn hash_token(&self, token: &str) -> Result<String, AppError> {
+        if self.secret.trim().is_empty() {
+            return Err(AppError::Internal);
+        }
         let mut mac = HmacSha256::new_from_slice(self.secret.as_bytes())
-            .expect("HMAC can take key of any size");
+            .map_err(|_| AppError::Internal)?;
         mac.update(token.as_bytes());
         let result = mac.finalize();
-        format!("{:x}", result.into_bytes())
+        Ok(format!("{:x}", result.into_bytes()))
     }
 
     /// 获取 token 前缀（用于显示）
@@ -75,7 +78,7 @@ impl ApiTokenService {
 
         // 生成 token（只显示一次）
         let token = Self::generate_token();
-        let token_hash = self.hash_token(&token);
+        let token_hash = self.hash_token(&token)?;
         let token_prefix = Self::get_token_prefix(&token);
 
         // 计算过期时间
@@ -94,7 +97,7 @@ impl ApiTokenService {
     /// 验证 token 并返回用户 ID
     pub async fn verify_token(&self, token: &str) -> Result<Uuid, AppError> {
         let repo = ApiTokensRepo::new(&self.pool);
-        let token_hash = self.hash_token(token);
+        let token_hash = self.hash_token(token)?;
 
         let api_token = repo
             .find_by_token_hash(&token_hash)

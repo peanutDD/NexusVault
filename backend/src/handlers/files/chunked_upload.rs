@@ -17,7 +17,6 @@ use uuid::Uuid;
 use crate::constants::MAX_CONCURRENT_CHUNKED_UPLOADS;
 use crate::extractors::AuthenticatedUser;
 use crate::models::upload_session::{CompleteChunkedUploadRequest, InitChunkedUploadRequest};
-use crate::services::file::FileService;
 use crate::utils::{json_response, parse_part_number, success_response, AppError};
 use crate::AppState;
 
@@ -47,9 +46,10 @@ pub async fn chunked_upload_init_handler(
         total_size = req.total_size,
         "POST /upload/chunked/init"
     );
-    let file_service = FileService::from_state(&state);
-    let (upload_id, chunk_size, total_parts) =
-        file_service.init_chunked_upload(user_id, req).await?;
+    let (upload_id, chunk_size, total_parts) = state
+        .file_service
+        .init_chunked_upload(user_id, req)
+        .await?;
     Ok(json_response(json!({
         "upload_id": upload_id,
         "chunk_size": chunk_size,
@@ -79,8 +79,6 @@ pub async fn chunked_upload_chunk_handler(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-
     let part = parse_part_number(&params)?;
     let part_sha256 = headers
         .get(HEADER_PART_SHA256)
@@ -93,7 +91,8 @@ pub async fn chunked_upload_chunk_handler(
         body_len = body.len(),
         "PUT /upload/chunked/:id/chunk"
     );
-    file_service
+    state
+        .file_service
         .upload_chunk(upload_id, user_id, part, body, part_sha256.as_deref())
         .await?;
 
@@ -109,8 +108,8 @@ pub async fn chunked_upload_status_handler(
     Path(upload_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
     tracing::debug!(upload_id = %upload_id, "GET /upload/chunked/:id/status");
-    let file_service = FileService::from_state(&state);
-    let (uploaded_parts, total_parts) = file_service
+    let (uploaded_parts, total_parts) = state
+        .file_service
         .chunked_upload_status(upload_id, user_id)
         .await?;
     Ok(json_response(json!({
@@ -130,8 +129,8 @@ pub async fn chunked_upload_complete_handler(
     axum::Json(req): axum::Json<CompleteChunkedUploadRequest>,
 ) -> Result<Response, AppError> {
     tracing::info!(upload_id = %upload_id, "POST /upload/chunked/:id/complete");
-    let file_service = FileService::from_state(&state);
-    let file = file_service
+    let file = state
+        .file_service
         .complete_chunked_upload(upload_id, user_id, req)
         .await?;
     Ok(json_response(json!({ "file": file })))
@@ -146,8 +145,8 @@ pub async fn chunked_upload_abort_handler(
     Path(upload_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
     tracing::info!(upload_id = %upload_id, "DELETE /upload/chunked/:id/abort");
-    let file_service = FileService::from_state(&state);
-    file_service
+    state
+        .file_service
         .abort_chunked_upload(upload_id, user_id)
         .await?;
     Ok(success_response("Upload aborted"))

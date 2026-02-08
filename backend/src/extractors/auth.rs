@@ -17,7 +17,7 @@
 use axum::{
     async_trait,
     extract::FromRequestParts,
-    http::{request::Parts, HeaderMap},
+    http::{request::Parts, HeaderMap, Method},
 };
 use percent_encoding::percent_decode_str;
 use sqlx::PgPool;
@@ -53,7 +53,10 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
     }
 }
 
-/// 允许从 query 中读取 token 的认证提取器（用于预览等场景）
+/// 允许从 query 中读取 token 的认证提取器（仅用于预览/下载等 GET 场景）。
+///
+/// **安全说明**：仅当请求为 **GET** 时接受 `?token=xxx`；POST/PUT 等必须使用 Authorization header。
+/// 勿在不可信环境（如第三方站点、Referer 会泄露的页面）将 token 放在 URL，否则可能出现在 Referer、服务器日志中。
 #[derive(Debug, Clone, Copy)]
 pub struct AuthenticatedUserQuery(pub Uuid);
 
@@ -65,15 +68,18 @@ impl FromRequestParts<AppState> for AuthenticatedUserQuery {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        // 先尝试 Authorization header
+        // 先尝试 Authorization header（任意方法均允许）
         if let Ok(user_id) =
             extract_user_id_from_headers(&parts.headers, &state.config, &state.pool).await
         {
             return Ok(AuthenticatedUserQuery(user_id));
         }
 
-        // 再尝试 query token
+        // 再尝试 query token：仅 GET 允许，避免 token 随 POST body 等进入日志
         if let Some(token) = extract_token_from_query(parts) {
+            if parts.method != Method::GET {
+                return Err(AppError::Unauthorized);
+            }
             let user_id = extract_user_id_from_token(&token, &state.config, &state.pool).await?;
             return Ok(AuthenticatedUserQuery(user_id));
         }

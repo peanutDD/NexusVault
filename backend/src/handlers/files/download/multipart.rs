@@ -5,6 +5,8 @@
 //! - Local：seek + take 读取每个分段
 //! - S3：每个分段走一次 `Range: bytes=start-end` 请求（简洁但会产生多次网络往返）
 
+use std::sync::Arc;
+
 use axum::body::Body;
 use bytes::Bytes;
 use uuid::Uuid;
@@ -14,8 +16,11 @@ use crate::services::storage::StorageReadStream;
 
 use super::ranges::ByteRange;
 
+/// 构造 multipart/byteranges 流式 body。
+///
+/// 接收 `Arc<FileService>` 以便在 'static 流中安全使用，避免引用逃逸。
 pub fn build_multipart_body(
-    state: &crate::AppState,
+    file_service: Arc<FileService>,
     file: crate::models::file::File,
     total_size: u64,
     ranges: Vec<ByteRange>,
@@ -30,8 +35,6 @@ pub fn build_multipart_body(
     // move into stream
     let boundary_stream = boundary.clone();
     let mime_type = file.mime_type.clone();
-    let file_service = FileService::from_state(state);
-
     let stream = try_stream! {
         for (start, end) in ranges {
             let header_bytes = format!(

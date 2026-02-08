@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::extractors::AuthenticatedUser;
 use crate::models::file::{BatchDeleteRequest, BatchGetRequest, BatchMoveRequest};
-use crate::services::file::{run_zip_writer_thread, FileService};
+use crate::services::file::run_zip_writer_thread;
 use crate::utils::{file_response, stream_file_response, json_response, parse_uuid_list, AppError};
 use crate::AppState;
 
@@ -34,8 +34,7 @@ pub async fn batch_get_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchGetRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    let files = file_service.get_files_by_ids(user_id, &req.ids).await?;
+    let files = state.file_service.get_files_by_ids(user_id, &req.ids).await?;
     Ok(json_response(json!({ "files": files })))
 }
 
@@ -52,8 +51,7 @@ pub async fn batch_delete_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchDeleteRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    let deleted = file_service.batch_delete(&req.ids, user_id).await?;
+    let deleted = state.file_service.batch_delete(&req.ids, user_id).await?;
     Ok(json_response(json!({
         "deleted": deleted,
         "message": "Batch delete completed"
@@ -69,8 +67,6 @@ pub async fn batch_download_zip_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-
     // 解析文件 ID 列表
     let ids_str = params
         .get("ids")
@@ -78,7 +74,7 @@ pub async fn batch_download_zip_handler(
     let ids = parse_uuid_list(ids_str)?;
 
     // 生成 ZIP 文件
-    let zip_data = file_service.batch_download_zip(&ids, user_id).await?;
+    let zip_data = state.file_service.batch_download_zip(&ids, user_id).await?;
 
     // 返回 ZIP 文件响应
     file_response(zip_data, "files.zip", "application/zip", false).map_err(|_| AppError::Internal)
@@ -97,8 +93,8 @@ pub async fn batch_download_zip_post_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchDeleteRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    let entries = file_service
+    let entries = state
+        .file_service
         .prepare_batch_zip_entries(&req.ids, user_id)
         .await?;
 
@@ -107,11 +103,10 @@ pub async fn batch_download_zip_post_handler(
 
     std::thread::spawn(move || run_zip_writer_thread(input_rx, output_tx));
 
-    let state_clone = state.clone();
+    let file_service = state.file_service.clone();
     tokio::spawn(async move {
-        let svc = FileService::from_state(&state_clone);
         for (file, name) in entries {
-            if let Ok(data) = svc.get_file_data(&file).await {
+            if let Ok(data) = file_service.get_file_data(&file).await {
                 let _ = input_tx.send((Some(name), data));
             }
         }
@@ -159,8 +154,7 @@ pub async fn batch_move_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchMoveRequest>,
 ) -> Result<Response, AppError> {
-    let file_service = FileService::from_state(&state);
-    let moved = file_service.batch_move(user_id, req).await?;
+    let moved = state.file_service.batch_move(user_id, req).await?;
     Ok(json_response(json!({
         "moved": moved,
         "message": "Batch move completed"

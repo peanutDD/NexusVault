@@ -1,6 +1,10 @@
 use std::env;
 use thiserror::Error;
 
+/// 端口有效范围（含）
+const PORT_MIN: u16 = 1;
+const PORT_MAX: u16 = 65535;
+
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Config {
@@ -19,6 +23,20 @@ pub struct Config {
     pub cors_origin: String,
     /// 超过此大小的视频使用 HLS 转码预览（字节），默认 100MB
     pub hls_threshold_bytes: u64,
+
+    // ---------- 后台维护任务（可经环境变量调参） ----------
+    /// 过期分块上传会话清理间隔（秒），默认 300
+    pub upload_session_cleanup_interval_secs: u64,
+    /// 过期会话单批数量，默认 200
+    pub upload_session_cleanup_batch_size: i64,
+    /// 文件一致性检查间隔（秒），默认 600
+    pub files_consistency_check_interval_secs: u64,
+    /// 一致性检查单批数量，默认 500
+    pub files_consistency_check_batch_size: i64,
+    /// 孤儿文件清理间隔（秒），默认 600
+    pub orphan_cleanup_interval_secs: u64,
+    /// 孤儿清理单轮最大删除文件数，默认 500
+    pub orphan_cleanup_batch_limit: u32,
 }
 
 #[derive(Error, Debug)]
@@ -31,7 +49,10 @@ pub enum ConfigError {
 
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
-        Ok(Config {
+        let port = parse_port()?;
+        let hls_threshold_bytes = parse_hls_threshold_bytes()?;
+
+        let config = Config {
             database_url: env::var("DATABASE_URL")
                 .map_err(|_| ConfigError::MissingEnvVar("DATABASE_URL".to_string()))?,
             jwt_secret: env::var("JWT_SECRET")
@@ -47,22 +68,120 @@ impl Config {
                 .unwrap_or_else(|_| "2147483648".to_string())
                 .parse()
                 .map_err(|_| {
-                    ConfigError::InvalidConfig("MAX_FILE_SIZE must be a number".to_string())
+                    ConfigError::InvalidConfig("MAX_FILE_SIZE must be a positive number".to_string())
                 })?,
             allowed_mime_types: env::var("ALLOWED_MIME_TYPES")
                 .unwrap_or_else(|_| "image/*,video/*,audio/*,application/pdf,text/*".to_string())
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect(),
-            port: env::var("PORT")
-                .unwrap_or_else(|_| "3000".to_string())
-                .parse()
-                .unwrap_or(3000),
+            port,
             cors_origin: env::var("CORS_ORIGIN").unwrap_or_else(|_| "*".to_string()),
-            hls_threshold_bytes: env::var("HLS_THRESHOLD_BYTES")
-                .unwrap_or_else(|_| "104857600".to_string()) // 100MB
-                .parse()
-                .unwrap_or(104_857_600),
-        })
+            hls_threshold_bytes,
+
+            upload_session_cleanup_interval_secs: env_u64(
+                "UPLOAD_SESSION_CLEANUP_INTERVAL_SECS",
+                300,
+            )?,
+            upload_session_cleanup_batch_size: env_i64(
+                "UPLOAD_SESSION_CLEANUP_BATCH_SIZE",
+                200,
+            )?,
+            files_consistency_check_interval_secs: env_u64(
+                "FILES_CONSISTENCY_CHECK_INTERVAL_SECS",
+                600,
+            )?,
+            files_consistency_check_batch_size: env_i64(
+                "FILES_CONSISTENCY_CHECK_BATCH_SIZE",
+                500,
+            )?,
+            orphan_cleanup_interval_secs: env_u64("ORPHAN_CLEANUP_INTERVAL_SECS", 600)?,
+            orphan_cleanup_batch_limit: env_u32("ORPHAN_CLEANUP_BATCH_LIMIT", 500)?,
+        };
+
+        config.validate()?;
+        Ok(config)
+    }
+
+    /// 启动时完整校验，非法则返回 ConfigError 并退出
+    fn validate(&self) -> Result<(), ConfigError> {
+        if self.port < PORT_MIN || self.port > PORT_MAX {
+            return Err(ConfigError::InvalidConfig(format!(
+                "PORT must be in range {}..={}",
+                PORT_MIN, PORT_MAX
+            )));
+        }
+        if self.max_file_size == 0 {
+            return Err(ConfigError::InvalidConfig(
+                "MAX_FILE_SIZE must be greater than 0".to_string(),
+            ));
+        }
+        if self.jwt_secret.trim().is_empty() {
+            return Err(ConfigError::InvalidConfig(
+                "JWT_SECRET must be non-empty".to_string(),
+            ));
+        }
+        if self.storage_backend == "local" && self.storage_path.trim().is_empty() {
+            return Err(ConfigError::InvalidConfig(
+                "STORAGE_PATH must be non-empty when STORAGE_BACKEND=local".to_string(),
+            ));
+        }
+        if self.upload_session_cleanup_interval_secs == 0
+            || self.files_consistency_check_interval_secs == 0
+            || self.orphan_cleanup_interval_secs == 0
+        {
+            return Err(ConfigError::InvalidConfig(
+                "Maintenance task interval env vars must be greater than 0".to_string(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+fn parse_port() -> Result<u16, ConfigError> {
+    let raw = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let port: u16 = raw.parse().map_err(|_| {
+        ConfigError::InvalidConfig(format!("PORT must be a number in range {}..={}", PORT_MIN, PORT_MAX))
+    })?;
+    if port < PORT_MIN || port > PORT_MAX {
+        return Err(ConfigError::InvalidConfig(format!(
+            "PORT must be in range {}..={}",
+            PORT_MIN, PORT_MAX
+        )));
+    }
+    Ok(port)
+}
+
+fn parse_hls_threshold_bytes() -> Result<u64, ConfigError> {
+    let raw = env::var("HLS_THRESHOLD_BYTES").unwrap_or_else(|_| "104857600".to_string());
+    raw.parse().map_err(|_| {
+        ConfigError::InvalidConfig("HLS_THRESHOLD_BYTES must be a non-negative number".to_string())
+    })
+}
+
+fn env_u64(key: &str, default: u64) -> Result<u64, ConfigError> {
+    match env::var(key) {
+        Ok(s) => s.parse().map_err(|_| {
+            ConfigError::InvalidConfig(format!("{} must be a non-negative integer", key))
+        }),
+        Err(_) => Ok(default),
+    }
+}
+
+fn env_i64(key: &str, default: i64) -> Result<i64, ConfigError> {
+    match env::var(key) {
+        Ok(s) => s.parse().map_err(|_| {
+            ConfigError::InvalidConfig(format!("{} must be an integer", key))
+        }),
+        Err(_) => Ok(default),
+    }
+}
+
+fn env_u32(key: &str, default: u32) -> Result<u32, ConfigError> {
+    match env::var(key) {
+        Ok(s) => s.parse().map_err(|_| {
+            ConfigError::InvalidConfig(format!("{} must be a non-negative integer", key))
+        }),
+        Err(_) => Ok(default),
     }
 }

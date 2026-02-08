@@ -19,6 +19,7 @@
 //! let auth_service = AuthService::new(users_repo, config);
 //! ```
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -62,6 +63,23 @@ pub trait UsersRepository: Send + Sync {
         email: &str,
         username: &str,
     ) -> Result<bool, AppError>;
+
+    /// 检查除指定用户外，是否有其他用户使用该邮箱或用户名
+    async fn exists_by_email_or_username_excluding(
+        &self,
+        exclude_user_id: Uuid,
+        email: &str,
+        username: &str,
+    ) -> Result<bool, AppError>;
+
+    /// 更新用户资料（用户名、邮箱）
+    async fn update_profile(
+        &self,
+        user_id: Uuid,
+        username: &str,
+        email: &str,
+        updated_at: DateTime<Utc>,
+    ) -> Result<(), AppError>;
 
     /// 获取用户存储配额
     async fn get_storage_quota(&self, user_id: Uuid) -> Result<Option<i64>, AppError>;
@@ -114,6 +132,9 @@ pub trait FilesRepository: Send + Sync {
 
     /// 统计引用同一 file_path 的记录数（删除时仅当为 0 才删物理文件）
     async fn count_by_file_path(&self, file_path: &str) -> Result<u64, AppError>;
+
+    /// 批量统计多个 file_path 的引用数，一次查询减少 round-trip（用于 batch_delete 等）
+    async fn count_by_file_paths(&self, paths: &[String]) -> Result<HashMap<String, u64>, AppError>;
 
     /// 根据 ID 和用户 ID 查询文件
     async fn find_by_id(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError>;
