@@ -28,7 +28,13 @@ export default function Settings() {
   const [success, setSuccess] = useState<string | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
 
-  const [profileForm, setProfileForm] = useState({ username: '', email: '' });
+  const [profileForm, setProfileForm] = useState({
+    username: '',
+    email: '',
+    emailVerificationCode: '',
+  });
+  const [sendingCode, setSendingCode] = useState(false);
+  const [sendCodeCooldown, setSendCodeCooldown] = useState(0);
 
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -48,9 +54,22 @@ export default function Settings() {
   // Sync profile form when user changes
   useEffect(() => {
     if (user) {
-      setProfileForm({ username: user.username, email: user.email });
+      setProfileForm((prev) => ({
+        ...prev,
+        username: user.username,
+        email: user.email,
+      }));
     }
   }, [user]);
+
+  // Send code cooldown timer
+  useEffect(() => {
+    if (sendCodeCooldown <= 0) return;
+    const t = setInterval(() => {
+      setSendCodeCooldown((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [sendCodeCooldown]);
 
   // 错误/成功提示出现时滚动到可见区域
   useEffect(() => {
@@ -146,6 +165,32 @@ export default function Settings() {
     setSuccess('Token 已复制到剪贴板');
   }, []);
 
+  // Send email verification code
+  const handleSendVerificationCode = useCallback(async () => {
+    setError(null);
+    const email = profileForm.email.trim();
+    const emailResult = validateEmail(email);
+    if (!emailResult.valid && emailResult.message) {
+      setError(emailResult.message);
+      return;
+    }
+    if (user && email === user.email) {
+      setError('新邮箱与当前邮箱相同，无需验证');
+      return;
+    }
+
+    setSendingCode(true);
+    try {
+      await authService.sendEmailVerification(email);
+      setSuccess('验证码已发送，请查收邮箱');
+      setSendCodeCooldown(60);
+    } catch (err) {
+      setError(getErrorMessage(err, '发送验证码失败'));
+    } finally {
+      setSendingCode(false);
+    }
+  }, [profileForm.email, user?.email]);
+
   // Profile update
   const handleUpdateProfile = useCallback(
     async (e: React.FormEvent) => {
@@ -166,12 +211,19 @@ export default function Settings() {
       if (!emailResult.valid && emailResult.message) {
         errors.push(emailResult.message);
       }
+      const email = profileForm.email.trim();
+      if (user && email !== user.email) {
+        if (!profileForm.emailVerificationCode.trim()) {
+          errors.push('修改邮箱需先获取并填写验证码');
+        } else if (profileForm.emailVerificationCode.trim().length !== 6) {
+          errors.push('验证码为 6 位数字');
+        }
+      }
       if (errors.length > 0) {
         setError(errors.join('；'));
         return;
       }
 
-      const email = profileForm.email.trim();
       if (user && username === user.username && email === user.email) {
         setSuccess('未做任何修改');
         return;
@@ -193,12 +245,19 @@ export default function Settings() {
           return;
         }
 
-        const { user: newUser } = await authService.updateProfile({
-          username: username,
-          email: email,
-        });
+        const payload: {
+          username: string;
+          email: string;
+          email_verification_code?: string;
+        } = { username, email };
+        if (user && email !== user.email && profileForm.emailVerificationCode.trim()) {
+          payload.email_verification_code = profileForm.emailVerificationCode.trim();
+        }
+
+        const { user: newUser } = await authService.updateProfile(payload);
         updateUser(newUser);
         setSuccess('账户信息已更新');
+        setProfileForm((p) => ({ ...p, emailVerificationCode: '' }));
       } catch (err) {
         setError(getErrorMessage(err, '更新账户信息失败'));
       } finally {
@@ -262,6 +321,25 @@ export default function Settings() {
     },
     []
   );
+
+  const handleProfileEmailVerificationCodeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setProfileForm((prev) => ({
+        ...prev,
+        emailVerificationCode: e.target.value.replace(/\D/g, '').slice(0, 6),
+      }));
+    },
+    []
+  );
+
+  const canSendCode = (() => {
+    const email = profileForm.email.trim();
+    if (!email) return false;
+    const emailResult = validateEmail(email);
+    if (!emailResult.valid) return false;
+    if (user && email === user.email) return false;
+    return true;
+  })();
 
   // Password form handlers
   const handleCurrentPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -413,6 +491,11 @@ export default function Settings() {
               loading={loading}
               onUsernameChange={handleProfileUsernameChange}
               onEmailChange={handleProfileEmailChange}
+              onEmailVerificationCodeChange={handleProfileEmailVerificationCodeChange}
+              onSendVerificationCode={handleSendVerificationCode}
+              sendingCode={sendingCode}
+              sendCodeCooldown={sendCodeCooldown}
+              canSendCode={canSendCode}
               onSubmit={handleUpdateProfile}
             />
 

@@ -37,6 +37,14 @@ pub struct Config {
     pub orphan_cleanup_interval_secs: u64,
     /// 孤儿清理单轮最大删除文件数，默认 500
     pub orphan_cleanup_batch_limit: u32,
+
+    /// 邮箱验证码发送：SMTP 服务器（可选，不配置则仅将验证码写入日志，适用于开发）
+    pub smtp_host: Option<String>,
+    pub smtp_port: Option<u16>,
+    pub smtp_username: Option<String>,
+    pub smtp_password: Option<String>,
+    /// 发件人地址
+    pub smtp_from: Option<String>,
 }
 
 #[derive(Error, Debug)]
@@ -97,6 +105,14 @@ impl Config {
             )?,
             orphan_cleanup_interval_secs: env_u64("ORPHAN_CLEANUP_INTERVAL_SECS", 600)?,
             orphan_cleanup_batch_limit: env_u32("ORPHAN_CLEANUP_BATCH_LIMIT", 500)?,
+
+            smtp_host: env::var("SMTP_HOST").ok().filter(|s| !s.is_empty()),
+            smtp_port: env::var("SMTP_PORT")
+                .ok()
+                .and_then(|s| s.parse().ok()),
+            smtp_username: env::var("SMTP_USERNAME").ok().filter(|s| !s.is_empty()),
+            smtp_password: env::var("SMTP_PASSWORD").ok().filter(|s| !s.is_empty()),
+            smtp_from: env::var("SMTP_FROM").ok().filter(|s| !s.is_empty()),
         };
 
         config.validate()?;

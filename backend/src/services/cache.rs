@@ -22,6 +22,7 @@ const USER_PREFIX: &str = "user:";
 const FILE_PREFIX: &str = "file:";
 const FOLDER_PREFIX: &str = "folder:";
 const FOLDER_LIST_PREFIX: &str = "folder_list:";
+const EMAIL_VERIFICATION_PREFIX: &str = "email_verify:";
 
 /// 应用缓存服务
 #[derive(Clone)]
@@ -34,6 +35,8 @@ pub struct CacheService {
     folders: Cache<String, Arc<Folder>>,
     /// 文件夹列表缓存
     folder_lists: Cache<String, Arc<Vec<Folder>>>,
+    /// 邮箱验证码缓存（key: user_id:email, value: 6位验证码，TTL 10 分钟）
+    email_verification: Cache<String, String>,
 }
 
 impl CacheService {
@@ -56,7 +59,33 @@ impl CacheService {
                 .max_capacity(10_000)
                 .time_to_live(Duration::from_secs(30)) // 30 秒
                 .build(),
+            email_verification: Cache::builder()
+                .max_capacity(10_000)
+                .time_to_live(Duration::from_secs(600)) // 10 分钟
+                .build(),
         }
+    }
+
+    // ========================================================================
+    // 邮箱验证码
+    // ========================================================================
+
+    /// 设置邮箱验证码
+    pub fn set_email_verification_code(&self, user_id: Uuid, email: &str, code: &str) {
+        let key = format!("{}{}:{}", EMAIL_VERIFICATION_PREFIX, user_id, email);
+        self.email_verification.insert(key, code.to_string());
+    }
+
+    /// 校验并消费邮箱验证码（验证成功后移除）
+    pub fn verify_and_consume_email_code(&self, user_id: Uuid, email: &str, code: &str) -> bool {
+        let key = format!("{}{}:{}", EMAIL_VERIFICATION_PREFIX, user_id, email);
+        if let Some(stored) = self.email_verification.get(&key) {
+            if stored == code {
+                self.email_verification.invalidate(&key);
+                return true;
+            }
+        }
+        false
     }
 
     // ========================================================================

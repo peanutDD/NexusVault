@@ -21,10 +21,19 @@ use uuid::Uuid;
 
 use crate::{
     config::Config,
-    models::user::{LoginRequest, RegisterRequest, UpdateProfileRequest, UserResponse},
+    models::user::{
+        LoginRequest, RegisterRequest, SendEmailVerificationRequest, UpdateProfileRequest,
+        UserResponse,
+    },
     repositories::{DynUsersRepo, SqlxUsersRepo},
+    services::cache::CacheService,
     utils::{hash_password, now_timestamp, parse_jwt_expiry, verify_password, AppError},
 };
+use lettre::message::header::ContentType;
+use lettre::message::Mailbox;
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
+use rand::Rng;
 
 /// JWT Claims 结构
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,25 +52,24 @@ pub struct Claims {
 pub struct AuthService {
     users_repo: DynUsersRepo,
     config: Config,
+    cache: CacheService,
 }
 
 impl AuthService {
     /// 创建新的 AuthService 实例
-    ///
-    /// # 参数
-    /// - `users_repo`: 用户仓库（Trait Object）
-    /// - `config`: 应用配置
-    pub fn new(users_repo: DynUsersRepo, config: Config) -> Self {
-        Self { users_repo, config }
+    pub fn new(users_repo: DynUsersRepo, config: Config, cache: CacheService) -> Self {
+        Self {
+            users_repo,
+            config,
+            cache,
+        }
     }
 
     /// 从 AppState 创建 AuthService（工厂方法）
-    ///
-    /// 使用 SQLx 实现的 UsersRepo。
     pub fn from_state(state: &crate::AppState) -> Self {
         let users_repo: DynUsersRepo =
             std::sync::Arc::new(SqlxUsersRepo::new(state.pool.clone()));
-        Self::new(users_repo, (*state.config).clone())
+        Self::new(users_repo, (*state.config).clone(), state.cache.clone())
     }
 
     /// 用户注册
@@ -198,6 +206,73 @@ impl AuthService {
         Ok(())
     }
 
+    /// 发送邮箱验证码（修改邮箱时用）
+    ///
+    /// 先校验邮箱格式、是否被其他用户占用，通过后才生成并发送验证码。
+    pub async fn send_email_verification_code(
+        &self,
+        user_id: Uuid,
+        req: SendEmailVerificationRequest,
+    ) -> Result<(), AppError> {
+        validator::Validate::validate(&req)
+            .map_err(|e| AppError::Validation(format!("邮箱格式无效: {}", e)))?;
+
+        // 检查邮箱是否被其他用户占用
+        if let Some(other) = self.users_repo.find_by_email(&req.email).await? {
+            if other.id != user_id {
+                return Err(AppError::Conflict("该邮箱已被其他用户使用".to_string()));
+            }
+        }
+
+        let code: String = (0..6).map(|_| rand::thread_rng().gen_range(0..10).to_string()).collect();
+        self.cache
+            .set_email_verification_code(user_id, &req.email, &code);
+
+        // SMTP 已配置则发送邮件，否则写入日志（开发环境）
+        if let (Some(host), Some(from)) = (&self.config.smtp_host, &self.config.smtp_from) {
+            let to_addr = req.email.parse().map_err(|_| {
+                AppError::Validation("无效的收件人邮箱".to_string())
+            })?;
+            let from_addr = from.parse().map_err(|_| {
+                AppError::Validation("无效的发件人邮箱配置".to_string())
+            })?;
+
+            let email = Message::builder()
+                .from(from_addr)
+                .to(to_addr)
+                .subject("邮箱验证码")
+                .header(ContentType::TEXT_PLAIN)
+                .body(format!("您的验证码是：{}，10 分钟内有效。", code))
+                .map_err(|e| AppError::Validation(format!("构建邮件失败: {}", e)))?;
+
+            let mut builder = AsyncSmtpTransport::<Tokio1Executor>::relay(host)
+                .map_err(|e| AppError::Validation(format!("SMTP 配置失败: {}", e)))?;
+
+            if let (Some(u), Some(p)) = (&self.config.smtp_username, &self.config.smtp_password) {
+                builder = builder.credentials(Credentials::new(u.clone(), p.clone()));
+            }
+            if let Some(port) = self.config.smtp_port {
+                builder = builder.port(port);
+            }
+
+            let mailer = builder.build();
+            if let Err(e) = mailer.send(email).await {
+                tracing::warn!("发送邮箱验证码失败: {}", e);
+                return Err(AppError::Validation(
+                    "发送验证码失败，请稍后重试".to_string(),
+                ));
+            }
+        } else {
+            tracing::info!(
+                "SMTP 未配置，邮箱验证码已写入日志: email={}, code={}",
+                req.email,
+                code
+            );
+        }
+
+        Ok(())
+    }
+
     /// 更新用户资料（用户名、邮箱）
     pub async fn update_profile(
         &self,
@@ -206,6 +281,30 @@ impl AuthService {
     ) -> Result<UserResponse, AppError> {
         validator::Validate::validate(&req)
             .map_err(|e| AppError::Validation(format!("Validation error: {}", e)))?;
+
+        let current = self
+            .users_repo
+            .find_by_id(user_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        // 修改邮箱时必须提供验证码
+        if req.email != current.email {
+            let code = req
+                .email_verification_code
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .ok_or_else(|| {
+                    AppError::Validation("修改邮箱需要先获取并填写验证码".to_string())
+                })?;
+
+            if !self
+                .cache
+                .verify_and_consume_email_code(user_id, &req.email, code)
+            {
+                return Err(AppError::Validation("验证码错误或已过期".to_string()));
+            }
+        }
 
         // 检查用户名是否被其他用户占用
         if let Some(other) = self.users_repo.find_by_username(&req.username).await? {

@@ -7,7 +7,7 @@ use axum::Router;
 
 use crate::handlers::auth::{
     change_password_handler, check_profile_availability_handler, login_handler, me_handler,
-    register_handler, update_profile_handler,
+    register_handler, send_email_verification_handler, update_profile_handler,
 };
 use crate::AppState;
 
@@ -19,6 +19,7 @@ use crate::AppState;
 /// - `GET /me`: 获取当前用户信息（需认证）
 /// - `PUT /change-password`: 修改密码（需认证）
 /// - `PUT /update-profile`: 更新用户资料（需认证）
+/// - `POST /send-email-verification`: 发送邮箱验证码（需认证）
 /// - `GET /check-profile-availability`: 检查用户名和邮箱是否可用（需认证）
 pub fn create_router() -> Router<AppState> {
     Router::new()
@@ -27,5 +28,6 @@ pub fn create_router() -> Router<AppState> {
         .route("/me", get(me_handler))
         .route("/change-password", put(change_password_handler))
         .route("/update-profile", put(update_profile_handler))
+        .route("/send-email-verification", post(send_email_verification_handler))
         .route("/check-profile-availability", get(check_profile_availability_handler))
 }

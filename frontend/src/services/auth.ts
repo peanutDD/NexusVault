@@ -28,9 +28,18 @@ export const authService = {
     return response.data;
   },
 
+  async sendEmailVerification(email: string): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>(
+      '/api/auth/send-email-verification',
+      { email }
+    );
+    return response.data;
+  },
+
   async updateProfile(data: {
     username: string;
     email: string;
+    email_verification_code?: string;
   }): Promise<{ user: User }> {
     const response = await api.put<{ user: User }>(
       '/api/auth/update-profile',

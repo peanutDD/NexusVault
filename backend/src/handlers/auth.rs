@@ -19,7 +19,8 @@ use serde_json::json;
 
 use crate::extractors::AuthenticatedUser;
 use crate::models::user::{
-    ChangePasswordRequest, LoginRequest, RegisterRequest, UpdateProfileRequest,
+    ChangePasswordRequest, LoginRequest, RegisterRequest, SendEmailVerificationRequest,
+    UpdateProfileRequest,
 };
 use crate::services::auth::AuthService;
 use crate::utils::{json_response, success_response, AppError};
@@ -175,6 +176,24 @@ pub async fn update_profile_handler(
 pub struct CheckProfileAvailabilityQuery {
     pub username: String,
     pub email: String,
+}
+
+/// 发送邮箱验证码（修改邮箱前需先校验邮箱有效）
+///
+/// # 请求体
+/// ```json
+/// { "email": "new@example.com" }
+/// ```
+pub async fn send_email_verification_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    axum::Json(req): axum::Json<SendEmailVerificationRequest>,
+) -> Result<Response, AppError> {
+    let auth_service = AuthService::from_state(&state);
+    auth_service
+        .send_email_verification_code(user_id, req)
+        .await?;
+    Ok(success_response("验证码已发送"))
 }
 
 /// 检查用户名和邮箱是否可用（排除当前用户）

@@ -74,6 +74,9 @@ zip = "2.2"
 # Random token generation
 rand = "0.8"
 
+# Email
+lettre = { version = "0.11", default-features = false, features = ["tokio1", "tokio1-native-tls"] }
+
 # Hashing for API tokens
 sha2 = "0.10"
 hmac = "0.12"

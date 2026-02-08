@@ -43,6 +43,14 @@ pub struct UpdateProfileRequest {
     pub username: String,
     #[validate(email)]
     pub email: String,
+    /// 修改邮箱时必填：新邮箱收到的 6 位验证码
+    pub email_verification_code: Option<String>,
+}
+
+#[derive(Debug, Deserialize, validator::Validate)]
+pub struct SendEmailVerificationRequest {
+    #[validate(email)]
+    pub email: String,
 }
 
 #[derive(Debug, Serialize)]
