@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { CheckCircle2, Circle, Download, MoveRight, Share2, Trash2 } from 'lucide-react';
+import { Circle, Download, MoveRight, Share2, Trash2 } from 'lucide-react';
 
 interface FileListBatchActionsProps {
   selectedFileCount: number;
@@ -10,6 +10,8 @@ interface FileListBatchActionsProps {
   onBatchDelete: () => void;
   /** 批量下载 ZIP 进行中（后端打包 + 传输完成前保存框不会弹出） */
   batchDownloading?: boolean;
+  /** 整合模式：不包玻璃拟态容器，由父级统一包裹 */
+  bare?: boolean;
 }
 
 const FileListBatchActions = memo(function FileListBatchActions({
@@ -20,6 +22,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
   onBatchDownload,
   onBatchDelete,
   batchDownloading = false,
+  bare = false,
 }: FileListBatchActionsProps) {
   const totalCount = selectedFileCount + selectedFolderCount;
   if (totalCount === 0) return null;
@@ -36,29 +39,35 @@ const FileListBatchActions = memo(function FileListBatchActions({
     return parts.join(', ');
   };
 
+  /* 与 ALL FILES 栏一致：text-[0.625rem] leading-none */
   const rowClass =
-    'font-brand font-normal tracking-widest text-[clamp(0.45rem,1.1vw,0.6rem)] leading-none';
+    'font-brand font-normal tracking-widest text-[0.625rem] leading-none';
   const btnClass =
-    'glass-btn inline-flex items-center justify-center sm:justify-start gap-[clamp(0.25rem,0.8vw,0.375rem)] px-[clamp(0.375rem,1vw,0.5rem)] py-[clamp(0.25rem,0.8vw,0.375rem)] hover:border-white/25 ' +
+    'glass-btn inline-flex items-center justify-center sm:justify-start gap-2 px-2 py-1 hover:border-white/25 ' +
     rowClass;
 
+  const wrapperClass = bare
+    ? 'batch-actions-row flex items-center justify-between gap-4 animate-fade-in transition-all duration-200'
+    : 'batch-actions-bar glass-panel-soft flex items-center justify-between gap-4 animate-fade-in transition-all duration-200';
+
   return (
-    <div className="batch-actions-bar glass-panel-soft mb-4 flex items-center justify-between gap-4 px-4 py-3 animate-fade-in transition-all duration-200">
-      <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
-        <CheckCircle2
-          strokeWidth={2}
-          className="shrink-0 text-gray-300 scale-[clamp(0.7,2vw,1)]"
+    <div className={wrapperClass}>
+      <div className="flex min-w-0 items-center gap-2 whitespace-nowrap text-[0.625rem]">
+        <span
           aria-hidden
-        />
+          className="inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center rounded-md border border-white/30 bg-white/15 text-white transition-all duration-200"
+        >
+          <i className="bi bi-check-lg text-[0.5rem] font-bold leading-none" aria-hidden />
+        </span>
         <span className={`min-w-0 truncate text-gray-300 ${rowClass} hidden sm:inline`}>
           Already selected {getSelectionText()}
         </span>
       </div>
 
-      <div className="flex min-w-0 items-center justify-end gap-1.5 overflow-x-auto whitespace-nowrap">
+      <div className="flex min-w-0 items-center justify-end gap-1.5 overflow-x-auto whitespace-nowrap text-[0.625rem]">
         <button type="button" onClick={onBatchMove} className={btnClass}>
           <span
-            className="relative inline-flex h-[clamp(0.65rem,2vw,0.85rem)] w-[clamp(0.65rem,2vw,0.85rem)] shrink-0 items-center justify-center"
+            className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
             aria-hidden
           >
             <Circle
@@ -68,14 +77,14 @@ const FileListBatchActions = memo(function FileListBatchActions({
             />
             <MoveRight
               strokeWidth={2}
-              className="relative h-[clamp(0.45rem,1.4vw,0.65rem)] w-[clamp(0.45rem,1.4vw,0.65rem)] text-slate-600"
+              className="relative h-[0.65em] w-[0.65em] text-slate-600"
             />
           </span>
           <span className="hidden sm:inline">Batch Move</span>
         </button>
         <button type="button" onClick={onBatchShare} className={btnClass}>
           <span
-            className="relative inline-flex h-[clamp(0.65rem,2vw,0.85rem)] w-[clamp(0.65rem,2vw,0.85rem)] shrink-0 items-center justify-center"
+            className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
             aria-hidden
           >
             <Circle
@@ -85,7 +94,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
             />
             <Share2
               strokeWidth={2}
-              className="relative h-[clamp(0.45rem,1.4vw,0.65rem)] w-[clamp(0.45rem,1.4vw,0.65rem)] text-slate-600"
+              className="relative h-[0.65em] w-[0.65em] text-slate-600"
             />
           </span>
           <span className="hidden sm:inline">Batch Share</span>
@@ -98,7 +107,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
           title={batchDownloading ? '正在打包 ZIP，请稍候…' : undefined}
         >
           <span
-            className="relative inline-flex h-[clamp(0.65rem,2vw,0.85rem)] w-[clamp(0.65rem,2vw,0.85rem)] shrink-0 items-center justify-center"
+            className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
             aria-hidden
           >
             <Circle
@@ -108,7 +117,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
             />
             <Download
               strokeWidth={2.5}
-              className="relative h-[clamp(0.45rem,1.4vw,0.65rem)] w-[clamp(0.45rem,1.4vw,0.65rem)] text-slate-600"
+              className="relative h-[0.65em] w-[0.65em] text-slate-600"
             />
           </span>
           <span className="hidden sm:inline">
@@ -117,7 +126,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
         </button>
         <button type="button" onClick={onBatchDelete} className={btnClass}>
           <span
-            className="relative inline-flex h-[clamp(0.65rem,2vw,0.85rem)] w-[clamp(0.65rem,2vw,0.85rem)] shrink-0 items-center justify-center"
+            className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
             aria-hidden
           >
             <Circle
@@ -127,7 +136,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
             />
             <Trash2
               strokeWidth={2}
-              className="relative h-[clamp(0.45rem,1.4vw,0.65rem)] w-[clamp(0.45rem,1.4vw,0.65rem)] text-slate-600"
+              className="relative h-[0.65em] w-[0.65em] text-slate-600"
             />
           </span>
           <span className="hidden sm:inline">Batch Delete</span>

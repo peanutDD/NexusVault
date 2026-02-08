@@ -139,7 +139,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
   };
 
   return (
-    <div className="fileListGlassScope space-y-4">
+    <div className="fileListGlassScope flex flex-col" style={{ gap: 'var(--bar-gap)' }}>
       {/* 头部组件：包含面包屑和工具栏 */}
       <FileListHeader
         folderPath={folderPath}

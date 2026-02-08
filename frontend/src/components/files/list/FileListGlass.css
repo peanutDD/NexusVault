@@ -12,6 +12,14 @@
   --glass-shadow-soft: 0 14px 48px rgba(0, 0, 0, 0.34);
   --glass-radius: 18px;
   --glass-radius-sm: 14px;
+  /* 搜索栏、ALL FILES、批量栏三者统一的可缩放圆角 */
+  --bar-radius: clamp(0.9rem, 1.4vw, 1.15rem);
+  /* 搜索栏↔ALL FILES、ALL FILES↔批量栏 统一间距 */
+  --bar-gap: clamp(0.75rem, 2vw, 1rem);
+  /* ALL FILES、批量栏 统一容器高度 */
+  --bar-min-h: clamp(2.25rem, 5vw, 2.75rem);
+  --bar-px: clamp(0.75rem, 2vw, 1rem);
+  --bar-py: clamp(0.5rem, 1.2vw, 0.75rem);
   /* 过大的 blur 是列表卡顿的主要原因之一 */
   --glass-blur: 14px;
   --glass-sat: 125%;
@@ -157,13 +165,14 @@
   z-index: 2;
 }
 
-/* 顶部工具区：与导航栏一致（nav-ui-fluid 风格） */
+/* 顶部工具区：与导航栏一致（nav-ui-fluid 风格），圆角与 ALL FILES、批量栏一致 */
 .fileListGlassScope .glass-panel.glass-panel-toolbar {
   font-family: var(--font-sans);
   letter-spacing: 0.025em;
   /* 下拉已改为 portal（挂到 body），无需 overflow: visible / 额外抬高层级 */
   overflow: hidden;
   z-index: auto;
+  border-radius: var(--bar-radius);
 }
 
 /* 搜索框那一行整体缩放到 0.75，保持居中和右对齐 */
@@ -177,6 +186,33 @@
   transform: scale(0.75);
   transform-origin: left center;
   margin-right: -33.333%;
+}
+
+/* ALL FILES、批量栏：无圆角，容器高度与 padding 统一 */
+.fileListGlassScope .sticky .glass-panel-soft {
+  border-radius: 0;
+  min-height: var(--bar-min-h);
+  padding-inline: var(--bar-px);
+  padding-block: var(--bar-py);
+}
+
+/* 整合模式：单块玻璃拟态包裹两行，无独立特效，无分割线 */
+.fileListGlassScope .glass-panel-soft.bars-integrated {
+  border-radius: 0;
+  min-height: unset;
+  padding-inline: var(--bar-px);
+  padding-block: 0;
+}
+.fileListGlassScope .glass-panel-soft.bars-integrated .all-files-row {
+  min-height: var(--bar-min-h);
+  padding-inline: 0;
+  padding-block: var(--bar-py);
+}
+.fileListGlassScope .glass-panel-soft.bars-integrated .batch-actions-row {
+  min-height: var(--bar-min-h);
+  padding-inline: 0;
+  padding-top: 0;
+  padding-bottom: var(--bar-py);
 }
 
 .fileListGlassScope .glass-panel-soft {

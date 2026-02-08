@@ -198,17 +198,6 @@ const FileListContent: React.FC<FileListContentProps> = ({
 
   return (
     <>
-      {/* 批量操作栏 */}
-      <FileListBatchActions
-        selectedFileCount={selectedFiles.size}
-        selectedFolderCount={selectedFolders.size}
-        onBatchMove={handleShowBatchMove}
-        onBatchShare={handleShowBatchShare}
-        onBatchDownload={handleBatchDownload}
-        onBatchDelete={handleBatchDelete}
-        batchDownloading={batchDownloading}
-      />
-
       {error && (
         <ErrorMessage
           message={error}
@@ -235,52 +224,118 @@ const FileListContent: React.FC<FileListContentProps> = ({
         </div>
       ) : (
         <>
-          {/* 全选栏：字体与导航栏标题一致，勾选框与文字同高 */}
-          <div className="glass-panel-soft mb-4 flex items-center justify-between gap-4 px-4 py-3">
-            <div className="flex shrink-0 items-center gap-3">
-              {isRevalidating && (
-                <span className="text-[0.65rem] text-gray-500" aria-live="polite">
-                  更新中…
-                </span>
-              )}
-              <label className="font-brand flex cursor-pointer items-center gap-2 whitespace-nowrap font-normal tracking-widest text-gray-300 text-[0.625rem] leading-none">
-                <input
-                  type="checkbox"
-                  checked={allFilesSelected}
-                  onChange={toggleSelectAll}
-                  aria-label="All Files"
-                  className="sr-only"
-                />
-                <span
-                  aria-hidden
-                  className={`
-                    inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center rounded-md
-                    border transition-all duration-200
-                    ${allFilesSelected
-                      ? 'border-white/30 bg-white/15 text-white'
-                      : 'border-white/15 bg-white/5 text-transparent hover:border-white/25 hover:bg-white/10'
+          {/* 全选栏 + 批量工具栏：有选择时整合为一块玻璃拟态，无选择时独立 */}
+          {selectedFiles.size + selectedFolders.size > 0 ? (
+            <div className="sticky top-20 sm:top-24 z-40 mb-[var(--bar-gap)]">
+              <div className="glass-panel-soft bars-integrated flex flex-col">
+                <div className="all-files-row flex items-center justify-between gap-4">
+                  <div className="flex shrink-0 items-center gap-3">
+                    {isRevalidating && (
+                      <span className="text-[0.65rem] text-gray-500" aria-live="polite">
+                        更新中…
+                      </span>
+                    )}
+                    <label className="font-brand flex cursor-pointer items-center gap-2 whitespace-nowrap font-normal tracking-widest text-gray-300 text-[0.625rem] leading-none">
+                      <input
+                        type="checkbox"
+                        checked={allFilesSelected}
+                        onChange={toggleSelectAll}
+                        aria-label="All Files"
+                        className="sr-only"
+                      />
+                      <span
+                        aria-hidden
+                        className={`
+                          inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center rounded-md
+                          border transition-all duration-200
+                          ${allFilesSelected
+                            ? 'border-white/30 bg-white/15 text-white'
+                            : 'border-white/15 bg-white/5 text-transparent hover:border-white/25 hover:bg-white/10'
+                          }
+                        `}
+                      >
+                        {allFilesSelected ? (
+                          <i className="bi bi-check-lg text-[0.5rem] font-bold leading-none" aria-hidden />
+                        ) : null}
+                      </span>
+                      <span className="select-none">All Files</span>
+                    </label>
+                    <span className="font-brand font-normal tracking-widest text-[0.625rem] leading-none text-yellow-400">
+                      {selectedFiles.size + selectedFolders.size} selected
+                    </span>
+                  </div>
+                  <span className="font-brand min-w-0 truncate font-normal tracking-widest text-gray-400 text-[0.625rem] leading-none">
+                    total:{
+                      displayFolders.length > 0 && `${displayFolders.length} folders · `
                     }
-                  `}
-                >
-                  {allFilesSelected ? (
-                    <i className="bi bi-check-lg text-[0.625rem] font-bold leading-none" aria-hidden />
-                  ) : null}
-                </span>
-                <span className="select-none">All Files</span>
-              </label>
-              {selectedFiles.size + selectedFolders.size > 0 && (
-                <span className="font-brand font-normal tracking-widest text-[0.625rem] leading-none text-yellow-400">
-                  {selectedFiles.size + selectedFolders.size} selected
-                </span>
-              )}
+                    {files.length} files
+                  </span>
+                </div>
+                <FileListBatchActions
+                  bare
+                  selectedFileCount={selectedFiles.size}
+                  selectedFolderCount={selectedFolders.size}
+                  onBatchMove={handleShowBatchMove}
+                  onBatchShare={handleShowBatchShare}
+                  onBatchDownload={handleBatchDownload}
+                  onBatchDelete={handleBatchDelete}
+                  batchDownloading={batchDownloading}
+                />
+              </div>
             </div>
-            <span className="font-brand min-w-0 truncate font-normal tracking-widest text-gray-400 text-[0.625rem] leading-none">
-              total:{
-                displayFolders.length > 0 && `${displayFolders.length} folders · `
-              }
-              {files.length} files
-            </span>
-          </div>
+          ) : (
+            <div className="sticky top-20 sm:top-24 z-40 flex flex-col mb-[var(--bar-gap)]" style={{ gap: 'var(--bar-gap)' }}>
+              <div className="all-files-bar glass-panel-soft mb-0 flex items-center justify-between gap-4">
+                <div className="flex shrink-0 items-center gap-3">
+                  {isRevalidating && (
+                    <span className="text-[0.65rem] text-gray-500" aria-live="polite">
+                      更新中…
+                    </span>
+                  )}
+                  <label className="font-brand flex cursor-pointer items-center gap-2 whitespace-nowrap font-normal tracking-widest text-gray-300 text-[0.625rem] leading-none">
+                    <input
+                      type="checkbox"
+                      checked={allFilesSelected}
+                      onChange={toggleSelectAll}
+                      aria-label="All Files"
+                      className="sr-only"
+                    />
+                    <span
+                      aria-hidden
+                      className={`
+                        inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center rounded-md
+                        border transition-all duration-200
+                        ${allFilesSelected
+                          ? 'border-white/30 bg-white/15 text-white'
+                          : 'border-white/15 bg-white/5 text-transparent hover:border-white/25 hover:bg-white/10'
+                        }
+                      `}
+                    >
+                      {allFilesSelected ? (
+                        <i className="bi bi-check-lg text-[0.5rem] font-bold leading-none" aria-hidden />
+                      ) : null}
+                    </span>
+                    <span className="select-none">All Files</span>
+                  </label>
+                </div>
+                <span className="font-brand min-w-0 truncate font-normal tracking-widest text-gray-400 text-[0.625rem] leading-none">
+                  total:{
+                    displayFolders.length > 0 && `${displayFolders.length} folders · `
+                  }
+                  {files.length} files
+                </span>
+              </div>
+              <FileListBatchActions
+                selectedFileCount={selectedFiles.size}
+                selectedFolderCount={selectedFolders.size}
+                onBatchMove={handleShowBatchMove}
+                onBatchShare={handleShowBatchShare}
+                onBatchDownload={handleBatchDownload}
+                onBatchDelete={handleBatchDelete}
+                batchDownloading={batchDownloading}
+              />
+            </div>
+          )}
 
           {/* 文件区域 - 按类型分组、按时间分组或普通列表 */}
           {isGroupByType && groupedFiles ? (
@@ -524,7 +579,7 @@ function GroupSelectCheckbox({ itemIds, selectedIds, onToggle }: GroupSelectChec
       aria-label={allSelected ? '取消全选此分组' : '全选此分组'}
     >
       {allSelected ? (
-        <i className="bi bi-check-lg text-[0.625rem] font-bold leading-none" aria-hidden />
+        <i className="bi bi-check-lg text-[0.5rem] font-bold leading-none" aria-hidden />
       ) : someSelected ? (
         <i className="bi bi-dash text-[0.625rem] font-bold leading-none" aria-hidden />
       ) : null}
