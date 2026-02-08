@@ -45,17 +45,17 @@ const UserInfoSection = memo(function UserInfoSection({
   return (
     <SettingsCard
       id="profile"
-      title="账户信息"
-      description="修改你的用户名和邮箱。敏感操作建议开启更强的密码策略。"
+      title="Account"
+      description="Update your username and email. Email changes require verification."
       icon={<UserCircle2 className="h-5 w-5" aria-hidden="true" />}
     >
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         <div>
           <label
             htmlFor="profile-username"
-            className="block text-sm font-medium text-slate-200 mb-2"
+            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
           >
-            用户名
+            Username
           </label>
           <input
             id="profile-username"
@@ -64,7 +64,7 @@ const UserInfoSection = memo(function UserInfoSection({
             onChange={onUsernameChange}
             minLength={3}
             maxLength={50}
-            placeholder="3–50 个字符"
+            placeholder="3–50 characters"
             className={cn(
               'w-full rounded-xl px-4 py-2.5',
               'bg-slate-950/40 border border-emerald-300/15',
@@ -76,9 +76,9 @@ const UserInfoSection = memo(function UserInfoSection({
         <div>
           <label
             htmlFor="profile-email"
-            className="block text-sm font-medium text-slate-200 mb-2"
+            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
           >
-            邮箱
+            Email
           </label>
           <div className="flex gap-2">
             <input
@@ -98,7 +98,7 @@ const UserInfoSection = memo(function UserInfoSection({
               onClick={onSendVerificationCode}
               disabled={!canSendCode || sendingCode || sendCodeCooldown > 0 || loading}
               className={cn(
-                'shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold whitespace-nowrap',
+                'font-brand shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold tracking-wide whitespace-nowrap',
                 'border border-emerald-300/15 bg-emerald-500/20 text-emerald-200',
                 'hover:bg-emerald-500/30 hover:border-emerald-300/25',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
@@ -107,17 +107,17 @@ const UserInfoSection = memo(function UserInfoSection({
               {sendCodeCooldown > 0
                 ? `${sendCodeCooldown}s`
                 : sendingCode
-                  ? '发送中...'
-                  : '获取验证码'}
+                  ? 'Sending...'
+                  : 'Get code'}
             </button>
           </div>
           {user?.email && profileForm.email.trim() !== user.email && (
             <div className="mt-2">
               <label
                 htmlFor="profile-email-code"
-                className="block text-sm font-medium text-slate-200 mb-2"
+                className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
               >
-                邮箱验证码
+                Verification code
               </label>
               <input
                 id="profile-email-code"
@@ -126,7 +126,7 @@ const UserInfoSection = memo(function UserInfoSection({
                 autoComplete="one-time-code"
                 value={profileForm.emailVerificationCode}
                 onChange={onEmailVerificationCodeChange}
-                placeholder="6 位数字"
+                placeholder="6 digits"
                 maxLength={6}
                 className={cn(
                   'w-full rounded-xl px-4 py-2.5',
@@ -139,10 +139,10 @@ const UserInfoSection = memo(function UserInfoSection({
           )}
         </div>
         <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
-          <p className="text-xs tracking-wide text-slate-400">注册时间</p>
+          <p className="font-brand text-xs font-normal tracking-wide text-slate-400">Registered</p>
           <p className="mt-1 text-sm font-semibold text-slate-100">
             {user?.created_at
-              ? new Date(user.created_at).toLocaleString('zh-CN')
+              ? new Date(user.created_at).toLocaleString()
               : '-'}
           </p>
         </div>
@@ -150,14 +150,14 @@ const UserInfoSection = memo(function UserInfoSection({
           type="submit"
           disabled={loading}
           className={cn(
-            'w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
+            'font-brand w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
             'bg-gradient-to-r from-emerald-500/80 to-cyan-500/80',
             'text-slate-950',
             'hover:from-emerald-500 hover:to-cyan-500',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         >
-          {loading ? '保存中...' : '保存'}
+          {loading ? 'Saving...' : 'Save'}
         </button>
       </form>
     </SettingsCard>

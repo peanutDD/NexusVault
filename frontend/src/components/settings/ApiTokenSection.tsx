@@ -44,34 +44,33 @@ const ApiTokenSection = memo(function ApiTokenSection({
     <SettingsCard
       id="api-tokens"
       title="API Tokens"
-      description="用于程序化访问。新 Token 只会显示一次，请及时保存。"
+      description="For programmatic access. New tokens are shown only once — save them immediately."
       icon={<Key className="h-5 w-5" aria-hidden="true" />}
     >
 
-      {/* 创建新 Token */}
       <div className="mb-6">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold tracking-wide text-slate-200">
-            创建新 Token
+          <h3 className="font-brand text-sm font-semibold tracking-wide text-slate-200">
+            Create new token
           </h3>
-          <span className="text-xs text-slate-500">
-            建议为不同用途创建不同 Token
+          <span className="font-brand text-xs font-normal tracking-wide text-slate-500">
+            Use separate tokens for different purposes
           </span>
         </div>
         <form onSubmit={onCreateToken} className="grid gap-4 sm:grid-cols-2">
           <div>
             <label
               htmlFor="new-token-name"
-              className="block text-sm font-medium text-slate-200 mb-2"
+              className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
             >
-              Token 名称
+              Token name
             </label>
             <input
               id="new-token-name"
               type="text"
               value={tokenForm.name}
               onChange={onTokenNameChange}
-              placeholder="例如：我的脚本、CI/CD 等"
+              placeholder="e.g. My script, CI/CD"
               required
               className={cn(
                 'w-full rounded-xl px-4 py-2.5',
@@ -84,9 +83,9 @@ const ApiTokenSection = memo(function ApiTokenSection({
           <div>
             <label
               htmlFor="new-token-expires"
-              className="block text-sm font-medium text-slate-200 mb-2"
+              className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
             >
-              过期时间（天数，可选）
+              Expires in (days, optional)
             </label>
             <input
               id="new-token-expires"
@@ -94,7 +93,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
               value={tokenForm.expires}
               onChange={onTokenExpiresChange}
               min="1"
-              placeholder="留空表示永不过期"
+              placeholder="Leave empty for never"
               className={cn(
                 'w-full rounded-xl px-4 py-2.5',
                 'bg-slate-950/40 border border-emerald-300/15',
@@ -107,13 +106,13 @@ const ApiTokenSection = memo(function ApiTokenSection({
             type="submit"
             disabled={loading}
             className={cn(
-              'sm:col-span-2 w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
+              'font-brand sm:col-span-2 w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
               'bg-gradient-to-r from-emerald-500/80 to-cyan-500/80 text-slate-950',
               'hover:from-emerald-500 hover:to-cyan-500',
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}
           >
-            {loading ? '创建中...' : '创建 Token'}
+            {loading ? 'Creating...' : 'Create token'}
           </button>
         </form>
 
@@ -122,18 +121,18 @@ const ApiTokenSection = memo(function ApiTokenSection({
           <div className="mt-4 rounded-xl border border-amber-300/25 bg-amber-500/10 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-amber-200">
-                  重要：请立即复制并保存，此 Token 只会显示一次
+                <p className="font-brand text-sm font-semibold tracking-wide text-amber-200">
+                  Important: Copy and save now — this token will only be shown once
                 </p>
-                <p className="mt-1 text-xs text-amber-200/80">
-                  建议粘贴到密码管理器或 CI Secret
+                <p className="font-brand mt-1 text-xs font-normal tracking-wide text-amber-200/80">
+                  Save to a password manager or CI secret
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onCloseTokenValue}
                 className="inline-flex items-center justify-center rounded-lg border border-amber-300/25 bg-slate-950/20 p-2 text-amber-100 hover:bg-slate-950/30"
-                aria-label="关闭 Token 展示"
+                aria-label="Close token display"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -151,7 +150,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
                 )}
               >
                 <Copy className="h-4 w-4" aria-hidden="true" />
-                复制
+                Copy
               </button>
             </div>
           </div>
@@ -160,11 +159,11 @@ const ApiTokenSection = memo(function ApiTokenSection({
 
       {/* Token 列表 */}
       <div>
-        <h3 className="text-sm font-semibold tracking-wide text-slate-200 mb-3">
-          现有 Tokens
+        <h3 className="font-brand text-sm font-semibold tracking-wide text-slate-200 mb-3">
+          Existing tokens
         </h3>
         {apiTokens.length === 0 ? (
-          <p className="text-sm text-slate-400">暂无 API Token</p>
+          <p className="font-brand text-sm font-normal tracking-wide text-slate-400">No API tokens yet</p>
         ) : (
           <div className="space-y-3">
             {apiTokens.map((token) => (
@@ -182,28 +181,28 @@ const ApiTokenSection = memo(function ApiTokenSection({
                         {token.name}
                       </h4>
                       {token.expires_at && new Date(token.expires_at) < new Date() && (
-                        <span className="rounded-full border border-rose-300/25 bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-200">
-                          已过期
+                        <span className="font-brand rounded-full border border-rose-300/25 bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-rose-200">
+                          Expired
                         </span>
                       )}
                     </div>
                     <div className="mt-2 grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
-                      <p>
-                        创建：{new Date(token.created_at).toLocaleString('zh-CN')}
+                      <p className="font-brand font-normal tracking-wide">
+                        Created: {new Date(token.created_at).toLocaleString()}
                       </p>
                       {token.last_used_at ? (
-                        <p>
-                          最后使用：{new Date(token.last_used_at).toLocaleString('zh-CN')}
+                        <p className="font-brand font-normal tracking-wide">
+                          Last used: {new Date(token.last_used_at).toLocaleString()}
                         </p>
                       ) : (
-                        <p>最后使用：-</p>
+                        <p className="font-brand font-normal tracking-wide">Last used: -</p>
                       )}
-                      <p className="sm:col-span-2">
-                        过期：
+                      <p className="font-brand sm:col-span-2 font-normal tracking-wide">
+                        Expires:
                         {token.expires_at ? (
-                          <> {new Date(token.expires_at).toLocaleString('zh-CN')}</>
+                          <> {new Date(token.expires_at).toLocaleString()}</>
                         ) : (
-                          ' 永不过期'
+                          ' Never'
                         )}
                       </p>
                     </div>
@@ -220,7 +219,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
                     )}
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    删除
+                    Delete
                   </button>
                 </div>
               </div>

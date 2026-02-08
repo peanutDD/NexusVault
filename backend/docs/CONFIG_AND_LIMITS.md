@@ -17,6 +17,11 @@
 | `CORS_ORIGIN` | CORS 允许的源 | `*` |
 | `HLS_THRESHOLD_BYTES` | 超过此大小的视频走 HLS 转码预览（字节） | `104857600`（100MiB） |
 | `UPLOAD_SESSION_CLEANUP_*` / `FILES_CONSISTENCY_CHECK_*` / `ORPHAN_CLEANUP_*` | 后台维护任务间隔与批次 | 见 config.rs 注释 |
+| `SMTP_HOST` | SMTP 服务器地址（修改邮箱验证码发送） | 可选，不配置则验证码仅写入日志 |
+| `SMTP_PORT` | SMTP 端口 | 可选，如 587 |
+| `SMTP_USERNAME` | SMTP 认证用户名（一般为发件邮箱） | 可选 |
+| `SMTP_PASSWORD` | SMTP 认证密码（Gmail 需用应用专用密码） | 可选 |
+| `SMTP_FROM` | 发件人地址 | 可选 |
 
 ## 请求体/业务上限（常量 → constants.rs）
 
@@ -49,3 +54,27 @@
 | 分块完成并发 | `COMPLETE_CONCURRENCY` | 2 |
 
 调参时：**业务上传大小**看 `MAX_FILE_SIZE`；**单次请求体/批量个数**看 `constants.rs`；**维护任务**看 Config 对应环境变量。
+
+## SMTP 配置（修改邮箱验证码）
+
+修改邮箱时需发送验证码。配置 `SMTP_HOST`、`SMTP_FROM` 等后，验证码会通过 SMTP 发送到用户新邮箱；未配置时验证码仅写入后端日志（便于开发调试）。
+
+### Gmail 示例
+
+1. [Google 账号](https://myaccount.google.com/) → 安全性 → 开启两步验证
+2. 安全性 → 两步验证 → 应用专用密码 → 生成 16 位密码
+3. 在 `.env` 中配置：
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=你的Gmail@gmail.com
+SMTP_PASSWORD=应用专用密码（16位）
+SMTP_FROM=你的Gmail@gmail.com
+```
+
+> 注意：`SMTP_PASSWORD` 必须使用「应用专用密码」，不能填 Gmail 登录密码。
+
+### QQ 邮箱 / 163 等
+
+使用该邮箱的 SMTP 授权码（非登录密码），在邮箱设置中开启 SMTP 服务并获取授权码，填入 `SMTP_PASSWORD`。

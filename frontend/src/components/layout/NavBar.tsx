@@ -128,14 +128,14 @@ export default function NavBar({
                 onClick={onLogout}
                 className={cn(
                   'nav-btn inline-flex items-center justify-center rounded-md whitespace-nowrap',
-                  'nav-ui-fluid font-semibold tracking-wide text-slate-100',
+                  'nav-ui-fluid font-brand font-semibold tracking-wide text-slate-100',
                   'bg-slate-900/40 border border-emerald-300/15',
                   'hover:bg-slate-900/55 hover:border-rose-300/35',
                   'active:translate-y-px transition-all duration-200'
                 )}
               >
                 <LogOut className="nav-icon shrink-0 text-white/90" aria-hidden="true" />
-                <span className="hidden sm:inline whitespace-nowrap">退出</span>
+                <span className="hidden sm:inline whitespace-nowrap">Logout</span>
               </button>
             </div>
           </div>

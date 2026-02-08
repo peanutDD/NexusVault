@@ -24,8 +24,8 @@ const StorageUsageSection = memo(function StorageUsageSection({
   return (
     <SettingsCard
       id="storage"
-      title="存储用量"
-      description="监控用量与配额，避免上传/合并失败。"
+      title="Storage"
+      description="Monitor usage and quota to avoid upload/merge failures."
       icon={<HardDrive className="h-5 w-5" aria-hidden="true" />}
     >
       {storageUsage ? (
@@ -33,7 +33,7 @@ const StorageUsageSection = memo(function StorageUsageSection({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs tracking-wide text-slate-400">已使用</p>
+                <p className="font-brand text-xs font-normal tracking-wide text-slate-400">Used</p>
                 {storageUsage.usage_percent !== null && (
                   <span
                     className={cn(
@@ -49,7 +49,7 @@ const StorageUsageSection = memo(function StorageUsageSection({
                   </span>
                 )}
               </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-100">
+              <p className="font-brand mt-2 text-2xl font-semibold tracking-wide text-slate-100">
                 {formatBytes(storageUsage.total_size)}
               </p>
               <p className="mt-1 text-xs text-slate-400">
@@ -59,8 +59,8 @@ const StorageUsageSection = memo(function StorageUsageSection({
             </div>
 
             <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
-              <p className="text-xs tracking-wide text-slate-400">文件数量</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-100 tabular-nums">
+              <p className="font-brand text-xs font-normal tracking-wide text-slate-400">Files</p>
+              <p className="font-brand mt-2 text-2xl font-semibold tracking-wide text-slate-100 tabular-nums">
                 {storageUsage.file_count}
               </p>
               <p className="mt-1 text-xs text-slate-400">items</p>
@@ -70,9 +70,9 @@ const StorageUsageSection = memo(function StorageUsageSection({
           {storageUsage.quota !== null && storageUsage.usage_percent !== null && (
             <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-200">配额进度</p>
-                <p className="text-xs text-slate-400">
-                  {storageUsage.is_unlimited ? '无限制' : '有上限'}
+                <p className="font-brand text-sm font-medium tracking-wide text-slate-200">Quota progress</p>
+                <p className="font-brand text-xs font-normal tracking-wide text-slate-400">
+                  {storageUsage.is_unlimited ? 'Unlimited' : 'Limited'}
                 </p>
               </div>
               <div className="mt-3 h-3 w-full rounded-full bg-slate-900/50 ring-1 ring-white/5">
@@ -91,24 +91,24 @@ const StorageUsageSection = memo(function StorageUsageSection({
               </div>
 
               {storageUsage.usage_percent >= 90 && (
-                <p className="mt-3 text-sm text-rose-200">
-                  提示：存储配额即将用尽，建议清理无用文件或提升配额。
+                <p className="font-brand mt-3 text-sm font-normal tracking-wide text-rose-200">
+                  Storage quota almost full. Consider cleaning up or increasing quota.
                 </p>
               )}
               {storageUsage.usage_percent >= 75 && storageUsage.usage_percent < 90 && (
-                <p className="mt-3 text-sm text-amber-200">
-                  提示：存储使用率较高，建议定期清理或归档。
+                <p className="font-brand mt-3 text-sm font-normal tracking-wide text-amber-200">
+                  Storage usage is high. Consider regular cleanup or archival.
                 </p>
               )}
             </div>
           )}
 
           {storageUsage.is_unlimited && (
-            <p className="text-sm text-slate-400">配额：无限制</p>
+            <p className="font-brand text-sm font-normal tracking-wide text-slate-400">Quota: unlimited</p>
           )}
         </div>
       ) : (
-        <p className="text-sm text-slate-400">加载中…</p>
+        <p className="font-brand text-sm font-normal tracking-wide text-slate-400">Loading…</p>
       )}
     </SettingsCard>
   );

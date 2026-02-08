@@ -45,11 +45,11 @@ export default function SettingsCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold tracking-wide text-slate-100 sm:text-lg">
+          <h2 className="font-brand text-base font-semibold tracking-wide text-slate-100 sm:text-lg">
             {title}
           </h2>
           {description && (
-            <p className="mt-1 text-sm leading-relaxed text-slate-400">
+            <p className="font-brand mt-1 text-sm font-normal leading-relaxed tracking-wide text-slate-400">
               {description}
             </p>
           )}

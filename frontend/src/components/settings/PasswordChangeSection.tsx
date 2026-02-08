@@ -29,17 +29,17 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
   return (
     <SettingsCard
       id="security"
-      title="安全"
-      description="建议定期更换密码，并避免在多处复用同一密码。"
+      title="Security"
+      description="Change your password periodically and avoid reusing it across services."
       icon={<KeyRound className="h-5 w-5" aria-hidden="true" />}
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label
             htmlFor="current-password"
-            className="block text-sm font-medium text-slate-200 mb-2"
+            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
           >
-            当前密码
+            Current password
           </label>
           <input
             id="current-password"
@@ -58,9 +58,9 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
         <div>
           <label
             htmlFor="new-password"
-            className="block text-sm font-medium text-slate-200 mb-2"
+            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
           >
-            新密码
+            New password
           </label>
           <input
             id="new-password"
@@ -76,14 +76,14 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
               'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
             )}
           />
-          <p className="text-slate-400 text-xs mt-1">至少 8 个字符</p>
+          <p className="font-brand text-slate-400 text-xs font-normal tracking-wide mt-1">At least 8 characters</p>
         </div>
         <div>
           <label
             htmlFor="confirm-password"
-            className="block text-sm font-medium text-slate-200 mb-2"
+            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
           >
-            确认新密码
+            Confirm new password
           </label>
           <input
             id="confirm-password"
@@ -104,14 +104,14 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
           type="submit"
           disabled={loading}
           className={cn(
-            'w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
+            'font-brand w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
             'bg-gradient-to-r from-emerald-500/80 to-cyan-500/80',
             'text-slate-950',
             'hover:from-emerald-500 hover:to-cyan-500',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         >
-          {loading ? '修改中...' : '修改密码'}
+          {loading ? 'Changing...' : 'Change password'}
         </button>
       </form>
     </SettingsCard>

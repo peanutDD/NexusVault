@@ -117,7 +117,7 @@ export default function Settings() {
     setSuccess(null);
 
     if (!tokenForm.name.trim()) {
-      setError('请输入 Token 名称');
+      setError('Please enter a token name');
       return;
     }
 
@@ -135,26 +135,26 @@ export default function Settings() {
         expires: '',
       }));
       await loadApiTokens();
-      setSuccess('API Token 创建成功！请立即复制并保存，此 Token 只会显示一次。');
+      setSuccess('API Token created. Copy and save it now — it will only be shown once.');
     } catch (err) {
-      setError(getErrorMessage(err, '创建 API Token 失败'));
+      setError(getErrorMessage(err, 'Failed to create API Token'));
     } finally {
       setLoading(false);
     }
   }, [tokenForm.name, tokenForm.expires, loadApiTokens]);
 
   const handleDeleteToken = useCallback(async (tokenId: string) => {
-    if (!confirm('确定要删除此 API Token 吗？删除后将无法恢复。')) {
+    if (!confirm('Delete this API Token? This action cannot be undone.')) {
       return;
     }
 
     setLoading(true);
     try {
       await apiTokenService.deleteToken(tokenId);
-      setSuccess('API Token 已删除');
+      setSuccess('API Token deleted');
       await loadApiTokens();
     } catch (err) {
-      setError(getErrorMessage(err, '删除 API Token 失败'));
+      setError(getErrorMessage(err, 'Failed to delete API Token'));
     } finally {
       setLoading(false);
     }
@@ -162,7 +162,7 @@ export default function Settings() {
 
   const copyTokenToClipboard = useCallback((token: string) => {
     navigator.clipboard.writeText(token);
-    setSuccess('Token 已复制到剪贴板');
+    setSuccess('Token copied to clipboard');
   }, []);
 
   // Send email verification code
@@ -175,17 +175,17 @@ export default function Settings() {
       return;
     }
     if (user && email === user.email) {
-      setError('新邮箱与当前邮箱相同，无需验证');
+      setError('New email is the same as current email');
       return;
     }
 
     setSendingCode(true);
     try {
       await authService.sendEmailVerification(email);
-      setSuccess('验证码已发送，请查收邮箱');
+      setSuccess('Verification code sent. Check your inbox.');
       setSendCodeCooldown(60);
     } catch (err) {
-      setError(getErrorMessage(err, '发送验证码失败'));
+      setError(getErrorMessage(err, 'Failed to send verification code'));
     } finally {
       setSendingCode(false);
     }
@@ -201,11 +201,11 @@ export default function Settings() {
       const errors: string[] = [];
       const username = profileForm.username.trim();
       if (!username) {
-        errors.push('请填写用户名');
+        errors.push('Username is required');
       } else if (username.length < 3) {
-        errors.push('用户名至少 3 个字符');
+        errors.push('Username must be at least 3 characters');
       } else if (username.length > 50) {
-        errors.push('用户名最多 50 个字符');
+        errors.push('Username must be at most 50 characters');
       }
       const emailResult = validateEmail(profileForm.email);
       if (!emailResult.valid && emailResult.message) {
@@ -214,18 +214,18 @@ export default function Settings() {
       const email = profileForm.email.trim();
       if (user && email !== user.email) {
         if (!profileForm.emailVerificationCode.trim()) {
-          errors.push('修改邮箱需先获取并填写验证码');
+          errors.push('Email verification code is required when changing email');
         } else if (profileForm.emailVerificationCode.trim().length !== 6) {
-          errors.push('验证码为 6 位数字');
+          errors.push('Verification code must be 6 digits');
         }
       }
       if (errors.length > 0) {
-        setError(errors.join('；'));
+        setError(errors.join('; '));
         return;
       }
 
       if (user && username === user.username && email === user.email) {
-        setSuccess('未做任何修改');
+        setSuccess('No changes made');
         return;
       }
 
@@ -237,10 +237,10 @@ export default function Settings() {
             email: email,
           });
         const availabilityErrors: string[] = [];
-        if (!username_available) availabilityErrors.push('用户名已被占用');
-        if (!email_available) availabilityErrors.push('邮箱已被占用');
+        if (!username_available) availabilityErrors.push('Username is taken');
+        if (!email_available) availabilityErrors.push('Email is taken');
         if (availabilityErrors.length > 0) {
-          setError(availabilityErrors.join('；'));
+          setError(availabilityErrors.join('; '));
           setLoading(false);
           return;
         }
@@ -256,10 +256,10 @@ export default function Settings() {
 
         const { user: newUser } = await authService.updateProfile(payload);
         updateUser(newUser);
-        setSuccess('账户信息已更新');
+        setSuccess('Profile updated');
         setProfileForm((p) => ({ ...p, emailVerificationCode: '' }));
       } catch (err) {
-        setError(getErrorMessage(err, '更新账户信息失败'));
+        setError(getErrorMessage(err, 'Failed to update profile'));
       } finally {
         setLoading(false);
       }
@@ -274,12 +274,12 @@ export default function Settings() {
     setSuccess(null);
 
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      setError('新密码和确认密码不匹配');
+      setError('New password and confirmation do not match');
       return;
     }
 
     if (passwordForm.new_password.length < 8) {
-      setError('新密码长度至少为 8 个字符');
+      setError('New password must be at least 8 characters');
       return;
     }
 
@@ -289,14 +289,14 @@ export default function Settings() {
         current_password: passwordForm.current_password,
         new_password: passwordForm.new_password,
       });
-      setSuccess('密码修改成功');
+      setSuccess('Password changed');
       setPasswordForm({
         current_password: '',
         new_password: '',
         confirm_password: '',
       });
     } catch (err) {
-      setError(getErrorMessage(err, '密码修改失败'));
+      setError(getErrorMessage(err, 'Failed to change password'));
     } finally {
       setLoading(false);
     }
@@ -390,38 +390,38 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={() => navigate('/files')}
-                className="mb-4 inline-flex items-center rounded-xl border border-emerald-300/15 bg-slate-900/35 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:bg-slate-900/50 hover:border-emerald-300/30"
+                className="font-brand mb-4 inline-flex items-center rounded-xl border border-emerald-300/15 bg-slate-900/35 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:bg-slate-900/50 hover:border-emerald-300/30"
               >
-                返回主页
+                Back to Home
               </button>
               <div className="flex items-center gap-3">
                 <div className="rounded-xl border border-emerald-300/15 bg-slate-900/40 p-2 text-emerald-200/80">
                   <Settings2 className="h-5 w-5" aria-hidden="true" />
                 </div>
-                <h1 className="truncate text-base font-semibold tracking-wide text-slate-100 sm:text-lg">
-                  设置中心
+                <h1 className="font-brand truncate text-base font-normal tracking-widest text-slate-100 sm:text-lg">
+                  Settings Center
                 </h1>
               </div>
-              <p className="mt-2 text-sm text-slate-400">
-                账户信息、存储配额、安全与 Token 管理。
+              <p className="font-brand mt-2 text-sm font-normal tracking-wide text-slate-400">
+                Account info, storage quota, security & token management.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="text-[11px] tracking-wide text-slate-500">文件</p>
+                <p className="font-brand text-[11px] font-normal tracking-wide text-slate-500">Files</p>
                 <p className="mt-1 text-sm font-semibold text-slate-100 tabular-nums">
                   {storageUsage ? storageUsage.file_count : '-'}
                 </p>
               </div>
               <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="text-[11px] tracking-wide text-slate-500">用量</p>
+                <p className="font-brand text-[11px] font-normal tracking-wide text-slate-500">Usage</p>
                 <p className="mt-1 text-sm font-semibold text-slate-100 tabular-nums">
                   {storageUsage ? `${storageUsage.total_size_mb} MB` : '-'}
                 </p>
               </div>
               <div className="hidden sm:block rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="text-[11px] tracking-wide text-slate-500">Tokens</p>
+                <p className="font-brand text-[11px] font-normal tracking-wide text-slate-500">Tokens</p>
                 <p className="mt-1 text-sm font-semibold text-slate-100 tabular-nums">
                   {apiTokens.length}
                 </p>
@@ -435,29 +435,29 @@ export default function Settings() {
           <aside className="lg:col-span-4">
             <div className="lg:sticky lg:top-28 space-y-4">
               <div className="rounded-2xl border border-emerald-300/15 bg-slate-950/25 p-4 text-sm text-slate-300 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_12px_50px_rgba(0,0,0,0.35)] backdrop-blur-md">
-                <p className="text-xs tracking-wide text-slate-500">快速导航</p>
+                <p className="font-brand text-xs font-normal tracking-wide text-slate-500">Quick nav</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <a
                     href="#profile"
-                    className="rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
-                    账户
+                    Account
                   </a>
                   <a
                     href="#storage"
-                    className="rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
-                    存储
+                    Storage
                   </a>
                   <a
                     href="#security"
-                    className="rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
-                    安全
+                    Security
                   </a>
                   <a
                     href="#api-tokens"
-                    className="rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
                     Tokens
                   </a>

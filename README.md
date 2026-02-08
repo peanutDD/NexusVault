@@ -5,6 +5,7 @@
 ## 功能特性
 
 - ✅ 用户认证系统（JWT + API Token）
+- ✅ 账户资料修改（用户名、邮箱；修改邮箱需验证码，SMTP 可选配置）
 - ✅ 文件上传
   - 多文件、拖拽上传；支持 URL 拉取上传
   - **分片上传 + 断点续传**：大文件切块上传，记录进度，失败可重传单块；可选每块 `X-Part-SHA256` 校验
@@ -251,6 +252,8 @@ frontend/
 - `POST /api/auth/register` - 用户注册
 - `POST /api/auth/login` - 用户登录
 - `GET /api/auth/me` - 获取当前用户信息
+- `PUT /api/auth/update-profile` - 更新用户名/邮箱（修改邮箱需先获取验证码）
+- `POST /api/auth/send-email-verification` - 发送邮箱验证码
 
 ### 文件 API
 
@@ -287,6 +290,13 @@ CORS_ORIGIN=*
 
 # 可选：大视频超过此大小（字节）时生成 HLS 供前端流式预览，默认 104857600（100MB）
 # HLS_THRESHOLD_BYTES=104857600
+
+# 可选：SMTP（修改邮箱验证码；不配置则验证码仅写入日志）
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USERNAME=your@gmail.com
+# SMTP_PASSWORD=应用专用密码
+# SMTP_FROM=your@gmail.com
 ```
 
 ### 前端 (.env)
