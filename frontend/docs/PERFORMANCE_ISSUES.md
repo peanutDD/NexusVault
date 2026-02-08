@@ -77,7 +77,7 @@
 - **问题**: 以下组件在页面加载时就被打包
 - **受影响组件**:
   - [x] `UploadDialog.tsx` (448 行) - 懒加载于 Files.tsx
-  - [x] `FilePreview.tsx` (390 行) - 懒加载于 FileList.tsx
+  - [x] `FilePreview.tsx` (~330 行，已模块化) - 懒加载于 FileList.tsx
   - [x] `BatchShareDialog.tsx` - 懒加载于 FileList.tsx
   - [x] `BatchMoveDialog.tsx` - 懒加载于 FileList.tsx
   - [x] `CreateFolderDialog.tsx` - 懒加载于 FileList.tsx

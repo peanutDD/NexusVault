@@ -79,7 +79,7 @@ impl Config {
                     ConfigError::InvalidConfig("MAX_FILE_SIZE must be a positive number".to_string())
                 })?,
             allowed_mime_types: env::var("ALLOWED_MIME_TYPES")
-                .unwrap_or_else(|_| "image/*,video/*,audio/*,application/pdf,text/*".to_string())
+                .unwrap_or_else(|_| "image/*,video/*,audio/*,application/pdf,text/*,application/x-ugoira".to_string())
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect(),

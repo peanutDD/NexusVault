@@ -214,7 +214,7 @@ import CreateFolderDialog from '../components/files/CreateFolderDialog';
 **问题分析**:
 - 这些对话框组件仅在用户交互时显示
 - 但它们在页面加载时就被包含在主 bundle 中
-- `FilePreview.tsx` 390 行，`UploadDialog.tsx` 448 行
+- `FilePreview.tsx` ~330 行（已模块化拆分为 hooks + 子组件），`UploadDialog.tsx` 448 行
 
 **优化后代码**:
 
@@ -224,7 +224,7 @@ import Spinner from '../components/common/Spinner';
 
 // 懒加载对话框组件
 const UploadDialog = lazy(() => import('../components/files/UploadDialog'));
-const FilePreview = lazy(() => import('../components/files/FilePreview'));
+const FilePreview = lazy(() => import('../components/files/preview/FilePreview'));
 const BatchShareDialog = lazy(() => import('../components/files/BatchShareDialog'));
 const BatchMoveDialog = lazy(() => import('../components/files/BatchMoveDialog'));
 const CreateFolderDialog = lazy(() => import('../components/files/CreateFolderDialog'));

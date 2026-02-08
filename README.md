@@ -167,7 +167,7 @@ frontend/
 │   │   ├── files/              # 文件相关 UI（列表 / 网格 / 过滤 / 预览 等）
 │   │   │   ├── list/           # FileList 主视图（过滤栏、分组、分页/无限滚动）
 │   │   │   ├── grid/           # FileCard / FolderCard / FileGrid / VirtualizedFileGrid
-│   │   │   ├── preview/        # FilePreview（图片/视频/音频/文本预览、不支持类型提示框）
+│   │   │   ├── preview/        # FilePreview 模块（主组件 + Content/Toolbar/Icons + hooks）
 │   │   │   ├── dialogs/        # 批量分享 / 批量移动 / 新建文件夹 / 重命名 对话框
 │   │   │   └── upload/         # 上传对话框、上传队列、URL 上传表单
 │   │   ├── common/             # 通用组件（按钮、对话框、DropdownMenu、表单控件等）

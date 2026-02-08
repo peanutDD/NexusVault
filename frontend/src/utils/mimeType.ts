@@ -39,6 +39,10 @@ export const isSpreadsheetType = (mime: string): boolean =>
 export const isArchiveType = (mime: string): boolean =>
   mime.includes('zip') || mime.includes('rar') || mime.includes('7z') || mime.includes('tar');
 
+/** 判断是否为 Ugoira 动图（ZIP + frames.json） */
+export const isUgoiraType = (mime: string): boolean =>
+  mime.toLowerCase() === 'application/x-ugoira';
+
 // ============================================================================
 // 标签生成函数
 // ============================================================================
@@ -56,7 +60,9 @@ export interface MimeTypeInfo {
 /** 获取 MIME 类型的分类标签 */
 export function getMimeTypeLabel(mime: string): string {
   // 使用条件表达式链替代 if-else
-  return isImageType(mime)
+  return isUgoiraType(mime)
+    ? 'Ugoira'
+    : isImageType(mime)
     ? mime.split('/')[1]?.toUpperCase() || 'Image'
     : isVideoType(mime)
       ? 'Video'
@@ -81,6 +87,7 @@ export function getMimeTypeLabel(mime: string): string {
 export function getMimeTypeInfo(mime: string): MimeTypeInfo {
   // 使用 Map 查找替代多个 if-else
   const typeMap: Array<[() => boolean, MimeTypeInfo]> = [
+    [() => isUgoiraType(mime), { label: 'UGOIRA', color: '#EC4899', bgClass: 'bg-pink-900/30' }],
     [() => isVideoType(mime), { label: 'VIDEO', color: '#8B5CF6', bgClass: 'bg-purple-900/30' }],
     [() => isPdfType(mime), { label: 'PDF', color: '#EF4444', bgClass: 'bg-red-900/30' }],
     [() => isAudioType(mime), { label: 'AUDIO', color: '#22C55E', bgClass: 'bg-green-900/30' }],
@@ -107,7 +114,14 @@ export function getMimeTypeColor(mime: string): string {
 
 /** 判断文件类型是否支持预览 */
 export function isPreviewSupported(mime: string): boolean {
-  return isImageType(mime) || isPdfType(mime) || isTextType(mime) || isVideoType(mime) || isAudioType(mime);
+  return (
+    isImageType(mime) ||
+    isPdfType(mime) ||
+    isTextType(mime) ||
+    isVideoType(mime) ||
+    isAudioType(mime) ||
+    isUgoiraType(mime)
+  );
 }
 
 /** 获取预览类型信息 */
@@ -119,5 +133,6 @@ export function getPreviewKind(mime: string) {
     isText: isTextType(mime),
     isVideo: isVideoType(mime),
     isAudio: isAudioType(mime),
+    isUgoira: isUgoiraType(mime),
   };
 }

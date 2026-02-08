@@ -83,8 +83,12 @@ src/
 │   │   │   ├── FolderGrid.tsx          # 文件夹网格
 │   │   │   ├── VirtualizedFileGrid.tsx # 虚拟化文件网格
 │   │   │   └── index.ts
-│   │   ├── preview/                    # 预览相关
-│   │   │   ├── FilePreview.tsx         # 文件预览
+│   │   ├── preview/                    # 预览相关（模块化）
+│   │   │   ├── FilePreview.tsx         # 主入口
+│   │   │   ├── FilePreviewContent.tsx  # 主内容区
+│   │   │   ├── FilePreviewToolbar.tsx  # 右侧控制面板
+│   │   │   ├── FilePreviewIcons.tsx    # 图标
+│   │   │   ├── hooks/                  # useFilePreviewData/Navigation/Effects
 │   │   │   ├── LazyThumbnail.tsx       # 懒加载缩略图
 │   │   │   └── index.ts
 │   │   ├── list/                       # 列表容器

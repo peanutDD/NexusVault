@@ -1,0 +1,134 @@
+/**
+ * FilePreviewToolbar
+ * 右侧控制面板：关闭、下载、放大、缩小、旋转、Reset
+ */
+
+import { cn } from '../../../utils/cn';
+import { CloseIcon, DownloadIcon } from './FilePreviewIcons';
+
+// =============================================================================
+// 类型
+// =============================================================================
+
+export interface FilePreviewToolbarProps {
+  isImage: boolean;
+  filesLength: number;
+  onClose: () => void;
+  onDownload: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onRotate: () => void;
+  onResetView: () => void;
+}
+
+// =============================================================================
+// 组件
+// =============================================================================
+
+export function FilePreviewToolbar({
+  isImage,
+  filesLength,
+  onClose,
+  onDownload,
+  onZoomIn,
+  onZoomOut,
+  onRotate,
+  onResetView,
+}: FilePreviewToolbarProps) {
+  const bottomOffset = filesLength > 1 ? 'bottom-[calc(50%+4rem)]' : 'bottom-[clamp(0.8rem,2.5vw,1.25rem)]';
+
+  return (
+    <div
+      className={cn(
+        'absolute z-[100] right-[clamp(0.5rem,2vw,1rem)] flex flex-col items-center pointer-events-auto',
+        bottomOffset
+      )}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        className={cn(
+          'flex flex-col items-center rounded-2xl bg-white/10 backdrop-blur-xl border-solid pointer-events-auto',
+          'w-[clamp(2.5rem,6vw,3rem)] gap-[clamp(0.25rem,0.8vw,0.5rem)] p-[clamp(0.35rem,1vw,0.75rem)]',
+          'border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.2)]',
+          'shadow-[0_clamp(0.35rem,1vw,0.75rem)_clamp(0.6rem,2vw,1.25rem)_rgba(15,23,42,0.85)]'
+        )}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)]"
+          aria-label="关闭"
+        >
+          <span className="flex shrink-0 items-center justify-center w-[clamp(1rem,2.5vw,1.25rem)] h-[clamp(1rem,2.5vw,1.25rem)]">
+            <CloseIcon />
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDownload();
+          }}
+          className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)]"
+          aria-label="下载"
+        >
+          <span className="flex shrink-0 items-center justify-center w-[clamp(1rem,2.5vw,1.25rem)] h-[clamp(1rem,2.5vw,1.25rem)]">
+            <DownloadIcon />
+          </span>
+        </button>
+
+        {isImage && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onZoomIn();
+              }}
+              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
+              aria-label="放大"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onZoomOut();
+              }}
+              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
+              aria-label="缩小"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRotate();
+              }}
+              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
+              aria-label="旋转 90 度"
+            >
+              ⤾
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onResetView();
+              }}
+              className="rounded-full font-semibold text-white/80 hover:bg-white/10 mt-[clamp(0.15rem,0.4vw,0.25rem)] px-[clamp(0.35rem,0.8vw,0.5rem)] py-[clamp(0.1rem,0.3vw,0.15rem)] text-[clamp(0.5rem,1.2vw,0.625rem)]"
+            >
+              Reset
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
