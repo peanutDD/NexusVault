@@ -4,8 +4,12 @@
 
 ## 功能特性
 
-- ✅ 用户认证系统（JWT）
-- ✅ 文件上传（支持多文件、拖拽上传）
+- ✅ 用户认证系统（JWT + API Token）
+- ✅ 文件上传
+  - 多文件、拖拽上传；支持 URL 拉取上传
+  - **分片上传 + 断点续传**：大文件切块上传，记录进度，失败可重传单块；可选每块 `X-Part-SHA256` 校验
+  - **秒传（文件指纹）**：客户端计算 SHA-256，服务器已有相同内容则直接创建记录、不传文件内容；多记录共享同一物理文件，删除时按引用计数仅最后一条删物理文件
+  - 上传队列支持并行（大文件与小文件可同时上传），进度与「计算指纹…」「秒传未命中，正在上传…」等状态反馈
 - ✅ 文件列表（虚拟列表 + 无限滚动，`Load more` 按钮兜底）
 - ✅ 文件过滤与分组：
   - `By Type`：按类型分组（Images / Videos / Audio / Docs / Text / Archives / Others），每组支持独立全选
@@ -14,9 +18,12 @@
 - ✅ 文件下载 / 批量下载（ZIP 打包）
 - ✅ 文件删除 / 批量删除（带确认弹窗）
 - ✅ 混合存储支持（本地文件系统 + AWS S3）
-- ✅ 文件预览：
+- ✅ 文件预览
   - 图片 / PDF / 文本 / 音视频内联预览
-  - 不支持的类型（如部分二进制文件）提供霓虹玻璃风格提示 + 下载按钮
+  - **大视频 HLS 预览**：超过阈值（默认 100MB）的视频在后端转码为 HLS（.m3u8 + .ts），前端用 hls.js 流式播放
+  - 不支持的类型提供霓虹玻璃风格提示 + 下载按钮
+- ✅ 文件夹与分类（新建文件夹、批量移动、分类筛选）
+- ✅ 文件分享（分享链接、访问控制）
 - ✅ 安全特性（文件类型验证、大小限制、路径清理）
 - ✅ 响应式 UI 设计（桌面 / 移动端统一样式，包含下拉筛选与分组栏优化）
 
@@ -138,17 +145,17 @@ backend/
 │   ├── services/           # 业务服务（文件存储、共享链接、权限）
 │   ├── middleware/         # 中间件（鉴权、日志、CORS 等）
 │   ├── database/           # SQLx Pool 管理、迁移工具
-│   ├── config/             # 配置加载（env + 默认值）
+│   ├── config.rs           # 配置加载（env + 默认值）
 │   └── utils/              # 通用工具（错误处理、时间、ID 生成）
 ├── migrations/             # SQLx 数据库迁移
 └── Cargo.toml
 ```
 
 > **后端职责概览**  
-> - 认证：注册 / 登录 / 用户信息、JWT 签发与校验  
-> - 文件：上传、下载、删除、分页列表、搜索与排序  
-> - 存储：本地文件系统 + S3 的统一适配  
-> - 共享：分享链接、下载次数与过期控制  
+> - 认证：注册 / 登录 / 用户信息、JWT 与 API Token  
+> - 文件：普通上传、分片上传（断点续传）、秒传（content_sha256 去重）、下载、预览、HLS 转码（大视频）、删除（含引用计数）、分页列表、搜索与排序  
+> - 存储：本地文件系统 + S3 的统一适配；秒传多记录共享同一物理文件  
+> - 文件夹与分类、共享链接与访问控制  
 
 ### 前端结构（`frontend/`）
 
@@ -247,10 +254,21 @@ frontend/
 
 ### 文件 API
 
-- `GET /api/files` - 获取文件列表（支持分页、搜索）
-- `POST /api/files/upload` - 上传文件
+- `GET /api/files` - 获取文件列表（支持分页、搜索、分类、文件夹）
+- `POST /api/files/upload` - 普通上传（单文件 multipart）
+- `POST /api/files/upload/instant` - 秒传（提交 content_sha256 + filename + file_size + mime_type；已有则 201 返回 file，无则 200 返回 `{ "instant": false }`，客户端走普通/分片上传）
+- `POST /api/files/upload/chunked/init` - 初始化分片上传
+- `PUT /api/files/upload/chunked/:id/chunk` - 上传分片（可选请求头 `X-Part-SHA256` 校验）
+- `GET /api/files/upload/chunked/:id/status` - 查询已上传分片（断点续传用）
+- `POST /api/files/upload/chunked/:id/complete` - 完成分片上传
+- `DELETE /api/files/upload/chunked/:id/abort` - 取消分片上传
 - `GET /api/files/:id/download` - 下载文件
+- `GET /api/files/:id/preview` - 预览（流式/内联）
+- `GET /api/files/:id/hls` - 大视频 HLS 主列表（.m3u8）
+- `GET /api/files/:id/hls/:filename` - HLS 分片（.ts）
+- `GET /api/files/:id/thumbnail` - 缩略图
 - `DELETE /api/files/:id` - 删除文件
+- 批量：`POST /api/files/batch-delete`、`POST /api/files/batch-move`、`GET /api/files/download-zip` 等
 
 ## 环境变量
 
@@ -266,6 +284,9 @@ MAX_FILE_SIZE=104857600
 ALLOWED_MIME_TYPES=image/*,application/pdf,text/*
 PORT=3000
 CORS_ORIGIN=*
+
+# 可选：大视频超过此大小（字节）时生成 HLS 供前端流式预览，默认 104857600（100MB）
+# HLS_THRESHOLD_BYTES=104857600
 ```
 
 ### 前端 (.env)
