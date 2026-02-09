@@ -21,6 +21,15 @@ const GIF_DIR = path.join(ROOT, 'frontend/gif-files');
 const UGOIRA_DIR = path.join(ROOT, 'frontend/gif2ugoira-files');
 const JSZip = require(path.join(ROOT, 'frontend/node_modules/jszip'));
 
+// 为了更接近 Pixiv 的实际体积与性能，这里做几项约束：
+// - 帧统一导出为 JPEG（而不是 PNG），大幅减小单帧体积
+// - 限制最长边分辨率，避免超高分辨率导致前端解码/绘制过慢
+// 如后续需要，可把这些常量改成命令行参数。
+const MAX_WIDTH = 1920;   // 最长边上限（像素），常见 Pixiv 规格为 1920x1080
+const MAX_HEIGHT = 1080;  // 另一边按等比例缩放，不会超过这个值
+const JPEG_QUALITY = 4;   // ffmpeg 的 qscale 质量（2~6 通常肉眼接近无损）
+const TARGET_FPS = 30;    // 目标帧率：过高会导致播放卡顿，30fps 体验通常足够
+
 // -----------------------------------------------------------------------------
 // 工具
 // -----------------------------------------------------------------------------
@@ -67,20 +76,75 @@ async function getFrameDurations(gifPath) {
 
 /** 用 ffmpeg 拆帧到目录 */
 async function extractFrames(gifPath, outDir) {
-  const outPattern = path.join(outDir, 'frame_%04d.png');
+  // 说明：
+  // - 输出 JPEG 而不是 PNG，单帧体积会从 ~1MB 降到几十 KB 级别
+  // - 使用 scale 约束最长边，避免非常大的 GIF 生成超大帧导致前端解码卡顿
+  // - 保持 -vsync 0，尽量与原 GIF 帧对齐（时间轴仍由 ffprobe 的 durations 决定）
+  const outPattern = path.join(outDir, 'frame_%04d.jpg');
+  const scaleFilter = `scale=w='if(gt(iw,${MAX_WIDTH}),${MAX_WIDTH},iw)':h='if(gt(ih,${MAX_HEIGHT}),${MAX_HEIGHT},ih)':force_original_aspect_ratio=decrease`;
+
   await exec('ffmpeg', [
     '-i', gifPath,
     '-vsync', '0',
+    '-q:v', String(JPEG_QUALITY),
+    '-vf', scaleFilter,
     outPattern,
   ]);
 }
 
-/** 读取目录下 frame_*.png 并按序号排序 */
+/** 读取目录下 frame_*.jpg 并按序号排序 */
 function listFrames(dir) {
   const files = fs.readdirSync(dir)
-    .filter((f) => f.startsWith('frame_') && f.endsWith('.png'))
+    .filter((f) => f.startsWith('frame_') && (f.endsWith('.jpg') || f.endsWith('.jpeg')))
     .sort();
   return files;
+}
+
+/**
+ * 将原始帧序列降采样到目标帧率附近：
+ * - 根据 durations 计算原始平均 fps
+ * - 如果原始 fps 高于 TARGET_FPS，则按步长合并/抽帧
+ * - 保持整体时长不变（通过合并 delay）
+ */
+function downsampleFrames(frames, delays, targetFps) {
+  if (!frames.length || !delays.length) {
+    return { frames, delays };
+  }
+
+  const totalDuration = delays.reduce((acc, d) => acc + d, 0);
+  const avgDelay = totalDuration / delays.length;
+  const origFps = 1000 / Math.max(1, avgDelay);
+
+  if (!Number.isFinite(origFps) || origFps <= targetFps) {
+    // 原始帧率已经不高，无需降采样
+    return { frames, delays };
+  }
+
+  const step = Math.max(2, Math.ceil(origFps / targetFps));
+
+  const newFrames = [];
+  const newDelays = [];
+  let accDelay = 0;
+
+  for (let i = 0; i < frames.length; i++) {
+    accDelay += delays[i] ?? avgDelay;
+    if (i % step === 0) {
+      // 保留这一帧，delay 为累计值
+      newFrames.push(frames[i]);
+      newDelays.push(accDelay);
+      accDelay = 0;
+    }
+  }
+
+  // 把尾部剩余时间补到最后一帧，避免总时长变短
+  if (accDelay > 0 && newDelays.length > 0) {
+    newDelays[newDelays.length - 1] += accDelay;
+  }
+
+  return {
+    frames: newFrames,
+    delays: newDelays,
+  };
 }
 
 // -----------------------------------------------------------------------------
@@ -121,18 +185,25 @@ async function main() {
     }
 
     // 若 ffprobe 返回的帧数与实际不一致，用均匀间隔
-    const delays = frames.length === durations.length
+    const rawDelays = frames.length === durations.length
       ? durations
       : Array(frames.length).fill(Math.round(1000 / Math.max(1, frames.length)));
 
+    // 按目标帧率降采样，减少总帧数（减轻前端解码/绘制压力）
+    const { frames: finalFrames, delays: finalDelays } = downsampleFrames(
+      frames,
+      rawDelays,
+      TARGET_FPS,
+    );
+
     const meta = {
-      frames: frames.map((file, i) => ({ file, delay: delays[i] ?? 100 })),
+      frames: finalFrames.map((file, i) => ({ file, delay: finalDelays[i] ?? 100 })),
     };
     fs.writeFileSync(path.join(tmpDir, 'frames.json'), JSON.stringify(meta, null, 2));
 
     console.log('[gif2ugoira] 打包 ZIP...');
     const zip = new JSZip();
-    for (const f of frames) {
+    for (const f of finalFrames) {
       zip.file(f, fs.readFileSync(path.join(tmpDir, f)));
     }
     zip.file('frames.json', JSON.stringify(meta, null, 2));

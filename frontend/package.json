@@ -21,6 +21,7 @@
     "giframe": "^0.2.0",
     "hls.js": "^1.6.15",
     "js-sha256": "^0.10.1",
+    "@zip.js/zip.js": "^2.7.29",
     "jszip": "^3.10.1",
     "lucide-react": "^0.563.0",
     "postcss": "^8.5.6",

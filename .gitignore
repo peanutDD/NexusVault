@@ -43,6 +43,12 @@ uploads/
 backend/uploads/
 frontend/uploads/
 
+# GIF files
+gif-files/
+gif2ugoira-files/
+**/gif-files/
+**/gif2ugoira-files/
+
 # Logs
 *.log
 logs/

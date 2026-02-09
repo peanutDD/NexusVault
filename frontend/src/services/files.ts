@@ -476,6 +476,42 @@ export const fileService = {
   },
 
   /**
+   * 使用 Range 请求获取文件指定字节范围（用于流式 ZIP 加载，对齐 Pixiv zip_player）
+   * @param fileId 文件 ID
+   * @param start 起始字节位置（包含）
+   * @param end 结束字节位置（包含）
+   * @param options 可选配置
+   * @returns 指定范围的 Blob
+   */
+  async getFileRange(
+    fileId: string,
+    start: number,
+    end: number,
+    options?: { signal?: AbortSignal }
+  ): Promise<Blob> {
+    const { data } = await api.get<Blob>(`/api/files/${fileId}/download`, {
+      responseType: 'blob',
+      headers: {
+        Range: `bytes=${start}-${end}`,
+      },
+      signal: options?.signal,
+    });
+    return data;
+  },
+
+  /**
+   * 获取文件大小（通过 HEAD 请求）
+   */
+  async getFileSize(fileId: string): Promise<number> {
+    const response = await api.head(`/api/files/${fileId}/download`);
+    const contentLength = response.headers['content-length'];
+    if (!contentLength) {
+      throw new Error('无法获取文件大小');
+    }
+    return parseInt(contentLength, 10);
+  },
+
+  /**
    * 删除单个文件
    * @param fileId 文件 ID
    */

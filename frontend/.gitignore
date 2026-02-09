@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# GIF files
+gif-files/
+gif2ugoira-files/
