@@ -114,7 +114,10 @@ export function useFilePreviewEffects({
     if (loading || !file) return;
 
     const preloadImage = (fileToPreload: FileMetadata) => {
-      const preloadKind = getPreviewKind(fileToPreload.mime_type);
+      const preloadKind = getPreviewKind(
+        fileToPreload.mime_type,
+        fileToPreload.original_filename
+      );
       if (!preloadKind.isImage) return;
       fileService
         .fetchPreviewBlob(fileToPreload.id)

@@ -157,7 +157,7 @@ export function useFilePreviewData({
       if (!isValidRequest()) return;
       setGifFirstFrameUrl(null);
       setError(null);
-      setBlobUrl(getStreamUrl(file.id));
+      setBlobUrl(null);
       finish();
       return;
     }

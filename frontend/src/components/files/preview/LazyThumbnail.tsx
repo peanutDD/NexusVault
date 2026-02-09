@@ -2,7 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { fileService } from '../../../services/files';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { cn } from '../../../utils/cn';
-import { isImageType, isVideoType, isPdfType, isAudioType } from '../../../utils/mimeType';
+import {
+  isImageType,
+  isUgoiraType,
+  isVideoType,
+  isPdfType,
+  isAudioType,
+} from '../../../utils/mimeType';
 import { getCachedThumbnailUrl, setCachedThumbnailUrl } from '../../../utils/thumbnailBlobCache';
 
 interface LazyThumbnailProps {
@@ -171,8 +177,10 @@ export default function LazyThumbnail({
   filename,
   className = '',
 }: LazyThumbnailProps) {
+  const showThumbnail =
+    isImageType(mimeType) || isUgoiraType(mimeType, filename);
   const [blobUrl, setBlobUrl] = useState<string | null>(() =>
-    isImageType(mimeType) ? getCachedThumbnailUrl(fileId) ?? null : null
+    showThumbnail ? getCachedThumbnailUrl(fileId) ?? null : null
   );
   const [loading, setLoading] = useState(false);
   const [showLoadingUi, setShowLoadingUi] = useState(false);
@@ -191,7 +199,7 @@ export default function LazyThumbnail({
 
   // fileId / mimeType 变化时从缓存同步并重置状态，避免虚拟列表复用时闪上一项或错误态
   useEffect(() => {
-    if (!isImageType(mimeType)) return;
+    if (!showThumbnail) return;
     const cached = getCachedThumbnailUrl(fileId);
     if (cached) {
       setBlobUrl(cached);
@@ -202,12 +210,12 @@ export default function LazyThumbnail({
       setError(false);
       setShowLoadingUi(false);
     }
-  }, [fileId, mimeType]);
+  }, [fileId, mimeType, showThumbnail]);
 
   // Blob URL 由 thumbnailBlobCache 统一管理，淘汰时再 revoke，此处不再 revoke 避免与缓存冲突
 
   useEffect(() => {
-    if (!isImageType(mimeType)) return;
+    if (!showThumbnail) return;
 
     const observer = getSharedObserver();
     const el = containerRef.current;
@@ -244,10 +252,10 @@ export default function LazyThumbnail({
         // ignore
       }
     };
-  }, [fileId, mimeType]);
+  }, [fileId, mimeType, showThumbnail]);
 
   useEffect(() => {
-    if (!isImageType(mimeType) || !loading || blobUrl || error) return;
+    if (!showThumbnail || !loading || blobUrl || error) return;
 
     let revoked = false;
     fileService
@@ -272,7 +280,7 @@ export default function LazyThumbnail({
     return () => {
       revoked = true;
     };
-  }, [fileId, mimeType, loading, blobUrl, error]);
+  }, [fileId, showThumbnail, loading, blobUrl, error]);
 
   const placeholder = (
     <div
@@ -284,7 +292,7 @@ export default function LazyThumbnail({
     >
       {showLoadingUi ? (
         <div className="w-full h-full animate-pulse bg-gray-600 dark:bg-gray-500" />
-      ) : isImageType(mimeType) ? (
+      ) : showThumbnail ? (
         <ImageIcon className="w-8 h-8" />
       ) : (
         <FileIcon className="w-8 h-8" />
@@ -292,8 +300,8 @@ export default function LazyThumbnail({
     </div>
   );
 
-  // 非图片类型：显示专门的图标
-  if (!isImageType(mimeType)) {
+  // 非缩略图类型（视频/PDF/音频等）：显示专门图标
+  if (!showThumbnail) {
     const { icon, bgClass, label } = getFileTypeDisplay(mimeType);
     return (
       <div

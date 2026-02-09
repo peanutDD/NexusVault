@@ -196,9 +196,9 @@ fn default_thumb_size() -> u32 {
     400
 }
 
-/// 图片缩略图（方案 B：先读盘，无则生成并写盘；GIF 只解第一帧）
+/// 图片缩略图（方案 B：先读盘，无则生成并写盘；GIF 只解第一帧；Ugoira 取首帧）
 ///
-/// 仅支持 `image/*` 类型，返回 JPEG 缩略图（最长边不超过 `w`），用于列表卡片等场景。
+/// 支持 `image/*` 与 Ugoira（`application/x-ugoira` 或 `application/zip` + `.ugoira`），返回 JPEG 缩略图。
 pub async fn thumbnail_file_handler(
     State(state): State<AppState>,
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
@@ -207,7 +207,13 @@ pub async fn thumbnail_file_handler(
 ) -> Result<Response, AppError> {
     let file = state.file_service.get_file(file_id, user_id).await?;
 
-    if !file.mime_type.starts_with("image/") {
+    let fname = file.original_filename.to_lowercase();
+    let is_ugoira = fname.ends_with(".ugoira");
+    let is_supported = file.mime_type.starts_with("image/")
+        || file.mime_type == "application/x-ugoira"
+        || ((file.mime_type == "application/zip" || file.mime_type == "application/octet-stream")
+            && is_ugoira);
+    if !is_supported {
         return Err(AppError::NotFound);
     }
 
@@ -224,9 +230,19 @@ pub async fn thumbnail_file_handler(
     let mime_type = file.mime_type.clone();
     let buf = tokio::task::spawn_blocking(move || generate_thumbnail_jpeg(data, mime_type, w))
         .await
-        .map_err(|_| AppError::Internal)??;
+        .map_err(|_| AppError::Internal)?;
+    let buf = match buf {
+        Ok(b) => b,
+        Err(AppError::File(e)) => {
+            tracing::debug!(file_id = %file_id, error = %e, "缩略图生成失败，返回 404");
+            return Err(AppError::NotFound);
+        }
+        Err(e) => return Err(e),
+    };
 
-    let _ = state.file_service.save_thumbnail(file_id, user_id, &buf).await;
+    if let Err(e) = state.file_service.save_thumbnail(file_id, user_id, &buf).await {
+        tracing::warn!(file_id = %file_id, error = %e, "缩略图生成成功但保存失败，下次请求将重新生成");
+    }
 
     file_response(buf, "thumb.jpg", "image/jpeg", true)
         .map_err(|_| AppError::Internal)

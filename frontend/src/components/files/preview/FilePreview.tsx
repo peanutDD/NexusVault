@@ -56,7 +56,10 @@ export default function FilePreview({
   // 预览类型
   // -------------------------------------------------------------------------
   const kind = useMemo(
-    () => (file ? getPreviewKind(file.mime_type) : getPreviewKind('')),
+    () =>
+      file
+        ? getPreviewKind(file.mime_type, file.original_filename)
+        : getPreviewKind(''),
     [file]
   );
 
@@ -325,7 +328,7 @@ export default function FilePreview({
               {displayFilename}
             </h2>
             <p className="text-white/55 mt-[clamp(0.2rem,0.5vw,0.25rem)] text-[clamp(0.65rem,1.4vw,0.75rem)]">
-              {formatFileSize(file.file_size)} · {getMimeTypeLabel(file.mime_type)} · {formatPreviewDate(file.created_at)}
+              {formatFileSize(file.file_size)} · {getMimeTypeLabel(file.mime_type, file.original_filename)} · {formatPreviewDate(file.created_at)}
             </p>
           </div>
         </div>

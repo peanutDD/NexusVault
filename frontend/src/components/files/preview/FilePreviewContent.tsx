@@ -98,13 +98,13 @@ export function FilePreviewContent({
 
       {!loading && !error && supported && (
         <div className="flex min-h-0 w-full flex-1 items-center justify-center">
-          {isUgoira && blobUrl && (
+          {isUgoira && (
             <div
               ref={imageTransformRef}
               className="flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-lg origin-center"
             >
               <UgoiraPlayer
-                src={blobUrl}
+                fileId={file.id}
                 alt={file.original_filename}
                 className="max-h-full max-w-full"
                 onLoad={() => setImageLoaded(true)}
@@ -238,7 +238,7 @@ export function FilePreviewContent({
                   <p className="flex items-center justify-center gap-1 whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-gray-400">
                     <span>{formatFileSize(file.file_size)}</span>
                     <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden />
-                    <span>{getMimeTypeLabel(file.mime_type)}</span>
+                    <span>{getMimeTypeLabel(file.mime_type, file.original_filename)}</span>
                   </p>
                   <p className="whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-gray-500">
                     {formatDate(file.created_at)}

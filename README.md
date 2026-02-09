@@ -9,7 +9,7 @@
 - ✅ 文件上传
   - 多文件、拖拽上传；支持 URL 拉取上传
   - **分片上传 + 断点续传**：大文件切块上传，记录进度，失败可重传单块；可选每块 `X-Part-SHA256` 校验
-  - **秒传（文件指纹）**：客户端计算 SHA-256，服务器已有相同内容则直接创建记录、不传文件内容；多记录共享同一物理文件，删除时按引用计数仅最后一条删物理文件
+  - **秒传（文件指纹）**：客户端计算 SHA-256，服务器已有相同内容则直接创建记录、不传文件内容；若已有文件属于当前用户则复用路径，属于其他用户则复制到当前用户目录（确保路径一致性）；同用户多记录共享同一物理文件，删除时按引用计数仅最后一条删物理文件
   - 上传队列支持并行（大文件与小文件可同时上传），进度与「计算指纹…」「秒传未命中，正在上传…」等状态反馈
 - ✅ 文件列表（虚拟列表 + 无限滚动，`Load more` 按钮兜底）
 - ✅ 文件过滤与分组：
@@ -267,6 +267,8 @@ frontend/
 - `DELETE /api/files/upload/chunked/:id/abort` - 取消分片上传
 - `GET /api/files/:id/download` - 下载文件
 - `GET /api/files/:id/preview` - 预览（流式/内联）
+- `GET /api/files/:id/preview/ugoira/metadata` - Ugoira 元数据（frames.json）
+- `GET /api/files/:id/preview/ugoira/frames/:index` - Ugoira 单帧（边播放边加载）
 - `GET /api/files/:id/hls` - 大视频 HLS 主列表（.m3u8）
 - `GET /api/files/:id/hls/:filename` - HLS 分片（.ts）
 - `GET /api/files/:id/thumbnail` - 缩略图

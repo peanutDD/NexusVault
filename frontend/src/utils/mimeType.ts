@@ -40,8 +40,11 @@ export const isArchiveType = (mime: string): boolean =>
   mime.includes('zip') || mime.includes('rar') || mime.includes('7z') || mime.includes('tar');
 
 /** 判断是否为 Ugoira 动图（ZIP + frames.json） */
-export const isUgoiraType = (mime: string): boolean =>
-  mime.toLowerCase() === 'application/x-ugoira';
+export function isUgoiraType(mime: string, filename?: string): boolean {
+  if (mime.toLowerCase() === 'application/x-ugoira') return true;
+  if (filename?.toLowerCase().endsWith('.ugoira')) return true;
+  return false;
+}
 
 // ============================================================================
 // 标签生成函数
@@ -58,9 +61,9 @@ export interface MimeTypeInfo {
 }
 
 /** 获取 MIME 类型的分类标签 */
-export function getMimeTypeLabel(mime: string): string {
+export function getMimeTypeLabel(mime: string, filename?: string): string {
   // 使用条件表达式链替代 if-else
-  return isUgoiraType(mime)
+  return isUgoiraType(mime, filename)
     ? 'Ugoira'
     : isImageType(mime)
     ? mime.split('/')[1]?.toUpperCase() || 'Image'
@@ -113,26 +116,26 @@ export function getMimeTypeColor(mime: string): string {
 // ============================================================================
 
 /** 判断文件类型是否支持预览 */
-export function isPreviewSupported(mime: string): boolean {
+export function isPreviewSupported(mime: string, filename?: string): boolean {
   return (
     isImageType(mime) ||
     isPdfType(mime) ||
     isTextType(mime) ||
     isVideoType(mime) ||
     isAudioType(mime) ||
-    isUgoiraType(mime)
+    isUgoiraType(mime, filename)
   );
 }
 
 /** 获取预览类型信息 */
-export function getPreviewKind(mime: string) {
+export function getPreviewKind(mime: string, filename?: string) {
   return {
-    supported: isPreviewSupported(mime),
+    supported: isPreviewSupported(mime, filename),
     isImage: isImageType(mime),
     isPDF: isPdfType(mime),
     isText: isTextType(mime),
     isVideo: isVideoType(mime),
     isAudio: isAudioType(mime),
-    isUgoira: isUgoiraType(mime),
+    isUgoira: isUgoiraType(mime, filename),
   };
 }

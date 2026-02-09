@@ -67,7 +67,7 @@ const FileCard = memo(
       minute: '2-digit',
     });
 
-    const mimeTypeLabel = getMimeTypeLabel(file.mime_type);
+    const mimeTypeLabel = getMimeTypeLabel(file.mime_type, file.original_filename);
 
     const handleMouseEnter = () => {
       schedulePreload(file.id);

@@ -1,10 +1,12 @@
 /**
  * UgoiraPlayer
- * 类 Pixiv うごイラ 播放器：ZIP 内含帧图 + frames.json，Canvas 逐帧绘制
+ * 对齐 Pixiv うごイラ 的 zip 模式：一次请求拉取整包 ZIP，在浏览器内用 JSZip 解析后从内存播放，无按帧请求。
+ * @see https://github.com/pixiv/zip_player
  */
 
 import { useEffect, useRef, useState } from 'react';
 import JSZip from 'jszip';
+import { fileService } from '../../../services/files';
 import { cn } from '../../../utils/cn';
 
 // =============================================================================
@@ -21,8 +23,8 @@ export interface UgoiraMetadata {
 }
 
 export interface UgoiraPlayerProps {
-  /** 预览 URL（含 token），支持 Range */
-  src: string;
+  /** 文件 ID，用于一次拉取整包 .ugoira (ZIP) */
+  fileId: string;
   /** 无障碍描述 */
   alt?: string;
   className?: string;
@@ -35,7 +37,7 @@ export interface UgoiraPlayerProps {
 // =============================================================================
 
 export function UgoiraPlayer({
-  src,
+  fileId,
   alt,
   className,
   onLoad,
@@ -48,7 +50,10 @@ export function UgoiraPlayer({
   const animRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const frameIndexRef = useRef<number>(0);
-  const imageUrlsRef = useRef<string[]>([]);
+  const lastDrawnRef = useRef<number>(-1);
+  /** 预加载后的全部帧（与 Pixiv zip 模式一致：一次解析，内存播放） */
+  const framesRef = useRef<HTMLImageElement[]>([]);
+  const urlsToRevokeRef = useRef<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,9 +65,9 @@ export function UgoiraPlayer({
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(src, { credentials: 'include' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
+
+        // 一次请求拉取整包（与 Pixiv zip 模式一致）
+        const blob = await fileService.getFileAsBlob(fileId);
         if (cancelled) return;
 
         const zip = await JSZip.loadAsync(blob);
@@ -73,33 +78,48 @@ export function UgoiraPlayer({
         const metaText = await metaFile.async('string');
         const meta: UgoiraMetadata = JSON.parse(metaText);
         if (!meta.frames?.length) throw new Error('frames.json 格式无效');
-
-        const frames: { blob: Blob; delay: number }[] = [];
-        for (let i = 0; i < meta.frames.length; i++) {
-          const f = meta.frames[i];
-          const fileName = f.file ?? `${i}.png`;
-          const file = zip.file(fileName);
-          if (!file) throw new Error(`缺少帧文件: ${fileName}`);
-          const blob = await file.async('blob');
-          frames.push({ blob, delay: f.delay });
-        }
         if (cancelled) return;
 
-        const img = new Image();
-        const firstUrl = URL.createObjectURL(frames[0].blob);
-        img.src = firstUrl;
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error('首帧加载失败'));
-        });
-        URL.revokeObjectURL(firstUrl);
+        const { frames: metaFrames } = meta;
+        const delays: number[] = [];
+        let totalDelay = 0;
+        for (const f of metaFrames) {
+          delays.push(totalDelay);
+          totalDelay += Math.max(0, f.delay ?? 100);
+        }
+        const totalMs = Math.max(1, totalDelay);
+
+        // 在内存中解出全部帧（无后续网络请求）
+        const loadImage = (name: string): Promise<HTMLImageElement> => {
+          const entry = zip.file(name);
+          if (!entry) return Promise.reject(new Error(`缺少帧: ${name}`));
+          return entry.async('blob').then((frameBlob) => {
+            if (cancelled) throw new Error('cancelled');
+            const url = URL.createObjectURL(frameBlob);
+            urlsToRevokeRef.current.push(url);
+            return new Promise<HTMLImageElement>((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => resolve(img);
+              img.onerror = () => reject(new Error(`帧加载失败: ${name}`));
+              img.src = url;
+            });
+          });
+        };
+
+        const images = await Promise.all(
+          metaFrames.map((f, i) =>
+            loadImage(f.file ?? `${i}.png`)
+          )
+        );
+        if (cancelled) return;
+
+        framesRef.current = images;
+        const w = images[0].naturalWidth;
+        const h = images[0].naturalHeight;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Canvas 2D 不可用');
-
         const dpr = window.devicePixelRatio ?? 1;
-        const w = img.naturalWidth;
-        const h = img.naturalHeight;
         canvas.width = w * dpr;
         canvas.height = h * dpr;
         ctx.scale(dpr, dpr);
@@ -109,41 +129,18 @@ export function UgoiraPlayer({
         setLoading(false);
         onLoad?.();
 
-        const imageUrls: string[] = [];
-        for (const f of frames) {
-          imageUrls.push(URL.createObjectURL(f.blob));
-        }
-
-        const preloadedImages: HTMLImageElement[] = [];
-        for (let i = 0; i < imageUrls.length; i++) {
-          const imgEl = new Image();
-          imgEl.src = imageUrls[i];
-          await new Promise<void>((resolve, reject) => {
-            imgEl.onload = () => resolve();
-            imgEl.onerror = () => reject(new Error(`帧 ${i} 加载失败`));
-          });
-          if (cancelled) {
-            for (const u of imageUrls) URL.revokeObjectURL(u);
-            return;
-          }
-          preloadedImages.push(imgEl);
-        }
-
-        let totalDelay = 0;
-        const delays = frames.map((f) => {
-          const t = totalDelay;
-          totalDelay += f.delay;
-          return t;
-        });
-        const totalMs = totalDelay;
-
         const drawFrame = (index: number) => {
-          const imgEl = preloadedImages[index];
-          if (imgEl && imgEl.complete) {
+          const img = framesRef.current[index];
+          if (img?.complete) {
             ctx.clearRect(0, 0, w, h);
-            ctx.drawImage(imgEl, 0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            lastDrawnRef.current = index;
           }
         };
+
+        drawFrame(0);
+        frameIndexRef.current = 0;
+        lastDrawnRef.current = 0;
 
         const tick = () => {
           if (cancelled) return;
@@ -157,17 +154,13 @@ export function UgoiraPlayer({
           }
           if (idx !== frameIndexRef.current) {
             frameIndexRef.current = idx;
-            drawFrame(idx);
           }
+          drawFrame(idx);
           animRef.current = requestAnimationFrame(tick);
         };
 
         startTimeRef.current = performance.now();
-        frameIndexRef.current = 0;
-        drawFrame(0);
         animRef.current = requestAnimationFrame(tick);
-
-        imageUrlsRef.current = imageUrls;
       } catch (err) {
         if (!cancelled) {
           const msg = err instanceof Error ? err.message : '加载失败';
@@ -186,10 +179,11 @@ export function UgoiraPlayer({
         cancelAnimationFrame(animRef.current);
         animRef.current = null;
       }
-      for (const u of imageUrlsRef.current) URL.revokeObjectURL(u);
-      imageUrlsRef.current = [];
+      for (const u of urlsToRevokeRef.current) URL.revokeObjectURL(u);
+      urlsToRevokeRef.current = [];
+      framesRef.current = [];
     };
-  }, [src, onLoad, _onError]);
+  }, [fileId, onLoad, _onError]);
 
   if (error) {
     return (
