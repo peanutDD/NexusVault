@@ -3,8 +3,11 @@
  * 预览主内容区：加载态、错误态、图片/视频/音频/PDF/文本/Ugoira/不支持
  */
 
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeHighlight from 'rehype-highlight';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { formatFileSize } from '../../../utils/format';
 import { getMimeTypeLabel } from '../../../utils/mimeType';
@@ -13,81 +16,185 @@ import { ErrorIcon, FileIcon, AudioIcon } from './FilePreviewIcons';
 
 interface MarkdownPreviewProps {
   content: string;
+  theme: 'dark' | 'light';
 }
 
-function MarkdownPreview({ content }: MarkdownPreviewProps) {
+function MarkdownPreview({ content, theme }: MarkdownPreviewProps) {
+  const isDark = theme === 'dark';
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeRaw, rehypeHighlight]}
       components={{
         h1: ({ node, ...props }) => (
-          <h1 className="mt-3 mb-1 text-sm font-semibold text-white" {...props} />
+          <h1
+            className={`mt-3 mb-1 text-sm font-semibold ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}
+            {...props}
+          />
         ),
         h2: ({ node, ...props }) => (
-          <h2 className="mt-3 mb-1 text-sm font-semibold text-white" {...props} />
+          <h2
+            className={`mt-3 mb-1 text-sm font-semibold ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}
+            {...props}
+          />
         ),
         h3: ({ node, ...props }) => (
-          <h3 className="mt-3 mb-1 text-sm font-semibold text-white" {...props} />
+          <h3
+            className={`mt-3 mb-1 text-sm font-semibold ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}
+            {...props}
+          />
         ),
         h4: ({ node, ...props }) => (
-          <h4 className="mt-3 mb-1 text-xs font-semibold text-white" {...props} />
+          <h4
+            className={`mt-3 mb-1 text-xs font-semibold ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}
+            {...props}
+          />
         ),
         h5: ({ node, ...props }) => (
-          <h5 className="mt-2 mb-1 text-xs font-semibold text-white" {...props} />
+          <h5
+            className={`mt-2 mb-1 text-xs font-semibold ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}
+            {...props}
+          />
         ),
         h6: ({ node, ...props }) => (
-          <h6 className="mt-2 mb-1 text-xs font-semibold text-white/90" {...props} />
+          <h6
+            className={`mt-2 mb-1 text-xs font-semibold ${
+              isDark ? 'text-white/90' : 'text-slate-800'
+            }`}
+            {...props}
+          />
         ),
         p: ({ node, ...props }) => (
-          <p className="mb-2 text-xs text-gray-100" {...props} />
+          <p
+            className={`mb-2 text-xs ${
+              isDark ? 'text-gray-100' : 'text-slate-800'
+            }`}
+            {...props}
+          />
         ),
         ul: ({ node, ...props }) => (
-          <ul className="mb-2 list-disc pl-5 text-xs text-gray-100" {...props} />
+          <ul
+            className={`mb-2 list-disc pl-5 text-xs ${
+              isDark ? 'text-gray-100' : 'text-slate-800'
+            }`}
+            {...props}
+          />
         ),
         ol: ({ node, ...props }) => (
-          <ol className="mb-2 list-decimal pl-5 text-xs text-gray-100" {...props} />
+          <ol
+            className={`mb-2 list-decimal pl-5 text-xs ${
+              isDark ? 'text-gray-100' : 'text-slate-800'
+            }`}
+            {...props}
+          />
         ),
         li: ({ node, ...props }) => <li className="mb-1" {...props} />,
         code: ({ inline, className, children, ...props }) =>
           inline ? (
             <code
-              className="rounded bg-black/40 px-1 py-0.5 text-[0.7rem] font-mono text-purple-200"
+              className={`rounded px-1 py-0.5 text-[0.7rem] font-mono ${
+                isDark
+                  ? 'bg-black/40 text-purple-200'
+                  : 'bg-slate-100 text-purple-700'
+              }`}
               {...props}
             >
               {children}
             </code>
           ) : (
-            <pre className="mb-3 overflow-auto rounded-md bg-black/40 p-3 text-xs text-gray-100 font-mono">
-              <code {...props}>{children}</code>
-            </pre>
+            // 对于代码块，只自定义 code，本身仍由 ReactMarkdown 包在 <pre> 里，
+            // 避免在 <p> 里再嵌套 <pre> 导致 hydration 报错
+            <code
+              className={`text-xs font-mono ${
+                isDark ? 'text-gray-100' : 'text-slate-50'
+              } ${className ?? ''}`}
+              {...props}
+            >
+              {children}
+            </code>
           ),
+        pre: ({ node, ...props }) => (
+          <pre
+            className={`mb-3 overflow-auto rounded-md p-3 text-xs font-mono ${
+              isDark ? 'bg-black/40 text-gray-100' : 'bg-slate-900 text-slate-50'
+            }`}
+            {...props}
+          />
+        ),
         blockquote: ({ node, ...props }) => (
           <blockquote
-            className="mb-2 border-l-2 border-purple-400/60 pl-3 text-xs text-gray-100/90"
+            className={`mb-2 border-l-2 pl-3 text-xs ${
+              isDark
+                ? 'border-purple-400/60 text-gray-100/90'
+                : 'border-purple-500/70 text-slate-800'
+            }`}
             {...props}
           />
         ),
         a: ({ node, ...props }) => (
           <a
-            className="text-xs text-sky-300 underline hover:text-sky-200"
+            className={`text-xs underline ${
+              isDark
+                ? 'text-sky-300 hover:text-sky-200'
+                : 'text-sky-600 hover:text-sky-500'
+            }`}
             target="_blank"
             rel="noreferrer"
             {...props}
           />
         ),
+        img: ({ node, ...props }) => (
+          // 统一控制图片展示为宽度自适应、保持比例
+          // 使用 block + margin 提升在长文中的可读性
+          // 注意：如果远程服务器禁止外链或加载失败，仍然会是浏览器的断图状态
+          <img
+            className="my-3 max-w-full rounded-md border border-white/10 bg-black/20 object-contain"
+            loading="lazy"
+            {...props}
+          />
+        ),
         table: ({ node, ...props }) => (
-          <div className="mb-3 overflow-auto rounded-md border border-white/10">
-            <table className="min-w-full text-[0.7rem] text-gray-100" {...props} />
+          <div
+            className={`mb-3 overflow-auto rounded-md border ${
+              isDark ? 'border-white/10' : 'border-slate-200'
+            }`}
+          >
+            <table
+              className={`min-w-full text-[0.7rem] ${
+                isDark ? 'text-gray-100' : 'text-slate-800'
+              }`}
+              {...props}
+            />
           </div>
         ),
         th: ({ node, ...props }) => (
           <th
-            className="border-b border-white/10 bg-white/5 px-2 py-1 text-left font-semibold"
+            className={`border-b px-2 py-1 text-left font-semibold ${
+              isDark
+                ? 'border-white/10 bg-white/5'
+                : 'border-slate-200 bg-slate-100'
+            }`}
             {...props}
           />
         ),
         td: ({ node, ...props }) => (
-          <td className="border-b border-white/5 px-2 py-1 align-top" {...props} />
+          <td
+            className={`border-b px-2 py-1 align-top ${
+              isDark ? 'border-white/5' : 'border-slate-200'
+            }`}
+            {...props}
+          />
         ),
       }}
     >
@@ -153,6 +260,7 @@ export function FilePreviewContent({
   onClose,
   formatDate,
 }: FilePreviewContentProps) {
+  const [markdownTheme, setMarkdownTheme] = useState<'dark' | 'light'>('dark');
   return (
     <div
       className="relative z-0 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pl-[clamp(4.5rem,13vw,7rem)] pr-[clamp(4.5rem,13vw,7rem)] py-[clamp(1rem,4vh,2.5rem)]"
@@ -281,11 +389,53 @@ export function FilePreviewContent({
                   <span className="text-xs text-white/40">
                     {isMarkdown ? 'md' : file.mime_type}
                   </span>
-                  <span className="text-xs text-white/40">{textContent.split('\n').length} 行</span>
+                  <div className="flex items-center gap-3">
+                    {isMarkdown && (
+                      <div className="flex items-center gap-1 text-[0.7rem] text-white/50">
+                        <span>主题</span>
+                        <button
+                          type="button"
+                          className={cn(
+                            'rounded-full px-2 py-0.5',
+                            markdownTheme === 'dark'
+                              ? 'bg-white/20 text-white'
+                              : 'bg-transparent text-white/60 hover:bg-white/10'
+                          )}
+                          onClick={() => setMarkdownTheme('dark')}
+                        >
+                          深色
+                        </button>
+                        <button
+                          type="button"
+                          className={cn(
+                            'rounded-full px-2 py-0.5',
+                            markdownTheme === 'light'
+                              ? 'bg-white/90 text-gray-900'
+                              : 'bg-transparent text-white/60 hover:bg-white/10'
+                          )}
+                          onClick={() => setMarkdownTheme('light')}
+                        >
+                          浅色
+                        </button>
+                      </div>
+                    )}
+                    <span className="text-xs text-white/40">
+                      {textContent.split('\n').length} 行
+                    </span>
+                  </div>
                 </div>
-                <div className="h-[calc(100%-40px)] overflow-auto p-4 text-sm leading-relaxed text-gray-100">
+                <div
+                  className={cn(
+                    'h-[calc(100%-40px)] overflow-auto p-4 text-sm leading-relaxed',
+                    isMarkdown
+                      ? markdownTheme === 'dark'
+                        ? 'bg-transparent text-gray-100'
+                        : 'bg-white text-slate-900'
+                      : 'text-gray-100'
+                  )}
+                >
                   {isMarkdown ? (
-                    <MarkdownPreview content={textContent} />
+                    <MarkdownPreview content={textContent} theme={markdownTheme} />
                   ) : (
                     <pre className="h-full overflow-auto text-sm leading-relaxed text-gray-200 whitespace-pre-wrap font-mono">
                       {textContent}

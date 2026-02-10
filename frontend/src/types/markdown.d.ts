@@ -4,6 +4,7 @@ declare module 'react-markdown' {
   export interface ReactMarkdownProps {
     children?: ReactNode;
     remarkPlugins?: unknown[];
+    rehypePlugins?: unknown[];
     components?: Record<string, ComponentType<any>>;
   }
 
@@ -14,5 +15,15 @@ declare module 'react-markdown' {
 declare module 'remark-gfm' {
   const remarkGfm: unknown;
   export default remarkGfm;
+}
+
+declare module 'rehype-raw' {
+  const rehypeRaw: unknown;
+  export default rehypeRaw;
+}
+
+declare module 'rehype-highlight' {
+  const rehypeHighlight: unknown;
+  export default rehypeHighlight;
 }
 
