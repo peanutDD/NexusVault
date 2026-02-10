@@ -165,12 +165,23 @@ function MarkdownPreview({ content, theme }: MarkdownPreviewProps) {
               ? apiPath(`/proxy/image?url=${encodeURIComponent(src)}`)
               : src;
 
+          // 对于 Markdown 中的 <img>：
+          // - 保留作者在 Markdown 里写的宽高/样式（width/height/style）
+          // - 同时限制最大宽高，避免超大外链图把整块内容撑满
+          const { className, ...rest } = props as {
+            className?: string;
+            [key: string]: unknown;
+          };
+
           return (
             <img
               src={proxiedSrc}
-              className="my-3 max-w-full rounded-md border border-white/10 bg-black/20 object-contain"
               loading="lazy"
-              {...props}
+              className={cn(
+                'my-3 mx-auto block max-w-full max-h-[60vh] rounded-md border border-white/10 bg-black/20 object-contain',
+                typeof className === 'string' ? className : undefined
+              )}
+              {...rest}
             />
           );
         },
