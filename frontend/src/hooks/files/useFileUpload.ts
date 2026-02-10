@@ -9,6 +9,7 @@ import {
 import { UPLOAD_QUEUE, LARGE_FILE_UPLOAD } from '../../constants';
 import { UploadQueue } from '../../utils/uploadQueue';
 import type { UploadFile } from '../../components/files/upload/UploadFileItem';
+import { trackEvent, trackError } from '../../utils/telemetry';
 
 const uploadQueue = new UploadQueue(
   UPLOAD_QUEUE.MAX_COST,
@@ -160,6 +161,19 @@ export function useFileUpload(
     const pendingFiles = currentFiles.filter((f) => f.status === 'pending' && f.file);
     if (pendingFiles.length === 0) return;
 
+    // 批量上传起点事件
+    const totalSize = pendingFiles.reduce(
+      (sum, f) => sum + (f.file ? f.file.size : 0),
+      0
+    );
+    trackEvent({
+      eventType: 'upload',
+      action: 'upload_batch_start',
+      status: 'start',
+      fileSize: totalSize,
+      extra: { count: pendingFiles.length },
+    });
+
     isUploadingRef.current = true;
 
     updateUploadFiles((prev) =>
@@ -205,6 +219,11 @@ export function useFileUpload(
           );
           hasNewSuccess = true;
         } catch (err) {
+          trackError(err, {
+            action: 'upload_file',
+            fileSize: file.size,
+            extra: { taskId },
+          });
           updateUploadFiles((prev) =>
             prev.map((f) =>
               f.id === taskId

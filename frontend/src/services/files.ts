@@ -12,6 +12,7 @@ import { BatchRequestManager } from '../utils/batchRequest';
 import { sha256FileHex } from '../utils/sha256';
 import { useAuthStore } from '../store/authStore';
 import type { FileMetadata, FileListResponse, FileListQuery } from '../types';
+import { trackEvent, trackError } from '../utils/telemetry';
 
 /**
  * 预览请求并发限制器
@@ -169,28 +170,65 @@ export const fileService = {
     file: globalThis.File,
     onProgress?: (percent: number, message?: string) => void
   ): Promise<{ file: FileMetadata }> {
+    const startedAt = performance.now();
     const useChunked =
       file.type.startsWith('video/') || file.size >= this.CHUNK_THRESHOLD;
-    onProgress?.(0, '计算指纹…');
-    const content_sha256 = await sha256FileHex(file);
-    const mime = file.type || 'application/octet-stream';
-    const result = await this.uploadInstant({
-      content_sha256,
-      filename: file.name,
-      file_size: file.size,
-      mime_type: mime,
-      folder_id: null,
+
+    trackEvent({
+      eventType: 'upload',
+      action: 'upload_with_instant',
+      status: 'start',
+      fileSize: file.size,
     });
-    if (result === null) {
-      console.info('[秒传] 服务器暂无相同文件，将走普通/分片上传');
-      onProgress?.(0, '秒传未命中，正在上传…');
-      const progressOnly = (p: number) => onProgress?.(p);
-      return useChunked
-        ? this.uploadFileChunked(file, progressOnly)
-        : this.uploadFile(file, progressOnly);
+
+    try {
+      onProgress?.(0, '计算指纹…');
+      const content_sha256 = await sha256FileHex(file);
+      const mime = file.type || 'application/octet-stream';
+      const result = await this.uploadInstant({
+        content_sha256,
+        filename: file.name,
+        file_size: file.size,
+        mime_type: mime,
+        folder_id: null,
+      });
+      if (result === null) {
+        console.info('[秒传] 服务器暂无相同文件，将走普通/分片上传');
+        onProgress?.(0, '秒传未命中，正在上传…');
+        const progressOnly = (p: number) => onProgress?.(p);
+        const uploaded = await (useChunked
+          ? this.uploadFileChunked(file, progressOnly)
+          : this.uploadFile(file, progressOnly));
+
+        trackEvent({
+          eventType: 'upload',
+          action: 'upload_with_instant',
+          status: 'success',
+          fileId: uploaded.file.id,
+          fileSize: file.size,
+          durationMs: Math.round(performance.now() - startedAt),
+        });
+        return uploaded;
+      }
+
+      onProgress?.(100);
+      trackEvent({
+        eventType: 'upload',
+        action: 'upload_with_instant',
+        status: 'success',
+        fileId: result.file.id,
+        fileSize: file.size,
+        durationMs: Math.round(performance.now() - startedAt),
+        extra: { mode: 'instant' },
+      });
+      return result;
+    } catch (err) {
+      trackError(err, {
+        action: 'upload_with_instant',
+        fileSize: file.size,
+      });
+      throw err;
     }
-    onProgress?.(100);
-    return result;
   },
 
   /**
@@ -448,10 +486,34 @@ export const fileService = {
    * @param filename 文件名
    */
   async downloadFile(fileId: string, filename: string): Promise<void> {
-    const response = await api.get<Blob>(`/api/files/${fileId}/download`, {
-      responseType: 'blob',
+    const startedAt = performance.now();
+    trackEvent({
+      eventType: 'download',
+      action: 'download_file',
+      status: 'start',
+      fileId,
     });
-    downloadBlob(response.data, filename);
+
+    try {
+      const response = await api.get<Blob>(`/api/files/${fileId}/download`, {
+        responseType: 'blob',
+      });
+      downloadBlob(response.data, filename);
+
+      trackEvent({
+        eventType: 'download',
+        action: 'download_file',
+        status: 'success',
+        fileId,
+        durationMs: Math.round(performance.now() - startedAt),
+      });
+    } catch (err) {
+      trackError(err, {
+        action: 'download_file',
+        fileId,
+      });
+      throw err;
+    }
   },
 
   /**

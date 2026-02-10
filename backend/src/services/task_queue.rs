@@ -1,0 +1,298 @@
+use std::sync::Arc;
+use std::time::Instant;
+
+use metrics::{counter, histogram};
+use serde::{Deserialize, Serialize};
+use sqlx::{query, query_as, PgPool};
+use uuid::Uuid;
+
+use crate::models::file::File;
+use crate::services::file::FileService;
+use crate::utils::AppError;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskStatus {
+    Pending,
+    Running,
+    Succeeded,
+    Failed,
+}
+
+impl TaskStatus {
+    fn as_str(self) -> &'static str {
+        match self {
+            TaskStatus::Pending => "pending",
+            TaskStatus::Running => "running",
+            TaskStatus::Succeeded => "succeeded",
+            TaskStatus::Failed => "failed",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackgroundTask {
+    pub id: Uuid,
+    pub task_type: String,
+    pub payload: serde_json::Value,
+    pub status: String,
+    pub attempts: i32,
+}
+
+#[derive(Debug, Clone)]
+pub struct TaskQueue {
+    pool: Arc<PgPool>,
+}
+
+impl TaskQueue {
+    pub fn new(pool: Arc<PgPool>) -> Self {
+        Self { pool }
+    }
+
+    /// 创建或复用一个后台任务。
+    ///
+    /// 若提供 `dedupe_key`，则在存在相同 dedupe_key 且仍为 pending/running 的任务时直接返回该任务，
+    /// 避免对同一业务实体重复排队。
+    pub async fn enqueue_task(
+        &self,
+        task_type: &str,
+        payload: serde_json::Value,
+        dedupe_key: Option<&str>,
+    ) -> Result<BackgroundTask, AppError> {
+        if let Some(key) = dedupe_key {
+            if let Some(existing) = self
+                .find_active_by_dedupe_key(task_type, key)
+                .await
+                .map_err(AppError::from)?
+            {
+                return Ok(existing);
+            }
+        }
+
+        let id = Uuid::new_v4();
+        let status = TaskStatus::Pending.as_str().to_string();
+        let dedupe = dedupe_key.map(|s| s.to_string());
+
+        let rec: (Uuid, String, serde_json::Value, String, i32) = query_as(
+            "INSERT INTO background_tasks (id, task_type, payload, status, attempts, dedupe_key)
+             VALUES ($1, $2, $3, $4, 0, $5)
+             RETURNING id, task_type, payload, status, attempts",
+        )
+        .bind(id)
+        .bind(task_type)
+        .bind(&payload)
+        .bind(&status)
+        .bind(dedupe)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+
+        Ok(BackgroundTask {
+            id: rec.0,
+            task_type: rec.1,
+            payload: rec.2,
+            status: rec.3,
+            attempts: rec.4,
+        })
+    }
+
+    /// 从队列中取出一个待处理任务（使用 FOR UPDATE SKIP LOCKED）。
+    pub async fn dequeue_pending_task(
+        &self,
+        task_type: &str,
+    ) -> Result<Option<BackgroundTask>, AppError> {
+        let mut tx = self.pool.begin().await.map_err(AppError::from)?;
+
+        let row: Option<(Uuid, serde_json::Value, i32)> = query_as(
+            "SELECT id, payload, attempts
+             FROM background_tasks
+             WHERE task_type = $1
+               AND status = 'pending'
+             ORDER BY created_at
+             FOR UPDATE SKIP LOCKED
+             LIMIT 1",
+        )
+        .bind(task_type)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::from)?;
+
+        let Some((id, payload, attempts)) = row else {
+            tx.commit().await.map_err(AppError::from)?;
+            return Ok(None);
+        };
+
+        query(
+            "UPDATE background_tasks
+             SET status = 'running', attempts = attempts + 1, started_at = NOW(), updated_at = NOW()
+             WHERE id = $1",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::from)?;
+
+        tx.commit().await.map_err(AppError::from)?;
+
+        Ok(Some(BackgroundTask {
+            id,
+            task_type: task_type.to_string(),
+            payload,
+            status: TaskStatus::Running.as_str().to_string(),
+            attempts: attempts + 1,
+        }))
+    }
+
+    pub async fn mark_succeeded(&self, id: Uuid) -> Result<(), AppError> {
+        query(
+            "UPDATE background_tasks
+             SET status = 'succeeded', completed_at = NOW(), updated_at = NOW()
+             WHERE id = $1",
+        )
+        .bind(id)
+        .execute(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+        Ok(())
+    }
+
+    pub async fn mark_failed(&self, id: Uuid, error: &str) -> Result<(), AppError> {
+        query(
+            "UPDATE background_tasks
+             SET status = 'failed', last_error = $2, completed_at = NOW(), updated_at = NOW()
+             WHERE id = $1",
+        )
+        .bind(id)
+        .bind(error)
+        .execute(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+        Ok(())
+    }
+
+    async fn find_active_by_dedupe_key(
+        &self,
+        task_type: &str,
+        dedupe_key: &str,
+    ) -> Result<Option<BackgroundTask>, sqlx::Error> {
+        let rec: Option<(Uuid, String, serde_json::Value, String, i32)> = query_as(
+            "SELECT id, task_type, payload, status, attempts
+             FROM background_tasks
+             WHERE task_type = $1
+               AND dedupe_key = $2
+               AND status IN ('pending', 'running')
+             ORDER BY created_at
+             LIMIT 1",
+        )
+        .bind(task_type)
+        .bind(dedupe_key)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(rec.map(|r| BackgroundTask {
+            id: r.0,
+            task_type: r.1,
+            payload: r.2,
+            status: r.3,
+            attempts: r.4,
+        }))
+    }
+}
+
+/// GIF 预览转码任务的 payload 模式。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GifPreviewPayload {
+    pub file_id: Uuid,
+    pub user_id: Uuid,
+    pub storage_backend: String,
+    pub source_path: String,
+}
+
+/// 简单的 GIF 预览 Worker：从队列中取出 `gif_preview` 任务并执行转码。
+pub async fn run_gif_preview_worker(state: &crate::AppState) -> Result<(), AppError> {
+    let task = match state.task_queue.dequeue_pending_task("gif_preview").await? {
+        Some(t) => t,
+        None => return Ok(()),
+    };
+
+    let payload: GifPreviewPayload = serde_json::from_value(task.payload.clone()).map_err(|e| {
+        AppError::File(format!("解析 gif_preview payload 失败: {}", e))
+    })?;
+
+    let started_at = Instant::now();
+
+    // 仅支持本地存储；S3 等后端后续扩展
+    if payload.storage_backend != "local" {
+        state
+            .task_queue
+            .mark_failed(
+                task.id,
+                "gif_preview only supports local storage backend for now",
+            )
+            .await?;
+        return Ok(());
+    }
+
+    // 查询最新的文件记录，避免任务创建后文件被删除或移动
+    let file: File = state
+        .file_service
+        .get_file(payload.file_id, payload.user_id)
+        .await?;
+
+    match state.file_service.transcode_gif_to_mp4(&file).await {
+        Ok(_path) => {
+            let elapsed = started_at.elapsed();
+            counter!(
+                "transcode_jobs_total",
+                "task_type" => "gif_preview",
+                "status" => "succeeded"
+            )
+            .increment(1);
+            histogram!(
+                "transcode_duration_seconds",
+                "task_type" => "gif_preview"
+            )
+            .record(elapsed.as_secs_f64());
+
+            tracing::info!(
+                task_id = %task.id,
+                user_id = %payload.user_id,
+                file_id = %payload.file_id,
+                duration_ms = elapsed.as_millis() as u64,
+                "gif_preview transcode succeeded"
+            );
+
+            state.task_queue.mark_succeeded(task.id).await?;
+        }
+        Err(e) => {
+            let elapsed = started_at.elapsed();
+            let msg = format!("gif_preview transcode failed: {}", e);
+
+            counter!(
+                "transcode_jobs_total",
+                "task_type" => "gif_preview",
+                "status" => "failed"
+            )
+            .increment(1);
+            histogram!(
+                "transcode_duration_seconds",
+                "task_type" => "gif_preview"
+            )
+            .record(elapsed.as_secs_f64());
+
+            tracing::error!(
+                task_id = %task.id,
+                user_id = %payload.user_id,
+                file_id = %payload.file_id,
+                duration_ms = elapsed.as_millis() as u64,
+                error = %e,
+                "gif_preview transcode failed"
+            );
+
+            state.task_queue.mark_failed(task.id, &msg).await?;
+        }
+    }
+
+    Ok(())
+}
+
+

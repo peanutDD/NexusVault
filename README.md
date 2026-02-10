@@ -22,7 +22,7 @@
 - ✅ 混合存储支持（本地文件系统 + AWS S3）
 - ✅ 文件预览
   - 图片 / PDF / 文本 / 音视频内联预览
-  - **GIF 视频预览**：GIF 文件在后端按需转码为 MP4，前端使用 `<video>` 元素播放，提供流畅的播放体验
+  - **GIF 视频预览**：GIF 文件在后端按需转码为 MP4（通过后台任务异步生成），前端使用 `<video>` 元素播放，提供流畅的播放体验；首次打开 GIF 时若尚未完成转码，前端会调用 `prepare/status` 接口短暂轮询，转码完成后自动切换为视频播放
   - **大视频 HLS 预览**：超过阈值（默认 100MB）的视频在后端转码为 HLS（.m3u8 + .ts），前端用 hls.js 流式播放
   - 不支持的类型提供霓虹玻璃风格提示 + 下载按钮
 - ✅ 文件夹与分类（新建文件夹、批量移动、分类筛选）
@@ -199,6 +199,18 @@ frontend/
 > - 预览体验：支持常见文件类型内联预览；不支持的类型使用霓虹玻璃风提示框 + 下载按钮  
 > - 响应式：桌面 / 移动端统一使用同一套过滤栏、分组栏与下拉菜单视觉风格
 
+### 前端 UI 设计系统
+
+前端在 `src/components/common/` 下抽象了一套可复用的 UI 组件，用于统一按钮、空状态、错误提示和加载态的视觉与交互：
+
+- **按钮 `Button`**：用于对话框确认、列表工具栏、操作入口等，统一圆角、阴影和 hover/focus 状态。
+- **空状态 `EmptyState`**：用于「暂无文件 / 文件夹为空 / 搜索无结果」等场景，例如当前文件列表在 `totalItems === 0` 时即使用该组件。
+- **错误提示 `ErrorMessage`**：玻璃拟态风的错误/警告/信息提示，用于列表加载失败、预览错误等场景，可配合 `Button` 提供「重试」操作。
+- **骨架屏 `Skeleton` / `FileCardSkeleton` / `FileListSkeleton`**：用于文件列表和网格的加载占位，减少大列表加载时的视觉跳变。
+- **标签 `Tag` 与表单容器 `FormField`**：统一展示状态徽标、表单标签与说明文字，用于设置页、对话框等。
+
+更详细的前端 UI 设计规范与示例代码，见 [`frontend/docs/UI_SYSTEM.md`](./frontend/docs/UI_SYSTEM.md)。
+
 ## 高并发与性能设计
 
 本项目在前后端都针对高并发 / 大文件量场景做了专门的设计。下面是实际用到的关键技术与策略。
@@ -247,6 +259,71 @@ frontend/
 > 总体上：后端依靠 Rust + Axum + SQLx + Tokio 提供高并发处理能力；  
 > 前端则通过请求去重、缓存、虚拟列表与 Worker 分组，确保在大量文件与频繁操作下仍然保持良好的响应速度。
 
+## 运维与可观测性
+
+### 结构化日志与 Trace ID
+
+- **请求级日志**：  
+  - 通过 `RequestLogLayer` 中间件为每个 HTTP 请求打出结构化日志，包括：  
+    - `trace_id`, `user_id`, `method`, `path`, `status`, `latency_ms`  
+  - 若上游（网关 / 反向代理）已注入 `X-Trace-Id` / `X-Request-Id`，则复用；否则服务端生成 UUID。  
+  - 响应统一回写 `X-Trace-Id` / `X-Request-Id`，前端可在错误上报中带上，方便端到端排查。
+- **统一错误处理**：  
+  - 所有业务错误收敛为 `AppError`，在 `IntoResponse` 中根据错误类型映射到合适的 HTTP 状态码与脱敏后的用户消息，  
+  - 日志中带上 `error_id`、`error_type`、`timestamp`，便于从告警跳转到详细日志。
+
+### 指标与简单监控
+
+- **HTTP 维度指标（Prometheus 兼容）**：  
+  - 通过 `metrics_middleware` 记录：  
+    - `http_requests_total{method,path,status,status_class}`  
+    - `http_request_duration_seconds{method,path}`（直方图，可用于 P95/P99 延迟）  
+    - `http_requests_in_flight`（在途请求数）
+- **文件上传/下载指标**：  
+  - 使用 `record_file_operation("upload"|"download", size_bytes, success)` 记录：  
+    - `file_operations_total{operation,status}`：上传/下载成功与失败次数  
+    - `file_operation_size_bytes{operation}`：成功上传/下载的文件大小分布（直方图）  
+  - 可据此统计一段时间内的上传/下载流量与平均文件大小。
+- **转码任务指标（GIF → MP4 预览）**：  
+  - 后台 GIF 预览 Worker 在每次转码完成后上报：  
+    - `transcode_jobs_total{task_type="gif_preview",status="succeeded|failed"}`  
+    - `transcode_duration_seconds{task_type="gif_preview"}`  
+  - 日志中额外包含 `task_id`, `user_id`, `file_id`, `duration_ms`，便于排查个别任务异常。
+
+### 关键错误与日志告警
+
+- **磁盘空间不足**：  
+  - 普通上传前会检查临时目录可用空间，若预留空间不足，则：  
+    - 记录结构化错误日志：`error_type="disk_full", tmp_dir, free_bytes, reserve_bytes`  
+    - 返回用户可读的错误信息「磁盘空间不足，请稍后重试」。  
+  - 运维可基于 `error_type="disk_full"` 在日志系统或告警平台（如 Loki + Alertmanager / ELK + Watcher）上配置告警。
+- **对象存储失败（本地磁盘 / S3）**：  
+  - 所有存储相关错误统一映射为 `AppError::Storage` 或 `AppError::File`，在错误处理中记录：  
+    - `error_type="storage"` / `"file"` 与脱敏后的错误细节（不包含完整路径）。  
+  - 运维可按错误类型与出现频率设置告警，如「5 分钟内 STORAGE_ERROR 超过 N 次」。
+
+### 前端遥测与错误上报
+
+- **前端事件上报接口**：  
+  - 新增 `POST /api/telemetry/events`，接受来自前端的关键交互与错误事件：  
+    - 字段包括：`event_type`, `action`, `status`, `duration_ms`, `error_message`, `file_id`, `file_size`, `extra` 等  
+    - 通过 `AuthenticatedUser` 提取 `user_id`，在后端以 `target="frontend_telemetry"` 的结构化日志记录。
+- **内置埋点与错误上报**：  
+  - 上传：  
+    - 批量上传开始时上报 `upload_batch_start` 事件（带文件数量与总大小）；  
+    - 单文件「秒传 + 普通/分片上传」封装为 `upload_with_instant` 事件，记录成功/失败与耗时。  
+  - 下载：  
+    - 调用下载接口前后分别上报 `download_file` 的 `start` / `success` 事件（含 `file_id` 与耗时）。  
+  - 错误：  
+    - `ErrorBoundary` 捕获到的 React 渲染错误会通过 `trackError` 上报，包含组件栈信息；  
+    - 全局 `window.error` 与 `unhandledrejection` 监听，将未捕获的 JS 错误与 Promise 拒绝上报到 `/api/telemetry/events`。  
+
+> 通过上述日志 + 指标 + 遥测事件组合，你可以在不引入全套监控系统的前提下，  
+> 先从日志聚合与基础告警做起：  
+> - 统计转码任务量与失败率  
+> - 统计上传/下载 QPS 与平均/分位时延  
+> - 对「磁盘满」「存储错误」「高失败率」等关键事件快速告警。
+
 ## API 端点
 
 ### 认证 API
@@ -269,9 +346,9 @@ frontend/
 - `DELETE /api/files/upload/chunked/:id/abort` - 取消分片上传
 - `GET /api/files/:id/download` - 下载文件
 - `GET /api/files/:id/preview` - 预览（流式/内联）
-- `GET /api/files/:id/preview/video` - GIF 视频预览（按需转码为 mp4，前端使用 `<video>` 播放）
-- `POST /api/files/:id/preview/video/prepare` - 触发 GIF 视频预览转码（当前实现中会同步完成转码并返回 `ready`）
-- `GET /api/files/:id/preview/video/status` - 查询 GIF 视频预览转码状态（前端轮询使用）
+- `GET /api/files/:id/preview/video` - GIF 视频预览：若派生 mp4 已存在，直接以流的形式返回，供 `<video>` 播放；若尚未生成则返回 404，由前端根据 `prepare/status` 决定 UI
+- `POST /api/files/:id/preview/video/prepare` - 触发或复用 GIF 视频预览转码后台任务：若已存在派生 mp4 则返回 `{ status: "ready" }`，否则写入 `background_tasks` 队列表并返回 `{ status: "processing" }`
+- `GET /api/files/:id/preview/video/status` - 查询 GIF 视频预览转码状态（前端轮询使用）：仅根据派生 mp4 是否存在返回 `{ status: "ready" }` 或 `{ status: "processing" }`
 - `GET /api/files/:id/hls` - 大视频 HLS 主列表（.m3u8）
 - `GET /api/files/:id/hls/:filename` - HLS 分片（.ts）
 - `GET /api/files/:id/thumbnail` - 缩略图
@@ -390,6 +467,56 @@ npm run preview -- --host 0.0.0.0 --port 5173
 - 在手机浏览器访问：`http://<你的局域网 IP>:5173`
 
 > 生产预览模式下，前端会以实际打包后的代码运行，更接近线上表现（包括列表渲染性能与 hover 效果）。
+
+## CDN 与公网访问
+
+### 有域名时：整站加速（CDN）
+
+若你有公网域名，希望整站走 CDN 加速、并顺带做 DDoS 防护，推荐使用 **Cloudflare**（免费）：
+
+1. 在 [Cloudflare](https://dash.cloudflare.com) 添加站点，将域名的 **NS 记录** 改到 Cloudflare 提供的 NS。
+2. 在 **DNS → Records** 中把域名 A/CNAME 指到你的服务器，并开启 **Proxied**（橙色云朵），流量即经 Cloudflare 再回源。
+3. 可选：**Caching → Caching Rules** 为 `/assets/` 或 `.js`/`.css`/图片等静态资源设置缓存，提升首屏与资源加载速度。
+4. **SSL/TLS** 选 **Full** 或 **Full (strict)**（源站已启用 HTTPS 时用 strict）。
+
+前后端分离时：前端可部署到 **Vercel** 或 **Cloudflare Pages**（自带 CDN），API 使用子域（如 `api.xxx.com`）并同样接入 Cloudflare 做加速与防护。
+
+若使用**独立 CDN 子域**承载静态资源（例如 `cdn.mmba.stream`）：在 Cloudflare **DNS → Records** 中为该子域添加记录（如 CNAME 到主站或静态源），并开启 **Proxied**；在 **Caching Rules** 中对该域名或路径设置较长缓存，静态资源即可通过该 CDN 域名加速。
+
+### 无域名、仅本地时
+
+- **不需要 CDN**：访问地址为 `http://localhost:5173` 或 `http://192.168.x.x:5173` 时，流量只在局域网内，没有公网节点可加速，当前方式已足够快。
+- **若希望从外网访问、又暂时没有域名**：可使用内网穿透，由服务商提供临时公网地址，无需购买域名或公网 IP：
+  - **Cloudflare Tunnel**：安装 [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)，运行后可获得 `xxx.trycloudflare.com` 等临时 URL。
+  - **ngrok**：安装 [ngrok](https://ngrok.com)，运行后获得 `xxx.ngrok.io` 等临时 URL（免费版有并发与时长限制）。
+
+## 架构评估与后续优化方向
+
+从整体架构和工程实践角度看，本项目已具备一个「中高完成度个人/小团队文件服务」应有的功能与质量：
+
+- **功能维度**：支持大文件上传（含分片）、下载、GIF 转 MP4 预览、缩略图懒加载与缓存、详细的上传类型白名单、安全相关配置（环境变量）、以及较完善的文档（包括 Ugoira 功能的历史说明）。
+- **技术栈维度**：后端基于 **Rust / Axum / SQLx / Tokio**，前端基于 **React / Vite / TypeScript**，再配合 Tailwind 风格的工具类与 Bootstrap Icons，整体选型主流且健康，没有明显的技术路线问题。
+
+若希望将本项目进一步打磨到「接近生产级 / 顶级工程水准」，推荐从以下几个方向分阶段演进：
+
+- **阶段 1：工程基础（优先）**
+  - 为后端关键路径（上传→列出→预览→下载）补充集成测试，用 `cargo test` 在 CI 中自动执行。
+  - 为前端核心交互（文件列表过滤/搜索、上传校验）添加 Vitest + React Testing Library 测试。
+  - 配置基础 CI（如 GitHub Actions），在每次提交时自动执行：前端 `lint/test/build`，后端 `cargo fmt --check`、`clippy` 和 `test`，确保 `main` 分支始终可随时部署。
+
+- **阶段 2：存储与任务抽象**
+  - 将当前文件读写封装为 `FileStorage` 抽象，提供「本地磁盘实现」与「S3/MinIO 实现」，便于后续迁移到对象存储与扩容。
+  - 将 GIF 转 MP4、缩略图生成等长耗时操作抽象为「任务 + Worker」模式：Web API 只负责创建任务与查询状态，后台 Worker 异步消费任务并更新状态，避免阻塞请求线程。
+
+- **阶段 3：前端设计系统与 UX 打磨**
+  - 提炼通用 UI 组件（按钮、输入框、搜索框、对话框、标签/Badge 等），统一使用一套设计变量（颜色、圆角、阴影、字号），减少「每个页面单独写样式」的差异。
+  - 对大文件列表引入虚拟滚动、键盘导航和更丰富的空状态/错误提示，使「大量文件时的浏览体验」更加顺滑且可预期。
+
+- **阶段 4：可观测性与安全**
+  - 在现有结构化日志与 trace ID 基础上，进一步完善分布式追踪（如接入 OpenTelemetry / Jaeger），并将关键指标纳入统一告警面板。
+  - 后续如有多用户/公网场景，可在此基础上完善鉴权（JWT/Session）、访问控制、限流与防护策略（如上传文件的类型/内容安全检查）。
+
+以上各阶段可以按实际需求与时间投入逐步推进，不要求一次性完成；即使只落地「阶段 1 + 阶段 2 的部分内容」，项目的整体工程质量和可维护性也会有明显提升。
 
 ## 许可证
 

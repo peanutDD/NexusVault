@@ -44,6 +44,8 @@ export interface UseFilePreviewDataResult {
   textContent: string | null;
   error: string | null;
   loading: boolean;
+  gifTranscodeInProgress: boolean;
+  gifTranscodeProgress: number | null;
   useHls: boolean;
   imageLoaded: boolean;
   setImageLoaded: (v: boolean) => void;
@@ -63,6 +65,8 @@ export function useFilePreviewData({
   const [textContent, setTextContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(() => (file ? kind.supported : false));
+  const [gifTranscodeInProgress, setGifTranscodeInProgress] = useState(false);
+  const [gifTranscodeProgress, setGifTranscodeProgress] = useState<number | null>(null);
   const [useHls, setUseHls] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -93,6 +97,11 @@ export function useFilePreviewData({
 
   const tryVideoAudioFallback = useCallback(() => {
     if (!file) return;
+    // GIF 视频预览失败时，不走通用的视频/音频回退逻辑，避免在转码过程中跳到
+    // 「视频加载或播放失败」的大提示框，交给 prepare/status + 进度条自己处理。
+    if (file.mime_type.toLowerCase() === 'image/gif') {
+      return;
+    }
     if (videoFallbackTriedRef.current) {
       setError('视频加载或播放失败');
       return;
@@ -117,6 +126,10 @@ export function useFilePreviewData({
     const isValidRequest = () => currentRequestId === requestIdRef.current;
     const finish = () => {
       if (isValidRequest()) setLoading(false);
+      if (isValidRequest()) {
+        setGifTranscodeInProgress(false);
+        setGifTranscodeProgress(null);
+      }
     };
     const isGif = file.mime_type.toLowerCase() === 'image/gif';
 
@@ -142,10 +155,60 @@ export function useFilePreviewData({
       gifFallbackTriedRef.current = false;
       setGifFirstFrameUrl(null);
       setError(null);
-      // 优先使用后端 GIF → mp4 视频预览，前端用 <video> 播放
-      setBlobUrl(getGifVideoUrl(file.id));
       setUseHls(false);
-      finish();
+       // 初始化 GIF 转码进度状态
+      setGifTranscodeInProgress(true);
+      setGifTranscodeProgress(0);
+
+      const videoUrl = getGifVideoUrl(file.id);
+
+      (async () => {
+        try {
+          // 先触发/检查转码任务
+          const initialStatus = await fileService.prepareVideoPreview(file.id);
+          if (!isValidRequest()) return;
+          if (initialStatus === 'ready') {
+            setBlobUrl(videoUrl);
+            finish();
+            return;
+          }
+
+          // initialStatus 为 processing：轮询状态，直到 ready 或超时
+          const maxAttempts = 20; // 约 20 * 1.5s ≈ 30s
+          const intervalMs = 1500;
+          for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            if (!isValidRequest()) return;
+            await new Promise((resolve) => setTimeout(resolve, intervalMs));
+            const status = await fileService.getVideoPreviewStatus(file.id);
+            if (!isValidRequest()) return;
+            if (status === 'ready') {
+              setBlobUrl(videoUrl);
+              setGifTranscodeProgress(100);
+              finish();
+              return;
+            }
+            // 粗略估算进度：仅用于 UI 提示，不代表真实编码进度
+            const progress = Math.round(((attempt + 1) / maxAttempts) * 100);
+            setGifTranscodeProgress(progress);
+          }
+
+          // 超时仍未 ready：视为「后台仍在慢速处理」，不弹失败大框，只结束本次等待
+          if (import.meta.env.DEV) {
+            // 开发环境下在控制台给一点提示，方便排查
+            // eslint-disable-next-line no-console
+            console.warn(
+              '[gif-preview] 转码超过预期时间，后台可能仍在处理，稍后可重新打开预览重试'
+            );
+          }
+          finish();
+        } catch (e) {
+          if (!isValidRequest()) return;
+          const msg = e instanceof Error ? e.message : 'GIF 视频预览加载失败';
+          setError(msg);
+          finish();
+        }
+      })();
+
       return;
     }
 
@@ -179,6 +242,8 @@ export function useFilePreviewData({
   useEffect(() => {
     return () => {
       if (blobUrl?.startsWith('blob:')) URL.revokeObjectURL(blobUrl);
+      setGifTranscodeInProgress(false);
+      setGifTranscodeProgress(null);
     };
   }, [blobUrl]);
 
@@ -188,6 +253,8 @@ export function useFilePreviewData({
     textContent,
     error,
     loading,
+    gifTranscodeInProgress,
+    gifTranscodeProgress,
     useHls,
     imageLoaded,
     setImageLoaded,

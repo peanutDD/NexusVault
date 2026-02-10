@@ -50,6 +50,13 @@ const DEFAULT_ALLOWED_MIME_SPEC =
 const ALLOWED_MIME_SPEC =
   import.meta.env.VITE_ALLOWED_MIME_TYPES || DEFAULT_ALLOWED_MIME_SPEC;
 
+// 明确禁止的高风险 MIME 类型（即使通配符允许，也强制拒绝）
+const BLOCKED_MIME_TYPES = [
+  'text/x-shellscript',
+  'text/x-sh',
+  'application/x-sh',
+];
+
 function parseAllowedTypes(spec: string): string[] {
   return spec.split(',').map((s) => s.trim().toLowerCase());
 }
@@ -82,6 +89,15 @@ export function validateFile(
     };
   }
   const mime = (file.type || 'application/octet-stream').toLowerCase();
+
+  // 命中黑名单时直接拒绝上传
+  if (BLOCKED_MIME_TYPES.includes(mime)) {
+    return {
+      ok: false,
+      error: `「${file.name}」类型 ${file.type || '未知'} 不允许上传`,
+    };
+  }
+
   const allowed = ALLOWED.length === 0 || ALLOWED.some((p) => matchesType(mime, p));
   if (!allowed) {
     return {

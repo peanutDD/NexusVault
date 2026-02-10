@@ -8,12 +8,14 @@
     "build": "tsc -b && vite build",
     "build:analyze": "ANALYZE=true tsc -b && ANALYZE=true vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-virtual": "^3.13.18",
+    "@zip.js/zip.js": "^2.7.29",
     "autoprefixer": "^10.4.23",
     "axios": "^1.13.2",
     "bootstrap-icons": "^1.11.3",
@@ -21,7 +23,6 @@
     "giframe": "^0.2.0",
     "hls.js": "^1.6.15",
     "js-sha256": "^0.10.1",
-    "@zip.js/zip.js": "^2.7.29",
     "jszip": "^3.10.1",
     "lucide-react": "^0.563.0",
     "postcss": "^8.5.6",
@@ -37,6 +38,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
@@ -46,12 +51,14 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jsdom": "^27.0.1",
     "rollup-plugin-visualizer": "^6.0.5",
     "terser": "^5.46.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^3.2.4"
   }
 }

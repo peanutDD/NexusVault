@@ -24,10 +24,10 @@ impl FileService {
             .join(format!("{}.mp4", file_id))
     }
 
-    /// 确保给定 GIF 文件已有派生 mp4，若不存在则调用 ffmpeg 转码。
+    /// 执行 GIF → MP4 转码（供后台任务 Worker 调用）。
     ///
-    /// 返回 mp4 的绝对路径。
-    pub async fn ensure_gif_video_ready(&self, file: &File) -> Result<PathBuf, AppError> {
+    /// 若目标文件已存在，则直接返回；否则调用 ffmpeg 生成。
+    pub async fn transcode_gif_to_mp4(&self, file: &File) -> Result<PathBuf, AppError> {
         if file.mime_type.to_lowercase() != "image/gif" {
             return Err(AppError::Validation(
                 "仅 GIF 支持视频预览，请直接使用普通预览".to_string(),
@@ -68,7 +68,9 @@ impl FileService {
         let out = out_path.to_string_lossy().replace('\\', "/");
 
         let status = tokio::task::spawn_blocking(move || {
-            // 使用 H.264 + yuv420p，兼容性最好；+faststart 便于边下边播
+            // 使用 H.264 + yuv420p，兼容性最好；+faststart 便于边下边播。
+            // 注意：libx264 要求宽高为偶数，这里通过 scale 过滤器将尺寸截断为最接近的偶数，
+            // 避免出现 “height not divisible by 2 (xxx x yyy)” 等编码错误。
             Command::new("ffmpeg")
                 .args([
                     "-y",
@@ -76,6 +78,8 @@ impl FileService {
                     &source,
                     "-movflags",
                     "+faststart",
+                    "-vf",
+                    "scale=trunc(iw/2)*2:trunc(ih/2)*2",
                     "-c:v",
                     "libx264",
                     "-pix_fmt",

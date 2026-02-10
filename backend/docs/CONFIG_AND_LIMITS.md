@@ -17,6 +17,7 @@
 | `CORS_ORIGIN` | CORS 允许的源 | `*` |
 | `HLS_THRESHOLD_BYTES` | 超过此大小的视频走 HLS 转码预览（字节） | `104857600`（100MiB） |
 | `UPLOAD_SESSION_CLEANUP_*` / `FILES_CONSISTENCY_CHECK_*` / `ORPHAN_CLEANUP_*` | 后台维护任务间隔与批次 | 见 config.rs 注释 |
+| （预留）`GIF_PREVIEW_WORKER_CONCURRENCY` | GIF 预览转码 Worker 并行度 | 若未设置则使用代码内默认值（当前为 2） |
 | `SMTP_HOST` | SMTP 服务器地址（修改邮箱验证码发送） | 可选，不配置则验证码仅写入日志 |
 | `SMTP_PORT` | SMTP 端口 | 可选，如 587 |
 | `SMTP_USERNAME` | SMTP 认证用户名（一般为发件邮箱） | 可选 |

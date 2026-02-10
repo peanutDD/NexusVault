@@ -77,6 +77,7 @@
 - **代码质量与可维护性（四）**：API 路由抽成 `api::create_api_routes()` 复用；**FileService 注入 AppState**（`AppState` 持有一份 `Arc<FileService>`，handlers 使用 `state.file_service`，不再在每次请求内 `from_state`）；bin/check_file_owners 去掉 unwrap；[CONFIG_AND_LIMITS.md](./CONFIG_AND_LIMITS.md) 列清常量与配置对应关系。
 - **可观测与运维（五·请求日志）**：request_id（X-Request-ID 或生成）打入 tracing span，响应头回写，便于与 error_id 关联。
 - **孤儿清理**：批量 find_by_ids、每轮 info 日志；可选按负载调 ORPHAN_DB_BATCH_SIZE。
+- **GIF 预览异步转码与任务队列**：引入 `background_tasks` 表与 `TaskQueue` 服务，用 `enqueue_task/dequeue_pending_task` 管理 GIF 预览转码任务；`FileService::transcode_gif_to_mp4` 封装 GIF→mp4 转码逻辑，`run_gif_preview_worker` 后台 Worker 以 FOR UPDATE SKIP LOCKED 方式并行消费；`/api/files/:id/preview/video/prepare` 与 `/status` 接口改为基于任务队列与派生文件是否存在返回 `ready/processing` 状态，`/preview/video` 仅在派生 mp4 已存在时流式返回视频。
 
 ---
 

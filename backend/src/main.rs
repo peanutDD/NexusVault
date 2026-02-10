@@ -46,6 +46,7 @@ use std::time::Duration; // 定时任务间隔（如清理周期）
 use config::Config;                           // 应用配置
 use database::pool::create_pool;              // 创建 PostgreSQL 连接池
 use services::file::create_storage;           // 根据配置创建存储后端（本地 / S3）
+use services::task_queue::TaskQueue;
 use services::maintenance::{                  // 维护任务：孤儿清理、一致性检查、上传会话清理
     run_orphan_cleanup_once,
     spawn_files_consistency_checker,
@@ -141,6 +142,25 @@ async fn async_main() -> anyhow::Result<()> {
 
     // ---------- 应用状态（注入到路由与 handler） ----------
     let app_state = AppState::new(config.clone(), pool, storage);
+
+    // ---------- 后台任务 Worker：GIF 转码等资源密集型操作 ----------
+    if config.storage_backend == "local" {
+        // GIF 预览 Worker 并行度：可按需要调整，避免一次性压满 CPU
+        let worker_concurrency: usize = 2;
+        for _ in 0..worker_concurrency {
+            let state_for_worker = app_state.clone();
+            tokio::spawn(async move {
+                loop {
+                    if let Err(e) =
+                        crate::services::task_queue::run_gif_preview_worker(&state_for_worker).await
+                    {
+                        tracing::error!("gif_preview worker iteration failed: {}", e);
+                    }
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                }
+            });
+        }
+    }
 
     // ---------- 后台维护任务（常驻定时） ----------
     // 定期清理过期的分片上传会话与临时文件

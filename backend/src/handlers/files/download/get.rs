@@ -92,6 +92,8 @@ pub async fn build_get_response(
         );
         apply_cache_headers(res.headers_mut(), entity_headers);
         apply_range_headers(res.headers_mut());
+        // 记录下载指标（Range 请求）
+        crate::middleware::metrics::record_file_operation("download", len, true);
         return Ok(res);
     }
 
@@ -114,5 +116,7 @@ pub async fn build_get_response(
     .map_err(|_| AppError::Internal)?;
     apply_cache_headers(res.headers_mut(), entity_headers);
     apply_range_headers(res.headers_mut());
+    // 记录完整下载指标
+    crate::middleware::metrics::record_file_operation("download", total_size, true);
     Ok(res)
 }

@@ -76,6 +76,7 @@ import ErrorMessage from '../../common/feedback/ErrorMessage';
 import { FileCardSkeleton } from '../../common/feedback/Skeleton';
 import { FILE_LIST } from '../../../constants';
 import InfiniteScrollSentinel from '../InfiniteScrollSentinel';
+import { Button, EmptyState } from '../../common';
 import type { FileMetadata, Folder } from '../../../types';
 
 /** 移动端宽度阈值：小于此宽度禁用虚拟列表 */
@@ -199,11 +200,25 @@ const FileListContent: React.FC<FileListContentProps> = ({
   return (
     <>
       {error && (
-        <ErrorMessage
-          message={error}
-          onClose={() => {/* 清除错误 */}}
-          type="error"
-        />
+        <div className="mb-4">
+          <ErrorMessage
+            message={error}
+            type="error"
+          />
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                // 简单重试：重新加载当前文件和文件夹列表
+                // 具体实现依赖外部传入的加载逻辑（useFileList 中已封装）
+                // 这里通过自带的刷新机制触发重新请求（例如父组件在 error 变化时会重跑 effect）
+                window.location.reload();
+              }}
+            >
+              重试
+            </Button>
+          </div>
+        </div>
       )}
 
       {isLoading ? (
@@ -211,17 +226,15 @@ const FileListContent: React.FC<FileListContentProps> = ({
           <FileCardSkeleton count={12} />
         </div>
       ) : totalItems === 0 ? (
-        <div className="glass-panel-soft flex flex-col items-center justify-center py-16">
-          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
-            <EmptyIcon />
-          </div>
-          <p className="text-lg font-medium text-gray-400">
-            {currentFolderId ? '文件夹为空' : '暂无文件'}
-          </p>
-          <p className="mt-1 text-sm text-gray-500">
-            {currentFolderId ? '拖拽文件到此处或创建子文件夹' : '上传你的第一个文件吧'}
-          </p>
-        </div>
+        <EmptyState
+          title={currentFolderId ? '文件夹为空' : '暂无文件'}
+          description={
+            currentFolderId
+              ? '拖拽文件到此处或创建子文件夹'
+              : '上传你的第一个文件吧'
+          }
+          icon={<EmptyIcon />}
+        />
       ) : (
         <>
           {/* 全选栏 + 批量工具栏：有选择时整合为一块玻璃拟态，无选择时独立 */}

@@ -74,6 +74,8 @@ export default function FilePreview({
     textContent,
     error,
     loading,
+    gifTranscodeInProgress,
+    gifTranscodeProgress,
     useHls,
     imageLoaded,
     setImageLoaded,
@@ -98,6 +100,7 @@ export default function FilePreview({
   // -------------------------------------------------------------------------
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [isLooping, setIsLooping] = useState(false);
   const imageTransformRef = useRef<HTMLDivElement>(null);
 
   // -------------------------------------------------------------------------
@@ -128,6 +131,7 @@ export default function FilePreview({
     setRotation(0);
     setImageLoaded(false);
     setGifFirstFrameUrl(null);
+    setIsLooping(false);
   }, [file?.id, setImageLoaded, setGifFirstFrameUrl]);
 
   // -------------------------------------------------------------------------
@@ -164,6 +168,10 @@ export default function FilePreview({
     } catch {
       /* 静默 */
     }
+  };
+
+  const handleToggleLoop = () => {
+    setIsLooping((prev) => !prev);
   };
 
   // -------------------------------------------------------------------------
@@ -230,6 +238,23 @@ export default function FilePreview({
       >
         <div className="flex items-center gap-3" />
         <div className="flex items-center gap-2" />
+        {file.mime_type.toLowerCase() === 'image/gif' && gifTranscodeInProgress && (
+          <div className="pointer-events-none absolute left-1/2 top-[3.1rem] -translate-x-1/2">
+            <div className="inline-flex flex-col items-center rounded-full bg-black/40 px-4 py-2 text-[11px] text-white/80 backdrop-blur-md shadow-lg border border-white/15">
+              <span className="mb-1">
+                正在为 GIF 生成视频预览，大文件可能需要几十秒…
+              </span>
+              {typeof gifTranscodeProgress === 'number' && (
+                <div className="relative h-1.5 w-40 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-purple-400 via-pink-400 to-sky-400 transition-all duration-300"
+                    style={{ width: `${Math.min(Math.max(gifTranscodeProgress, 5), 100)}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {files.length > 1 && (
           <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2">
             <div
@@ -275,6 +300,7 @@ export default function FilePreview({
       {/* ---- 右侧控制面板 ---- */}
       <FilePreviewToolbar
         isImage={isImage}
+        isVideo={isVideo}
         filesLength={files.length}
         onClose={onClose}
         onDownload={handleDownload}
@@ -282,6 +308,8 @@ export default function FilePreview({
         onZoomOut={handleZoomOut}
         onRotate={handleRotate}
         onResetView={handleResetView}
+        onToggleLoop={handleToggleLoop}
+        isLooping={isLooping}
       />
 
       {/* ---- 主内容区 ---- */}
@@ -302,6 +330,7 @@ export default function FilePreview({
         imageLoaded={imageLoaded}
         imageTransformRef={imageTransformRef}
         videoRef={videoRef}
+        loop={isLooping}
         setImageLoaded={setImageLoaded}
         tryVideoAudioFallback={tryVideoAudioFallback}
         onImageError={onImageError}

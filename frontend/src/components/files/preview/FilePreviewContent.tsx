@@ -32,6 +32,7 @@ export interface FilePreviewContentProps {
   imageLoaded: boolean;
   imageTransformRef: React.RefObject<HTMLDivElement | null>;
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  loop: boolean;
   setImageLoaded: (v: boolean) => void;
   tryVideoAudioFallback: () => void;
   onImageError: () => void;
@@ -56,6 +57,7 @@ export function FilePreviewContent({
   imageLoaded,
   imageTransformRef,
   videoRef,
+  loop,
   setImageLoaded,
   tryVideoAudioFallback,
   onImageError,
@@ -143,6 +145,7 @@ export function FilePreviewContent({
                 ref={videoRef}
                 key={blobUrl}
                 src={useHls ? undefined : blobUrl}
+                loop={loop}
                 controls
                 autoPlay
                 preload="metadata"

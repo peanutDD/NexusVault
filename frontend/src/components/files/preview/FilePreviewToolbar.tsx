@@ -12,6 +12,7 @@ import { CloseIcon, DownloadIcon } from './FilePreviewIcons';
 
 export interface FilePreviewToolbarProps {
   isImage: boolean;
+  isVideo: boolean;
   filesLength: number;
   onClose: () => void;
   onDownload: () => void;
@@ -19,6 +20,8 @@ export interface FilePreviewToolbarProps {
   onZoomOut: () => void;
   onRotate: () => void;
   onResetView: () => void;
+  onToggleLoop: () => void;
+  isLooping: boolean;
 }
 
 // =============================================================================
@@ -27,6 +30,7 @@ export interface FilePreviewToolbarProps {
 
 export function FilePreviewToolbar({
   isImage,
+  isVideo,
   filesLength,
   onClose,
   onDownload,
@@ -34,6 +38,8 @@ export function FilePreviewToolbar({
   onZoomOut,
   onRotate,
   onResetView,
+  onToggleLoop,
+  isLooping,
 }: FilePreviewToolbarProps) {
   const bottomOffset = filesLength > 1 ? 'bottom-[calc(50%+4rem)]' : 'bottom-[clamp(0.8rem,2.5vw,1.25rem)]';
 
@@ -66,6 +72,20 @@ export function FilePreviewToolbar({
             <CloseIcon />
           </span>
         </button>
+
+        {isVideo && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleLoop();
+            }}
+            className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.7rem,1.8vw,0.9rem)]"
+            aria-label={isLooping ? '关闭循环播放' : '开启循环播放'}
+          >
+            <span className={isLooping ? '' : 'opacity-60'}>∞</span>
+          </button>
+        )}
 
         <button
           type="button"

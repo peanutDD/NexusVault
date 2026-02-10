@@ -16,3 +16,4 @@ export { default as Button } from './Button';
 export { default as DropdownMenu } from './DropdownMenu';
 export { default as ThemeToggle } from './ThemeToggle';
 export { default as BrowserCompatibilityWarning } from './BrowserCompatibilityWarning';
+export { EmptyState } from './EmptyState';

@@ -12,6 +12,7 @@ use sqlx::PgPool;
 use crate::config::Config;
 use crate::repositories::{DynFilesRepo, DynUsersRepo, SqlxFilesRepo, SqlxUsersRepo};
 use crate::services::cache::CacheService;
+use crate::services::task_queue::TaskQueue;
 use crate::services::file::FileService;
 use crate::services::storage::StorageBackend;
 
@@ -45,6 +46,8 @@ pub struct AppState {
     pub cache: CacheService,
     /// 文件服务（统一构造并注入，避免各 handler 内重复 from_state）
     pub file_service: Arc<FileService>,
+    /// 后台任务队列（GIF 转码、缩略图重建等）
+    pub task_queue: Arc<TaskQueue>,
 }
 
 impl AppState {
@@ -65,12 +68,15 @@ impl AppState {
             config.clone(),
         ));
 
+        let task_queue = Arc::new(TaskQueue::new(Arc::new(pool.clone())));
+
         Self {
             config,
             pool,
             storage,
             cache: CacheService::new(),
             file_service,
+            task_queue,
         }
     }
 }

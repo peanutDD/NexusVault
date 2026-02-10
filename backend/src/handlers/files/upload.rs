@@ -70,6 +70,13 @@ pub async fn upload_file_handler(
             // 磁盘空间保护（best-effort）
             if let Ok(free) = fs2::available_space(&tmp_dir) {
                 if free.saturating_sub(DISK_RESERVE_UPLOAD) == 0 {
+                    tracing::error!(
+                        error_type = "disk_full",
+                        tmp_dir = %tmp_dir.display(),
+                        free_bytes = free,
+                        reserve_bytes = DISK_RESERVE_UPLOAD,
+                        "insufficient disk space for upload temp file"
+                    );
                     return Err(AppError::Storage("磁盘空间不足，请稍后重试".to_string()));
                 }
             }
@@ -121,7 +128,8 @@ pub async fn upload_file_handler(
     .ok()
     .flatten();
 
-    let file = match state.file_service
+    let file = match state
+        .file_service
         .create_file_from_path(
             user_id,
             original_filename,
@@ -138,6 +146,9 @@ pub async fn upload_file_handler(
             return Err(e);
         }
     };
+
+    // 记录上传文件体积指标（成功路径）
+    crate::middleware::metrics::record_file_operation("upload", file_size, true);
 
     Ok(json_response(json!({ "file": file })))
 }

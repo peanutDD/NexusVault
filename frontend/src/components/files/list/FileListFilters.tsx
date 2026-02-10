@@ -79,6 +79,20 @@ const FileListFilters = memo(function FileListFilters({
             className="filtersSearchInput"
             aria-label="Search files"
           />
+          {search && (
+            <button
+              type="button"
+              className="filtersSearchClearButton"
+              onClick={() => {
+                onSearchChange('');
+                const w = window as unknown as { __fileListSearchInput?: HTMLInputElement };
+                w.__fileListSearchInput?.focus();
+              }}
+              aria-label="Clear search"
+            >
+              <i className="bi bi-x-lg" aria-hidden="true" />
+            </button>
+          )}
         </div>
 
         {layout === 'screenshot' && (

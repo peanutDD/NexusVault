@@ -27,3 +27,4 @@ pub mod folder;
 pub mod maintenance;
 pub mod share;
 pub mod storage;
+pub mod task_queue;

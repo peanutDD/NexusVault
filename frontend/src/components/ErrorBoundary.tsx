@@ -1,4 +1,5 @@
-import { type ReactNode, Component } from 'react';
+import { type ReactNode, type ErrorInfo, Component } from 'react';
+import { trackError } from '../utils/telemetry';
 
 interface Props {
   children: ReactNode;
@@ -15,6 +16,13 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    trackError(error, {
+      action: 'react_error_boundary',
+      extra: { componentStack: info.componentStack },
+    });
   }
 
   render() {

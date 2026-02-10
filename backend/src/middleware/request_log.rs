@@ -1,19 +1,18 @@
 //! 请求日志中间件
 //!
-//! 记录每个 HTTP 请求的 method、path、status、elapsed_ms，
-//! 并注入 request_id（X-Request-ID）便于链路追踪与 error_id 关联。
+//! 记录每个 HTTP 请求的 `trace_id`、`user_id`、`method`、`path`、`status`、`latency_ms`，
+//! 并注入 `X-Trace-Id` / `X-Request-Id` 便于前后端链路追踪与告警关联。
 //!
 //! 通过 Tower 的 `RequestLogLayer` 挂载到 `middleware_stack`，避免 axum `route_layer(from_fn(...))`
 //! 在带 state 路由上的 `Service<Request>` 类型不满足问题；Layer 与 Service 均实现 `Clone` 以符合栈要求。
 
 use axum::http::{header, Request, Response};
-use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Instant;
 use tower::{Layer, Service};
 
-/// Tower 请求日志层：为每条请求打日志并回写 X-Request-ID。
+/// Tower 请求日志层：为每条请求打日志并回写 X-Trace-Id / X-Request-Id。
 #[derive(Clone, Default)]
 pub struct RequestLogLayer;
 
@@ -49,15 +48,25 @@ where
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
         let method = req.method().clone();
         let path = req.uri().path().to_string();
-        let request_id = req
-            .headers()
-            .get("x-request-id")
+        let headers = req.headers();
+
+        // 优先复用上游传入的 trace_id（支持 X-Trace-Id / X-Request-Id），否则本地生成 UUID。
+        let trace_id = headers
+            .get("x-trace-id")
+            .or_else(|| headers.get("x-request-id"))
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string())
             .filter(|s| s.len() <= 64)
-            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()[..8].to_string());
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
-        let _guard = tracing::info_span!("request", request_id = %request_id).entered();
+        // 从上游注入的 X-User-Id 读取用户标识（由网关或上游服务负责注入），否则为 "-"
+        let user_id = headers
+            .get("x-user-id")
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+
+        let _guard = tracing::info_span!("request", trace_id = %trace_id, user_id = %user_id).entered();
         let start = Instant::now();
 
         let mut inner = self.inner.clone();
@@ -66,19 +75,29 @@ where
         Box::pin(async move {
             let mut res = fut.await?;
             let elapsed = start.elapsed();
+            let latency_ms = elapsed.as_millis() as u64;
 
             tracing::info!(
-                request_id = %request_id,
+                trace_id = %trace_id,
+                user_id = %user_id,
                 method = %method,
                 path = %path,
                 status = %res.status(),
-                elapsed_ms = elapsed.as_millis(),
+                latency_ms = latency_ms,
                 "request"
             );
 
-            if let Ok(v) = header::HeaderValue::try_from(request_id.as_str()) {
-                res.headers_mut()
-                    .insert(header::HeaderName::from_static("x-request-id"), v);
+            if let Ok(trace_val) = header::HeaderValue::try_from(trace_id.as_str()) {
+                let headers = res.headers_mut();
+                headers.insert(
+                    header::HeaderName::from_static("x-trace-id"),
+                    trace_val.clone(),
+                );
+                // 兼容旧客户端：继续写入 X-Request-Id
+                headers.insert(
+                    header::HeaderName::from_static("x-request-id"),
+                    trace_val,
+                );
             }
             Ok(res)
         })
