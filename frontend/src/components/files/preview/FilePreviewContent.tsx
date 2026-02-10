@@ -3,11 +3,98 @@
  * 预览主内容区：加载态、错误态、图片/视频/音频/PDF/文本/Ugoira/不支持
  */
 
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { formatFileSize } from '../../../utils/format';
 import { getMimeTypeLabel } from '../../../utils/mimeType';
 import { cn } from '../../../utils/cn';
 import { ErrorIcon, FileIcon, AudioIcon } from './FilePreviewIcons';
+
+interface MarkdownPreviewProps {
+  content: string;
+}
+
+function MarkdownPreview({ content }: MarkdownPreviewProps) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        h1: ({ node, ...props }) => (
+          <h1 className="mt-3 mb-1 text-sm font-semibold text-white" {...props} />
+        ),
+        h2: ({ node, ...props }) => (
+          <h2 className="mt-3 mb-1 text-sm font-semibold text-white" {...props} />
+        ),
+        h3: ({ node, ...props }) => (
+          <h3 className="mt-3 mb-1 text-sm font-semibold text-white" {...props} />
+        ),
+        h4: ({ node, ...props }) => (
+          <h4 className="mt-3 mb-1 text-xs font-semibold text-white" {...props} />
+        ),
+        h5: ({ node, ...props }) => (
+          <h5 className="mt-2 mb-1 text-xs font-semibold text-white" {...props} />
+        ),
+        h6: ({ node, ...props }) => (
+          <h6 className="mt-2 mb-1 text-xs font-semibold text-white/90" {...props} />
+        ),
+        p: ({ node, ...props }) => (
+          <p className="mb-2 text-xs text-gray-100" {...props} />
+        ),
+        ul: ({ node, ...props }) => (
+          <ul className="mb-2 list-disc pl-5 text-xs text-gray-100" {...props} />
+        ),
+        ol: ({ node, ...props }) => (
+          <ol className="mb-2 list-decimal pl-5 text-xs text-gray-100" {...props} />
+        ),
+        li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+        code: ({ inline, className, children, ...props }) =>
+          inline ? (
+            <code
+              className="rounded bg-black/40 px-1 py-0.5 text-[0.7rem] font-mono text-purple-200"
+              {...props}
+            >
+              {children}
+            </code>
+          ) : (
+            <pre className="mb-3 overflow-auto rounded-md bg-black/40 p-3 text-xs text-gray-100 font-mono">
+              <code {...props}>{children}</code>
+            </pre>
+          ),
+        blockquote: ({ node, ...props }) => (
+          <blockquote
+            className="mb-2 border-l-2 border-purple-400/60 pl-3 text-xs text-gray-100/90"
+            {...props}
+          />
+        ),
+        a: ({ node, ...props }) => (
+          <a
+            className="text-xs text-sky-300 underline hover:text-sky-200"
+            target="_blank"
+            rel="noreferrer"
+            {...props}
+          />
+        ),
+        table: ({ node, ...props }) => (
+          <div className="mb-3 overflow-auto rounded-md border border-white/10">
+            <table className="min-w-full text-[0.7rem] text-gray-100" {...props} />
+          </div>
+        ),
+        th: ({ node, ...props }) => (
+          <th
+            className="border-b border-white/10 bg-white/5 px-2 py-1 text-left font-semibold"
+            {...props}
+          />
+        ),
+        td: ({ node, ...props }) => (
+          <td className="border-b border-white/5 px-2 py-1 align-top" {...props} />
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
 
 export interface FilePreviewContentProps {
   file: {
@@ -22,6 +109,7 @@ export interface FilePreviewContentProps {
   supported: boolean;
   isImage: boolean;
   isPDF: boolean;
+  isMarkdown: boolean;
   isVideo: boolean;
   isAudio: boolean;
   isText: boolean;
@@ -47,6 +135,7 @@ export function FilePreviewContent({
   supported,
   isImage,
   isPDF,
+  isMarkdown,
   isVideo,
   isAudio,
   isText,
@@ -189,12 +278,20 @@ export function FilePreviewContent({
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-                  <span className="text-xs text-white/40">{file.mime_type}</span>
+                  <span className="text-xs text-white/40">
+                    {isMarkdown ? 'md' : file.mime_type}
+                  </span>
                   <span className="text-xs text-white/40">{textContent.split('\n').length} 行</span>
                 </div>
-                <pre className="h-[calc(100%-40px)] overflow-auto p-4 text-sm leading-relaxed text-gray-200 whitespace-pre-wrap font-mono">
-                  {textContent}
-                </pre>
+                <div className="h-[calc(100%-40px)] overflow-auto p-4 text-sm leading-relaxed text-gray-100">
+                  {isMarkdown ? (
+                    <MarkdownPreview content={textContent} />
+                  ) : (
+                    <pre className="h-full overflow-auto text-sm leading-relaxed text-gray-200 whitespace-pre-wrap font-mono">
+                      {textContent}
+                    </pre>
+                  )}
+                </div>
               </div>
             </div>
           )}

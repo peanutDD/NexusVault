@@ -31,6 +31,18 @@ export const isTextType = (mime: string): boolean =>
   mime === 'application/xml' ||
   mime === 'application/javascript';
 
+/** 判断是否为 Markdown（基于 MIME 与文件名） */
+export const isMarkdownType = (mime: string, filename?: string): boolean => {
+  const lowerMime = mime.toLowerCase();
+  const lowerName = filename?.toLowerCase() ?? '';
+  return (
+    lowerMime === 'text/markdown' ||
+    lowerMime === 'text/x-markdown' ||
+    lowerName.endsWith('.md') ||
+    lowerName.endsWith('.markdown')
+  );
+};
+
 /** 判断是否为文档类型 */
 export const isDocumentType = (mime: string): boolean =>
   mime.includes('word') || mime.includes('document');
@@ -58,7 +70,7 @@ export interface MimeTypeInfo {
 }
 
 /** 获取 MIME 类型的分类标签 */
-export function getMimeTypeLabel(mime: string, _filename?: string): string {
+export function getMimeTypeLabel(mime: string, filename?: string): string {
   // 使用条件表达式链替代 if-else
   return isImageType(mime)
     ? mime.split('/')[1]?.toUpperCase() || 'Image'
@@ -74,11 +86,13 @@ export function getMimeTypeLabel(mime: string, _filename?: string): string {
               ? 'Spreadsheet'
               : isArchiveType(mime)
                 ? 'Archive'
-                : isTextType(mime)
-                  ? mime === 'application/json'
-                    ? 'JSON'
-                    : 'Text'
-                  : 'File';
+                : isMarkdownType(mime, filename)
+                  ? 'md'
+                  : isTextType(mime)
+                    ? mime === 'application/json'
+                      ? 'JSON'
+                      : 'Text'
+                    : 'File';
 }
 
 /** 获取 MIME 类型的完整信息（标签、颜色、背景） */
@@ -130,6 +144,7 @@ export function getPreviewKind(mime: string, filename?: string) {
     isImage: isImageType(mime) && !isGif,
     isPDF: isPdfType(mime),
     isText: isTextType(mime),
+    isMarkdown: isMarkdownType(mime, filename),
     isVideo: isVideoType(mime) || isGif,
     isAudio: isAudioType(mime),
     // Ugoira 支持已移除，这里固定为 false，避免前端再走任何 Ugoira 分支
