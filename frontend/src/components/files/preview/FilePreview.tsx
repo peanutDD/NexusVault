@@ -100,7 +100,7 @@ export default function FilePreview({
   // -------------------------------------------------------------------------
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
-  const [isLooping, setIsLooping] = useState(false);
+  const [isLooping, setIsLooping] = useState(true);
   const imageTransformRef = useRef<HTMLDivElement>(null);
 
   // -------------------------------------------------------------------------
@@ -131,7 +131,7 @@ export default function FilePreview({
     setRotation(0);
     setImageLoaded(false);
     setGifFirstFrameUrl(null);
-    setIsLooping(false);
+    setIsLooping(true);
   }, [file?.id, setImageLoaded, setGifFirstFrameUrl]);
 
   // -------------------------------------------------------------------------

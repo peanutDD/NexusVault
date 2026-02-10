@@ -497,26 +497,38 @@ npm run preview -- --host 0.0.0.0 --port 5173
 - **功能维度**：支持大文件上传（含分片）、下载、GIF 转 MP4 预览、缩略图懒加载与缓存、详细的上传类型白名单、安全相关配置（环境变量）、以及较完善的文档（包括 Ugoira 功能的历史说明）。
 - **技术栈维度**：后端基于 **Rust / Axum / SQLx / Tokio**，前端基于 **React / Vite / TypeScript**，再配合 Tailwind 风格的工具类与 Bootstrap Icons，整体选型主流且健康，没有明显的技术路线问题。
 
-若希望将本项目进一步打磨到「接近生产级 / 顶级工程水准」，推荐从以下几个方向分阶段演进：
+若希望将本项目进一步打磨到「接近生产级 / 顶级工程水准」，推荐从以下几个方向分阶段演进（部分内容已在当前版本中落地，见每节下方的「当前状态」小结）：
 
 - **阶段 1：工程基础（优先）**
   - 为后端关键路径（上传→列出→预览→下载）补充集成测试，用 `cargo test` 在 CI 中自动执行。
   - 为前端核心交互（文件列表过滤/搜索、上传校验）添加 Vitest + React Testing Library 测试。
   - 配置基础 CI（如 GitHub Actions），在每次提交时自动执行：前端 `lint/test/build`，后端 `cargo fmt --check`、`clippy` 和 `test`，确保 `main` 分支始终可随时部署。
+  - **当前状态**：
+    - 已为后端添加若干集成测试（如 `tests/repository_tests.rs`、`tests/auth_tests.rs`），并在 CI 中执行 `cargo test --all-features`。
+    - 已为前端补充首批 Vitest 测试用例（如 `uploadValidation.test.ts`、`FileListFilters.test.tsx`），验证上传校验和搜索交互。
+    - 已配置 GitHub Actions CI（`.github/workflows/ci.yml`），在 push/PR 时自动运行前后端的 lint/test/build 流水线。
 
 - **阶段 2：存储与任务抽象**
   - 将当前文件读写封装为 `FileStorage` 抽象，提供「本地磁盘实现」与「S3/MinIO 实现」，便于后续迁移到对象存储与扩容。
   - 将 GIF 转 MP4、缩略图生成等长耗时操作抽象为「任务 + Worker」模式：Web API 只负责创建任务与查询状态，后台 Worker 异步消费任务并更新状态，避免阻塞请求线程。
+  - **当前状态**：
+    - 已存在 `StorageBackend` 抽象及 `LocalStorage` / S3 实现，文件上传、下载、缩略图等路径均通过统一接口访问。
+    - 新增 `background_tasks` 表与 `TaskQueue` 服务，GIF→MP4 转码已改为通过任务队列 + Worker 异步执行，并通过 `/preview/video/prepare` + `/status` 提供前端轮询接口。
+    - 将 GIF 预览转码逻辑封装在 `FileService::transcode_gif_to_mp4` 中，便于未来扩展缩略图重建等其他后台任务。
 
 - **阶段 3：前端设计系统与 UX 打磨**
   - 提炼通用 UI 组件（按钮、输入框、搜索框、对话框、标签/Badge 等），统一使用一套设计变量（颜色、圆角、阴影、字号），减少「每个页面单独写样式」的差异。
   - 对大文件列表引入虚拟滚动、键盘导航和更丰富的空状态/错误提示，使「大量文件时的浏览体验」更加顺滑且可预期。
+  - **当前状态**：
+    - 在 `src/components/common/` 下抽象了 `Button`、`EmptyState`、`ErrorMessage`、`Skeleton`、`Tag`、`FormField` 等通用组件，并在文件列表等核心界面（如空列表、错误态、加载态）中落地使用。
+    - 文件预览模块新增 GIF 转码进度条、视频循环播放按钮等体验优化，提升 GIF/视频预览的一致性与可控性。
+    - 详细 UI 设计规范与组件用法已整理在 [`frontend/docs/UI_SYSTEM.md`](./frontend/docs/UI_SYSTEM.md) 中，作为前端开发的参考。
 
 - **阶段 4：可观测性与安全**
   - 在现有结构化日志与 trace ID 基础上，进一步完善分布式追踪（如接入 OpenTelemetry / Jaeger），并将关键指标纳入统一告警面板。
   - 后续如有多用户/公网场景，可在此基础上完善鉴权（JWT/Session）、访问控制、限流与防护策略（如上传文件的类型/内容安全检查）。
 
-以上各阶段可以按实际需求与时间投入逐步推进，不要求一次性完成；即使只落地「阶段 1 + 阶段 2 的部分内容」，项目的整体工程质量和可维护性也会有明显提升。
+以上各阶段可以按实际需求与时间投入逐步推进，不要求一次性完成；当前版本已基本完成阶段 1、阶段 2 的关键部分，并在阶段 3 上建立了统一的 UI 设计系统，为继续向「顶级水准」演进打下了良好基础。
 
 ## 许可证
 

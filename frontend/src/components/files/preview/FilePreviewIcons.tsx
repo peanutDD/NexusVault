@@ -113,3 +113,41 @@ export function AudioIcon() {
     </svg>
   );
 }
+
+// =============================================================================
+// 循环播放图标
+// =============================================================================
+
+/** 循环播放图标，适配预览工具栏按钮 */
+export function LoopIcon() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        d="M7 7h9a2 2 0 0 1 2 2v1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 4 7 7l3 3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17 17H8a2 2 0 0 1-2-2v-1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 20 17 17l-3-3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

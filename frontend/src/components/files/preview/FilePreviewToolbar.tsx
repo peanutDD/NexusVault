@@ -4,7 +4,7 @@
  */
 
 import { cn } from '../../../utils/cn';
-import { CloseIcon, DownloadIcon } from './FilePreviewIcons';
+import { CloseIcon, DownloadIcon, LoopIcon } from './FilePreviewIcons';
 
 // =============================================================================
 // 类型
@@ -80,10 +80,18 @@ export function FilePreviewToolbar({
               e.stopPropagation();
               onToggleLoop();
             }}
-            className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.7rem,1.8vw,0.9rem)]"
+            className={cn(
+              'flex items-center justify-center rounded-full font-semibold w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] transition-colors',
+              isLooping
+                ? 'bg-white/15 text-white shadow-inner'
+                : 'text-white/80 hover:bg-white/10'
+            )}
             aria-label={isLooping ? '关闭循环播放' : '开启循环播放'}
+            title={isLooping ? '循环播放：已开启' : '循环播放：已关闭'}
           >
-            <span className={isLooping ? '' : 'opacity-60'}>∞</span>
+            <span className="flex shrink-0 items-center justify-center w-[clamp(1rem,2.5vw,1.25rem)] h-[clamp(1rem,2.5vw,1.25rem)]">
+              <LoopIcon />
+            </span>
           </button>
         )}
 
