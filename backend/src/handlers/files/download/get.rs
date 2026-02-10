@@ -45,7 +45,7 @@ pub async fn build_get_response(
                 HeaderValue::from_str(&format!("multipart/byteranges; boundary={}", boundary))
                     .map_err(|_| AppError::Internal)?,
             );
-            apply_cache_headers(res.headers_mut(), entity_headers);
+            apply_cache_headers(res.headers_mut(), entity_headers, inline);
             apply_range_headers(res.headers_mut());
             return Ok(res);
         }
@@ -90,7 +90,7 @@ pub async fn build_get_response(
             HeaderValue::from_str(&format!("bytes {}-{}/{}", start, end, total_size))
                 .map_err(|_| AppError::Internal)?,
         );
-        apply_cache_headers(res.headers_mut(), entity_headers);
+        apply_cache_headers(res.headers_mut(), entity_headers, inline);
         apply_range_headers(res.headers_mut());
         // 记录下载指标（Range 请求）
         crate::middleware::metrics::record_file_operation("download", len, true);
@@ -114,7 +114,7 @@ pub async fn build_get_response(
         Some(total_size),
     )
     .map_err(|_| AppError::Internal)?;
-    apply_cache_headers(res.headers_mut(), entity_headers);
+    apply_cache_headers(res.headers_mut(), entity_headers, inline);
     apply_range_headers(res.headers_mut());
     // 记录完整下载指标
     crate::middleware::metrics::record_file_operation("download", total_size, true);

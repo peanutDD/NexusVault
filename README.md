@@ -23,7 +23,16 @@
 - ✅ 文件预览
   - 图片 / PDF / 文本 / 音视频内联预览
   - **GIF 视频预览**：GIF 文件在后端按需转码为 MP4（通过后台任务异步生成），前端使用 `<video>` 元素播放，提供流畅的播放体验；首次打开 GIF 时若尚未完成转码，前端会调用 `prepare/status` 接口短暂轮询，转码完成后自动切换为视频播放
+  - **视频循环播放**：视频预览默认开启循环播放，预览工具栏提供循环播放按钮（带图标与提示信息），可随时切换循环状态
   - **大视频 HLS 预览**：超过阈值（默认 100MB）的视频在后端转码为 HLS（.m3u8 + .ts），前端用 hls.js 流式播放
+  - **Markdown 预览**：
+    - 支持 `.md` / `.markdown` 文件以及 `text/markdown` / `text/x-markdown` MIME 类型
+    - 使用 `react-markdown` + `remark-gfm` 渲染，支持 GitHub Flavored Markdown（表格、任务列表、删除线、自动链接等）
+    - 代码语法高亮：通过 `rehype-highlight` 提供代码块语法高亮
+    - HTML 图片支持：通过 `rehype-raw` 支持 Markdown 中的原生 HTML `<img>` 标签
+    - 图片代理中转：自动将 Markdown 中的绝对 URL 图片（`http://` / `https://`）通过后端 `/api/proxy/image` 接口中转，绕过第三方防盗链限制
+    - 主题切换：预览界面提供「深色 / 浅色」主题切换按钮，适配不同阅读偏好
+    - 卡片标签：文件卡片上显示为 `md` 缩写，预览头部也显示 `md` 标识
   - 不支持的类型提供霓虹玻璃风格提示 + 下载按钮
 - ✅ 文件夹与分类（新建文件夹、批量移动、分类筛选）
 - ✅ 文件分享（分享链接、访问控制）
@@ -41,6 +50,8 @@
 - Zustand (状态管理)
 - Axios
 - React Hook Form + Zod
+- react-markdown + remark-gfm (Markdown 渲染)
+- rehype-raw + rehype-highlight (HTML 支持与代码高亮)
 
 ### 后端
 - Rust
@@ -49,6 +60,8 @@
 - PostgreSQL
 - JWT 认证
 - bcrypt (密码加密)
+- reqwest (HTTP 客户端，用于图片代理)
+- url (URL 解析与验证)
 
 ## 快速开始
 
@@ -355,6 +368,14 @@ frontend/
 - `DELETE /api/files/:id` - 删除文件
 - 批量：`POST /api/files/batch-delete`、`POST /api/files/batch-move`、`GET /api/files/download-zip` 等
 
+### 代理 API
+
+- `GET /api/proxy/image?url=...` - 图片代理中转接口
+  - 用于 Markdown 预览中的外链图片，绕过第三方防盗链限制
+  - 仅支持 `http://` / `https://` 协议
+  - 禁止访问 `localhost` / `127.0.0.1` / `::1`，防止 SSRF 攻击
+  - 返回上游图片的原始 `Content-Type` 和字节流
+
 ## 环境变量
 
 ### 后端 (.env)
@@ -515,6 +536,7 @@ npm run preview -- --host 0.0.0.0 --port 5173
     - 已存在 `StorageBackend` 抽象及 `LocalStorage` / S3 实现，文件上传、下载、缩略图等路径均通过统一接口访问。
     - 新增 `background_tasks` 表与 `TaskQueue` 服务，GIF→MP4 转码已改为通过任务队列 + Worker 异步执行，并通过 `/preview/video/prepare` + `/status` 提供前端轮询接口。
     - 将 GIF 预览转码逻辑封装在 `FileService::transcode_gif_to_mp4` 中，便于未来扩展缩略图重建等其他后台任务。
+    - 新增 `/api/proxy/image` 图片代理接口，用于 Markdown 预览中的外链图片中转，包含基本的 SSRF 防护（禁止访问本地地址）。
 
 - **阶段 3：前端设计系统与 UX 打磨**
   - 提炼通用 UI 组件（按钮、输入框、搜索框、对话框、标签/Badge 等），统一使用一套设计变量（颜色、圆角、阴影、字号），减少「每个页面单独写样式」的差异。
@@ -522,6 +544,7 @@ npm run preview -- --host 0.0.0.0 --port 5173
   - **当前状态**：
     - 在 `src/components/common/` 下抽象了 `Button`、`EmptyState`、`ErrorMessage`、`Skeleton`、`Tag`、`FormField` 等通用组件，并在文件列表等核心界面（如空列表、错误态、加载态）中落地使用。
     - 文件预览模块新增 GIF 转码进度条、视频循环播放按钮等体验优化，提升 GIF/视频预览的一致性与可控性。
+    - **Markdown 预览功能**：支持完整的 Markdown 渲染（包括 GFM 扩展、代码高亮、HTML 图片），提供深色/浅色主题切换，并通过后端代理接口解决外链图片防盗链问题。
     - 详细 UI 设计规范与组件用法已整理在 [`frontend/docs/UI_SYSTEM.md`](./frontend/docs/UI_SYSTEM.md) 中，作为前端开发的参考。
 
 - **阶段 4：可观测性与安全**

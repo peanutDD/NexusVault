@@ -6,7 +6,7 @@
 
 use axum::http::{header, HeaderMap, HeaderValue};
 
-use crate::constants::CACHE_CONTROL_PRIVATE_REVALIDATE;
+use crate::constants::{CACHE_CONTROL_PREVIEW, CACHE_CONTROL_PRIVATE_REVALIDATE};
 use crate::utils::AppError;
 
 #[derive(Clone)]
@@ -30,6 +30,11 @@ impl EntityHeaders {
             last_modified,
         })
     }
+
+    /// 返回 Last-Modified 头部，供日志等场景使用，避免直接访问私有字段。
+    pub fn last_modified_header(&self) -> &HeaderValue {
+        &self.last_modified
+    }
 }
 
 pub fn apply_entity_headers(headers: &mut HeaderMap, e: &EntityHeaders) {
@@ -37,11 +42,19 @@ pub fn apply_entity_headers(headers: &mut HeaderMap, e: &EntityHeaders) {
     headers.insert(header::LAST_MODIFIED, e.last_modified.clone());
 }
 
-pub fn apply_cache_headers(headers: &mut HeaderMap, e: &EntityHeaders) {
+/// 应用缓存头
+/// - `inline=true`: 预览场景，使用 `max-age=3600` 允许浏览器缓存1小时
+/// - `inline=false`: 下载场景，使用 `max-age=0, must-revalidate` 强制重新验证
+pub fn apply_cache_headers(headers: &mut HeaderMap, e: &EntityHeaders, inline: bool) {
     apply_entity_headers(headers, e);
+    let cache_control = if inline {
+        CACHE_CONTROL_PREVIEW
+    } else {
+        CACHE_CONTROL_PRIVATE_REVALIDATE
+    };
     headers.insert(
         header::CACHE_CONTROL,
-        HeaderValue::from_static(CACHE_CONTROL_PRIVATE_REVALIDATE),
+        HeaderValue::from_static(cache_control),
     );
 }
 

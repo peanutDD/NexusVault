@@ -17,8 +17,8 @@ mod ranges;
 mod responses;
 
 use axum::extract::{Path, Query, State};
-use axum::http::{header, HeaderMap, Method};
-use axum::response::Response;
+use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
+use axum::response::{IntoResponse, Response};
 use uuid::Uuid;
 
 use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
@@ -30,6 +30,8 @@ use crate::AppState;
 use headers::EntityHeaders;
 use ranges::parse_ranges;
 use responses::{not_modified_response, precondition_failed_response};
+
+use crate::constants::CACHE_CONTROL_THUMBNAIL;
 
 fn compute_etag(file_id: Uuid, updated_at_unix: i64, total_size: u64) -> String {
     // Weak ETag：用于缓存/断点续传的实用型标识（不保证字节级强一致）
@@ -97,7 +99,13 @@ async fn file_get_or_head_response(
     if range_header.is_none() && if_none_match == Some(entity_headers.etag_str.as_str()) {
         // 验证文件是否存在，防止数据库记录存在但文件缺失的情况
         if state.file_service.verify_file_exists(&file).await.is_ok() {
-            return Ok(not_modified_response(&entity_headers));
+            tracing::debug!(
+                file_id = %file_id,
+                etag = %entity_headers.etag_str,
+                inline = inline,
+                "preview/download 304 Not Modified (If-None-Match match)"
+            );
+            return Ok(not_modified_response(&entity_headers, inline));
         }
         // 文件不存在，继续处理以返回错误或重新生成内容
     }
@@ -114,7 +122,16 @@ async fn file_get_or_head_response(
                 if updated_ts <= t_ts {
                     // 同样验证文件是否存在
                     if state.file_service.verify_file_exists(&file).await.is_ok() {
-                        return Ok(not_modified_response(&entity_headers));
+                        tracing::debug!(
+                            file_id = %file_id,
+                            last_modified = %entity_headers
+                                .last_modified_header()
+                                .to_str()
+                                .unwrap_or(""),
+                            inline = inline,
+                            "preview/download 304 Not Modified (If-Modified-Since match)"
+                        );
+                        return Ok(not_modified_response(&entity_headers, inline));
                     }
                 }
             }
@@ -199,11 +216,13 @@ fn default_thumb_size() -> u32 {
 /// 图片缩略图（方案 B：先读盘，无则生成并写盘；GIF 只解第一帧；Ugoira 取首帧）
 ///
 /// 支持 `image/*` 与 Ugoira（`application/x-ugoira` 或 `application/zip` + `.ugoira`），返回 JPEG 缩略图。
+/// 支持 ETag 条件请求，命中缓存时返回 304。
 pub async fn thumbnail_file_handler(
     State(state): State<AppState>,
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
     Path(file_id): Path<Uuid>,
     Query(q): Query<ThumbnailQuery>,
+    headers: HeaderMap,
 ) -> Result<Response, AppError> {
     let file = state.file_service.get_file(file_id, user_id).await?;
 
@@ -219,13 +238,61 @@ pub async fn thumbnail_file_handler(
 
     let w = q.w.clamp(64, 800);
 
+    // 计算缩略图的 ETag（基于 file_id + updated_at + width）
+    let thumbnail_etag = format!(
+        "W/\"thumb-{}-{}-{}\"",
+        file_id,
+        file.updated_at.timestamp(),
+        w
+    );
+    let etag_header = HeaderValue::from_str(&thumbnail_etag).map_err(|_| AppError::Internal)?;
+
+    // 检查 If-None-Match 条件请求
+    if let Some(if_none_match) = headers.get(header::IF_NONE_MATCH).and_then(|v| v.to_str().ok()) {
+        if if_none_match == thumbnail_etag.as_str() {
+            // 检查缩略图是否存在（磁盘缓存）
+            if state.file_service.get_thumbnail(file_id, user_id).await.is_ok() {
+                tracing::debug!(
+                    file_id = %file_id,
+                    width = w,
+                    etag = %thumbnail_etag,
+                    "thumbnail 304 Not Modified (ETag match)"
+                );
+                let mut res = StatusCode::NOT_MODIFIED.into_response();
+                res.headers_mut().insert(header::ETAG, etag_header);
+                res.headers_mut().insert(
+                    header::CACHE_CONTROL,
+                    HeaderValue::from_static(CACHE_CONTROL_THUMBNAIL),
+                );
+                return Ok(res);
+            }
+        }
+    }
+
     // 方案 B：先读已存在的缩略图（按用户隔离）
     if let Ok(cached) = state.file_service.get_thumbnail(file_id, user_id).await {
-        return file_response(cached, "thumb.jpg", "image/jpeg", true)
-            .map_err(|_| AppError::Internal);
+        tracing::debug!(
+            file_id = %file_id,
+            width = w,
+            size_bytes = cached.len(),
+            "thumbnail served from disk cache (200 OK)"
+        );
+        let mut res =
+            file_response(cached, "thumb.jpg", "image/jpeg", true).map_err(|_| AppError::Internal)?;
+        res.headers_mut().insert(header::ETAG, etag_header);
+        res.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static(CACHE_CONTROL_THUMBNAIL),
+        );
+        return Ok(res);
     }
 
     // 无缓存：在阻塞线程中生成缩略图，避免长时间占用 async 工作线程导致超时或无法正确返回
+    tracing::debug!(
+        file_id = %file_id,
+        width = w,
+        "thumbnail not cached, generating new thumbnail"
+    );
     let data = state.file_service.get_file_data(&file).await?;
     let mime_type = file.mime_type.clone();
     let buf = tokio::task::spawn_blocking(move || generate_thumbnail_jpeg(data, mime_type, w))
@@ -244,8 +311,20 @@ pub async fn thumbnail_file_handler(
         tracing::warn!(file_id = %file_id, error = %e, "缩略图生成成功但保存失败，下次请求将重新生成");
     }
 
-    file_response(buf, "thumb.jpg", "image/jpeg", true)
-        .map_err(|_| AppError::Internal)
+    tracing::debug!(
+        file_id = %file_id,
+        width = w,
+        size_bytes = buf.len(),
+        "thumbnail generated and saved (200 OK)"
+    );
+    let mut res =
+        file_response(buf, "thumb.jpg", "image/jpeg", true).map_err(|_| AppError::Internal)?;
+    res.headers_mut().insert(header::ETAG, etag_header);
+    res.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static(CACHE_CONTROL_THUMBNAIL),
+    );
+    Ok(res)
 }
 
 /// 返回 HLS 主列表（playlist.m3u8），供前端 hls.js 加载。仅对超过阈值的视频生效。

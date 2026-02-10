@@ -36,7 +36,7 @@ pub fn build_head_response(
                 HeaderValue::from_str(&format!("multipart/byteranges; boundary={}", boundary))
                     .map_err(|_| AppError::Internal)?,
             );
-            apply_cache_headers(res.headers_mut(), entity_headers);
+            apply_cache_headers(res.headers_mut(), entity_headers, inline);
             apply_range_headers(res.headers_mut());
             return Ok(res);
         }
@@ -63,7 +63,7 @@ pub fn build_head_response(
             HeaderValue::from_str(&format!("bytes {}-{}/{}", start, end, total_size))
                 .map_err(|_| AppError::Internal)?,
         );
-        apply_cache_headers(res.headers_mut(), entity_headers);
+        apply_cache_headers(res.headers_mut(), entity_headers, inline);
         apply_range_headers(res.headers_mut());
         return Ok(res);
     }
@@ -76,7 +76,7 @@ pub fn build_head_response(
         Some(total_size),
     )
     .map_err(|_| AppError::Internal)?;
-    apply_cache_headers(res.headers_mut(), entity_headers);
+    apply_cache_headers(res.headers_mut(), entity_headers, inline);
     apply_range_headers(res.headers_mut());
     Ok(res)
 }

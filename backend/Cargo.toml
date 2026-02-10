@@ -62,6 +62,8 @@ moka = { version = "0.12", features = ["sync"] }
 fs2 = "0.4"
 httpdate = "1.0"
 percent-encoding = "2.3"
+reqwest = { version = "0.12", features = ["json", "stream", "gzip", "brotli", "deflate", "rustls-tls"] }
+url = "2.5"
 
 # Rate limiting - implemented as custom middleware
 

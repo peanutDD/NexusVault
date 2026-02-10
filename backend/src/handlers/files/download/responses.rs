@@ -15,9 +15,19 @@ pub fn precondition_failed_response(e: &EntityHeaders) -> Response {
     res
 }
 
-pub fn not_modified_response(e: &EntityHeaders) -> Response {
+/// 返回 304 Not Modified 响应
+/// - `inline=true`: 预览场景，使用预览缓存策略
+/// - `inline=false`: 下载场景，使用下载缓存策略
+pub fn not_modified_response(e: &EntityHeaders, inline: bool) -> Response {
+    // 打印一条 304 命中日志，便于在日志中观察缓存命中情况
+    tracing::debug!(
+        etag = %e.etag_str,
+        inline = inline,
+        "returning 304 Not Modified for file preview/download"
+    );
+
     let mut res = StatusCode::NOT_MODIFIED.into_response();
-    apply_cache_headers(res.headers_mut(), e);
+    apply_cache_headers(res.headers_mut(), e, inline);
     apply_range_headers(res.headers_mut());
     res
 }

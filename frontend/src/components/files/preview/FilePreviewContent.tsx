@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeHighlight from 'rehype-highlight';
+import { apiPath } from '../../../config/env';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { formatFileSize } from '../../../utils/format';
 import { getMimeTypeLabel } from '../../../utils/mimeType';
@@ -154,16 +155,25 @@ function MarkdownPreview({ content, theme }: MarkdownPreviewProps) {
             {...props}
           />
         ),
-        img: ({ node, ...props }) => (
-          // 统一控制图片展示为宽度自适应、保持比例
-          // 使用 block + margin 提升在长文中的可读性
-          // 注意：如果远程服务器禁止外链或加载失败，仍然会是浏览器的断图状态
-          <img
-            className="my-3 max-w-full rounded-md border border-white/10 bg-black/20 object-contain"
-            loading="lazy"
-            {...props}
-          />
-        ),
+        img: ({ node, src, ...props }) => {
+          const isAbsolute =
+            typeof src === 'string' &&
+            (src.startsWith('http://') || src.startsWith('https://'));
+
+          const proxiedSrc =
+            isAbsolute && typeof src === 'string'
+              ? apiPath(`/proxy/image?url=${encodeURIComponent(src)}`)
+              : src;
+
+          return (
+            <img
+              src={proxiedSrc}
+              className="my-3 max-w-full rounded-md border border-white/10 bg-black/20 object-contain"
+              loading="lazy"
+              {...props}
+            />
+          );
+        },
         table: ({ node, ...props }) => (
           <div
             className={`mb-3 overflow-auto rounded-md border ${
