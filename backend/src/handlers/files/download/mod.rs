@@ -99,7 +99,7 @@ async fn file_get_or_head_response(
     if range_header.is_none() && if_none_match == Some(entity_headers.etag_str.as_str()) {
         // 验证文件是否存在，防止数据库记录存在但文件缺失的情况
         if state.file_service.verify_file_exists(&file).await.is_ok() {
-            tracing::debug!(
+            tracing::info!(
                 file_id = %file_id,
                 etag = %entity_headers.etag_str,
                 inline = inline,
@@ -122,7 +122,7 @@ async fn file_get_or_head_response(
                 if updated_ts <= t_ts {
                     // 同样验证文件是否存在
                     if state.file_service.verify_file_exists(&file).await.is_ok() {
-                        tracing::debug!(
+                        tracing::info!(
                             file_id = %file_id,
                             last_modified = %entity_headers
                                 .last_modified_header()
@@ -252,7 +252,7 @@ pub async fn thumbnail_file_handler(
         if if_none_match == thumbnail_etag.as_str() {
             // 检查缩略图是否存在（磁盘缓存）
             if state.file_service.get_thumbnail(file_id, user_id).await.is_ok() {
-                tracing::debug!(
+                tracing::info!(
                     file_id = %file_id,
                     width = w,
                     etag = %thumbnail_etag,
@@ -271,7 +271,7 @@ pub async fn thumbnail_file_handler(
 
     // 方案 B：先读已存在的缩略图（按用户隔离）
     if let Ok(cached) = state.file_service.get_thumbnail(file_id, user_id).await {
-        tracing::debug!(
+        tracing::info!(
             file_id = %file_id,
             width = w,
             size_bytes = cached.len(),
@@ -288,7 +288,7 @@ pub async fn thumbnail_file_handler(
     }
 
     // 无缓存：在阻塞线程中生成缩略图，避免长时间占用 async 工作线程导致超时或无法正确返回
-    tracing::debug!(
+    tracing::info!(
         file_id = %file_id,
         width = w,
         "thumbnail not cached, generating new thumbnail"
@@ -301,7 +301,7 @@ pub async fn thumbnail_file_handler(
     let buf = match buf {
         Ok(b) => b,
         Err(AppError::File(e)) => {
-            tracing::debug!(file_id = %file_id, error = %e, "缩略图生成失败，返回 404");
+            tracing::info!(file_id = %file_id, error = %e, "缩略图生成失败，返回 404");
             return Err(AppError::NotFound);
         }
         Err(e) => return Err(e),
@@ -311,7 +311,7 @@ pub async fn thumbnail_file_handler(
         tracing::warn!(file_id = %file_id, error = %e, "缩略图生成成功但保存失败，下次请求将重新生成");
     }
 
-    tracing::debug!(
+    tracing::info!(
         file_id = %file_id,
         width = w,
         size_bytes = buf.len(),

@@ -77,11 +77,11 @@ pub const MAX_CONCURRENT_CHUNKED_UPLOADS: i64 = 5;
 /// 私有缓存控制头（强制重新验证）
 pub const CACHE_CONTROL_PRIVATE_REVALIDATE: &str = "private, max-age=0, must-revalidate";
 
-/// 预览文件缓存控制头（允许浏览器缓存1小时，配合ETag/Last-Modified做条件请求）
-pub const CACHE_CONTROL_PREVIEW: &str = "private, max-age=3600";
+/// 预览文件缓存控制头（临时缩短为 5 秒，方便本地调试 304 日志）
+pub const CACHE_CONTROL_PREVIEW: &str = "private, max-age=5";
 
-/// 缩略图缓存控制头（允许浏览器和CDN缓存1天）
-pub const CACHE_CONTROL_THUMBNAIL: &str = "public, max-age=86400";
+/// 缩略图缓存控制头（临时缩短为 5 秒，方便本地调试 304 日志）
+pub const CACHE_CONTROL_THUMBNAIL: &str = "public, max-age=5";
 
 // ============================================================================
 // 随机字符集

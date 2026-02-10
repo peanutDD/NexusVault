@@ -20,7 +20,7 @@ pub fn precondition_failed_response(e: &EntityHeaders) -> Response {
 /// - `inline=false`: 下载场景，使用下载缓存策略
 pub fn not_modified_response(e: &EntityHeaders, inline: bool) -> Response {
     // 打印一条 304 命中日志，便于在日志中观察缓存命中情况
-    tracing::debug!(
+    tracing::info!(
         etag = %e.etag_str,
         inline = inline,
         "returning 304 Not Modified for file preview/download"
