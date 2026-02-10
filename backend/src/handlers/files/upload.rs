@@ -59,9 +59,6 @@ pub async fn upload_file_handler(
                 .content_type()
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "application/octet-stream".to_string());
-            if filename.to_lowercase().ends_with(".ugoira") {
-                mime_type = "application/x-ugoira".to_string();
-            }
 
             // 临时文件路径
             let tmp_dir = std::env::temp_dir().join("file-storage-backend");

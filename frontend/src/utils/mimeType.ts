@@ -11,6 +11,10 @@
 /** 判断是否为图片类型 */
 export const isImageType = (mime: string): boolean => mime.startsWith('image/');
 
+/** 判断是否为 GIF 图片（部分场景下按“视频”处理以获得更好的预览体验） */
+export const isGifType = (mime: string): boolean =>
+  mime.toLowerCase() === 'image/gif';
+
 /** 判断是否为视频类型 */
 export const isVideoType = (mime: string): boolean => mime.startsWith('video/');
 
@@ -39,13 +43,6 @@ export const isSpreadsheetType = (mime: string): boolean =>
 export const isArchiveType = (mime: string): boolean =>
   mime.includes('zip') || mime.includes('rar') || mime.includes('7z') || mime.includes('tar');
 
-/** 判断是否为 Ugoira 动图（ZIP + frames.json） */
-export function isUgoiraType(mime: string, filename?: string): boolean {
-  if (mime.toLowerCase() === 'application/x-ugoira') return true;
-  if (filename?.toLowerCase().endsWith('.ugoira')) return true;
-  return false;
-}
-
 // ============================================================================
 // 标签生成函数
 // ============================================================================
@@ -61,11 +58,9 @@ export interface MimeTypeInfo {
 }
 
 /** 获取 MIME 类型的分类标签 */
-export function getMimeTypeLabel(mime: string, filename?: string): string {
+export function getMimeTypeLabel(mime: string, _filename?: string): string {
   // 使用条件表达式链替代 if-else
-  return isUgoiraType(mime, filename)
-    ? 'Ugoira'
-    : isImageType(mime)
+  return isImageType(mime)
     ? mime.split('/')[1]?.toUpperCase() || 'Image'
     : isVideoType(mime)
       ? 'Video'
@@ -90,7 +85,6 @@ export function getMimeTypeLabel(mime: string, filename?: string): string {
 export function getMimeTypeInfo(mime: string): MimeTypeInfo {
   // 使用 Map 查找替代多个 if-else
   const typeMap: Array<[() => boolean, MimeTypeInfo]> = [
-    [() => isUgoiraType(mime), { label: 'UGOIRA', color: '#EC4899', bgClass: 'bg-pink-900/30' }],
     [() => isVideoType(mime), { label: 'VIDEO', color: '#8B5CF6', bgClass: 'bg-purple-900/30' }],
     [() => isPdfType(mime), { label: 'PDF', color: '#EF4444', bgClass: 'bg-red-900/30' }],
     [() => isAudioType(mime), { label: 'AUDIO', color: '#22C55E', bgClass: 'bg-green-900/30' }],
@@ -116,26 +110,29 @@ export function getMimeTypeColor(mime: string): string {
 // ============================================================================
 
 /** 判断文件类型是否支持预览 */
-export function isPreviewSupported(mime: string, filename?: string): boolean {
+export function isPreviewSupported(mime: string, _filename?: string): boolean {
   return (
     isImageType(mime) ||
     isPdfType(mime) ||
     isTextType(mime) ||
     isVideoType(mime) ||
-    isAudioType(mime) ||
-    isUgoiraType(mime, filename)
+    isAudioType(mime)
   );
 }
 
 /** 获取预览类型信息 */
 export function getPreviewKind(mime: string, filename?: string) {
+  const isGif = isGifType(mime);
+
   return {
     supported: isPreviewSupported(mime, filename),
-    isImage: isImageType(mime),
+    // GIF 在预览层面按“视频”处理（走 <video> 管线），避免大 GIF 卡顿
+    isImage: isImageType(mime) && !isGif,
     isPDF: isPdfType(mime),
     isText: isTextType(mime),
-    isVideo: isVideoType(mime),
+    isVideo: isVideoType(mime) || isGif,
     isAudio: isAudioType(mime),
-    isUgoira: isUgoiraType(mime, filename),
+    // Ugoira 支持已移除，这里固定为 false，避免前端再走任何 Ugoira 分支
+    isUgoira: false,
   };
 }

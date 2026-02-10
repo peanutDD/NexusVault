@@ -25,9 +25,6 @@ impl FileService {
         user_id: Uuid,
         mut req: InstantUploadRequest,
     ) -> Result<Option<FileResponse>, AppError> {
-        if req.filename.to_lowercase().ends_with(".ugoira") {
-            req.mime_type = "application/x-ugoira".to_string();
-        }
         let hash = req.content_sha256.trim();
         if hash.len() != SHA256_HEX_LEN
             || !hash.chars().all(|c| c.is_ascii_hexdigit())

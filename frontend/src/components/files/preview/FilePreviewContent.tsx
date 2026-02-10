@@ -8,7 +8,6 @@ import { formatFileSize } from '../../../utils/format';
 import { getMimeTypeLabel } from '../../../utils/mimeType';
 import { cn } from '../../../utils/cn';
 import { ErrorIcon, FileIcon, AudioIcon } from './FilePreviewIcons';
-import { UgoiraPlayer } from './UgoiraPlayer';
 
 export interface FilePreviewContentProps {
   file: {
@@ -26,7 +25,6 @@ export interface FilePreviewContentProps {
   isVideo: boolean;
   isAudio: boolean;
   isText: boolean;
-  isUgoira?: boolean;
   blobUrl: string | null;
   gifFirstFrameUrl: string | null;
   textContent: string | null;
@@ -51,7 +49,6 @@ export function FilePreviewContent({
   isVideo,
   isAudio,
   isText,
-  isUgoira = false,
   blobUrl,
   gifFirstFrameUrl,
   textContent,
@@ -98,21 +95,7 @@ export function FilePreviewContent({
 
       {!loading && !error && supported && (
         <div className="flex min-h-0 w-full flex-1 items-center justify-center">
-          {isUgoira && (
-            <div
-              ref={imageTransformRef}
-              className="flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-lg origin-center"
-            >
-              <UgoiraPlayer
-                fileId={file.id}
-                alt={file.original_filename}
-                className="max-h-full max-w-full"
-                onLoad={() => setImageLoaded(true)}
-              />
-            </div>
-          )}
-
-          {isImage && !isUgoira && (blobUrl || gifFirstFrameUrl) && (
+          {isImage && (blobUrl || gifFirstFrameUrl) && (
             <div className="relative flex h-full w-full min-h-0 items-center justify-center">
               <div
                 ref={imageTransformRef}

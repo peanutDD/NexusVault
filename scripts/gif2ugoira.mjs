@@ -2,8 +2,8 @@
 /**
  * GIF → Ugoira 转换脚本
  * 用法: node scripts/gif2ugoira.mjs <filename.gif>
- * 源目录: frontend/gif-files/
- * 输出目录: frontend/gif2ugoira-files/
+ * 源目录: frontend/files/gif-files/
+ * 输出目录: frontend/files/gif2ugoira-files/
  * 依赖: ffmpeg、ffprobe（需已安装）
  */
 
@@ -17,8 +17,9 @@ import os from 'os';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const GIF_DIR = path.join(ROOT, 'frontend/gif-files');
-const UGOIRA_DIR = path.join(ROOT, 'frontend/gif2ugoira-files');
+// 新路径：源 GIF 放在 frontend/files/gif-files，生成的 Ugoira 放在 frontend/files/gif2ugoira-files
+const GIF_DIR = path.join(ROOT, 'frontend/files/gif-files');
+const UGOIRA_DIR = path.join(ROOT, 'frontend/files/gif2ugoira-files');
 const JSZip = require(path.join(ROOT, 'frontend/node_modules/jszip'));
 
 // 为了更接近 Pixiv 的实际体积与性能，这里做几项约束：
@@ -156,7 +157,7 @@ async function main() {
 
   if (!filename) {
     console.error('用法: node scripts/gif2ugoira.mjs <filename.gif>');
-    console.error('  将 frontend/gif-files/<filename.gif> 转为 frontend/gif2ugoira-files/<filename>.ugoira');
+    console.error('  将 frontend/files/gif-files/<filename.gif> 转为 frontend/files/gif2ugoira-files/<filename>.ugoira');
     process.exit(1);
   }
 

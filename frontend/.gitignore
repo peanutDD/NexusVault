@@ -23,6 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# GIF files
-gif-files/
-gif2ugoira-files/
+# GIF files（本地转换输入/输出，体积大，不提交）
+files/gif-files/
+files/gif2ugoira-files/

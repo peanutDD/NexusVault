@@ -36,7 +36,7 @@ mod instant_upload;
 mod list;
 mod storage;
 mod upload;
-mod ugoira;
+mod video;
 
 pub use batch::{
     batch_delete_handler, batch_download_zip_handler, batch_download_zip_post_handler,
@@ -53,7 +53,11 @@ pub use download::{
     download_file_handler, hls_asset_handler, hls_playlist_handler, preview_file_handler,
     thumbnail_file_handler,
 };
-pub use ugoira::{ugoira_frame_handler, ugoira_metadata_handler};
+pub use video::{
+    gif_video_preview_handler,
+    video_preview_prepare_handler,
+    video_preview_status_handler,
+};
 pub use list::list_files_handler;
 pub use storage::storage_usage_handler;
 pub use upload::upload_file_handler;

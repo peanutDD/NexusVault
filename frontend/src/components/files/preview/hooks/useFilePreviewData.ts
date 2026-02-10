@@ -25,6 +25,14 @@ function getHlsUrl(fileId: string): string {
   return `${base}${joiner}token=${encodeURIComponent(token)}`;
 }
 
+function getGifVideoUrl(fileId: string): string {
+  const base = fileService.getGifVideoPreviewUrl(fileId);
+  const token = useAuthStore.getState().token ?? localStorage.getItem('token');
+  if (!token) return base;
+  const joiner = base.includes('?') ? '&' : '?';
+  return `${base}${joiner}token=${encodeURIComponent(token)}`;
+}
+
 export interface UseFilePreviewDataParams {
   file: { id: string; mime_type: string; file_size: number } | null;
   kind: ReturnType<typeof getPreviewKind>;
@@ -111,7 +119,6 @@ export function useFilePreviewData({
       if (isValidRequest()) setLoading(false);
     };
     const isGif = file.mime_type.toLowerCase() === 'image/gif';
-    const isUgoira = kind.isUgoira ?? false;
 
     if (kind.isText) {
       fileService
@@ -129,6 +136,19 @@ export function useFilePreviewData({
       return;
     }
 
+    // 先处理 GIF：虽然 MIME 是 image/gif，但预览时按“视频”走 GIF → mp4 管线
+    if (isGif) {
+      if (!isValidRequest()) return;
+      gifFallbackTriedRef.current = false;
+      setGifFirstFrameUrl(null);
+      setError(null);
+      // 优先使用后端 GIF → mp4 视频预览，前端用 <video> 播放
+      setBlobUrl(getGifVideoUrl(file.id));
+      setUseHls(false);
+      finish();
+      return;
+    }
+
     if (kind.isVideo || kind.isAudio) {
       if (!isValidRequest()) return;
       videoFallbackTriedRef.current = false;
@@ -139,25 +159,6 @@ export function useFilePreviewData({
         setBlobUrl(getStreamUrl(file.id));
         setUseHls(false);
       }
-      finish();
-      return;
-    }
-
-    if (isGif) {
-      if (!isValidRequest()) return;
-      gifFallbackTriedRef.current = false;
-      setGifFirstFrameUrl(null);
-      setError(null);
-      setBlobUrl(getStreamUrl(file.id));
-      finish();
-      return;
-    }
-
-    if (isUgoira) {
-      if (!isValidRequest()) return;
-      setGifFirstFrameUrl(null);
-      setError(null);
-      setBlobUrl(null);
       finish();
       return;
     }
@@ -173,7 +174,7 @@ export function useFilePreviewData({
         setError(e instanceof Error ? e.message : '加载失败');
       })
       .finally(finish);
-  }, [file, kind.supported, kind.isText, kind.isVideo, kind.isAudio, kind.isUgoira]);
+  }, [file, kind.supported, kind.isText, kind.isVideo, kind.isAudio]);
 
   useEffect(() => {
     return () => {

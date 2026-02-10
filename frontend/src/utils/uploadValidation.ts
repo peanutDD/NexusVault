@@ -10,9 +10,45 @@ const MAX_FILE_SIZE =
 // 单次批量上传最大文件数量：默认 20
 const MAX_BATCH_COUNT = Number(import.meta.env.VITE_MAX_BATCH_COUNT) || 20;
 
-// 允许的 MIME 类型（*/* 表示允许所有）
+// 允许的 MIME 类型
+// 默认与后端 ALLOWED_MIME_TYPES 对齐，并额外放开常见「正常内容文件」：
+// - 图片 / 视频 / 音频 / PDF / 文本
+// - 常见 Office 文档：Word / Excel / PowerPoint
+// - 开放文档：ODT / ODS / ODP
+// - 电子书：EPUB / MOBI
+// - 压缩包：ZIP / 7z / RAR / TAR / GZIP / BZIP2
+const DEFAULT_ALLOWED_MIME_SPEC =
+  [
+    'image/*',
+    'video/*',
+    'audio/*',
+    'application/pdf',
+    'text/*',
+    // Office
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    // OpenDocument
+    'application/vnd.oasis.opendocument.text',
+    'application/vnd.oasis.opendocument.spreadsheet',
+    'application/vnd.oasis.opendocument.presentation',
+    // 电子书
+    'application/epub+zip',
+    'application/x-mobipocket-ebook',
+    // 压缩包 / 归档
+    'application/zip',
+    'application/x-7z-compressed',
+    'application/x-rar-compressed',
+    'application/x-tar',
+    'application/gzip',
+    'application/x-bzip2',
+  ].join(',');
+
 const ALLOWED_MIME_SPEC =
-  import.meta.env.VITE_ALLOWED_MIME_TYPES || '*/*';
+  import.meta.env.VITE_ALLOWED_MIME_TYPES || DEFAULT_ALLOWED_MIME_SPEC;
 
 function parseAllowedTypes(spec: string): string[] {
   return spec.split(',').map((s) => s.trim().toLowerCase());

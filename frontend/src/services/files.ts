@@ -173,9 +173,7 @@ export const fileService = {
       file.type.startsWith('video/') || file.size >= this.CHUNK_THRESHOLD;
     onProgress?.(0, '计算指纹…');
     const content_sha256 = await sha256FileHex(file);
-    const mime = file.name.toLowerCase().endsWith('.ugoira')
-      ? 'application/x-ugoira'
-      : (file.type || 'application/octet-stream');
+    const mime = file.type || 'application/octet-stream';
     const result = await this.uploadInstant({
       content_sha256,
       filename: file.name,
@@ -207,10 +205,7 @@ export const fileService = {
     onProgress?: (percent: number) => void
   ): Promise<{ file: FileMetadata }> {
     const formData = new FormData();
-    const fileToUpload = file.name.toLowerCase().endsWith('.ugoira')
-      ? new File([file], file.name, { type: 'application/x-ugoira' })
-      : file;
-    formData.append('file', fileToUpload);
+    formData.append('file', file);
 
     const response = await api.post<{ file: FileMetadata }>(
       '/api/files/upload',
@@ -329,9 +324,7 @@ export const fileService = {
     file: globalThis.File,
     onProgress?: (percent: number) => void
   ): Promise<{ file: FileMetadata }> {
-    const mimeType = file.name.toLowerCase().endsWith('.ugoira')
-      ? 'application/x-ugoira'
-      : (file.type || 'application/octet-stream');
+    const mimeType = file.type || 'application/octet-stream';
     
     // 初始化分块上传
     const { upload_id, chunk_size, total_parts } = await this.chunkedUploadInit(
@@ -663,6 +656,33 @@ export const fileService = {
    */
   getPreviewUrl(fileId: string): string {
     return `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/preview`;
+  },
+
+  /**
+   * 获取 GIF 视频预览 URL（后端按需将 GIF 转码为 mp4）
+   */
+  getGifVideoPreviewUrl(fileId: string): string {
+    return `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/preview/video`;
+  },
+
+  /**
+   * 触发 GIF/Ugoira 视频预览转码（不阻塞，后端可能启动后台任务）
+   */
+  async prepareVideoPreview(fileId: string): Promise<'ready' | 'processing'> {
+    const { data } = await api.post<{ status: 'ready' | 'processing' }>(
+      `/api/files/${fileId}/preview/video/prepare`
+    );
+    return data.status;
+  },
+
+  /**
+   * 查询 GIF/Ugoira 视频预览转码状态（前端轮询使用）
+   */
+  async getVideoPreviewStatus(fileId: string): Promise<'processing' | 'ready'> {
+    const { data } = await api.get<{ status: 'processing' | 'ready' }>(
+      `/api/files/${fileId}/preview/video/status`
+    );
+    return data.status;
   },
 
   /** 超大视频 HLS 列表 URL（>100MB 时后端转码为 .m3u8 + ts，供 hls.js 播放） */

@@ -23,9 +23,10 @@ use crate::handlers::files::{
     batch_get_handler, batch_move_handler, categories_handler,
     chunked_upload_abort_handler, chunked_upload_chunk_handler, chunked_upload_complete_handler,
     chunked_upload_init_handler, chunked_upload_status_handler, delete_file_handler,
-    download_file_handler, hls_asset_handler, hls_playlist_handler, instant_upload_handler,
-    list_files_handler, preview_file_handler, storage_usage_handler, thumbnail_file_handler,
-    ugoira_frame_handler, ugoira_metadata_handler, upload_file_handler,
+    download_file_handler, gif_video_preview_handler, hls_asset_handler, hls_playlist_handler,
+    instant_upload_handler, list_files_handler, preview_file_handler, storage_usage_handler,
+    thumbnail_file_handler, upload_file_handler, video_preview_prepare_handler,
+    video_preview_status_handler,
 };
 use crate::AppState;
 
@@ -179,13 +180,15 @@ pub fn create_router() -> Router<AppState> {
             get(batch_download_zip_handler).post(batch_download_zip_post_handler),
         )
         .route("/:id/download", get(download_file_handler).head(download_file_handler))
+        // GIF → 视频预览（按需转码为 mp4，前端用 <video> 播放）
+        .route("/:id/preview/video", get(gif_video_preview_handler))
         .route(
-            "/:id/preview/ugoira/metadata",
-            get(ugoira_metadata_handler),
+            "/:id/preview/video/prepare",
+            post(video_preview_prepare_handler),
         )
         .route(
-            "/:id/preview/ugoira/frames/:index",
-            get(ugoira_frame_handler),
+            "/:id/preview/video/status",
+            get(video_preview_status_handler),
         )
         .route("/:id/preview", get(preview_file_handler).head(preview_file_handler))
         .route("/:id/thumbnail", get(thumbnail_file_handler))

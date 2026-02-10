@@ -63,7 +63,7 @@ export default function FilePreview({
     [file]
   );
 
-  const { isImage, isPDF, isText, isVideo, isAudio, isUgoira, supported } = kind;
+  const { isImage, isPDF, isText, isVideo, isAudio, supported } = kind;
 
   // -------------------------------------------------------------------------
   // 数据加载（Blob/文本/GIF 流式首帧等）
@@ -274,7 +274,7 @@ export default function FilePreview({
 
       {/* ---- 右侧控制面板 ---- */}
       <FilePreviewToolbar
-        isImage={isImage || isUgoira}
+        isImage={isImage}
         filesLength={files.length}
         onClose={onClose}
         onDownload={handleDownload}
@@ -295,7 +295,6 @@ export default function FilePreview({
         isVideo={isVideo}
         isAudio={isAudio}
         isText={isText}
-        isUgoira={isUgoira}
         blobUrl={blobUrl}
         gifFirstFrameUrl={gifFirstFrameUrl}
         textContent={textContent}

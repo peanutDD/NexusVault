@@ -21,6 +21,7 @@ mod categories;
 mod chunked_upload;
 mod delete;
 mod instant_upload;
+mod video;
 mod hls;
 mod list;
 mod quota;

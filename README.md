@@ -11,6 +11,7 @@
   - **分片上传 + 断点续传**：大文件切块上传，记录进度，失败可重传单块；可选每块 `X-Part-SHA256` 校验
   - **秒传（文件指纹）**：客户端计算 SHA-256，服务器已有相同内容则直接创建记录、不传文件内容；若已有文件属于当前用户则复用路径，属于其他用户则复制到当前用户目录（确保路径一致性）；同用户多记录共享同一物理文件，删除时按引用计数仅最后一条删物理文件
   - 上传队列支持并行（大文件与小文件可同时上传），进度与「计算指纹…」「秒传未命中，正在上传…」等状态反馈
+  - **文件类型白名单**：前后端统一校验，默认支持图片、视频、音频、PDF、文本、Office 文档（Word/Excel/PowerPoint）、OpenDocument、电子书（EPUB/MOBI）和常见压缩包（ZIP/7z/RAR/TAR/GZIP/BZIP2），避免无效格式污染
 - ✅ 文件列表（虚拟列表 + 无限滚动，`Load more` 按钮兜底）
 - ✅ 文件过滤与分组：
   - `By Type`：按类型分组（Images / Videos / Audio / Docs / Text / Archives / Others），每组支持独立全选
@@ -21,6 +22,7 @@
 - ✅ 混合存储支持（本地文件系统 + AWS S3）
 - ✅ 文件预览
   - 图片 / PDF / 文本 / 音视频内联预览
+  - **GIF 视频预览**：GIF 文件在后端按需转码为 MP4，前端使用 `<video>` 元素播放，提供流畅的播放体验
   - **大视频 HLS 预览**：超过阈值（默认 100MB）的视频在后端转码为 HLS（.m3u8 + .ts），前端用 hls.js 流式播放
   - 不支持的类型提供霓虹玻璃风格提示 + 下载按钮
 - ✅ 文件夹与分类（新建文件夹、批量移动、分类筛选）
@@ -267,8 +269,9 @@ frontend/
 - `DELETE /api/files/upload/chunked/:id/abort` - 取消分片上传
 - `GET /api/files/:id/download` - 下载文件
 - `GET /api/files/:id/preview` - 预览（流式/内联）
-- `GET /api/files/:id/preview/ugoira/metadata` - Ugoira 元数据（frames.json）
-- `GET /api/files/:id/preview/ugoira/frames/:index` - Ugoira 单帧（边播放边加载）
+- `GET /api/files/:id/preview/video` - GIF 视频预览（按需转码为 mp4，前端使用 `<video>` 播放）
+- `POST /api/files/:id/preview/video/prepare` - 触发 GIF 视频预览转码（当前实现中会同步完成转码并返回 `ready`）
+- `GET /api/files/:id/preview/video/status` - 查询 GIF 视频预览转码状态（前端轮询使用）
 - `GET /api/files/:id/hls` - 大视频 HLS 主列表（.m3u8）
 - `GET /api/files/:id/hls/:filename` - HLS 分片（.ts）
 - `GET /api/files/:id/thumbnail` - 缩略图
@@ -285,8 +288,11 @@ JWT_SECRET=your-secret-key
 JWT_EXPIRY=24h
 STORAGE_BACKEND=local
 STORAGE_PATH=./uploads
-MAX_FILE_SIZE=104857600
-ALLOWED_MIME_TYPES=image/*,application/pdf,text/*
+MAX_FILE_SIZE=2147483648
+# 允许上传的 MIME 类型（前后端默认值一致）
+# 默认支持：图片、视频、音频、PDF、文本、Office 文档、OpenDocument、电子书、压缩包
+# 如需自定义，可覆盖此值（前后端需保持一致）
+ALLOWED_MIME_TYPES=image/*,video/*,audio/*,application/pdf,text/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/epub+zip,application/x-mobipocket-ebook,application/zip,application/x-7z-compressed,application/x-rar-compressed,application/x-tar,application/gzip,application/x-bzip2
 PORT=3000
 CORS_ORIGIN=*
 
@@ -305,6 +311,10 @@ CORS_ORIGIN=*
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000
+
+# 可选：允许上传的 MIME 类型（需与后端 ALLOWED_MIME_TYPES 保持一致）
+# 默认值已包含：图片、视频、音频、PDF、文本、Office 文档、OpenDocument、电子书、压缩包
+# VITE_ALLOWED_MIME_TYPES=image/*,video/*,audio/*,application/pdf,text/*,...
 ```
 
 ## 安全特性
@@ -315,8 +325,14 @@ VITE_API_BASE_URL=http://localhost:3000
    - Token 过期机制
 
 2. **文件安全**
-   - 文件类型白名单验证
-   - 文件大小限制
+   - **文件类型白名单验证**：前后端统一校验，默认支持以下类型：
+     - **基础类型**：图片（`image/*`）、视频（`video/*`）、音频（`audio/*`）、PDF（`application/pdf`）、文本（`text/*`）
+     - **Office 文档**：Word（`.doc`, `.docx`）、Excel（`.xls`, `.xlsx`）、PowerPoint（`.ppt`, `.pptx`）
+     - **OpenDocument**：`.odt`, `.ods`, `.odp`
+     - **电子书**：`.epub`, `.mobi`
+     - **压缩包**：`.zip`, `.7z`, `.rar`, `.tar`, `.gz`, `.bz2`
+     - 不在白名单内的文件类型会被前端直接拦截，不会进入上传队列
+   - 文件大小限制（默认 2GB，可通过 `MAX_FILE_SIZE` 配置）
    - 文件名清理（防止路径遍历攻击）
 
 3. **API 安全**

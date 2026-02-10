@@ -2,13 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { fileService } from '../../../services/files';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { cn } from '../../../utils/cn';
-import {
-  isImageType,
-  isUgoiraType,
-  isVideoType,
-  isPdfType,
-  isAudioType,
-} from '../../../utils/mimeType';
+import { isImageType, isVideoType, isPdfType, isAudioType } from '../../../utils/mimeType';
 import { getCachedThumbnailUrl, setCachedThumbnailUrl } from '../../../utils/thumbnailBlobCache';
 
 interface LazyThumbnailProps {
@@ -177,8 +171,7 @@ export default function LazyThumbnail({
   filename,
   className = '',
 }: LazyThumbnailProps) {
-  const showThumbnail =
-    isImageType(mimeType) || isUgoiraType(mimeType, filename);
+  const showThumbnail = isImageType(mimeType);
   const [blobUrl, setBlobUrl] = useState<string | null>(() =>
     showThumbnail ? getCachedThumbnailUrl(fileId) ?? null : null
   );
@@ -224,7 +217,9 @@ export default function LazyThumbnail({
     observeCallbacks.set(el, () => {
       const cached = getCachedThumbnailUrl(fileId);
       if (cached) {
-        setBlobUrl(cached);
+        if (mountedRef.current) {
+          setBlobUrl(cached);
+        }
         observeCallbacks.delete(el);
         observer.unobserve(el);
         return;
@@ -257,18 +252,18 @@ export default function LazyThumbnail({
   useEffect(() => {
     if (!showThumbnail || !loading || blobUrl || error) return;
 
-    let revoked = false;
+    let cancelled = false;
     fileService
       .fetchThumbnailBlob(fileId)
       .then((blob) => {
-        if (!mountedRef.current || revoked) return;
+        if (!mountedRef.current || cancelled) return;
         if (blob === null) return; // 404/415 无缩略图，保持占位
         const url = URL.createObjectURL(blob);
         setCachedThumbnailUrl(fileId, url);
         setBlobUrl(url);
       })
       .catch(() => {
-        if (mountedRef.current && !revoked) setError(true);
+        if (mountedRef.current && !cancelled) setError(true);
       })
       .finally(() => {
         if (mountedRef.current) {
@@ -278,7 +273,7 @@ export default function LazyThumbnail({
       });
 
     return () => {
-      revoked = true;
+      cancelled = true;
     };
   }, [fileId, showThumbnail, loading, blobUrl, error]);
 

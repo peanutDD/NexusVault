@@ -1,0 +1,114 @@
+//! GIF → 视频预览转码：将 GIF 源文件按需转成 mp4，供前端 `<video>` 流式播放。
+//!
+//! 设计原则：
+//! - **懒转码**：只有当用户请求 GIF 视频预览时才触发 ffmpeg，一次生成，多次复用
+//! - **仅本地存储**：与 HLS 一样，目前只支持 local backend，S3 后续再扩展
+//! - **不新增 DB 记录**：派生 mp4 存放在 `.derived_videos/{file_id}.mp4`，对用户透明
+
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use uuid::Uuid;
+use crate::models::file::File;
+use crate::utils::AppError;
+
+use super::FileService;
+
+const DERIVED_VIDEO_DIR: &str = ".derived_videos";
+
+impl FileService {
+    /// 派生 GIF 视频预览的输出路径：`{storage_path}/.derived_videos/{file_id}.mp4`
+    pub fn derived_video_output_path(&self, file_id: Uuid) -> PathBuf {
+        Path::new(&self.config.storage_path)
+            .join(DERIVED_VIDEO_DIR)
+            .join(format!("{}.mp4", file_id))
+    }
+
+    /// 确保给定 GIF 文件已有派生 mp4，若不存在则调用 ffmpeg 转码。
+    ///
+    /// 返回 mp4 的绝对路径。
+    pub async fn ensure_gif_video_ready(&self, file: &File) -> Result<PathBuf, AppError> {
+        if file.mime_type.to_lowercase() != "image/gif" {
+            return Err(AppError::Validation(
+                "仅 GIF 支持视频预览，请直接使用普通预览".to_string(),
+            ));
+        }
+        if file.storage_backend != "local" {
+            return Err(AppError::Validation(
+                "GIF 视频预览当前仅支持本地存储".to_string(),
+            ));
+        }
+
+        let out_path = self.derived_video_output_path(file.id);
+        // 已存在则直接复用
+        if tokio::fs::try_exists(&out_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?
+        {
+            return Ok(out_path);
+        }
+
+        // 检查源文件是否存在
+        let source_path = Path::new(&file.file_path);
+        if !tokio::fs::try_exists(source_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?
+        {
+            return Err(AppError::NotFound);
+        }
+
+        // 创建输出目录
+        if let Some(parent) = out_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| AppError::Storage(format!("创建派生视频目录失败: {}", e)))?;
+        }
+
+        let source = source_path.to_string_lossy().replace('\\', "/");
+        let out = out_path.to_string_lossy().replace('\\', "/");
+
+        let status = tokio::task::spawn_blocking(move || {
+            // 使用 H.264 + yuv420p，兼容性最好；+faststart 便于边下边播
+            Command::new("ffmpeg")
+                .args([
+                    "-y",
+                    "-i",
+                    &source,
+                    "-movflags",
+                    "+faststart",
+                    "-c:v",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-preset",
+                    "veryfast",
+                    "-crf",
+                    "23",
+                    &out,
+                ])
+                .status()
+        })
+        .await
+        .map_err(|_e| AppError::Internal)?;
+
+        if !status.map(|s| s.success()).unwrap_or(false) {
+            let _ = tokio::fs::remove_file(&out_path).await;
+            return Err(AppError::File(
+                "FFmpeg 转码 GIF 为视频失败，请确认已安装 ffmpeg 且 GIF 格式支持".to_string(),
+            ));
+        }
+
+        if !tokio::fs::try_exists(&out_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?
+        {
+            return Err(AppError::File(
+                "GIF 视频预览生成后未找到输出文件".to_string(),
+            ));
+        }
+
+        Ok(out_path)
+    }
+
+}
+

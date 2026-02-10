@@ -78,8 +78,33 @@ impl Config {
                 .map_err(|_| {
                     ConfigError::InvalidConfig("MAX_FILE_SIZE must be a positive number".to_string())
                 })?,
-            allowed_mime_types: env::var("ALLOWED_MIME_TYPES")
-                .unwrap_or_else(|_| "image/*,video/*,audio/*,application/pdf,text/*,application/x-ugoira".to_string())
+            // 与前端 uploadValidation 默认值保持一致：允许常见图片/视频/音频/PDF/文本、
+            // Office 文档、OpenDocument、电子书和常见压缩包格式，避免「看得见却传不上」的情况。
+            allowed_mime_types: env::var("ALLOWED_MIME_TYPES").unwrap_or_else(|_| {
+                "image/*,\
+                 video/*,\
+                 audio/*,\
+                 application/pdf,\
+                 text/*,\
+                 application/msword,\
+                 application/vnd.openxmlformats-officedocument.wordprocessingml.document,\
+                 application/vnd.ms-excel,\
+                 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,\
+                 application/vnd.ms-powerpoint,\
+                 application/vnd.openxmlformats-officedocument.presentationml.presentation,\
+                 application/vnd.oasis.opendocument.text,\
+                 application/vnd.oasis.opendocument.spreadsheet,\
+                 application/vnd.oasis.opendocument.presentation,\
+                 application/epub+zip,\
+                 application/x-mobipocket-ebook,\
+                 application/zip,\
+                 application/x-7z-compressed,\
+                 application/x-rar-compressed,\
+                 application/x-tar,\
+                 application/gzip,\
+                 application/x-bzip2"
+                    .to_string()
+            })
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect(),

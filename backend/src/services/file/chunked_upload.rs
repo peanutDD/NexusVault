@@ -23,9 +23,6 @@ impl FileService {
         user_id: Uuid,
         mut req: InitChunkedUploadRequest,
     ) -> Result<(Uuid, u32, u32), AppError> {
-        if req.filename.to_lowercase().ends_with(".ugoira") {
-            req.mime_type = "application/x-ugoira".to_string();
-        }
         // 复用统一校验逻辑，但保持原先错误信息（更短、更贴近该场景）
         self.ensure_can_store_quota_simple(user_id, &req.mime_type, req.total_size)
             .await?;
