@@ -158,6 +158,76 @@ impl AuthService {
         Ok(user_id)
     }
 
+    /// 第三方登录（如 GitHub）时，根据邮箱查找或创建用户
+    ///
+    /// - 若邮箱已存在，则返回对应用户
+    /// - 若不存在，则以 username_hint 为基础生成唯一用户名并创建用户
+    pub async fn find_or_create_oauth_user(
+        &self,
+        username_hint: &str,
+        email: &str,
+    ) -> Result<UserResponse, AppError> {
+        // 1. 先尝试按邮箱查找已存在用户
+        if let Some(user) = self.users_repo.find_by_email(email).await? {
+            tracing::info!(
+                "oauth_login_existing_user: user_id={}, username={}, email={}, provider=github",
+                user.id,
+                user.username,
+                user.email
+            );
+            return Ok(UserResponse::from(user));
+        }
+
+        // 2. 生成唯一用户名：以 hint 为基础，必要时追加 -1/-2/...
+        let base = username_hint.trim();
+        let mut candidate = if base.is_empty() {
+            email.split('@').next().unwrap_or("user").to_string()
+        } else {
+            base.to_string()
+        };
+
+        // 简单清洗：去掉空白
+        candidate = candidate.replace(char::is_whitespace, "");
+
+        // 限制最大长度，避免超出 username 字段限制
+        if candidate.len() > 50 {
+            candidate.truncate(50);
+        }
+
+        let mut username = candidate.clone();
+        let mut suffix = 1u32;
+        while self
+            .users_repo
+            .exists_by_email_or_username(email, &username)
+            .await?
+        {
+            let trimmed = if candidate.len() > 45 {
+                &candidate[..45]
+            } else {
+                &candidate
+            };
+            username = format!("{}-{}", trimmed, suffix);
+            suffix += 1;
+        }
+
+        // 3. 创建用户（OAuth 登录不需要本地密码，使用随机哈希占位）
+        let random_password = Uuid::new_v4().to_string();
+        let password_hash = hash_password(&random_password)?;
+        let user = self
+            .users_repo
+            .create(&username, email, &password_hash)
+            .await?;
+
+        tracing::info!(
+            "oauth_login_new_user_created: user_id={}, username={}, email={}, provider=github",
+            user.id,
+            user.username,
+            user.email
+        );
+
+        Ok(UserResponse::from(user))
+    }
+
     /// 获取用户信息
     pub async fn get_user(&self, user_id: Uuid) -> Result<UserResponse, AppError> {
         let user = self
@@ -176,10 +246,18 @@ impl AuthService {
         current_password: String,
         new_password: String,
     ) -> Result<(), AppError> {
-        // 验证新密码
-        if new_password.len() < 8 {
+        // 验证新密码：与注册规则一致（长度 8–64，且至少包含 1 个字母和 1 个数字）
+        let len = new_password.len();
+        if len < 8 || len > 64 {
             return Err(AppError::Validation(
-                "New password must be at least 8 characters".to_string(),
+                "New password must be between 8 and 64 characters".to_string(),
+            ));
+        }
+        let has_letter = new_password.chars().any(|c| c.is_ascii_alphabetic());
+        let has_digit = new_password.chars().any(|c| c.is_ascii_digit());
+        if !has_letter || !has_digit {
+            return Err(AppError::Validation(
+                "New password must contain at least one letter and one digit".to_string(),
             ));
         }
 
@@ -401,9 +479,20 @@ impl AuthService {
         if !req.email.contains('@') {
             return Err(AppError::Validation("Invalid email format".to_string()));
         }
-        if req.password.len() < 8 {
+        let len = req.password.len();
+        if len < 8 || len > 64 {
             return Err(AppError::Validation(
-                "Password must be at least 8 characters".to_string(),
+                "Password must be between 8 and 64 characters".to_string(),
+            ));
+        }
+        let has_letter = req
+            .password
+            .chars()
+            .any(|c| c.is_ascii_alphabetic());
+        let has_digit = req.password.chars().any(|c| c.is_ascii_digit());
+        if !has_letter || !has_digit {
+            return Err(AppError::Validation(
+                "Password must contain at least one letter and one digit".to_string(),
             ));
         }
         Ok(())

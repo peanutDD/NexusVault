@@ -14,6 +14,8 @@ use crate::AppState;
 
 pub mod api_token;
 pub mod auth;
+pub mod oauth_github;
+pub mod oauth_google;
 pub mod files;
 pub mod folders;
 pub mod openapi;

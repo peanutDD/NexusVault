@@ -17,22 +17,23 @@ export const AUTH_INPUT_CLASSES = cn(
   'transition-all duration-200'
 );
 
-// 标签样式
-export const AUTH_LABEL_CLASSES = 'block text-sm font-medium text-gray-300 mb-2';
+// 标签样式（统一使用品牌字体）
+export const AUTH_LABEL_CLASSES =
+  'font-brand block text-sm font-medium text-gray-300 mb-2';
 
 // 错误消息样式
-export const AUTH_ERROR_CLASSES = 'mt-1 text-sm text-red-400';
+export const AUTH_ERROR_CLASSES = 'font-brand mt-1 text-sm text-red-400';
 
 // 错误提示框样式
 export const AUTH_ERROR_BOX_CLASSES = cn(
-  'mb-4 p-3',
+  'font-brand mb-4 p-3',
   'bg-red-500/20 border border-red-500/50',
   'rounded-lg text-red-200 text-sm'
 );
 
 // 主按钮样式
 export const AUTH_BUTTON_CLASSES = cn(
-  'w-full py-3 px-4 rounded-xl font-semibold tracking-wide',
+  'font-brand w-full py-3 px-4 rounded-xl font-semibold tracking-wide',
   'bg-gradient-to-r from-emerald-500/85 via-cyan-500/85 to-sky-500/85',
   'text-slate-950',
   'hover:from-emerald-500 hover:via-cyan-500 hover:to-sky-500',
@@ -70,6 +71,6 @@ export const AUTH_TITLE_CLASSES = cn(
 
 // 副标题样式
 export const AUTH_SUBTITLE_CLASSES = cn(
-  'text-center text-slate-300',
+  'font-brand text-center text-slate-300',
   'mb-8 transition-colors duration-200 text-sm sm:text-base'
 );

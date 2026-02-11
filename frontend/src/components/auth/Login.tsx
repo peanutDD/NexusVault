@@ -31,6 +31,7 @@ export default function Login() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
 
   const {
     register,
@@ -52,6 +53,18 @@ export default function Login() {
       setError(getErrorMessage(err, 'Login failed'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setGithubLoading(true);
+    setError(null);
+    try {
+      const { url } = await authService.getGithubOAuthUrl();
+      window.location.href = url;
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to initiate GitHub login'));
+      setGithubLoading(false);
     }
   };
 
@@ -128,11 +141,32 @@ export default function Login() {
               </button>
             </form>
 
-            <p className="mt-6 text-center text-slate-400 text-sm">
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={handleGithubLogin}
+                disabled={githubLoading}
+                className="w-full inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800/80 transition-colors"
+              >
+                {githubLoading ? 'Redirecting to GitHub…' : 'Sign in with GitHub'}
+              </button>
+            </div>
+
+          <div className="mt-3">
+            <button
+              type="button"
+              disabled
+              className="w-full inline-flex items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/40 px-4 py-2 text-sm font-medium text-slate-500 cursor-not-allowed"
+            >
+              Sign in with Google (coming soon)
+            </button>
+          </div>
+
+            <p className="font-brand mt-6 text-center text-slate-400 text-sm">
               Don&apos;t have an account?{' '}
               <Link
                 to="/register"
-                className="text-emerald-300 hover:text-emerald-200 font-medium"
+                className="font-brand text-emerald-300 hover:text-emerald-200 font-medium"
               >
                 Sign up
               </Link>

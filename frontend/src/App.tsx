@@ -9,6 +9,7 @@ import BrowserCompatibilityWarning from './components/common/BrowserCompatibilit
 
 const Login = lazy(() => import('./components/auth/Login'));
 const Register = lazy(() => import('./components/auth/Register'));
+const GithubCallback = lazy(() => import('./components/auth/GithubCallback'));
 const Files = lazy(() => import('./pages/Files'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Share = lazy(() => import('./pages/Share'));
@@ -75,6 +76,14 @@ function App() {
               element={
                 <LazyRoute>
                   <Register />
+                </LazyRoute>
+              }
+            />
+            <Route
+              path="/auth/callback/github"
+              element={
+                <LazyRoute>
+                  <GithubCallback />
                 </LazyRoute>
               }
             />

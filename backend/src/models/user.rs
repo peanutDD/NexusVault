@@ -21,7 +21,8 @@ pub struct RegisterRequest {
     pub username: String,
     #[validate(email)]
     pub email: String,
-    #[validate(length(min = 8))]
+    /// 密码：长度至少 8，最多 64。具体复杂度校验在 AuthService::validate_register_input 中完成。
+    #[validate(length(min = 8, max = 64))]
     pub password: String,
 }
 

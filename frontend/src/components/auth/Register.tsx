@@ -148,11 +148,11 @@ export default function Register() {
               </button>
             </form>
 
-            <p className="mt-6 text-center text-slate-400 text-sm">
+            <p className="font-brand mt-6 text-center text-slate-400 text-sm">
               Already have an account?{' '}
               <Link
                 to="/login"
-                className="text-emerald-300 hover:text-emerald-200 font-medium"
+                className="font-brand text-emerald-300 hover:text-emerald-200 font-medium"
               >
                 Sign in
               </Link>

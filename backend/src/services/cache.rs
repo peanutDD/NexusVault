@@ -24,6 +24,7 @@ const FILE_PREFIX: &str = "file:";
 const FOLDER_PREFIX: &str = "folder:";
 const FOLDER_LIST_PREFIX: &str = "folder_list:";
 const EMAIL_VERIFICATION_PREFIX: &str = "email_verify:";
+const OAUTH_STATE_PREFIX: &str = "oauth_state:";
 const UGOIRA_DATA_PREFIX: &str = "ugoira:";
 
 /// 应用缓存服务
@@ -41,6 +42,8 @@ pub struct CacheService {
     email_verification: Cache<String, String>,
     /// Ugoira 预解压缓存（metadata + 全部帧），命中后零 ZIP 解析
     ugoira_data: Cache<String, Arc<UgoiraCacheEntry>>,
+    /// OAuth state 缓存（key: provider:state, value: "1"，TTL 5 分钟，用于 CSRF 防护）
+    oauth_states: Cache<String, String>,
 }
 
 impl CacheService {
@@ -70,6 +73,10 @@ impl CacheService {
             ugoira_data: Cache::builder()
                 .max_capacity(20)
                 .time_to_live(Duration::from_secs(60)) // 1 分钟，同一播放会话内多帧复用
+                .build(),
+            oauth_states: Cache::builder()
+                .max_capacity(10_000)
+                .time_to_live(Duration::from_secs(300)) // 5 分钟内有效
                 .build(),
         }
     }
@@ -108,6 +115,26 @@ impl CacheService {
                 self.email_verification.invalidate(&key);
                 return true;
             }
+        }
+        false
+    }
+
+    // ========================================================================
+    // OAuth state（第三方登录 CSRF 防护）
+    // ========================================================================
+
+    /// 记录 OAuth state（按 provider 区分）
+    pub fn set_oauth_state(&self, provider: &str, state: &str) {
+        let key = format!("{}{}:{}", OAUTH_STATE_PREFIX, provider, state);
+        self.oauth_states.insert(key, "1".to_string());
+    }
+
+    /// 校验并消费 OAuth state，成功返回 true
+    pub fn verify_and_consume_oauth_state(&self, provider: &str, state: &str) -> bool {
+        let key = format!("{}{}:{}", OAUTH_STATE_PREFIX, provider, state);
+        if self.oauth_states.get(&key).is_some() {
+            self.oauth_states.invalidate(&key);
+            return true;
         }
         false
     }

@@ -90,6 +90,12 @@ export default defineConfig({
         brotliSize: true,
       }),
   ].filter(Boolean),
+  server: {
+    // 允许通过局域网 IP / 自定义域名（如 files.local）访问开发服务器
+    host: '0.0.0.0',
+    // 允许任意 Host（本地开发环境，方便同时用 IP 和 files.local 访问）
+    allowedHosts: true,
+  },
   build: {
     target: 'es2015',
     rollupOptions: {

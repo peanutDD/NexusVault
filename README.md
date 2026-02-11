@@ -52,6 +52,8 @@
 - React Hook Form + Zod
 - react-markdown + remark-gfm (Markdown 渲染)
 - rehype-raw + rehype-highlight (HTML 支持与代码高亮)
+- GitHub OAuth 登录（登录页「Sign in with GitHub」+ `/auth/callback/github` 回调，已接入）
+- Google OAuth 登录（后端已实现 `/api/auth/oauth/google/*` 路由；前端登录页按钮已预留但默认禁用，待绑定公网域名后再开启）
 
 ### 后端
 - Rust
@@ -60,8 +62,9 @@
 - PostgreSQL
 - JWT 认证
 - bcrypt (密码加密)
-- reqwest (HTTP 客户端，用于图片代理)
+- reqwest (HTTP 客户端，用于图片代理与 GitHub OAuth)
 - url (URL 解析与验证)
+- urlencoding (安全编码 OAuth URL 参数与重定向 token)
 
 ## 快速开始
 
@@ -136,6 +139,44 @@ npm run dev
 >   VITE_API_BASE_URL=http://192.168.0.73:3000
 >   ```  
 > - 在手机浏览器中访问：`http://192.168.0.73:5173`（IP 请根据实际情况替换）
+
+> 🌐 **使用本地域名 `files.local`（可选，更稳定的本地开发方式）**  
+> - 在开发机器上编辑 hosts（macOS 示例）：  
+>   ```bash
+>   sudo nano /etc/hosts
+>   ```  
+>   在文件末尾添加一行（将 `192.168.0.73` 换成你电脑在局域网中的实际 IP）：  
+>   ```text
+>   192.168.0.73  files.local
+>   ```  
+>   在 nano 中按 `Ctrl + O`（字母 O）保存，回车确认，再按 `Ctrl + X` 退出。  
+>   可选：刷新本机 DNS 缓存（macOS 示例）：  
+>   ```bash
+>   sudo dscacheutil -flushcache
+>   sudo killall -HUP mDNSResponder 2>/dev/null || true
+>   ```  
+>   然后在终端验证映射是否生效：  
+>   ```bash
+>   ping files.local
+>   ```  
+>   如果输出里的 IP 是你配置的地址（例如 `192.168.0.73`），说明 hosts 绑定成功。  
+>   之后即可通过 `http://files.local:5173` 访问前端，通过 `http://files.local:3000` 访问后端。  
+>  
+> - 前后端推荐配置示例：  
+>   - `frontend/.env`：  
+>     ```env
+>     VITE_API_BASE_URL=http://files.local:3000
+>     ```  
+>   - `backend/.env`：  
+>     ```env
+>     CORS_ORIGIN=http://localhost:5173,http://files.local:5173
+>     GITHUB_OAUTH_REDIRECT_URI=http://files.local:3000/api/auth/oauth/github/callback
+>     FRONTEND_BASE_URL=http://files.local:5173
+>     ```  
+>   - GitHub OAuth 应用中对应配置：  
+>     - Homepage URL：`http://files.local:5173/`  
+>     - Authorization callback URL：`http://files.local:3000/api/auth/oauth/github/callback`  
+> - 注意：`files.local` 只在你配置了 hosts 的设备上可用，手机若想使用该域名访问，需要在手机上也做类似的 hosts/DNS 配置；否则手机可以直接用 IP 形式访问（如 `http://192.168.0.73:5173`）。
 
 ## 项目结构
 
@@ -346,6 +387,85 @@ frontend/
 - `GET /api/auth/me` - 获取当前用户信息
 - `PUT /api/auth/update-profile` - 更新用户名/邮箱（修改邮箱需先获取验证码）
 - `POST /api/auth/send-email-verification` - 发送邮箱验证码
+- `GET /api/auth/oauth/github/url` - 获取 GitHub OAuth 授权 URL（前端点击「Sign in with GitHub」后跳转）
+- `GET /api/auth/oauth/github/callback` - GitHub OAuth 回调，完成换取 access_token → 获取用户信息 → 从 `/user/emails` 中优先选择「primary + verified」邮箱（若不存在则退而求其次），据此在本地查找/创建用户 → 签发 JWT，并重定向回前端 `/auth/callback/github?token=...`
+ - `GET /api/auth/oauth/google/url` - 获取 Google OAuth 授权 URL（后端已实现；受限于 Google 对回调域名的要求，目前仅在拥有公网域名或使用 ngrok/Cloudflare Tunnel 等方案时启用）
+ - `GET /api/auth/oauth/google/callback` - Google OAuth 回调（后端已实现）：完成换取 access_token → 调用 OpenID Connect `userinfo` 接口获取 `sub`/`email`/`email_verified` 等信息，仅接受 `email_verified = true` 的邮箱；随后在本地查找/创建用户 → 签发 JWT，并重定向回前端 `/auth/callback/google?token=...`
+
+> **GitHub 第三方登录行为说明**  
+> - 邮箱选择规则：  
+>   - 始终调用 `GET /user/emails`，按以下优先级选择邮箱：  
+>     1. `primary && verified`  
+>     2. 其余 `primary`  
+>     3. 其余 `verified`  
+>     4. 若列表仍为空，则回退到 `/user` 返回的 `email` 字段  
+>   - 若最终仍无法获得邮箱，则登录失败并返回认证错误。  
+> - 账号合并规则：  
+>   - 若本地用户表中已存在同邮箱用户，则复用该用户（视为「用 GitHub 登录已有账号」），不会创建新账号；  
+>   - 若不存在同邮箱用户，则以 GitHub 的 `name/login` 为提示生成唯一用户名，自动创建新用户。  
+> - 日志可观测性（便于调试和审计）：  
+>   - `github_oauth_callback: github_id=..., login=..., raw_email=..., selected_email=..., username_hint=...`  
+>   - `oauth_login_existing_user: user_id=..., username=..., email=..., provider=github`  
+>   - `oauth_login_new_user_created: user_id=..., username=..., email=..., provider=github`
+
+> **Google 第三方登录完整方案（预留，待你有域名后启用）**  
+> - 当前状态：  
+>   - 后端已经实现 `GET /api/auth/oauth/google/url` 与 `GET /api/auth/oauth/google/callback`，并复用同一套 `AuthService::find_or_create_oauth_user` 逻辑；  
+>   - 前端登录页已经放置「Sign in with Google」按钮，但默认设置为 `disabled`，防止在未配置好域名与 OAuth 应用时误点；  
+>   - 前端路由层已经预留 `/auth/callback/google` 组件实现（参考 GitHub 回调组件的实现模式）。  
+> - Google Console 端配置步骤（等你有自己的域名或使用 ngrok/Cloudflare Tunnel 之后再做）：  
+>   1. 进入 Google Cloud Console，启用「OAuth 同意屏幕」，将应用发布为「测试中」或「上线」。  
+>   2. 在「凭据」中创建 OAuth 2.0 Client（Web 应用），在 **Authorized JavaScript origins** 中填写你的前端域名（例如 `https://files.yourdomain.com` 或 `https://你的-ngrok-域名`）；  
+>   3. 在 **Authorized redirect URIs** 中填写后端回调地址，例如 `https://files-api.yourdomain.com/api/auth/oauth/google/callback` 或 `https://你的-ngrok-域名/api/auth/oauth/google/callback`。  
+> - 后端环境变量配置（`backend/.env`）：  
+>   - `GOOGLE_CLIENT_ID=在 Google Console 创建的 OAuth Client ID`  
+>   - `GOOGLE_CLIENT_SECRET=对应的 Client Secret`  
+>   - `GOOGLE_OAUTH_REDIRECT_URI=https://你的后端域名或隧道域名/api/auth/oauth/google/callback`  
+>   - `FRONTEND_BASE_URL=https://你的前端域名或隧道域名`（若已配置则无需修改，仅要求与实际前端一致）。  
+> - 详细本地开发示例（等你需要时可以照着一步步做）：  
+>   1. **打开 Google Cloud Console**  
+>      - 浏览器访问：`https://console.cloud.google.com/apis/credentials`（可能要先选一个项目或新建项目）。  
+>      - 如果没有项目：顶部项目下拉 → `New Project` → 随便起个名字 → 创建并切换到这个项目。  
+>   2. **配置 OAuth 同意屏幕（只需要做一次）**  
+>      - 左侧菜单：`APIs & Services` → `OAuth consent screen`。  
+>      - 选择用户类型：自己用/测试阶段可以选 `External`（保持未发布即可）。  
+>      - 填基础信息：  
+>        - App name：例如 `Upload Download Util Local`；  
+>        - User support email：选择你的 Google 账号邮箱；  
+>        - Developer contact information：填你的邮箱；  
+>      - 作用域（Scopes）可以先用默认；OpenID / email / profile 在后面创建凭据时会自动勾上。  
+>   3. **创建 OAuth 2.0 Client ID（拿 Client ID / Secret）**  
+>      - 左侧菜单：`APIs & Services` → `Credentials`；  
+>      - 上方点击 `Create credentials` → `OAuth client ID`；  
+>      - 选择类型：Application type = `Web application`；  
+>      - 填写：  
+>        - Name：随便取一个，比如 `Web Client (Local)`；  
+>        - Authorized JavaScript origins（前端来源，Google 一般只接受 `http://localhost` 或 `https://` 的真实域名）：  
+>          - 本机调试推荐填写：`http://localhost:5173`；  
+>          - 若以后有公网域名或通过 ngrok / Cloudflare Tunnel 暴露前端，可填写例如：`https://files.yourdomain.com` 或 `https://你的-ngrok-域名`；  
+>        - Authorized redirect URIs（**重点**）：  
+>          - 必须和 `GOOGLE_OAUTH_REDIRECT_URI` 完全一致，例如：  
+>            - 本机/局域网后端示例：`http://192.168.0.3:3000/api/auth/oauth/google/callback` 或 `http://files.local:3000/api/auth/oauth/google/callback`；  
+>            - 线上/隧道示例：`https://files-api.yourdomain.com/api/auth/oauth/google/callback` 或 `https://你的-ngrok-域名/api/auth/oauth/google/callback`。  
+>      - 点 `Create` 后，弹出的对话框里可以看到：  
+>        - Client ID → 复制到 `GOOGLE_CLIENT_ID`；  
+>        - Client secret → 复制到 `GOOGLE_CLIENT_SECRET`。  
+>   4. **填到你的 `backend/.env` 并重启后端**  
+>      - 例如（根据你是用 IP 还是 `files.local` 自己调整）：  
+>        ```env
+>        GOOGLE_CLIENT_ID=（刚才复制的 Client ID）
+>        GOOGLE_CLIENT_SECRET=（刚才复制的 Client Secret）
+>        GOOGLE_OAUTH_REDIRECT_URI=http://192.168.0.3:3000/api/auth/oauth/google/callback
+>        ```  
+>      - 确保这里的 `GOOGLE_OAUTH_REDIRECT_URI` 和你在 Google 控制台的 **Authorized redirect URIs** 里填的是同一条，否则会报 `redirect_uri_mismatch`。  
+>      - 配置好后，重启后端（`cargo run`），前端通过 `/api/auth/oauth/google/url` 拿到的就是 Google 授权链接，可以正常跳转并回调到你的后端。  
+> - 前端启用步骤：  
+>   1. 打开登录页组件，找到「Sign in with Google (coming soon)」按钮，去掉 `disabled` 属性，并实现 `handleGoogleLogin`：调用 `GET /api/auth/oauth/google/url` 接口获取授权 URL 后 `window.location.href = url`；  
+>   2. 确认前端路由中存在 `/auth/callback/google` 组件，逻辑与 GitHub 回调一致：从 URL 中取出 `token`，调用 `/api/auth/me` 获取用户信息，并通过 Zustand `useAuthStore().setAuth` 完成登录态写入后跳转到 `/files`；  
+>   3. 在生产构建前，使用实际域名或隧道域名，在桌面与手机浏览器分别走完整登录流程，确保不会出现「invalid origin」或「redirect_uri mismatch」错误。  
+> - 开启策略建议：  
+>   - 你可以在真正有自己的域名或搭好 ngrok/Cloudflare Tunnel 后，再按照以上步骤逐项完成配置；  
+>   - 当前阶段保留灰色不可点的 Google 按钮，相当于在 UI 和文档层先把「未来要做的事」标出，避免将来忘记接这条链路。
 
 ### 文件 API
 
@@ -403,6 +523,19 @@ CORS_ORIGIN=*
 # SMTP_USERNAME=your@gmail.com
 # SMTP_PASSWORD=应用专用密码
 # SMTP_FROM=your@gmail.com
+
+# 可选：GitHub OAuth 登录
+# GITHUB_CLIENT_ID=your-github-client-id
+# GITHUB_CLIENT_SECRET=your-github-client-secret
+# GITHUB_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/oauth/github/callback
+#
+# 可选：Google OAuth 登录（完整方案已实现，但受限于 Google 对回调域名的要求，建议在拥有公网域名或使用 ngrok/Cloudflare Tunnel 后再开启）
+# GOOGLE_CLIENT_ID=your-google-client-id
+# GOOGLE_CLIENT_SECRET=your-google-client-secret
+# GOOGLE_OAUTH_REDIRECT_URI=https://your-domain-or-tunnel/api/auth/oauth/google/callback
+#
+# 前端回调后的跳转地址基于此构造：{FRONTEND_BASE_URL}/auth/callback/xxx
+# FRONTEND_BASE_URL=http://localhost:5173
 ```
 
 ### 前端 (.env)
@@ -420,6 +553,8 @@ VITE_API_BASE_URL=http://localhost:3000
 1. **认证安全**
    - 密码使用 bcrypt 加密
    - JWT Token 认证
+   - 密码复杂度：后端要求「长度 8–64，且至少包含 1 个字母和 1 个数字」
+   - 支持邮箱 + 密码登录与 GitHub OAuth 登录，OAuth 登录使用随机 `state` + 内存缓存进行 CSRF 防护
    - Token 过期机制
 
 2. **文件安全**
@@ -552,6 +687,94 @@ npm run preview -- --host 0.0.0.0 --port 5173
   - 后续如有多用户/公网场景，可在此基础上完善鉴权（JWT/Session）、访问控制、限流与防护策略（如上传文件的类型/内容安全检查）。
 
 以上各阶段可以按实际需求与时间投入逐步推进，不要求一次性完成；当前版本已基本完成阶段 1、阶段 2 的关键部分，并在阶段 3 上建立了统一的 UI 设计系统，为继续向「顶级水准」演进打下了良好基础。
+
+## 走向商业化：改进清单（可逐项打勾）
+
+> 本节用于规划「如果将本项目用于商业场景，还需要补齐哪些能力」。建议按优先级逐项推进，**实现一项就把对应条目标记为 `[x]`**，方便跟踪。
+
+### 1. 账号体系与权限控制
+
+- [x] **用户系统**
+  - [x] 支持邮箱 + 密码注册/登录（后端 `AuthService` + `/api/auth/register` / `/api/auth/login`，前端表单 + JWT 持久化，所有文件相关接口通过 `Authorization: Bearer` 携带 user_id；后端当前密码规则为「长度 8–64，且至少包含 1 个字母和 1 个数字」，前端应在文案/校验中同步提示）
+  - [ ] 可选接入第三方登录（**GitHub 已接入**：后端 `/api/auth/oauth/github/url` + `/api/auth/oauth/github/callback`，前端登录页「Sign in with GitHub」按钮 + `/auth/callback/github` 回调；**Google 登录后端与前端回调链路已实现，登录页按钮预留但默认禁用，等待你有正式域名/隧道域名后再开启**；其他企业 SSO 待接入）
+  - [ ] 邮箱验证与找回密码流程（邮件 + 一次性 token + 过期时间）
+  - [ ] **多租户与权限**
+  - [ ] 按用户/团队（Organization）隔离文件空间
+  - [ ] 角色体系：Owner / Admin / Member，不同权限粒度（上传/删除/分享/管理成员）
+  - [ ] 文件/文件夹的分享范围控制（私有 / 组织内 / 公开链接）
+
+### 2. 安全与合规
+
+- [ ] **接口安全**
+  - [ ] 所有写操作（上传、删除、移动、重命名等）统一走鉴权中间件
+  - [ ] 针对敏感接口增加限流（按 IP / 用户），防止暴力请求与枚举 ID
+  - [ ] 针对管理端接口增加额外保护（如仅允许特定来源网段或二次确认）
+- [ ] **上传与内容安全**
+  - [ ] 文件上传白名单：限制 MIME / 后缀组合，拒绝明显危险类型
+  - [ ] 对 HTML / SVG 等潜在 XSS 载体统一加 `Content-Disposition: attachment` 或 `X-Content-Type-Options: nosniff`
+  - [ ] 统一的病毒/恶意内容扫描接口预留（可对接第三方服务）
+- [ ] **合规基础**
+  - [ ] 提供隐私政策与使用条款页面（前端单独路由）
+  - [ ] 用户注销账号时，完善数据删除流程（含对象存储中的文件）
+  - [ ] 日志与备份的数据保留策略（保留时长、可溯源范围）
+
+### 3. 可靠性与运维
+
+- [ ] **错误监控**
+  - [ ] 前端接入错误上报（如 Sentry），记录 JS 异常与接口失败
+  - [ ] 后端 `tracing` 日志汇总到集中式日志系统（ELK / Loki 等）
+  - [ ] 为关键业务路径设置告警阈值（错误率、延迟、磁盘/对象存储占用）
+- [ ] **健康检查与自监控**
+  - [ ] 提供 `/healthz` 接口，检查数据库、存储、队列等依赖的可用性
+  - [ ] 暴露 `/metrics`（Prometheus）端点，输出 QPS、响应时间、错误率、任务队列长度等指标
+- [ ] **后台任务与队列**
+  - [ ] 将大文件转码、批量缩略图生成等操作统一通过任务队列（如 Redis）异步处理
+  - [ ] 设计任务重试策略与死信队列，避免单次失败导致任务丢失或无限重试
+
+### 4. 性能与成本优化
+
+- [ ] **存储与 CDN**
+  - [ ] 将文件本体迁移到对象存储（S3 / MinIO / OSS），前端访问走 CDN
+  - [ ] 针对缩略图与预览接口，结合现有 HTTP 缓存头配置 CDN 规则，减少源站压力
+  - [ ] Markdown 图片代理增加简单缓存层（本地文件或内存 LRU），避免同一外链反复回源
+- [ ] **数据库与查询性能**
+  - [ ] 为常用查询添加合适索引（按 `user_id`、`created_at`、`original_filename` 等）
+  - [ ] 文件列表使用游标分页 / keyset 分页，避免深度 offset 带来的性能问题
+- [ ] **前端性能**
+  - [ ] 按路由/功能模块拆包，延迟加载管理后台、设置页等非首屏模块
+  - [ ] 构建产物开启 gzip/brotli 压缩，并合理配置静态资源缓存策略
+
+### 5. 产品功能补强
+
+- [ ] **文件分享与协作**
+  - [ ] 生成可配置的分享链接（过期时间、允许预览/下载、访问密码等）
+  - [ ] 对分享链接的访问量与下载量进行统计，为后续商业分析提供数据基础
+- [ ] **版本与审计**
+  - [ ] 文件版本管理（至少保留最近 N 个版本，可回滚）
+  - [ ] 审计日志：记录谁在何时对哪个文件做了什么操作（上传/删除/移动/分享）
+- [ ] **搜索与组织**
+  - [ ] 支持按文件名、类型、标签等组合搜索
+  - [ ] 支持标签/分类管理界面，为商业用户提供更强的文件组织能力
+
+### 6. 体验与 UI 打磨（商业版）
+
+- [ ] **预览体验**
+  - [ ] Markdown 预览支持目录（TOC）、锚点导航、图片点击放大/缩略图模式
+  - [ ] 对失败的预览（视频/音频/文档）提供统一 fallback（错误原因 + 下载按钮）
+- [ ] **操作反馈**
+  - [ ] 统一的全局通知系统（成功/失败/警告），支持队列与自动消失
+  - [ ] 对长耗时操作（批量上传、转码、压缩下载）提供进度反馈与可取消操作
+
+### 7. 部署与环境管理
+
+- [ ] **多环境配置**
+  - [ ] 区分 `dev` / `staging` / `prod` 三套环境配置（数据库、对象存储、域名/回调地址）
+  - [ ] 使用 `.env` + 配置管理工具集中管理敏感配置，不将密钥写入代码库
+- [ ] **CI/CD**
+  - [ ] 为主干分支设计自动化发布流程（push → 构建 → 部署到测试环境 → 人工确认后发布到生产）
+  - [ ] 在发布流程中增加简单的 smoke test / health check，确保部署成功且服务可用
+
+> 提示：上述条目既可以作为「Roadmap」，也可以作为「上线 checklist」。实际开发中可在每次完成某一改进后，将对应 `[ ]` 改为 `[x]`，并在提交信息中引用本节，方便团队追踪商业化进度。
 
 ## 许可证
 

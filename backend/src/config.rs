@@ -45,6 +45,24 @@ pub struct Config {
     pub smtp_password: Option<String>,
     /// 发件人地址
     pub smtp_from: Option<String>,
+
+    // ---------- 第三方登录（OAuth） ----------
+    /// GitHub OAuth 应用的 Client ID（可选，未配置则禁用 GitHub 登录）
+    pub github_client_id: Option<String>,
+    /// GitHub OAuth 应用的 Client Secret
+    pub github_client_secret: Option<String>,
+    /// GitHub 回调地址（需与 GitHub 应用配置一致），例如：https://your-backend.com/api/auth/oauth/github/callback
+    pub github_oauth_redirect_uri: Option<String>,
+
+    /// Google OAuth 应用的 Client ID（可选，未配置则禁用 Google 登录）
+    pub google_client_id: Option<String>,
+    /// Google OAuth 应用的 Client Secret
+    pub google_client_secret: Option<String>,
+    /// Google 回调地址（需与 Google 控制台配置一致），例如：https://your-backend.com/api/auth/oauth/google/callback
+    pub google_oauth_redirect_uri: Option<String>,
+    
+    /// 前端基础地址，用于 OAuth 登录成功后重定向前端（如 https://app.example.com）
+    pub frontend_base_url: Option<String>,
 }
 
 #[derive(Error, Debug)]
@@ -138,6 +156,18 @@ impl Config {
             smtp_username: env::var("SMTP_USERNAME").ok().filter(|s| !s.is_empty()),
             smtp_password: env::var("SMTP_PASSWORD").ok().filter(|s| !s.is_empty()),
             smtp_from: env::var("SMTP_FROM").ok().filter(|s| !s.is_empty()),
+
+            github_client_id: env::var("GITHUB_CLIENT_ID").ok().filter(|s| !s.is_empty()),
+            github_client_secret: env::var("GITHUB_CLIENT_SECRET").ok().filter(|s| !s.is_empty()),
+            github_oauth_redirect_uri: env::var("GITHUB_OAUTH_REDIRECT_URI")
+                .ok()
+                .filter(|s| !s.is_empty()),
+            google_client_id: env::var("GOOGLE_CLIENT_ID").ok().filter(|s| !s.is_empty()),
+            google_client_secret: env::var("GOOGLE_CLIENT_SECRET").ok().filter(|s| !s.is_empty()),
+            google_oauth_redirect_uri: env::var("GOOGLE_OAUTH_REDIRECT_URI")
+                .ok()
+                .filter(|s| !s.is_empty()),
+            frontend_base_url: env::var("FRONTEND_BASE_URL").ok().filter(|s| !s.is_empty()),
         };
 
         config.validate()?;

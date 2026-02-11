@@ -12,6 +12,11 @@ export const authService = {
     return response.data;
   },
 
+  async getGithubOAuthUrl(): Promise<{ url: string }> {
+    const response = await api.get<{ url: string }>('/api/auth/oauth/github/url');
+    return response.data;
+  },
+
   async getMe(): Promise<{ user: User }> {
     const response = await api.get<{ user: User }>('/api/auth/me');
     return response.data;
