@@ -100,15 +100,66 @@ export default defineConfig({
     target: 'es2015',
     rollupOptions: {
       output: {
-        manualChunks: {
-          // React 核心
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // 表单处理
-          'vendor-form': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          // 状态管理
-          'vendor-state': ['zustand'],
-          // 工具库
-          'vendor-utils': ['axios', 'clsx', 'tailwind-merge'],
+        // 使用函数形式的 manualChunks 实现更细粒度的代码拆分
+        manualChunks(id) {
+          // node_modules 中的依赖
+          if (id.includes('node_modules')) {
+            // React 核心库
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            // 表单处理库
+            if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+              return 'vendor-form';
+            }
+            // 状态管理
+            if (id.includes('zustand')) {
+              return 'vendor-state';
+            }
+            // UI 组件库和图标
+            if (id.includes('lucide-react') || id.includes('bootstrap-icons')) {
+              return 'vendor-ui';
+            }
+            // 工具库
+            if (id.includes('axios') || id.includes('clsx') || id.includes('tailwind-merge')) {
+              return 'vendor-utils';
+            }
+            // 其他大型依赖单独拆分
+            if (id.includes('@tanstack/react-virtual')) {
+              return 'vendor-virtual';
+            }
+            if (id.includes('hls.js')) {
+              return 'vendor-hls';
+            }
+            if (id.includes('zip.js') || id.includes('jszip')) {
+              return 'vendor-zip';
+            }
+            // 其他 node_modules 依赖
+            return 'vendor-other';
+          }
+          
+          // 按路由拆分页面代码
+          if (id.includes('/src/pages/')) {
+            if (id.includes('/pages/Files')) {
+              return 'chunk-Files';
+            }
+            if (id.includes('/pages/Settings')) {
+              return 'chunk-Settings';
+            }
+            if (id.includes('/pages/Share')) {
+              return 'chunk-Share';
+            }
+          }
+          
+          // 按功能模块拆分组件
+          if (id.includes('/src/components/auth/')) {
+            return 'chunk-auth';
+          }
+          
+          // 文件相关组件（较大，单独拆分）
+          if (id.includes('/src/components/files/')) {
+            return 'chunk-files-components';
+          }
         },
       },
     },

@@ -210,10 +210,14 @@
 - [x] **资源压缩**：已配置 `vite-plugin-compression`，构建时自动生成 gzip（`.gz`）和 brotli（`.br`）压缩文件
 - [x] **静态资源缓存**：Nginx 配置了静态资源（JS/CSS/图片/字体）1 年缓存 + `Cache-Control: public, immutable`
 - [x] **PWA 运行时缓存**：配置了 Workbox 缓存策略（文件列表/文件夹 API 5 分钟缓存，预览文件 7 天缓存）
-- [ ] **可进一步优化**：
-  - 按路由更细粒度拆分代码（当前按 vendor 拆分，可考虑按路由拆分如 `chunk-Files`、`chunk-Settings`）
-  - HTML 文件缓存策略优化（当前 Nginx 未配置 HTML 的 Cache-Control，建议设置为 `no-cache` 或 `max-age=0`）
-  - 添加 `build:analyze` 脚本用于分析 bundle 大小（已配置 visualizer，但需确认 package.json 中是否有对应脚本）
+- [x] **路由级代码拆分优化**：
+  - 已实现函数形式的 `manualChunks`，按路由拆分页面代码（`chunk-Files`、`chunk-Settings`、`chunk-Share`、`chunk-auth`）
+  - 按功能模块拆分组件（`chunk-files-components` 用于文件相关组件）
+  - 更细粒度的 vendor 拆分（`vendor-ui`、`vendor-virtual`、`vendor-hls`、`vendor-zip` 等）
+- [x] **HTML 文件缓存策略优化**：
+  - Nginx 已配置 `/index.html` 的 `Cache-Control: no-cache, no-store, must-revalidate`
+  - 确保每次请求都获取最新的 HTML，避免缓存导致的应用更新问题
+- [x] **Bundle 分析工具**：已确认 `package.json` 中包含 `build:analyze` 脚本，可使用 `npm run build:analyze` 分析 bundle 大小
 
 ---
 
