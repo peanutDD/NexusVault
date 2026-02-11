@@ -34,8 +34,10 @@ mod delete;
 mod download;
 mod instant_upload;
 mod list;
+mod semantic_search;
 mod storage;
 mod upload;
+mod versions;
 mod video;
 
 pub use batch::{
@@ -59,5 +61,10 @@ pub use video::{
     video_preview_status_handler,
 };
 pub use list::list_files_handler;
+pub use semantic_search::semantic_search_handler;
 pub use storage::storage_usage_handler;
 pub use upload::upload_file_handler;
+pub use versions::{
+    delete_version_handler, get_file_version_handler, list_file_versions_handler,
+    restore_version_handler, update_version_label_handler,
+};

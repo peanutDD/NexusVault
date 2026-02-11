@@ -174,6 +174,33 @@ impl FilesRepository for SqlxFilesRepo {
         Ok(result.is_some()) // 有行即属于该用户
     }
 
+    async fn find_by_name_and_folder(
+        &self,
+        user_id: Uuid,
+        original_filename: &str,
+        folder_id: Option<Uuid>,
+    ) -> Result<Option<File>, AppError> {
+        let file = if let Some(fid) = folder_id {
+            sqlx::query_as::<_, File>(
+                "SELECT * FROM files WHERE user_id = $1 AND original_filename = $2 AND folder_id = $3 LIMIT 1",
+            )
+            .bind(user_id)
+            .bind(original_filename)
+            .bind(fid)
+            .fetch_optional(&self.pool)
+            .await?
+        } else {
+            sqlx::query_as::<_, File>(
+                "SELECT * FROM files WHERE user_id = $1 AND original_filename = $2 AND folder_id IS NULL LIMIT 1",
+            )
+            .bind(user_id)
+            .bind(original_filename)
+            .fetch_optional(&self.pool)
+            .await?
+        };
+        Ok(file)
+    }
+
 // =============================================================================
 // 按文件夹列表（不分页，供文件夹树等场景）
 // =============================================================================
@@ -572,20 +599,32 @@ impl FilesRepository for SqlxFilesRepo {
                     qb.push(sort_column);
                     qb.push(" < ");
                     match cursor {
-                        CursorValue::DateTime(dt) => qb.push_bind(*dt),
-                        CursorValue::String(s) => qb.push_bind(s),
-                        CursorValue::Int64(n) => qb.push_bind(*n),
-                    }
+                        CursorValue::DateTime(dt) => {
+                            qb.push_bind(*dt);
+                        }
+                        CursorValue::String(s) => {
+                            qb.push_bind(s);
+                        }
+                        CursorValue::Int64(n) => {
+                            qb.push_bind(*n);
+                        }
+                    };
                 } else {
                     // ASC 排序：WHERE sort_column > cursor（获取更晚的记录）
                     qb.push(" AND ");
                     qb.push(sort_column);
                     qb.push(" > ");
                     match cursor {
-                        CursorValue::DateTime(dt) => qb.push_bind(*dt),
-                        CursorValue::String(s) => qb.push_bind(s),
-                        CursorValue::Int64(n) => qb.push_bind(*n),
-                    }
+                        CursorValue::DateTime(dt) => {
+                            qb.push_bind(*dt);
+                        }
+                        CursorValue::String(s) => {
+                            qb.push_bind(s);
+                        }
+                        CursorValue::Int64(n) => {
+                            qb.push_bind(*n);
+                        }
+                    };
                 }
             }
         }

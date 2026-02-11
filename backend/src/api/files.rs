@@ -23,10 +23,12 @@ use crate::handlers::files::{
     batch_get_handler, batch_move_handler, categories_handler,
     chunked_upload_abort_handler, chunked_upload_chunk_handler, chunked_upload_complete_handler,
     chunked_upload_init_handler, chunked_upload_status_handler, delete_file_handler,
-    download_file_handler, gif_video_preview_handler, hls_asset_handler, hls_playlist_handler,
-    instant_upload_handler, list_files_handler, preview_file_handler, storage_usage_handler,
-    thumbnail_file_handler, upload_file_handler, video_preview_prepare_handler,
-    video_preview_status_handler,
+    delete_version_handler, download_file_handler, get_file_version_handler,
+    gif_video_preview_handler, hls_asset_handler, hls_playlist_handler,
+    instant_upload_handler, list_file_versions_handler, list_files_handler, preview_file_handler,
+    restore_version_handler, semantic_search_handler, storage_usage_handler,
+    thumbnail_file_handler, update_version_label_handler, upload_file_handler,
+    video_preview_prepare_handler, video_preview_status_handler,
 };
 use crate::AppState;
 
@@ -55,6 +57,9 @@ use crate::AppState;
 ///
 /// ## 秒传（文件指纹）
 /// - `POST /upload/instant`: 按 content_sha256 + file_size 秒传，已有则复用存储
+///
+/// ## 搜索
+/// - `GET /search/semantic`: 语义搜索（基于向量相似度）
 ///
 /// ## 其他
 /// - `GET /storage-usage`: 获取存储使用情况
@@ -172,6 +177,7 @@ pub fn create_router() -> Router<AppState> {
         )
         .route("/storage-usage", get(storage_usage_handler))
         .route("/categories", get(categories_handler))
+        .route("/search/semantic", get(semantic_search_handler))
         .route("/batch", post(batch_get_handler))
         .route("/batch-delete", post(batch_delete_handler))
         .route("/batch-move", post(batch_move_handler))
@@ -194,5 +200,11 @@ pub fn create_router() -> Router<AppState> {
         .route("/:id/thumbnail", get(thumbnail_file_handler))
         .route("/:id/hls", get(hls_playlist_handler))
         .route("/:id/hls/:filename", get(hls_asset_handler))
+        // 文件版本管理
+        .route("/:id/versions", get(list_file_versions_handler))
+        .route("/versions/:version_id", get(get_file_version_handler))
+        .route("/versions/:version_id/label", put(update_version_label_handler))
+        .route("/:id/versions/:version_id/restore", post(restore_version_handler))
+        .route("/versions/:version_id", delete(delete_version_handler))
         .route("/:id", delete(delete_file_handler))
 }

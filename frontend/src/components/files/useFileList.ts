@@ -362,9 +362,9 @@ export function useFileList() {
           if (fileListCacheKeyRef.current !== cacheKey) return;
           startTransition(() => {
             setFiles(response.files);
-            setTotal(response.total);
+            setTotal(response.total ?? 0);
             setLoadedPageCount(1);
-            setCachedFileList(cacheKey, response.files, response.total);
+            setCachedFileList(cacheKey, response.files, response.total ?? 0);
           });
         })
         .catch(() => {
@@ -386,11 +386,11 @@ export function useFileList() {
       startTransition(() => {
         setLoading(false);
         setFiles(response.files);
-        setTotal(response.total);
+        setTotal(response.total ?? 0);
         setLoadedPageCount(1);
         setSelectedFiles(new Set());
         lastRequestedPageRef.current = 1;
-        setCachedFileList(cacheKey, response.files, response.total);
+        setCachedFileList(cacheKey, response.files, response.total ?? 0);
       });
     } catch (err) {
       if (isRequestCanceled(err)) return;
@@ -464,7 +464,7 @@ export function useFileList() {
       startTransition(() => {
         setFiles((prev) => [...prev, ...response.files]);
         setLoadedPageCount(nextPage);
-        setCachedFileList(cacheKey, response.files, response.total);
+        setCachedFileList(cacheKey, response.files, response.total ?? 0);
       });
     } catch (err) {
       if (isRequestCanceled(err)) return;

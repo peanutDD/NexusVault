@@ -177,7 +177,7 @@ impl FileService {
         &self,
         upload_id: Uuid,
         user_id: Uuid,
-        _req: CompleteChunkedUploadRequest,
+        req: CompleteChunkedUploadRequest,
     ) -> Result<FileResponse, AppError> {
         use tokio::io::{copy, AsyncWriteExt};
 
@@ -263,6 +263,7 @@ impl FileService {
                 s.total_size as u64,
                 &merged_path,
                 content_sha256,
+                req.folder_id,
             )
             .await?;
 

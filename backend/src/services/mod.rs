@@ -23,7 +23,9 @@
 pub mod api_token;
 pub mod auth;
 pub mod cache;
+pub mod embeddings;
 pub mod file;
+pub mod file_content_extractor;
 pub mod folder;
 pub mod maintenance;
 pub mod organization;

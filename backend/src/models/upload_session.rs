@@ -60,4 +60,6 @@ pub struct CompleteChunkedUploadRequest {
     pub filename: String,
     #[allow(dead_code)]
     pub mime_type: String,
+    /// 目标文件夹 ID（可选，None 表示根目录）
+    pub folder_id: Option<Uuid>,
 }

@@ -80,22 +80,141 @@ impl FileService {
             new_path
         };
 
-        let file = self
+        // 检查是否存在同名文件（在同一文件夹下）
+        let existing_file = self
             .files_repo
-            .insert(
-                file_id,
-                user_id,
-                &storage_filename,
-                &req.filename,
-                &file_path,
-                req.file_size,
-                &req.mime_type,
-                &existing.storage_backend,
-                Some(hash),
-                req.folder_id,
-            )
+            .find_by_name_and_folder(user_id, &req.filename, req.folder_id)
             .await?;
 
-        Ok(Some(FileResponse::from(file)))
+        let file = if let Some(existing_same_name) = existing_file {
+            // 存在同名文件，需要创建版本
+            let existing_file_id = existing_same_name.id;
+            
+            // 获取当前最大版本号
+            let max_version = self.file_versions_repo.get_max_version_number(existing_file_id).await?;
+            let next_version = max_version + 1;
+            
+            // 将旧文件保存为历史版本
+            let _ = self.file_versions_repo.create_version(
+                existing_file_id,
+                user_id,
+                next_version,
+                &existing_same_name.filename,
+                &existing_same_name.original_filename,
+                &existing_same_name.file_path,
+                existing_same_name.file_size as u64,
+                &existing_same_name.mime_type,
+                &existing_same_name.storage_backend,
+                existing_same_name.content_sha256.as_deref(),
+            ).await;
+
+            // 更新文件记录为新文件
+            sqlx::query(
+                "UPDATE files SET 
+                    filename = $1, file_path = $2, file_size = $3, 
+                    mime_type = $4, content_sha256 = $5, updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $6 AND user_id = $7"
+            )
+            .bind(&storage_filename)
+            .bind(&file_path)
+            .bind(req.file_size as i64)
+            .bind(&req.mime_type)
+            .bind(Some(hash))
+            .bind(existing_file_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+            // 清理旧版本（只保留最近2个）
+            let old_version_paths = self.file_versions_repo.cleanup_old_versions(existing_file_id, 2).await?;
+            for old_path in old_version_paths {
+                let _ = self.storage.delete_file(&old_path).await;
+            }
+
+            // 重新查询更新后的文件
+            let file_response = self.files_repo.find_by_id(existing_file_id, user_id).await?
+                .ok_or(AppError::NotFound)
+                .map(FileResponse::from)?;
+            
+            // 如果配置了嵌入服务，异步提取内容并生成向量嵌入（不阻塞上传流程）
+            if let Some(embedding_service) = &self.embedding_service {
+                if let Ok(file_clone) = self.files_repo.find_by_id(existing_file_id, user_id).await {
+                    if let Some(file_clone) = file_clone {
+                        let embedding_service_clone = embedding_service.clone();
+                        let storage_clone = self.storage.clone();
+                        let mime_type_clone = req.mime_type.clone();
+                        let original_filename_clone = req.filename.clone();
+                        let file_id_clone = file_response.id;
+                        let user_id_clone = user_id;
+                        let pool_clone = self.pool.clone();
+                        
+                        tokio::spawn(async move {
+                            crate::services::file::FileService::generate_embedding_with_content(
+                                &embedding_service_clone,
+                                &storage_clone,
+                                &file_clone,
+                                &mime_type_clone,
+                                &original_filename_clone,
+                                file_id_clone,
+                                user_id_clone,
+                                pool_clone,
+                            ).await;
+                        });
+                    }
+                }
+            }
+            
+            file_response
+        } else {
+            // 不存在同名文件，创建新文件
+            let file = self
+                .files_repo
+                .insert(
+                    file_id,
+                    user_id,
+                    &storage_filename,
+                    &req.filename,
+                    &file_path,
+                    req.file_size,
+                    &req.mime_type,
+                    &existing.storage_backend,
+                    Some(hash),
+                    req.folder_id,
+                )
+                .await?;
+            let file_response = FileResponse::from(file);
+            
+            // 如果配置了嵌入服务，异步提取内容并生成向量嵌入（不阻塞上传流程）
+            if let Some(embedding_service) = &self.embedding_service {
+                if let Ok(file_clone) = self.files_repo.find_by_id(file_response.id, user_id).await {
+                    if let Some(file_clone) = file_clone {
+                        let embedding_service_clone = embedding_service.clone();
+                        let storage_clone = self.storage.clone();
+                        let mime_type_clone = req.mime_type.clone();
+                        let original_filename_clone = req.filename.clone();
+                        let file_id_clone = file_response.id;
+                        let user_id_clone = user_id;
+                        let pool_clone = self.pool.clone();
+                        
+                        tokio::spawn(async move {
+                            crate::services::file::FileService::generate_embedding_with_content(
+                                &embedding_service_clone,
+                                &storage_clone,
+                                &file_clone,
+                                &mime_type_clone,
+                                &original_filename_clone,
+                                file_id_clone,
+                                user_id_clone,
+                                pool_clone,
+                            ).await;
+                        });
+                    }
+                }
+            }
+            
+            file_response
+        };
+
+        Ok(Some(file))
     }
 }

@@ -10,8 +10,9 @@ use std::sync::Arc;
 use sqlx::PgPool;
 
 use crate::config::Config;
-use crate::repositories::{DynFilesRepo, DynUsersRepo, SqlxFilesRepo, SqlxUsersRepo};
+use crate::repositories::{DynFilesRepo, DynFileVersionsRepo, DynUsersRepo, SqlxFilesRepo, SqlxFileVersionsRepo, SqlxUsersRepo};
 use crate::services::cache::CacheService;
+use crate::services::embeddings::EmbeddingService;
 use crate::services::task_queue::TaskQueue;
 use crate::services::file::FileService;
 use crate::services::storage::StorageBackend;
@@ -48,6 +49,8 @@ pub struct AppState {
     pub file_service: Arc<FileService>,
     /// 后台任务队列（GIF 转码、缩略图重建等）
     pub task_queue: Arc<TaskQueue>,
+    /// 嵌入服务（用于语义搜索）
+    pub embedding_service: Option<Arc<EmbeddingService>>,
 }
 
 impl AppState {
@@ -59,13 +62,24 @@ impl AppState {
     /// - `storage`: 存储后端
     pub fn new(config: Arc<Config>, pool: PgPool, storage: Arc<dyn StorageBackend>) -> Self {
         let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(pool.clone()));
+        let file_versions_repo: DynFileVersionsRepo = Arc::new(SqlxFileVersionsRepo::new(pool.clone()));
         let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(pool.clone()));
+        
+        // 如果配置了 Hugging Face API Token，创建嵌入服务
+        let embedding_service = if config.huggingface_api_token.is_some() {
+            Some(Arc::new(EmbeddingService::new(&config)))
+        } else {
+            None
+        };
+        
         let file_service = Arc::new(FileService::new(
             files_repo,
+            file_versions_repo,
             users_repo,
             pool.clone(),
             storage.clone(),
             config.clone(),
+            embedding_service.clone(),
         ));
 
         let task_queue = Arc::new(TaskQueue::new(Arc::new(pool.clone())));
@@ -77,6 +91,7 @@ impl AppState {
             cache: CacheService::new(),
             file_service,
             task_queue,
+            embedding_service,
         }
     }
 }

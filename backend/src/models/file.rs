@@ -173,3 +173,89 @@ pub struct BatchGetRequest {
     /// 要查询的文件 ID 列表
     pub ids: Vec<Uuid>,
 }
+
+// ============================================================================
+// 文件版本管理
+// ============================================================================
+
+/// 文件版本记录
+///
+/// 对应数据库表 `file_versions`，用于存储文件的历史版本。
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct FileVersion {
+    /// 版本记录 ID
+    pub id: Uuid,
+    /// 关联的文件 ID
+    pub file_id: Uuid,
+    /// 所属用户 ID
+    pub user_id: Uuid,
+    /// 版本号（从 1 开始递增）
+    pub version_number: i32,
+    /// 存储文件名
+    pub filename: String,
+    /// 原始文件名
+    pub original_filename: String,
+    /// 文件存储路径
+    pub file_path: String,
+    /// 文件大小（字节）
+    pub file_size: i64,
+    /// MIME 类型
+    pub mime_type: String,
+    /// 存储后端类型
+    pub storage_backend: String,
+    /// 文件内容 SHA-256
+    pub content_sha256: Option<String>,
+    /// 版本标签/备注
+    pub label: Option<String>,
+    /// 创建时间
+    pub created_at: DateTime<Utc>,
+}
+
+/// 文件版本响应
+#[derive(Debug, Serialize)]
+pub struct FileVersionResponse {
+    pub id: Uuid,
+    pub file_id: Uuid,
+    pub version_number: i32,
+    pub original_filename: String,
+    pub file_size: i64,
+    pub mime_type: String,
+    pub content_sha256: Option<String>,
+    pub label: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+impl From<FileVersion> for FileVersionResponse {
+    fn from(version: FileVersion) -> Self {
+        FileVersionResponse {
+            id: version.id,
+            file_id: version.file_id,
+            version_number: version.version_number,
+            original_filename: version.original_filename,
+            file_size: version.file_size,
+            mime_type: version.mime_type,
+            content_sha256: version.content_sha256,
+            label: version.label,
+            created_at: version.created_at,
+        }
+    }
+}
+
+/// 更新版本标签请求
+#[derive(Debug, Deserialize)]
+pub struct UpdateVersionLabelRequest {
+    /// 版本标签/备注
+    pub label: Option<String>,
+}
+
+/// 恢复版本请求
+#[derive(Debug, Deserialize)]
+pub struct RestoreVersionRequest {
+    /// 是否保留当前版本为历史版本（默认 true）
+    #[serde(default = "default_true")]
+    pub keep_current: bool,
+}
+
+fn default_true() -> bool {
+    true
+}

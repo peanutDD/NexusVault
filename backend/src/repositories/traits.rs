@@ -26,7 +26,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::models::file::{File, FileListQuery, FileListResult};
+use crate::models::file::{File, FileListQuery, FileListResult, FileVersion};
 use crate::models::user::User;
 use crate::utils::AppError;
 
@@ -39,6 +39,9 @@ pub type DynUsersRepo = Arc<dyn UsersRepository>;
 
 /// 动态分发的 FilesRepository
 pub type DynFilesRepo = Arc<dyn FilesRepository>;
+
+/// 动态分发的 FileVersionsRepository
+pub type DynFileVersionsRepo = Arc<dyn FileVersionsRepository>;
 
 // ============================================================================
 // UsersRepository Trait
@@ -146,6 +149,14 @@ pub trait FilesRepository: Send + Sync {
     /// 检查文件是否属于指定用户
     async fn belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError>;
 
+    /// 查找同名文件（用于版本管理：检测是否已有同名文件）
+    async fn find_by_name_and_folder(
+        &self,
+        user_id: Uuid,
+        original_filename: &str,
+        folder_id: Option<Uuid>,
+    ) -> Result<Option<File>, AppError>;
+
     /// 列出指定文件夹下的文件。
     ///
     /// 当前文件列表接口基于统一的分页查询与过滤条件，
@@ -194,4 +205,45 @@ pub trait FilesRepository: Send + Sync {
 
     /// 分页查询文件列表
     async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<FileListResult, AppError>;
+}
+
+// ============================================================================
+// FileVersionsRepository Trait
+// ============================================================================
+
+/// 文件版本数据访问接口
+#[async_trait]
+pub trait FileVersionsRepository: Send + Sync {
+    /// 创建文件版本（将当前文件保存为历史版本）
+    async fn create_version(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+        version_number: i32,
+        filename: &str,
+        original_filename: &str,
+        file_path: &str,
+        file_size: u64,
+        mime_type: &str,
+        storage_backend: &str,
+        content_sha256: Option<&str>,
+    ) -> Result<FileVersion, AppError>;
+
+    /// 获取文件的所有版本列表（按版本号降序）
+    async fn list_versions(&self, file_id: Uuid, user_id: Uuid) -> Result<Vec<FileVersion>, AppError>;
+
+    /// 获取指定版本
+    async fn get_version(&self, version_id: Uuid, user_id: Uuid) -> Result<Option<FileVersion>, AppError>;
+
+    /// 获取文件的最大版本号
+    async fn get_max_version_number(&self, file_id: Uuid) -> Result<i32, AppError>;
+
+    /// 更新版本标签
+    async fn update_label(&self, version_id: Uuid, user_id: Uuid, label: Option<&str>) -> Result<(), AppError>;
+
+    /// 删除指定版本（同时删除物理文件）
+    async fn delete_version(&self, version_id: Uuid, user_id: Uuid) -> Result<String, AppError>;
+
+    /// 删除文件的所有旧版本（保留最近 N 个版本）
+    async fn cleanup_old_versions(&self, file_id: Uuid, keep_count: i32) -> Result<Vec<String>, AppError>;
 }

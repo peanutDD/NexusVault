@@ -137,6 +137,7 @@ pub async fn upload_file_handler(
             file_size,
             &tmp_path,
             content_sha256.as_deref(),
+            None, // TODO: 从请求中获取 folder_id
         )
         .await
     {

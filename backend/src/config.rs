@@ -68,6 +68,14 @@ pub struct Config {
     
     /// 前端基础地址，用于 OAuth 登录成功后重定向前端（如 https://app.example.com）
     pub frontend_base_url: Option<String>,
+
+    // ---------- 语义搜索（Hugging Face） ----------
+    /// Hugging Face API Token（可选，未配置则禁用语义搜索）
+    pub huggingface_api_token: Option<String>,
+    /// Hugging Face 嵌入模型 ID（默认：sentence-transformers/all-MiniLM-L6-v2）
+    pub huggingface_model_id: String,
+    /// Hugging Face Inference API 基础 URL（默认：https://api-inference.huggingface.co）
+    pub huggingface_api_url: String,
 }
 
 #[derive(Error, Debug)]
@@ -173,6 +181,12 @@ impl Config {
                 .ok()
                 .filter(|s| !s.is_empty()),
             frontend_base_url: env::var("FRONTEND_BASE_URL").ok().filter(|s| !s.is_empty()),
+
+            huggingface_api_token: env::var("HUGGINGFACE_API_TOKEN").ok().filter(|s| !s.is_empty()),
+            huggingface_model_id: env::var("HUGGINGFACE_MODEL_ID")
+                .unwrap_or_else(|_| "sentence-transformers/all-MiniLM-L6-v2".to_string()),
+            huggingface_api_url: env::var("HUGGINGFACE_API_URL")
+                .unwrap_or_else(|_| "https://api-inference.huggingface.co".to_string()),
         };
 
         config.validate()?;

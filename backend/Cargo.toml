@@ -74,6 +74,14 @@ async-trait = "0.1"
 # ZIP for batch download
 zip = "2.2"
 
+# File content extraction for semantic search
+# PDF text extraction
+pdf-extract = "0.10"
+# Word document parsing (docx) - lightweight text extraction
+docx-lite = "0.1"
+# Text encoding detection
+encoding_rs = "0.8"
+
 # Random token generation
 rand = "0.8"
 

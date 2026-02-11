@@ -32,6 +32,7 @@
 
 pub mod api_tokens;
 pub mod files;
+pub mod file_versions;
 pub mod folders;
 pub mod shares;
 pub mod traits;
@@ -43,13 +44,14 @@ pub mod organizations;
 // 重新导出：Trait + Dyn 别名
 // ============================================================================
 
-pub use traits::{DynFilesRepo, DynUsersRepo};
+pub use traits::{DynFilesRepo, DynFileVersionsRepo, DynUsersRepo};
 
 // ============================================================================
 // 重新导出：SQLx 具体实现
 // ============================================================================
 
 pub use files::SqlxFilesRepo;
+pub use file_versions::SqlxFileVersionsRepo;
 pub use users::SqlxUsersRepo;
 pub use organizations::OrganizationsRepo;
 

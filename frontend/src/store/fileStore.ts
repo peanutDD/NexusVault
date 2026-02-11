@@ -230,12 +230,12 @@ export const useFileStore = create<FileState>((set, get) => {
         const response = await fileService.listFiles(query);
         set({ 
           files: response.files, 
-          total: response.total, 
+          total: response.total ?? 0, 
           loadedPageCount: 1,
           loading: false,
           isRevalidating: false
         });
-        setCachedFileList(cacheKey, response.files, response.total);
+        setCachedFileList(cacheKey, response.files, response.total ?? 0);
       } catch (err) {
         if (isRequestCanceled(err)) return;
         set({ 

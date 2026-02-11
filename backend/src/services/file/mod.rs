@@ -26,8 +26,10 @@ mod hls;
 mod list;
 mod quota;
 mod read;
+pub mod semantic_search;
 mod storage_factory;
 mod upload;
+mod versions;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -36,10 +38,12 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::config::Config;
-use crate::repositories::{DynFilesRepo, DynUsersRepo, SqlxFilesRepo, SqlxUsersRepo};
+use crate::repositories::{DynFilesRepo, DynFileVersionsRepo, DynUsersRepo, SqlxFilesRepo, SqlxFileVersionsRepo, SqlxUsersRepo};
+use crate::services::embeddings::EmbeddingService;
 use crate::services::storage::StorageBackend;
 use crate::utils::AppError;
 
+pub use semantic_search::SemanticSearchService;
 pub use storage_factory::create_storage;
 
 /// 文件服务
@@ -48,6 +52,8 @@ pub use storage_factory::create_storage;
 pub struct FileService {
     /// 文件仓库（Trait Object）
     pub(super) files_repo: DynFilesRepo,
+    /// 文件版本仓库（Trait Object）
+    pub(super) file_versions_repo: DynFileVersionsRepo,
     /// 用户仓库（Trait Object），用于配额查询
     pub(super) users_repo: DynUsersRepo,
     /// 数据库连接池（仅用于分块上传会话等尚未抽象的 Repository）
@@ -56,6 +62,8 @@ pub struct FileService {
     pub(super) storage: Arc<dyn StorageBackend>,
     /// 应用配置
     pub(super) config: Arc<Config>,
+    /// 嵌入服务（可选，用于语义搜索）
+    pub(super) embedding_service: Option<Arc<EmbeddingService>>,
 }
 
 impl FileService {
@@ -69,17 +77,21 @@ impl FileService {
     /// - `config`: 应用配置
     pub fn new(
         files_repo: DynFilesRepo,
+        file_versions_repo: DynFileVersionsRepo,
         users_repo: DynUsersRepo,
         pool: PgPool,
         storage: Arc<dyn StorageBackend>,
         config: Arc<Config>,
+        embedding_service: Option<Arc<EmbeddingService>>,
     ) -> Self {
         Self {
             files_repo,
+            file_versions_repo,
             users_repo,
             pool,
             storage,
             config,
+            embedding_service,
         }
     }
 
@@ -88,14 +100,17 @@ impl FileService {
     /// 使用 SQLx 实现的 Repository。
     pub fn from_state(state: &crate::AppState) -> Self {
         let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(state.pool.clone()));
+        let file_versions_repo: DynFileVersionsRepo = Arc::new(SqlxFileVersionsRepo::new(state.pool.clone()));
         let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(state.pool.clone()));
 
         Self::new(
             files_repo,
+            file_versions_repo,
             users_repo,
             state.pool.clone(),
             state.storage.clone(),
             state.config.clone(),
+            state.embedding_service.clone(),
         )
     }
 
