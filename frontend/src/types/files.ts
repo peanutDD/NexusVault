@@ -17,19 +17,28 @@ export interface FileMetadata {
 }
 
 /**
- * 文件列表响应类型
+ * 文件列表响应类型（支持传统分页和游标分页）
  */
 export interface FileListResponse {
   files: FileMetadata[];
-  total: number;
+  // 传统分页字段（当使用 page 参数时）
+  total?: number;
+  page?: number;
+  limit?: number;
+  // 游标分页字段（当使用 cursor 参数时）
+  next_cursor?: string | null;
 }
 
 /**
  * 文件列表查询参数类型
  */
 export interface FileListQuery {
+  // 传统分页参数
   page?: number;
   limit?: number;
+  // 游标分页参数（如果提供了 cursor，则使用游标分页，忽略 page）
+  cursor?: string;
+  // 筛选参数
   search?: string;
   mime_type?: string;
   category?: string;
@@ -38,6 +47,7 @@ export interface FileListQuery {
   date_to?: string;
   size_min?: number;
   size_max?: number;
+  // 排序参数
   sort_by?: 'created_at' | 'filename' | 'file_size';
   sort_order?: 'asc' | 'desc';
 }

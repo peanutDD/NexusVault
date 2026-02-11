@@ -37,6 +37,7 @@ pub mod shares;
 pub mod traits;
 pub mod upload_sessions;
 pub mod users;
+pub mod organizations;
 
 // ============================================================================
 // 重新导出：Trait + Dyn 别名
@@ -50,6 +51,7 @@ pub use traits::{DynFilesRepo, DynUsersRepo};
 
 pub use files::SqlxFilesRepo;
 pub use users::SqlxUsersRepo;
+pub use organizations::OrganizationsRepo;
 
 // ============================================================================
 // 重新导出：其他 Repository（暂未抽象为 Trait）

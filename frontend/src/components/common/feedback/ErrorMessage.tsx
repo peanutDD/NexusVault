@@ -53,7 +53,7 @@ export default function ErrorMessage({
   return (
     <div
       className={cn(
-        'relative mb-4 w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4',
+        'relative w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4',
         'bg-slate-900/80 backdrop-blur-xl',
         'shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.5)]',
         config.borderClass,

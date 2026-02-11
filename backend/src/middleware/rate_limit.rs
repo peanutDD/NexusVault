@@ -1,61 +1,85 @@
 use axum::{
     extract::Request,
-    http::{HeaderMap, HeaderValue, StatusCode},
+    http::{HeaderMap, HeaderValue, Method, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
     Json,
 };
+use moka::sync::Cache;
 use serde_json::json;
 use std::{
     sync::atomic::{AtomicU32, Ordering},
     sync::Arc,
     time::Duration,
 };
-use moka::sync::Cache;
+use uuid::Uuid;
+
+use crate::extractors::auth::extract_user_id_from_headers;
+use crate::AppState;
 
 #[derive(Clone)]
 pub struct RateLimitState {
-    /// 以“固定窗口 + TTL”实现的计数器：
+    /// 以“固定窗口 + TTL”实现的 IP 级计数器：
     /// - key：客户端标识（IP）
     /// - value：窗口内请求计数
-    ///
-    /// 使用 Cache 的好处：
-    /// - **有容量上限**（max_capacity）：避免攻击/异常流量导致 key 无限增长
-    /// - **自动过期**（time_to_live）：窗口结束后自动清理，避免手写清理任务的锁竞争
-    counters: Cache<String, Arc<AtomicU32>>,
-    max_requests: u32,
+    ip_counters: Cache<String, Arc<AtomicU32>>,
+    ip_max_requests: u32,
+    /// 已登录用户写操作的计数器：
+    /// - key：`user:{user_id}`
+    /// - value：窗口内写请求计数
+    user_counters: Cache<String, Arc<AtomicU32>>,
+    user_max_requests: u32,
+    /// 固定窗口大小（秒），IP 与 user 共用同一窗口长度
     window_seconds: u64,
 }
 
 impl RateLimitState {
-    fn new(max_requests: u32, window_seconds: u64, max_keys: u64) -> Self {
+    fn new(
+        ip_max_requests: u32,
+        user_max_requests: u32,
+        window_seconds: u64,
+        max_keys: u64,
+    ) -> Self {
+        let ttl = Duration::from_secs(window_seconds);
         Self {
-            max_requests,
+            ip_max_requests,
+            user_max_requests,
             window_seconds,
-            counters: Cache::builder()
+            ip_counters: Cache::builder()
                 .max_capacity(max_keys)
-                .time_to_live(Duration::from_secs(window_seconds))
+                .time_to_live(ttl)
+                .build(),
+            user_counters: Cache::builder()
+                .max_capacity(max_keys)
+                .time_to_live(ttl)
                 .build(),
         }
     }
 
-    async fn check_rate_limit(&self, key: &str) -> bool {
-        // 固定窗口：以“首次出现的瞬间”为窗口起点，TTL 到期自动清理
+    async fn check_ip_rate_limit(&self, key: &str) -> bool {
         let counter = self
-            .counters
+            .ip_counters
             .get_with(key.to_string(), || Arc::new(AtomicU32::new(0)));
-
         let current = counter.fetch_add(1, Ordering::Relaxed) + 1;
-        current <= self.max_requests
+        current <= self.ip_max_requests
+    }
+
+    async fn check_user_rate_limit(&self, key: &str) -> bool {
+        let counter = self
+            .user_counters
+            .get_with(key.to_string(), || Arc::new(AtomicU32::new(0)));
+        let current = counter.fetch_add(1, Ordering::Relaxed) + 1;
+        current <= self.user_max_requests
     }
 }
 
 pub fn create_rate_limit_middleware(
-    max_requests: u32,
+    ip_max_requests: u32,
+    user_max_requests: u32,
     window_seconds: u64,
     max_keys: u64,
 ) -> RateLimitState {
-    RateLimitState::new(max_requests, window_seconds, max_keys)
+    RateLimitState::new(ip_max_requests, user_max_requests, window_seconds, max_keys)
 }
 
 fn get_client_ip(headers: &HeaderMap) -> String {
@@ -79,32 +103,56 @@ fn is_chunked_upload_path(path: &str) -> bool {
     path.contains("upload/chunked")
 }
 
-pub async fn rate_limit_middleware(state: RateLimitState, req: Request, next: Next) -> Response {
-    let path = req.uri().path();
-    if is_chunked_upload_path(path) {
+/// 已登录写操作：按 user_id 限流的目标路径前缀。
+fn is_user_scoped_write(method: &Method, path: &str) -> bool {
+    let is_write_method = matches!(method, &Method::POST | &Method::PUT | &Method::DELETE);
+    if !is_write_method {
+        return false;
+    }
+
+    // 仅对文件 / 文件夹 / 分享 / 组织相关写操作做 user 级限流
+    path.starts_with("/api/files")
+        || path.starts_with("/api/v1/files")
+        || path.starts_with("/api/folders")
+        || path.starts_with("/api/v1/folders")
+        || path.starts_with("/api/shares")
+        || path.starts_with("/api/v1/shares")
+        || path.starts_with("/api/org")
+        || path.starts_with("/api/v1/org")
+}
+
+pub async fn rate_limit_middleware(
+    app_state: AppState,
+    state: RateLimitState,
+    req: Request,
+    next: Next,
+) -> Response {
+    let path = req.uri().path().to_string();
+    if is_chunked_upload_path(&path) {
         return next.run(req).await;
     }
 
-    let key = get_client_ip(req.headers());
+    let method = req.method().clone();
+    let ip_key = get_client_ip(req.headers());
 
-    if !state.check_rate_limit(&key).await {
+    // 1. 全局 IP 级限流（包含所有请求）
+    if !state.check_ip_rate_limit(&ip_key).await {
         let mut response = (
             StatusCode::TOO_MANY_REQUESTS,
             [
-                ("X-RateLimit-Limit", state.max_requests.to_string()),
+                ("X-RateLimit-Limit", state.ip_max_requests.to_string()),
                 ("X-RateLimit-Window", state.window_seconds.to_string()),
             ],
             Json(json!({
                 "error": "Too many requests",
-                "message": "请求过于频繁，请稍后再试",
-                "code": "RATE_LIMIT_EXCEEDED"
+                "message": "来自当前 IP 的请求过于频繁，请稍后再试",
+                "code": "IP_RATE_LIMIT_EXCEEDED"
             })),
         )
             .into_response();
 
-        // Set headers (HeaderValue::from_str for numeric strings should not fail)
         let headers = response.headers_mut();
-        if let Ok(limit_val) = HeaderValue::from_str(&state.max_requests.to_string()) {
+        if let Ok(limit_val) = HeaderValue::from_str(&state.ip_max_requests.to_string()) {
             headers.insert("X-RateLimit-Limit", limit_val);
         }
         if let Ok(window_val) = HeaderValue::from_str(&state.window_seconds.to_string()) {
@@ -112,6 +160,51 @@ pub async fn rate_limit_middleware(state: RateLimitState, req: Request, next: Ne
         }
 
         return response;
+    }
+
+    // 2. 针对「已登录用户写操作」的 user 级限流
+    if is_user_scoped_write(&method, &path) {
+        // 复用认证模块的 header 解析逻辑；失败时视为“无 user_id”，退回到 IP 级限流保护
+        let user_id: Option<Uuid> = extract_user_id_from_headers(
+            req.headers(),
+            app_state.config.as_ref(),
+            &app_state.pool,
+        )
+        .await
+        .ok();
+
+        if let Some(user_id) = user_id {
+            let user_key = format!("user:{}", user_id);
+            if !state.check_user_rate_limit(&user_key).await {
+                let mut response = (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    [
+                        ("X-RateLimit-Limit", state.user_max_requests.to_string()),
+                        ("X-RateLimit-Window", state.window_seconds.to_string()),
+                    ],
+                    Json(json!({
+                        "error": "Too many requests",
+                        "message": "当前账号写操作过于频繁，请稍后再试",
+                        "code": "USER_WRITE_RATE_LIMIT_EXCEEDED"
+                    })),
+                )
+                    .into_response();
+
+                let headers = response.headers_mut();
+                if let Ok(limit_val) =
+                    HeaderValue::from_str(&state.user_max_requests.to_string())
+                {
+                    headers.insert("X-RateLimit-Limit", limit_val);
+                }
+                if let Ok(window_val) =
+                    HeaderValue::from_str(&state.window_seconds.to_string())
+                {
+                    headers.insert("X-RateLimit-Window", window_val);
+                }
+
+                return response;
+            }
+        }
     }
 
     next.run(req).await

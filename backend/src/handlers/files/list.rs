@@ -42,12 +42,22 @@ pub async fn list_files_handler(
     let page = query.page.unwrap_or(1);
     let limit = query.limit.unwrap_or(20);
 
-    let (files, total) = state.file_service.list_files(user_id, query).await?;
+    let (files, total, next_cursor) = state.file_service.list_files(user_id, query).await?;
 
-    Ok(json_response(json!({
+    // 构建响应：如果使用游标分页，返回 next_cursor；否则返回 total 和 page
+    let mut response = json!({
         "files": files,
-        "total": total,
-        "page": page,
-        "limit": limit,
-    })))
+    });
+    
+    if next_cursor.is_some() {
+        // 游标分页响应
+        response["next_cursor"] = json!(next_cursor);
+    } else {
+        // 传统分页响应
+        response["total"] = json!(total.unwrap_or(0));
+        response["page"] = json!(page);
+        response["limit"] = json!(limit);
+    }
+
+    Ok(json_response(response))
 }

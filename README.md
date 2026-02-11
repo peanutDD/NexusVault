@@ -698,10 +698,10 @@ npm run preview -- --host 0.0.0.0 --port 5173
   - [x] 支持邮箱 + 密码注册/登录（后端 `AuthService` + `/api/auth/register` / `/api/auth/login`，前端表单 + JWT 持久化，所有文件相关接口通过 `Authorization: Bearer` 携带 user_id；后端当前密码规则为「长度 8–64，且至少包含 1 个字母和 1 个数字」，前端应在文案/校验中同步提示）
   - [ ] 可选接入第三方登录（**GitHub 已接入**：后端 `/api/auth/oauth/github/url` + `/api/auth/oauth/github/callback`，前端登录页「Sign in with GitHub」按钮 + `/auth/callback/github` 回调；**Google 登录后端与前端回调链路已实现，登录页按钮预留但默认禁用，等待你有正式域名/隧道域名后再开启**；其他企业 SSO 待接入）
   - [ ] 邮箱验证与找回密码流程（邮件 + 一次性 token + 过期时间）
-  - [ ] **多租户与权限**
-  - [ ] 按用户/团队（Organization）隔离文件空间
-  - [ ] 角色体系：Owner / Admin / Member，不同权限粒度（上传/删除/分享/管理成员）
-  - [ ] 文件/文件夹的分享范围控制（私有 / 组织内 / 公开链接）
+  - [x] **多租户与权限（后端能力已实现）**
+  - [x] 按用户/团队（Organization）隔离文件空间（后端已提供 `/api/org/*` 组织与成员管理接口，并支持将文件共享到组织空间；前端后续可在文件列表页增加「切换组织」与「团队文件视图」）
+  - [x] 角色体系：Owner / Admin / Member，不同权限粒度（Owner/Admin 可管理成员与文件共享，Member 仅可访问与自身相关的组织及共享文件）
+  - [ ] 文件/文件夹的分享范围控制（私有 / 组织内 / 公开链接）（当前实现为基础组织空间 + 成员角色，细粒度分享范围控制可在现有组织/分享模型上继续扩展）
 
 ### 2. 安全与合规
 

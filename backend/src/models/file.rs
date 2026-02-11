@@ -89,9 +89,16 @@ impl From<File> for FileResponse {
 #[derive(Debug, Deserialize)]
 pub struct FileListQuery {
     /// 页码（从 1 开始，默认 1）
+    /// 注意：如果提供了 `cursor`，则使用游标分页，忽略 `page` 参数
     pub page: Option<u32>,
     /// 每页数量（默认 20，最大 100）
     pub limit: Option<u32>,
+    /// 游标值（用于 keyset/游标分页）
+    /// - 如果 `sort_by = created_at`：ISO 8601 时间戳字符串
+    /// - 如果 `sort_by = filename`：文件名字符串
+    /// - 如果 `sort_by = file_size`：文件大小数字（字符串形式）
+    /// 如果提供了 `cursor`，则使用游标分页（WHERE sort_column > cursor），否则使用传统分页（OFFSET）
+    pub cursor: Option<String>,
     /// 搜索关键词（匹配文件名）
     pub search: Option<String>,
     /// MIME 类型过滤
@@ -114,6 +121,20 @@ pub struct FileListQuery {
     pub sort_order: Option<String>,
 }
 
+/// 文件列表查询结果（支持传统分页和游标分页）
+#[derive(Debug)]
+pub struct FileListResult {
+    /// 文件列表
+    pub files: Vec<File>,
+    /// 总条数（传统分页时使用，游标分页时为 None）
+    pub total: Option<i64>,
+    /// 下一个游标值（游标分页时使用，传统分页时为 None）
+    /// - 如果 `sort_by = created_at`：ISO 8601 时间戳字符串
+    /// - 如果 `sort_by = filename`：文件名字符串
+    /// - 如果 `sort_by = file_size`：文件大小数字（字符串形式）
+    /// 如果返回 None，表示已到末尾，没有更多数据
+    pub next_cursor: Option<String>,
+}
 
 /// 秒传请求：客户端已计算文件 SHA-256，若服务器已有相同内容则直接创建记录、不传文件
 #[derive(Debug, Deserialize)]

@@ -27,7 +27,7 @@ use chrono::{DateTime, NaiveDateTime, Utc}; // 日期解析与存库用 UTC
 use sqlx::{postgres::PgRow, PgPool, Row}; // PgRow 用于 list 中取 total_count
 use uuid::Uuid;
 
-use crate::models::file::{File, FileListQuery}; // 实体与列表查询 DTO
+use crate::models::file::{File, FileListQuery, FileListResult}; // 实体与列表查询 DTO
 use crate::repositories::traits::FilesRepository; // 本模块实现的 trait
 use crate::utils::AppError; // 统一错误类型，SQLx 错误会转为 Database
 
@@ -343,22 +343,26 @@ impl FilesRepository for SqlxFilesRepo {
 // 分页列表（文件列表页：搜索 / MIME / 分类 / 文件夹 / 日期 / 大小 / 排序）
 // =============================================================================
 
-    /// 分页查询文件列表，支持多条件筛选与排序，返回当前页数据与总条数。
+    /// 分页查询文件列表，支持多条件筛选与排序，返回当前页数据与总条数或游标。
     ///
-    /// **返回值**：`(Vec<File>, total_count)`，`total_count` 由 `COUNT(*) OVER()` 在单次查询中得出，与筛选条件一致。
+    /// **返回值**：
+    /// - 传统分页：`(Vec<File>, total_count)`，`total_count` 由 `COUNT(*) OVER()` 在单次查询中得出。
+    /// - 游标分页：`(Vec<File>, next_cursor)`，`next_cursor` 为最后一条记录的排序字段值（字符串形式），如果已到末尾则为 `None`。
     ///
     /// **实现要点**：
-    /// - 分页：`page` 默认 1，`limit` 默认 20、最大 100，`offset = (page - 1) * limit`。
+    /// - 分页模式：
+    ///   - 如果提供了 `cursor`，使用游标分页（keyset pagination）：`WHERE sort_column > cursor`（DESC）或 `WHERE sort_column < cursor`（ASC），不使用 `OFFSET`。
+    ///   - 否则使用传统分页：`page` 默认 1，`limit` 默认 20、最大 100，`offset = (page - 1) * limit`。
     /// - 筛选：搜索（`original_filename`/`filename` ILIKE）、MIME（精确或前缀 `image/%`）、分类、文件夹、日期范围、大小范围；根目录（folder_id 为 null/root/空）不按 folder_id 过滤，返回该用户全部文件。
-    /// - 排序：仅允许 `sort_by` ∈ { created_at, filename, file_size }，`sort_order` ∈ { asc, desc }，否则回退默认（created_at DESC）。
-    /// - SQL 构建：使用 `QueryBuilder` 动态拼接 WHERE，避免手拼字符串与注入；`total_count` 用窗口函数一次查出。
+    /// - 排序：仅允许 `sort_by` ∈ { created_at, filename, file_size }，`sort_order` ∈ { asc, desc }，否则回退默认（created_at DESC）。游标分页时，为确保唯一性，二级排序使用 `id`。
+    /// - SQL 构建：使用 `QueryBuilder` 动态拼接 WHERE，避免手拼字符串与注入；传统分页的 `total_count` 用窗口函数一次查出。
     /// - 超时：本查询在独立事务中执行并 `SET LOCAL statement_timeout = '3s'`，避免慢查询长时间占用连接池。
-    async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<(Vec<File>, i64), AppError> {
+    async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<FileListResult, AppError> {
         use sqlx::QueryBuilder;
+        use chrono::{DateTime, Utc, NaiveDateTime};
 
-        let page = query.page.unwrap_or(1); // 页码从 1 开始
         let limit = query.limit.unwrap_or(20).min(100); // 单页最多 100 条
-        let offset = (page - 1) * limit; // SQL OFFSET 偏移量
+        let use_cursor_pagination = query.cursor.is_some(); // 是否使用游标分页
 
         // ---- 筛选条件预解析（空字符串视为未传，不参与 WHERE） ----
         let search_pattern: Option<String> = query
@@ -459,10 +463,51 @@ impl FilesRepository for SqlxFilesRepo {
             _ => "DESC",
         };
 
-        // ---- 动态拼接 SELECT + WHERE + ORDER BY + LIMIT/OFFSET；COUNT(*) OVER() 提供总条数 ----
-        let mut qb: QueryBuilder<sqlx::Postgres> = QueryBuilder::new(
-            "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at, COUNT(*) OVER() AS total_count FROM files WHERE user_id = ",
-        );
+        // ---- 游标解析（如果使用游标分页） ----
+        // 使用枚举表示不同类型的游标值
+        enum CursorValue {
+            DateTime(DateTime<Utc>),
+            String(String),
+            Int64(i64),
+        }
+        
+        let cursor_value: Option<CursorValue> = if use_cursor_pagination {
+            let cursor_str = query.cursor.as_deref().unwrap_or("");
+            match sort_column {
+                "created_at" => {
+                    // 解析 ISO 8601 时间戳
+                    DateTime::parse_from_rfc3339(cursor_str)
+                        .ok()
+                        .map(|dt| CursorValue::DateTime(dt.with_timezone(&Utc)))
+                        .or_else(|| {
+                            NaiveDateTime::parse_from_str(cursor_str, "%Y-%m-%d %H:%M:%S%.f")
+                                .ok()
+                                .map(|dt| CursorValue::DateTime(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)))
+                        })
+                }
+                "original_filename" => Some(CursorValue::String(cursor_str.to_string())),
+                "file_size" => {
+                    cursor_str.parse::<i64>()
+                        .ok()
+                        .map(CursorValue::Int64)
+                }
+                _ => None,
+            }
+        } else {
+            None
+        };
+
+        // ---- 动态拼接 SELECT + WHERE + ORDER BY + LIMIT/OFFSET 或 LIMIT（游标分页） ----
+        // 传统分页使用 COUNT(*) OVER() 获取总条数，游标分页不需要
+        let mut qb: QueryBuilder<sqlx::Postgres> = if use_cursor_pagination {
+            QueryBuilder::new(
+                "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at FROM files WHERE user_id = "
+            )
+        } else {
+            QueryBuilder::new(
+                "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at, COUNT(*) OVER() AS total_count FROM files WHERE user_id = "
+            )
+        };
         qb.push_bind(user_id); // 首绑：user_id，后续条件用 push + push_bind 避免 SQL 注入
 
         if category_filter_uncategorized {
@@ -518,14 +563,52 @@ impl FilesRepository for SqlxFilesRepo {
             qb.push_bind(size_max);
         }
 
+        // ---- 游标分页：添加 WHERE sort_column > cursor（DESC）或 < cursor（ASC）条件 ----
+        if use_cursor_pagination {
+            if let Some(cursor) = &cursor_value {
+                if sort_direction == "DESC" {
+                    // DESC 排序：WHERE sort_column < cursor（获取更早的记录）
+                    qb.push(" AND ");
+                    qb.push(sort_column);
+                    qb.push(" < ");
+                    match cursor {
+                        CursorValue::DateTime(dt) => qb.push_bind(*dt),
+                        CursorValue::String(s) => qb.push_bind(s),
+                        CursorValue::Int64(n) => qb.push_bind(*n),
+                    }
+                } else {
+                    // ASC 排序：WHERE sort_column > cursor（获取更晚的记录）
+                    qb.push(" AND ");
+                    qb.push(sort_column);
+                    qb.push(" > ");
+                    match cursor {
+                        CursorValue::DateTime(dt) => qb.push_bind(*dt),
+                        CursorValue::String(s) => qb.push_bind(s),
+                        CursorValue::Int64(n) => qb.push_bind(*n),
+                    }
+                }
+            }
+        }
+
         qb.push(" ORDER BY ");
         qb.push(sort_column); // 已白名单，非用户输入
         qb.push(" ");
         qb.push(sort_direction);
+        // 游标分页时，为确保唯一性，添加 id 作为二级排序
+        if use_cursor_pagination {
+            qb.push(", id ");
+            qb.push(sort_direction);
+        }
         qb.push(" LIMIT ");
         qb.push_bind(limit as i64);
-        qb.push(" OFFSET ");
-        qb.push_bind(offset as i64);
+        
+        // 传统分页才使用 OFFSET
+        if !use_cursor_pagination {
+            let page = query.page.unwrap_or(1);
+            let offset = (page - 1) * limit;
+            qb.push(" OFFSET ");
+            qb.push_bind(offset as i64);
+        }
 
         // 在独立事务中执行列表查询，并设置 3s 超时，避免慢查询占用连接池影响其他请求
         let mut tx = self.pool.begin().await?;
@@ -536,11 +619,14 @@ impl FilesRepository for SqlxFilesRepo {
         let rows: Vec<PgRow> = qb.build().fetch_all(&mut *tx).await?; // 执行拼接后的 SQL
         tx.commit().await?; // 提交事务（SET LOCAL 仅本事务有效，提交后连接归还池）
 
-        // 从首行取窗口函数结果 total_count（每行相同）
-        let total: i64 = rows
-            .first()
-            .and_then(|row| row.try_get::<i64, _>("total_count").ok())
-            .unwrap_or(0); // 无行时 0
+        // 传统分页：先从首行取窗口函数结果 total_count（每行相同），然后再转换为 files
+        let total: Option<i64> = if !use_cursor_pagination {
+            rows.first()
+                .and_then(|row| row.try_get::<i64, _>("total_count").ok())
+                .or(Some(0)) // 无行时 0
+        } else {
+            None
+        };
 
         // 将 PgRow 映射为 File 实体（SELECT 列与 File 字段一致，FromRow 可反序列化）
         let files: Vec<File> = rows
@@ -548,6 +634,28 @@ impl FilesRepository for SqlxFilesRepo {
             .map(|row| sqlx::FromRow::from_row(&row).map_err(AppError::Database)) // 列名与 File 字段对应
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok((files, total))
+        // 计算返回值：传统分页返回 total_count，游标分页返回 next_cursor
+        if use_cursor_pagination {
+            // 游标分页：返回 next_cursor（最后一条记录的排序字段值）
+            let next_cursor = files.last().map(|file| {
+                match sort_column {
+                    "created_at" => file.created_at.to_rfc3339(),
+                    "original_filename" => file.original_filename.clone(),
+                    "file_size" => file.file_size.to_string(),
+                    _ => String::new(),
+                }
+            });
+            Ok(FileListResult {
+                files,
+                total: None,
+                next_cursor,
+            })
+        } else {
+            Ok(FileListResult {
+                files,
+                total,
+                next_cursor: None,
+            })
+        }
     }
 }

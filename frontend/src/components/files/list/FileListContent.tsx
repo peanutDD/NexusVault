@@ -76,7 +76,7 @@ import ErrorMessage from '../../common/feedback/ErrorMessage';
 import { FileCardSkeleton } from '../../common/feedback/Skeleton';
 import { FILE_LIST } from '../../../constants';
 import InfiniteScrollSentinel from '../InfiniteScrollSentinel';
-import { Button, EmptyState } from '../../common';
+import { EmptyState } from '../../common';
 import type { FileMetadata, Folder } from '../../../types';
 
 /** 移动端宽度阈值：小于此宽度禁用虚拟列表 */
@@ -200,25 +200,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
   return (
     <>
       {error && (
-        <div className="mb-4">
-          <ErrorMessage
-            message={error}
-            type="error"
-          />
-          <div className="mt-2 flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                // 简单重试：重新加载当前文件和文件夹列表
-                // 具体实现依赖外部传入的加载逻辑（useFileList 中已封装）
-                // 这里通过自带的刷新机制触发重新请求（例如父组件在 error 变化时会重跑 effect）
-                window.location.reload();
-              }}
-            >
-              重试
-            </Button>
-          </div>
-        </div>
+        <ErrorMessage
+          message={error}
+          type="error"
+        />
       )}
 
       {isLoading ? (

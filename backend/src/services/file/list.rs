@@ -12,11 +12,12 @@ impl FileService {
         &self,
         user_id: Uuid,
         query: FileListQuery,
-    ) -> Result<(Vec<FileResponse>, u64), AppError> {
-        let (files, total) = self.files_repo.list(user_id, query).await?;
+    ) -> Result<(Vec<FileResponse>, Option<u64>, Option<String>), AppError> {
+        let result = self.files_repo.list(user_id, query).await?;
         Ok((
-            files.into_iter().map(FileResponse::from).collect(),
-            total as u64,
+            result.files.into_iter().map(FileResponse::from).collect(),
+            result.total.map(|t| t as u64),
+            result.next_cursor,
         ))
     }
 }

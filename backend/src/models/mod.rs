@@ -16,5 +16,6 @@ pub mod file;
 pub mod folder;
 pub mod share;
 pub mod upload_session;
+pub mod organization;
 pub mod user;
 pub mod ugoira;

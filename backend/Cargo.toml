@@ -91,3 +91,6 @@ metrics-exporter-prometheus = "0.16"
 # API Documentation
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-swagger-ui = { version = "8", features = ["axum"] }
+
+# Rate limiting (IP / user 级别限流)
+tower_governor = { version = "0.6", features = ["axum"] }

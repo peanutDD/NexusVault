@@ -42,6 +42,20 @@ fn content_disposition_value(filename: &str, inline: bool) -> String {
     )
 }
 
+/// 判断是否为应强制下载的“潜在危险” MIME 类型（如 HTML / SVG）。
+///
+/// 对这些类型，即便调用方请求 `inline = true`，也会自动降级为 `attachment`，
+/// 防止浏览器在当前站点上下文中直接渲染执行（XSS / SVG 脚本等）。
+fn is_dangerous_mime(mime_type: &str) -> bool {
+    let mt = mime_type.to_ascii_lowercase();
+    mt == "text/html"
+        || mt.starts_with("text/html;")
+        || mt == "application/xhtml+xml"
+        || mt.starts_with("application/xhtml+xml;")
+        || mt == "image/svg+xml"
+        || mt.starts_with("image/svg+xml;")
+}
+
 /// 构建标准的 JSON 成功响应
 ///
 /// # 示例
@@ -75,8 +89,11 @@ pub fn file_response(
     mime_type: &str,
     inline: bool,
 ) -> Result<Response, axum::http::Error> {
+    // 对 HTML / SVG 等潜在危险类型强制以附件形式返回，避免在当前页面内直接执行。
+    let effective_inline = inline && !is_dangerous_mime(mime_type);
+
     // 构建 Content-Disposition header（RFC5987 filename* 支持 UTF-8）
-    let disposition = content_disposition_value(filename, inline);
+    let disposition = content_disposition_value(filename, effective_inline);
 
     // 构建 headers
     let mut headers = HeaderMap::new();
@@ -108,8 +125,11 @@ pub fn stream_file_response(
     inline: bool,
     content_length: Option<u64>,
 ) -> Result<Response, axum::http::Error> {
+    // 对 HTML / SVG 等潜在危险类型强制以附件形式返回，避免在当前页面内直接执行。
+    let effective_inline = inline && !is_dangerous_mime(mime_type);
+
     // 构建 Content-Disposition header（RFC5987 filename* 支持 UTF-8）
-    let disposition = content_disposition_value(filename, inline);
+    let disposition = content_disposition_value(filename, effective_inline);
 
     // 构建 headers
     let mut headers = HeaderMap::new();

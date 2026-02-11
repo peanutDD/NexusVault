@@ -255,7 +255,7 @@ impl FolderService {
             }
 
             // 检查是否会造成循环
-            if repo.is_descendant_of(folder_id, new_parent_id).await? {
+            if repo.is_descendant_of(folder_id, new_parent_id, user_id).await? {
                 return Err(AppError::Validation(
                     "不能将文件夹移动到其子文件夹中".to_string(),
                 ));
@@ -295,7 +295,7 @@ impl FolderService {
         let folder_ids = repo.get_all_descendant_ids(folder_id, user_id).await?;
 
         // 获取需要删除的文件路径（用于清理存储）
-        let file_paths = repo.get_file_paths_in_folders(&folder_ids).await?;
+        let file_paths = repo.get_file_paths_in_folders(&folder_ids, user_id).await?;
         let file_count = file_paths.len() as u64;
 
         // 删除存储中的文件
@@ -306,10 +306,10 @@ impl FolderService {
         }
 
         // 删除文件记录
-        repo.delete_files_in_folders(&folder_ids).await?;
+        repo.delete_files_in_folders(&folder_ids, user_id).await?;
 
         // 删除文件夹
-        repo.delete(&folder_ids).await?;
+        repo.delete(&folder_ids, user_id).await?;
 
         Ok(file_count)
     }

@@ -22,11 +22,13 @@ pub mod openapi;
 pub mod share;
 pub mod telemetry;
 pub mod proxy;
+pub mod organizations;
 
 /// 返回 auth/files/folders/shares/tokens 聚合路由，供挂载到 `/api/v1` 与 `/api` 复用。
 pub fn create_api_routes() -> Router<AppState> {
     Router::new()
         .nest("/auth", auth::create_router())
+        .nest("/org", organizations::create_router())
         .nest("/files", files::create_router())
         .nest("/folders", folders::create_router())
         .nest("/shares", share::create_router())

@@ -1,9 +1,20 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as Sentry from '@sentry/react';
 import './index.css';
 import App from './App.tsx';
 import { API_BASE_URL } from './config/env';
 import { trackError } from './utils/telemetry';
+
+// Sentry 前端错误监控（仅在生产环境且配置了 DSN 时启用）
+if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.VITE_SENTRY_ENV || import.meta.env.MODE,
+    // 适度开启性能采样（可按需调小或关闭）
+    tracesSampleRate: 0.1,
+  });
+}
 
 // 关键资源预连接：API 跨域时提前建立连接，减少首屏请求延迟
 if (typeof document !== 'undefined' && API_BASE_URL.startsWith('http')) {

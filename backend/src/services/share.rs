@@ -132,10 +132,13 @@ impl ShareService {
     }
 
     /// 删除分享
-    pub async fn delete_share(&self, share_id: Uuid, _user_id: Uuid) -> Result<(), AppError> {
+    ///
+    /// 只能由创建该分享的用户删除；否则返回 `NotFound`，避免泄露是否存在。
+    pub async fn delete_share(&self, share_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
         let repo = SharesRepo::new(&self.pool);
 
-        let affected = repo.delete_by_id(share_id).await?;
+        // 仅当分享属于当前用户时才允许删除
+        let affected = repo.delete_by_id(share_id, user_id).await?;
 
         if affected == 0 {
             return Err(AppError::NotFound);

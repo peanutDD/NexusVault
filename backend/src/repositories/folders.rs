@@ -151,24 +151,29 @@ impl<'a> FoldersRepo<'a> {
     }
 
     /// 检查目标文件夹是否是源文件夹的后代（防止循环引用）
+    ///
+    /// 限定在同一用户的文件夹树内，避免跨用户误判。
     pub async fn is_descendant_of(
         &self,
         source_id: Uuid,
         target_id: Uuid,
+        user_id: Uuid,
     ) -> Result<bool, AppError> {
         let result: Option<i64> = sqlx::query_scalar(
             r#"
             WITH RECURSIVE descendants AS (
-                SELECT id FROM folders WHERE parent_id = $1
+                SELECT id FROM folders WHERE parent_id = $1 AND user_id = $3
                 UNION ALL
                 SELECT f.id FROM folders f
                 INNER JOIN descendants d ON f.parent_id = d.id
+                WHERE f.user_id = $3
             )
             SELECT 1 FROM descendants WHERE id = $2
             "#,
         )
         .bind(source_id)
         .bind(target_id)
+        .bind(user_id)
         .fetch_optional(self.pool)
         .await?;
         Ok(result.is_some())
@@ -242,9 +247,12 @@ impl<'a> FoldersRepo<'a> {
     }
 
     /// 删除文件夹（级联删除由数据库处理）
-    pub async fn delete(&self, folder_ids: &[Uuid]) -> Result<u64, AppError> {
-        let result = sqlx::query("DELETE FROM folders WHERE id = ANY($1)")
+    ///
+    /// **必须**传入已按 `user_id` 过滤过的 `folder_ids`，此处再次加 `user_id` 条件防止跨用户误删。
+    pub async fn delete(&self, folder_ids: &[Uuid], user_id: Uuid) -> Result<u64, AppError> {
+        let result = sqlx::query("DELETE FROM folders WHERE id = ANY($1) AND user_id = $2")
             .bind(folder_ids)
+            .bind(user_id)
             .execute(self.pool)
             .await?;
         Ok(result.rows_affected())
@@ -256,32 +264,53 @@ impl<'a> FoldersRepo<'a> {
     /// 「按文件夹统计使用量」接口，因此暂未用到该方法。
     /// 未来如果在前端展示「每个文件夹内的文件数」或做配额报表，
     /// 可以直接调用这里的聚合查询。
+    ///
+    /// **约定**：`folder_ids` 须为已按 `user_id` 过滤过的 ID 列表；此处再加 `user_id` 条件防御。
     #[allow(dead_code)]
-    pub async fn count_files_in_folders(&self, folder_ids: &[Uuid]) -> Result<i64, AppError> {
+    pub async fn count_files_in_folders(
+        &self,
+        folder_ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<i64, AppError> {
         let result: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM files WHERE folder_id = ANY($1)",
+            "SELECT COUNT(*) FROM files WHERE folder_id = ANY($1) AND user_id = $2",
         )
         .bind(folder_ids)
+        .bind(user_id)
         .fetch_one(self.pool)
         .await?;
         Ok(result.0)
     }
 
     /// 获取文件夹下所有文件的路径
-    pub async fn get_file_paths_in_folders(&self, folder_ids: &[Uuid]) -> Result<Vec<String>, AppError> {
+    ///
+    /// **约定**：`folder_ids` 须为已按 `user_id` 过滤过的 ID 列表；此处再加 `user_id` 条件防止跨用户泄露。
+    pub async fn get_file_paths_in_folders(
+        &self,
+        folder_ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<Vec<String>, AppError> {
         let paths: Vec<(String,)> = sqlx::query_as(
-            "SELECT file_path FROM files WHERE folder_id = ANY($1)",
+            "SELECT file_path FROM files WHERE folder_id = ANY($1) AND user_id = $2",
         )
         .bind(folder_ids)
+        .bind(user_id)
         .fetch_all(self.pool)
         .await?;
         Ok(paths.into_iter().map(|(p,)| p).collect())
     }
 
     /// 删除文件夹下的所有文件记录
-    pub async fn delete_files_in_folders(&self, folder_ids: &[Uuid]) -> Result<u64, AppError> {
-        let result = sqlx::query("DELETE FROM files WHERE folder_id = ANY($1)")
+    ///
+    /// **约定**：`folder_ids` 须为已按 `user_id` 过滤过的 ID 列表；此处再加 `user_id` 条件防止跨用户误删。
+    pub async fn delete_files_in_folders(
+        &self,
+        folder_ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<u64, AppError> {
+        let result = sqlx::query("DELETE FROM files WHERE folder_id = ANY($1) AND user_id = $2")
             .bind(folder_ids)
+            .bind(user_id)
             .execute(self.pool)
             .await?;
         Ok(result.rows_affected())

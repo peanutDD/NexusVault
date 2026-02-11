@@ -18,6 +18,7 @@
 //! - `api_token`: API Token 管理
 //! - `storage`: 存储后端抽象（本地、S3）
 //! - `cache`: 应用级缓存服务
+//! - `organization`: 组织 / 多租户与权限服务
 
 pub mod api_token;
 pub mod auth;
@@ -25,6 +26,7 @@ pub mod cache;
 pub mod file;
 pub mod folder;
 pub mod maintenance;
+pub mod organization;
 pub mod share;
 pub mod storage;
 pub mod task_queue;

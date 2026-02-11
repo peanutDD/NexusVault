@@ -41,7 +41,11 @@ where
     F: Fn() -> String + Clone + Send + Sync + 'static,
 {
     let cors = create_cors_layer(config);
-    let rate_limit_state = middleware::rate_limit::create_rate_limit_middleware(500, 60, 20_000);
+    // 全局 IP 级限流 + 已登录用户写操作 user 级限流：
+    // - IP：60 req/min（窗口 60s）
+    // - user：120 req/min（窗口 60s，仅文件/文件夹/分享/组织相关写接口）
+    let rate_limit_state =
+        middleware::rate_limit::create_rate_limit_middleware(60, 120, 60, 20_000);
 
     // Router::layer 要求 L::Service: Clone。RequestLogLayer 及其 Service 已实现 Clone。
     let middleware_stack = ServiceBuilder::new()
@@ -87,9 +91,16 @@ where
         .nest("/api", api::create_api_routes())
         .route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
-            move |_state: axum::extract::State<AppState>, req, next| {
+            move |axum::extract::State(app_state_for_mw): axum::extract::State<AppState>,
+                  req,
+                  next| {
                 let limit_state = rate_limit_state.clone();
-                middleware::rate_limit::rate_limit_middleware(limit_state, req, next)
+                middleware::rate_limit::rate_limit_middleware(
+                    app_state_for_mw,
+                    limit_state,
+                    req,
+                    next,
+                )
             },
         ))
         .route_layer(axum::middleware::from_fn_with_state(

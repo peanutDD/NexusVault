@@ -102,7 +102,7 @@ impl FromRequestParts<AppState> for AuthenticatedUserQuery {
 /// # 返回
 /// - `Ok(Uuid)`: 验证成功的用户 ID
 /// - `Err(AppError::Unauthorized)`: 认证失败
-async fn extract_user_id_from_headers(
+pub(crate) async fn extract_user_id_from_headers(
     headers: &HeaderMap,
     config: &Config,
     pool: &PgPool,
@@ -127,7 +127,7 @@ async fn extract_user_id_from_headers(
 }
 
 /// 从 token 字符串中提取并验证用户 ID（JWT 或 API token）
-async fn extract_user_id_from_token(
+pub(crate) async fn extract_user_id_from_token(
     token: &str,
     config: &Config,
     pool: &PgPool,

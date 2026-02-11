@@ -9,6 +9,12 @@ use uuid::Uuid;
 use crate::models::file::File;
 use crate::utils::AppError;
 
+/// 单个后台任务的最大自动重试次数。
+///
+/// - attempts 在 dequeue 时自增一次，因此 attempts = 1 表示第一次真实执行。
+/// - 当 attempts >= MAX_ATTEMPTS 时，本次失败会被标记为最终失败（死信），不再自动重试。
+const MAX_ATTEMPTS: i32 = 3;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TaskStatus {
     Pending,
@@ -174,6 +180,21 @@ impl TaskQueue {
         Ok(())
     }
 
+    /// 将任务重新标记为 pending 并记录错误信息，供后续自动重试。
+    pub async fn mark_pending_with_error(&self, id: Uuid, error: &str) -> Result<(), AppError> {
+        query(
+            "UPDATE background_tasks
+             SET status = 'pending', last_error = $2, updated_at = NOW()
+             WHERE id = $1",
+        )
+        .bind(id)
+        .bind(error)
+        .execute(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+        Ok(())
+    }
+
     async fn find_active_by_dedupe_key(
         &self,
         task_type: &str,
@@ -293,7 +314,15 @@ pub async fn run_gif_preview_worker(state: &crate::AppState) -> Result<(), AppEr
                 "gif_preview transcode failed"
             );
 
-            state.task_queue.mark_failed(task.id, &msg).await?;
+            // 若尚未达到最大重试次数，则重新排回 pending 队列；否则标记为最终失败（死信）。
+            if task.attempts < MAX_ATTEMPTS {
+                state
+                    .task_queue
+                    .mark_pending_with_error(task.id, &msg)
+                    .await?;
+            } else {
+                state.task_queue.mark_failed(task.id, &msg).await?;
+            }
         }
     }
 

@@ -26,7 +26,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::models::file::{File, FileListQuery};
+use crate::models::file::{File, FileListQuery, FileListResult};
 use crate::models::user::User;
 use crate::utils::AppError;
 
@@ -193,5 +193,5 @@ pub trait FilesRepository: Send + Sync {
     ) -> Result<Vec<(Uuid, String)>, AppError>;
 
     /// 分页查询文件列表
-    async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<(Vec<File>, i64), AppError>;
+    async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<FileListResult, AppError>;
 }
