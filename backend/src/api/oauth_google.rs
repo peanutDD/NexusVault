@@ -145,7 +145,9 @@ pub async fn google_oauth_callback_handler(
         email_verified: bool,
         name: Option<String>,
         given_name: Option<String>,
+        #[allow(dead_code)] // 目前仅做结构预留，未来若展示更详细资料可用
         family_name: Option<String>,
+        #[allow(dead_code)] // 目前未在业务中使用头像 URL
         picture: Option<String>,
     }
 

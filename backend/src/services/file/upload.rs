@@ -15,7 +15,11 @@ pub(crate) fn build_storage_filename(file_id: Uuid, original_filename: &str) -> 
 }
 
 impl FileService {
-    /// 从内存数据创建文件（暂未使用，保留以备将来 API 扩展）
+    /// 从内存数据创建文件。
+    ///
+    /// 当前 HTTP 上传路径统一走 multipart / 分片上传，因此暂未直接使用该方法；
+    /// 预留给「纯 JSON + Base64 / 直接从第三方拉取字节流再入库」这类 API。
+    /// 当你需要提供「服务端从远程拉取并写入存储」的能力时，可以复用此逻辑。
     #[allow(dead_code)]
     pub async fn create_file(
         &self,

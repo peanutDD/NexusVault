@@ -8,6 +8,12 @@ use uuid::Uuid;
 
 use crate::{config::Config, utils::AppError};
 
+/// 简单版 JWT 鉴权中间件（预留）。
+///
+/// 当前项目已经通过 `extractors::auth::AuthenticatedUser` 在 Handler
+/// 层完成鉴权与 user_id 提取，因此没有在路由上挂载本中间件。
+/// 如果你未来希望以「全局中间件 + 扁平 Handler」的风格组织代码，
+/// 可以改为在路由层使用本方法，并逐步迁移现有 Handler。
 #[allow(dead_code)]
 pub async fn auth_middleware(
     State(config): State<Config>,

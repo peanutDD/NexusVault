@@ -9,6 +9,10 @@ pub struct ApiToken {
     pub id: Uuid,
     pub user_id: Uuid,
     #[serde(skip_serializing)]
+    /// 存储在数据库中的 Token 哈希值。
+    ///
+    /// 实际验证时由 Auth 层读取该字段与传入明文 Token 做比对，
+    /// 当前未直接在序列化/响应中使用，因此标记为 `dead_code`。
     #[allow(dead_code)] // used for verification in auth, not read directly
     pub token_hash: String,
     pub name: String,

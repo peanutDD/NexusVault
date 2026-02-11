@@ -28,7 +28,10 @@ pub struct FolderService {
 }
 
 impl FolderService {
-    /// 创建新的 FolderService 实例
+    /// 创建新的 `FolderService` 实例。
+    ///
+    /// 当前生产代码统一通过 `from_state` / `with_storage` 构造，
+    /// 该 `new` 方法主要预留给单元测试或未来拆分模块单独注入 `PgPool` 的场景。
     #[allow(dead_code)]
     pub fn new(pool: PgPool) -> Self {
         Self { pool, storage: None }

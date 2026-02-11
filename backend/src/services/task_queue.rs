@@ -7,7 +7,6 @@ use sqlx::{query, query_as, PgPool};
 use uuid::Uuid;
 
 use crate::models::file::File;
-use crate::services::file::FileService;
 use crate::utils::AppError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -143,12 +142,15 @@ impl TaskQueue {
     }
 
     pub async fn mark_succeeded(&self, id: Uuid) -> Result<(), AppError> {
+        let status = TaskStatus::Succeeded.as_str();
+
         query(
             "UPDATE background_tasks
-             SET status = 'succeeded', completed_at = NOW(), updated_at = NOW()
+             SET status = $2, completed_at = NOW(), updated_at = NOW()
              WHERE id = $1",
         )
         .bind(id)
+        .bind(status)
         .execute(&*self.pool)
         .await
         .map_err(AppError::from)?;
@@ -156,12 +158,15 @@ impl TaskQueue {
     }
 
     pub async fn mark_failed(&self, id: Uuid, error: &str) -> Result<(), AppError> {
+        let status = TaskStatus::Failed.as_str();
+
         query(
             "UPDATE background_tasks
-             SET status = 'failed', last_error = $2, completed_at = NOW(), updated_at = NOW()
+             SET status = $2, last_error = $3, completed_at = NOW(), updated_at = NOW()
              WHERE id = $1",
         )
         .bind(id)
+        .bind(status)
         .bind(error)
         .execute(&*self.pool)
         .await

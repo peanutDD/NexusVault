@@ -54,6 +54,11 @@ pub struct SendEmailVerificationRequest {
     pub email: String,
 }
 
+/// 登录响应模型（预留）。
+///
+/// 目前登录接口主要返回「单独的 token + 通过 `/api/auth/me` 获取用户信息」，
+/// 尚未使用这种「一次性返回 token + user 对象」的复合响应。
+/// 若你将来希望在登录接口中直接返回完整用户信息，可以启用此结构体。
 #[derive(Debug, Serialize)]
 #[allow(dead_code)]
 pub struct AuthResponse {

@@ -100,7 +100,11 @@ fn simplify_path(path: &str) -> String {
     simplified.join("/")
 }
 
-/// 记录数据库查询指标
+/// 记录数据库查询指标。
+///
+/// 当前项目尚未在具体 Handler / Service 中显式调用该函数，预留给
+/// 「接入 Prometheus / Grafana 等完整监控体系」时使用。
+/// 当你需要对单条 SQL 的耗时与成功率打点时，可在相应位置调用。
 #[allow(dead_code)]
 pub fn record_db_query(operation: &str, table: &str, duration_ms: u64, success: bool) {
     let status = if success { "success" } else { "error" };
@@ -121,7 +125,11 @@ pub fn record_db_query(operation: &str, table: &str, duration_ms: u64, success: 
     .record(duration_ms as f64 / 1000.0);
 }
 
-/// 记录文件操作指标
+/// 记录文件操作指标。
+///
+/// 当前未在上传/下载逻辑中显式调用，预留给「统计文件操作 QPS /
+/// 平均大小」等监控需求。未来接入统一 metrics 中间件后，可以在
+/// 文件 Service 中按操作类型调用。
 #[allow(dead_code)]
 pub fn record_file_operation(operation: &str, size_bytes: u64, success: bool) {
     let status = if success { "success" } else { "error" };
@@ -142,7 +150,11 @@ pub fn record_file_operation(operation: &str, size_bytes: u64, success: bool) {
     }
 }
 
-/// 记录认证指标
+/// 记录认证指标。
+///
+/// 目前认证流程只通过日志追踪，不上报指标；当你需要在监控系统中
+/// 查看登录/注册的成功率与错误率曲线时，可在 auth Handler 中
+/// 调用该函数。
 #[allow(dead_code)]
 pub fn record_auth_attempt(method: &str, success: bool) {
     let status = if success { "success" } else { "failure" };

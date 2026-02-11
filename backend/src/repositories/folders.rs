@@ -250,7 +250,12 @@ impl<'a> FoldersRepo<'a> {
         Ok(result.rows_affected())
     }
 
-    /// 获取文件夹下的文件数量
+    /// 获取文件夹下的文件数量。
+    ///
+    /// 当前文件夹相关 API 还未对外暴露「带计数的树状视图」或
+    /// 「按文件夹统计使用量」接口，因此暂未用到该方法。
+    /// 未来如果在前端展示「每个文件夹内的文件数」或做配额报表，
+    /// 可以直接调用这里的聚合查询。
     #[allow(dead_code)]
     pub async fn count_files_in_folders(&self, folder_ids: &[Uuid]) -> Result<i64, AppError> {
         let result: (i64,) = sqlx::query_as(

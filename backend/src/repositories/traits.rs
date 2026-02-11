@@ -53,7 +53,11 @@ pub trait UsersRepository: Send + Sync {
     /// 根据邮箱查询用户
     async fn find_by_email(&self, email: &str) -> Result<Option<User>, AppError>;
 
-    /// 根据用户名查询用户
+    /// 根据用户名查询用户。
+    ///
+    /// 目前登录统一走「邮箱 + 密码」或第三方登录，因此暂未暴露
+    /// 「用户名登录」或「按用户名查重」的 API；未来如果需要支持
+    /// 用户名登录/搜索，可以在 Repository 实现中补上该方法。
     #[allow(dead_code)]
     async fn find_by_username(&self, username: &str) -> Result<Option<User>, AppError>;
 
@@ -142,7 +146,11 @@ pub trait FilesRepository: Send + Sync {
     /// 检查文件是否属于指定用户
     async fn belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError>;
 
-    /// 列出指定文件夹下的文件
+    /// 列出指定文件夹下的文件。
+    ///
+    /// 当前文件列表接口基于统一的分页查询与过滤条件，
+    /// 尚未提供「指定 folder_id 列表全部文件」的简单接口；
+    /// 预留给将来做「文件夹视图」或后台管理时使用。
     #[allow(dead_code)]
     async fn list_by_folder(
         &self,

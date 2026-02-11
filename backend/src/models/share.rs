@@ -116,7 +116,11 @@ pub struct BatchShareResponse {
 }
 
 impl FileShare {
-    /// 检查分享是否已过期
+    /// 检查分享是否已过期。
+    ///
+    /// 当前过期判断逻辑直接写在 Repository / Handler 中，
+    /// 这里封装的方法尚未被调用，预留给未来整理分享领域逻辑、
+    /// 在 Service 层统一判断状态时使用。
     #[allow(dead_code)]
     pub fn is_expired(&self) -> bool {
         self.expires_at
@@ -124,7 +128,10 @@ impl FileShare {
             .unwrap_or(false)
     }
 
-    /// 检查是否已达到下载次数限制
+    /// 检查是否已达到下载次数限制。
+    ///
+    /// 同上，未来若在 Service 中集中处理「是否允许继续下载」
+    /// 或整理成领域对象时，可复用该方法。
     #[allow(dead_code)]
     pub fn is_download_limit_reached(&self) -> bool {
         self.max_downloads
@@ -132,7 +139,10 @@ impl FileShare {
             .unwrap_or(false)
     }
 
-    /// 检查是否需要密码
+    /// 检查是否需要密码。
+    ///
+    /// 当前是否需要密码由 Handler 根据 `password_hash` 字段直接判断，
+    /// 为避免业务逻辑散落，后续可以改为统一调用该方法。
     #[allow(dead_code)]
     pub fn requires_password(&self) -> bool {
         self.password_hash.is_some()

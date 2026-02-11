@@ -5,6 +5,11 @@ use thiserror::Error;
 const PORT_MIN: u16 = 1;
 const PORT_MAX: u16 = 65535;
 
+/// 应用配置总结构。
+///
+/// 部分字段（如 S3 相关配置、某些清理任务间隔、第三方登录）在
+/// 当前部署中可能尚未启用，但为了便于按需打开功能，这里保留了
+/// 完整字段集合，因此整体标记为 `allow(dead_code)`。
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Config {

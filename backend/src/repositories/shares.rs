@@ -48,7 +48,11 @@ impl<'a> SharesRepo<'a> {
         .map_err(AppError::from)
     }
 
-    /// 列出用户的所有分享
+    /// 列出用户的所有分享。
+    ///
+    /// 当前对外 API 只暴露「创建分享 / 通过 token 访问单条分享」，
+    /// 管理端「我的全部分享列表」页面尚未实现，因此该方法暂未被调用，
+    /// 预留给将来做分享管理后台或个人中心时使用。
     #[allow(dead_code)]
     pub async fn list_by_user(&self, user_id: Uuid) -> Result<Vec<FileShare>, AppError> {
         sqlx::query_as::<_, FileShare>(
@@ -103,7 +107,11 @@ impl<'a> SharesRepo<'a> {
         Ok(())
     }
 
-    /// 删除分享
+    /// 删除分享。
+    ///
+    /// 目前主要通过 `delete_by_id` 在内部使用，按「file_id + user_id」
+    /// 删除的接口未暴露给 HTTP 层，因此保持为未使用状态，后续若需要
+    /// 直接按文件维度批量取消分享，可以复用此方法。
     #[allow(dead_code)]
     pub async fn delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
         let result = sqlx::query("DELETE FROM file_shares WHERE file_id = $1 AND user_id = $2")

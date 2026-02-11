@@ -74,8 +74,6 @@ pub async fn proxy_image_handler(
         tracing::warn!("proxy image upstream status: {}", upstream.status());
         return Err(AppError::File("图片拉取失败".into()));
     }
-
-    let status = upstream.status();
     let content_type = upstream.headers().get(reqwest::header::CONTENT_TYPE).cloned();
 
     let body_bytes: Bytes = upstream
