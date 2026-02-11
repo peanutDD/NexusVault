@@ -205,7 +205,15 @@
 #### 当前状态
 
 - [x] 已在文件列表等场景引入虚拟列表、请求去重与本地缓存，整体性能较好
-- [ ] 路由级代码拆包与系统性的静态资源压缩 / 缓存策略可在生产部署阶段进一步完善
+- [x] **路由懒加载**：所有路由（Login、Register、Files、Settings、Share）均已使用 `React.lazy()` 实现按需加载
+- [x] **代码拆包**：已配置 `manualChunks` 将 vendor 库分离（vendor-react、vendor-form、vendor-state、vendor-utils），提升缓存命中率
+- [x] **资源压缩**：已配置 `vite-plugin-compression`，构建时自动生成 gzip（`.gz`）和 brotli（`.br`）压缩文件
+- [x] **静态资源缓存**：Nginx 配置了静态资源（JS/CSS/图片/字体）1 年缓存 + `Cache-Control: public, immutable`
+- [x] **PWA 运行时缓存**：配置了 Workbox 缓存策略（文件列表/文件夹 API 5 分钟缓存，预览文件 7 天缓存）
+- [ ] **可进一步优化**：
+  - 按路由更细粒度拆分代码（当前按 vendor 拆分，可考虑按路由拆分如 `chunk-Files`、`chunk-Settings`）
+  - HTML 文件缓存策略优化（当前 Nginx 未配置 HTML 的 Cache-Control，建议设置为 `no-cache` 或 `max-age=0`）
+  - 添加 `build:analyze` 脚本用于分析 bundle 大小（已配置 visualizer，但需确认 package.json 中是否有对应脚本）
 
 ---
 
