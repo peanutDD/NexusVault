@@ -57,6 +57,7 @@ logs/
 # Database
 *.db
 *.sqlite
+*.dump
 
 # Build artifacts
 *.o
