@@ -74,6 +74,8 @@
 
 详细步骤请参考 [`docs/QUICKSTART.md`](./docs/QUICKSTART.md)
 
+**贡献与代码审查：** 提交 PR 前请阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)；审查标准见 [docs/CODE_REVIEW_GUIDE.md](./docs/CODE_REVIEW_GUIDE.md)，首次使用见 [docs/CODE_REVIEW_START.md](./docs/CODE_REVIEW_START.md)。
+
 ### 前置要求
 
 - Rust (最新稳定版)

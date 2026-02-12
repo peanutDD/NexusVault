@@ -24,6 +24,8 @@
 
 - **测试与质量**
   - `TESTING.md`：测试指南
+  - `CODE_REVIEW_GUIDE.md`：代码审查方案（企业级），供 MR/PR 与日常审查使用
+  - `CODE_REVIEW_START.md`：代码审查方案开始使用检查清单，首次使用前请阅读
 
 - **部署与运维**
   - `DEPLOYMENT.md`：部署指南（Docker + 手动部署）

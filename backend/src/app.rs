@@ -41,11 +41,13 @@ where
     F: Fn() -> String + Clone + Send + Sync + 'static,
 {
     let cors = create_cors_layer(config);
-    // 全局 IP 级限流 + 已登录用户写操作 user 级限流：
-    // - IP：60 req/min（窗口 60s）
-    // - user：120 req/min（窗口 60s，仅文件/文件夹/分享/组织相关写接口）
-    let rate_limit_state =
-        middleware::rate_limit::create_rate_limit_middleware(60, 120, 60, 20_000);
+    // 全局 IP 级限流 + 已登录用户写操作 user 级限流（可通过 IP_RATE_LIMIT、USER_RATE_LIMIT 等环境变量调整）
+    let rate_limit_state = middleware::rate_limit::create_rate_limit_middleware(
+        config.ip_rate_limit,
+        config.user_rate_limit,
+        config.rate_limit_window_secs,
+        config.rate_limit_max_keys,
+    );
 
     // Router::layer 要求 L::Service: Clone。RequestLogLayer 及其 Service 已实现 Clone。
     let middleware_stack = ServiceBuilder::new()

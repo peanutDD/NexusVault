@@ -43,6 +43,16 @@ pub struct Config {
     /// 孤儿清理单轮最大删除文件数，默认 500
     pub orphan_cleanup_batch_limit: u32,
 
+    // ---------- 限流 ----------
+    /// IP 级限流：每窗口内最大请求数，默认 600
+    pub ip_rate_limit: u32,
+    /// 已登录用户写操作限流：每窗口内最大请求数，默认 600
+    pub user_rate_limit: u32,
+    /// 限流窗口大小（秒），默认 60
+    pub rate_limit_window_secs: u64,
+    /// 限流缓存最大 key 数，默认 20_000
+    pub rate_limit_max_keys: u64,
+
     /// 邮箱验证码发送：SMTP 服务器（可选，不配置则仅将验证码写入日志，适用于开发）
     pub smtp_host: Option<String>,
     pub smtp_port: Option<u16>,
@@ -162,6 +172,11 @@ impl Config {
             orphan_cleanup_interval_secs: env_u64("ORPHAN_CLEANUP_INTERVAL_SECS", 600)?,
             orphan_cleanup_batch_limit: env_u32("ORPHAN_CLEANUP_BATCH_LIMIT", 500)?,
 
+            ip_rate_limit: env_u32("IP_RATE_LIMIT", 600)?,
+            user_rate_limit: env_u32("USER_RATE_LIMIT", 600)?,
+            rate_limit_window_secs: env_u64("RATE_LIMIT_WINDOW_SECS", 60)?,
+            rate_limit_max_keys: env_u64("RATE_LIMIT_MAX_KEYS", 20_000)?,
+
             smtp_host: env::var("SMTP_HOST").ok().filter(|s| !s.is_empty()),
             smtp_port: env::var("SMTP_PORT")
                 .ok()
@@ -222,6 +237,12 @@ impl Config {
         {
             return Err(ConfigError::InvalidConfig(
                 "Maintenance task interval env vars must be greater than 0".to_string(),
+            ));
+        }
+        if self.ip_rate_limit == 0 || self.user_rate_limit == 0 || self.rate_limit_window_secs == 0 {
+            return Err(ConfigError::InvalidConfig(
+                "IP_RATE_LIMIT, USER_RATE_LIMIT, RATE_LIMIT_WINDOW_SECS must be greater than 0"
+                    .to_string(),
             ));
         }
         Ok(())
