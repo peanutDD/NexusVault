@@ -118,7 +118,10 @@ export function useFilePreviewData({
   }, [file, blobUrl]);
 
   const tryVideoAudioFallbackRef = useRef(tryVideoAudioFallback);
-  tryVideoAudioFallbackRef.current = tryVideoAudioFallback;
+
+  useEffect(() => {
+    tryVideoAudioFallbackRef.current = tryVideoAudioFallback;
+  }, [tryVideoAudioFallback]);
 
   useEffect(() => {
     if (!file || !kind.supported) return;
@@ -153,12 +156,14 @@ export function useFilePreviewData({
     if (isGif) {
       if (!isValidRequest()) return;
       gifFallbackTriedRef.current = false;
-      setGifFirstFrameUrl(null);
-      setError(null);
-      setUseHls(false);
-       // 初始化 GIF 转码进度状态
-      setGifTranscodeInProgress(true);
-      setGifTranscodeProgress(0);
+      Promise.resolve().then(() => {
+        if (!isValidRequest()) return;
+        setGifFirstFrameUrl(null);
+        setError(null);
+        setUseHls(false);
+        setGifTranscodeInProgress(true);
+        setGifTranscodeProgress(0);
+      });
 
       const videoUrl = getGifVideoUrl(file.id);
 
@@ -194,8 +199,6 @@ export function useFilePreviewData({
 
           // 超时仍未 ready：视为「后台仍在慢速处理」，不弹失败大框，只结束本次等待
           if (import.meta.env.DEV) {
-            // 开发环境下在控制台给一点提示，方便排查
-            // eslint-disable-next-line no-console
             console.warn(
               '[gif-preview] 转码超过预期时间，后台可能仍在处理，稍后可重新打开预览重试'
             );
@@ -215,13 +218,16 @@ export function useFilePreviewData({
     if (kind.isVideo || kind.isAudio) {
       if (!isValidRequest()) return;
       videoFallbackTriedRef.current = false;
-      if (kind.isVideo && file.file_size >= HLS_THRESHOLD_BYTES) {
-        setBlobUrl(getHlsUrl(file.id));
-        setUseHls(true);
-      } else {
-        setBlobUrl(getStreamUrl(file.id));
-        setUseHls(false);
-      }
+      Promise.resolve().then(() => {
+        if (!isValidRequest()) return;
+        if (kind.isVideo && file.file_size >= HLS_THRESHOLD_BYTES) {
+          setBlobUrl(getHlsUrl(file.id));
+          setUseHls(true);
+        } else {
+          setBlobUrl(getStreamUrl(file.id));
+          setUseHls(false);
+        }
+      });
       finish();
       return;
     }

@@ -8,6 +8,18 @@ export function isSha256Supported(): boolean {
   return typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.subtle !== 'undefined';
 }
 
+const CHUNK_SIZE = 2 * 1024 * 1024;
+
+async function yieldToMain(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(() => resolve(), { timeout: 50 });
+      return;
+    }
+    setTimeout(() => resolve(), 0);
+  });
+}
+
 /**
  * 计算文件内容的 SHA-256，返回 64 位十六进制字符串。
  * 用于秒传：与后端 content_sha256 + file_size 匹配已有文件。
@@ -15,11 +27,22 @@ export function isSha256Supported(): boolean {
  * - HTTP：使用纯 JS 的 js-sha256，无需安全上下文即可秒传。
  */
 export async function sha256FileHex(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
   if (isSha256Supported()) {
+    const buffer = await file.arrayBuffer();
     const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
-  return sha256.hex(new Uint8Array(buffer));
+  const hasher = sha256.create();
+  let offset = 0;
+  while (offset < file.size) {
+    const chunk = file.slice(offset, offset + CHUNK_SIZE);
+    const buffer = await chunk.arrayBuffer();
+    hasher.update(new Uint8Array(buffer));
+    offset += CHUNK_SIZE;
+    if (offset < file.size) {
+      await yieldToMain();
+    }
+  }
+  return hasher.hex();
 }

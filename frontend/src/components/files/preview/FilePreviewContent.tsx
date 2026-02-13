@@ -3,226 +3,15 @@
  * 预览主内容区：加载态、错误态、图片/视频/音频/PDF/文本/Ugoira/不支持
  */
 
-import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import rehypeHighlight from 'rehype-highlight';
-import { apiPath } from '../../../config/env';
+import { useState, lazy, Suspense } from 'react';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { formatFileSize } from '../../../utils/format';
 import { getMimeTypeLabel } from '../../../utils/mimeType';
 import { cn } from '../../../utils/cn';
-import { ErrorIcon, FileIcon, AudioIcon } from './FilePreviewIcons';
+import { ErrorIcon, FileIcon, AudioIcon, SpinnerIcon } from './FilePreviewIcons';
 
-interface MarkdownPreviewProps {
-  content: string;
-  theme: 'dark' | 'light';
-}
-
-function MarkdownPreview({ content, theme }: MarkdownPreviewProps) {
-  const isDark = theme === 'dark';
-
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw, rehypeHighlight]}
-      components={{
-        h1: ({ node, ...props }) => (
-          <h1
-            className={`mt-3 mb-1 text-sm font-semibold ${
-              isDark ? 'text-white' : 'text-slate-900'
-            }`}
-            {...props}
-          />
-        ),
-        h2: ({ node, ...props }) => (
-          <h2
-            className={`mt-3 mb-1 text-sm font-semibold ${
-              isDark ? 'text-white' : 'text-slate-900'
-            }`}
-            {...props}
-          />
-        ),
-        h3: ({ node, ...props }) => (
-          <h3
-            className={`mt-3 mb-1 text-sm font-semibold ${
-              isDark ? 'text-white' : 'text-slate-900'
-            }`}
-            {...props}
-          />
-        ),
-        h4: ({ node, ...props }) => (
-          <h4
-            className={`mt-3 mb-1 text-xs font-semibold ${
-              isDark ? 'text-white' : 'text-slate-900'
-            }`}
-            {...props}
-          />
-        ),
-        h5: ({ node, ...props }) => (
-          <h5
-            className={`mt-2 mb-1 text-xs font-semibold ${
-              isDark ? 'text-white' : 'text-slate-900'
-            }`}
-            {...props}
-          />
-        ),
-        h6: ({ node, ...props }) => (
-          <h6
-            className={`mt-2 mb-1 text-xs font-semibold ${
-              isDark ? 'text-white/90' : 'text-slate-800'
-            }`}
-            {...props}
-          />
-        ),
-        p: ({ node, ...props }) => (
-          <p
-            className={`mb-2 text-xs ${
-              isDark ? 'text-gray-100' : 'text-slate-800'
-            }`}
-            {...props}
-          />
-        ),
-        ul: ({ node, ...props }) => (
-          <ul
-            className={`mb-2 list-disc pl-5 text-xs ${
-              isDark ? 'text-gray-100' : 'text-slate-800'
-            }`}
-            {...props}
-          />
-        ),
-        ol: ({ node, ...props }) => (
-          <ol
-            className={`mb-2 list-decimal pl-5 text-xs ${
-              isDark ? 'text-gray-100' : 'text-slate-800'
-            }`}
-            {...props}
-          />
-        ),
-        li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-        code: ({ inline, className, children, ...props }) =>
-          inline ? (
-            <code
-              className={`rounded px-1 py-0.5 text-[0.7rem] font-mono ${
-                isDark
-                  ? 'bg-black/40 text-purple-200'
-                  : 'bg-slate-100 text-purple-700'
-              }`}
-              {...props}
-            >
-              {children}
-            </code>
-          ) : (
-            // 对于代码块，只自定义 code，本身仍由 ReactMarkdown 包在 <pre> 里，
-            // 避免在 <p> 里再嵌套 <pre> 导致 hydration 报错
-            <code
-              className={`text-xs font-mono ${
-                isDark ? 'text-gray-100' : 'text-slate-50'
-              } ${className ?? ''}`}
-              {...props}
-            >
-              {children}
-            </code>
-          ),
-        pre: ({ node, ...props }) => (
-          <pre
-            className={`mb-3 overflow-auto rounded-md p-3 text-xs font-mono ${
-              isDark ? 'bg-black/40 text-gray-100' : 'bg-slate-900 text-slate-50'
-            }`}
-            {...props}
-          />
-        ),
-        blockquote: ({ node, ...props }) => (
-          <blockquote
-            className={`mb-2 border-l-2 pl-3 text-xs ${
-              isDark
-                ? 'border-purple-400/60 text-gray-100/90'
-                : 'border-purple-500/70 text-slate-800'
-            }`}
-            {...props}
-          />
-        ),
-        a: ({ node, ...props }) => (
-          <a
-            className={`text-xs underline ${
-              isDark
-                ? 'text-sky-300 hover:text-sky-200'
-                : 'text-sky-600 hover:text-sky-500'
-            }`}
-            target="_blank"
-            rel="noreferrer"
-            {...props}
-          />
-        ),
-        img: ({ node, src, ...props }) => {
-          const isAbsolute =
-            typeof src === 'string' &&
-            (src.startsWith('http://') || src.startsWith('https://'));
-
-          const proxiedSrc =
-            isAbsolute && typeof src === 'string'
-              ? apiPath(`/proxy/image?url=${encodeURIComponent(src)}`)
-              : src;
-
-          // 对于 Markdown 中的 <img>：
-          // - 保留作者在 Markdown 里写的宽高/样式（width/height/style）
-          // - 同时限制最大宽高，避免超大外链图把整块内容撑满
-          const { className, ...rest } = props as {
-            className?: string;
-            [key: string]: unknown;
-          };
-
-          return (
-            <img
-              src={proxiedSrc}
-              loading="lazy"
-              className={cn(
-                'my-3 mx-auto block max-w-full max-h-[60vh] rounded-md border border-white/10 bg-black/20 object-contain',
-                typeof className === 'string' ? className : undefined
-              )}
-              {...rest}
-            />
-          );
-        },
-        table: ({ node, ...props }) => (
-          <div
-            className={`mb-3 overflow-auto rounded-md border ${
-              isDark ? 'border-white/10' : 'border-slate-200'
-            }`}
-          >
-            <table
-              className={`min-w-full text-[0.7rem] ${
-                isDark ? 'text-gray-100' : 'text-slate-800'
-              }`}
-              {...props}
-            />
-          </div>
-        ),
-        th: ({ node, ...props }) => (
-          <th
-            className={`border-b px-2 py-1 text-left font-semibold ${
-              isDark
-                ? 'border-white/10 bg-white/5'
-                : 'border-slate-200 bg-slate-100'
-            }`}
-            {...props}
-          />
-        ),
-        td: ({ node, ...props }) => (
-          <td
-            className={`border-b px-2 py-1 align-top ${
-              isDark ? 'border-white/5' : 'border-slate-200'
-            }`}
-            {...props}
-          />
-        ),
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  );
-}
+const MarkdownPreview = lazy(() => import('./MarkdownPreview'));
+const PdfPreview = lazy(() => import('./PdfPreview'));
 
 export interface FilePreviewContentProps {
   file: {
@@ -287,14 +76,14 @@ export function FilePreviewContent({
       className="relative z-0 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pl-[clamp(4.5rem,13vw,7rem)] pr-[clamp(4.5rem,13vw,7rem)] py-[clamp(1rem,4vh,2.5rem)]"
       onClick={onClose}
     >
-      {loading && (
+      {loading ? (
         <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
-          <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/25 border-t-purple-500" />
+          <SpinnerIcon className="h-12 w-12 text-purple-500" />
           <span className="text-sm text-white/60">加载中…</span>
         </div>
-      )}
+      ) : null}
 
-      {error && !loading && (
+      {error && !loading ? (
         <div
           className="flex flex-col items-center gap-4 rounded-2xl bg-white/5 px-8 py-10 text-center"
           onClick={(e) => e.stopPropagation()}
@@ -311,11 +100,11 @@ export function FilePreviewContent({
             关闭
           </button>
         </div>
-      )}
+      ) : null}
 
-      {!loading && !error && supported && (
+      {!loading && !error && supported ? (
         <div className="flex min-h-0 w-full flex-1 items-center justify-center">
-          {isImage && (blobUrl || gifFirstFrameUrl) && (
+          {isImage && (blobUrl || gifFirstFrameUrl) ? (
             <div className="relative flex h-full w-full min-h-0 items-center justify-center">
               <div
                 ref={imageTransformRef}
@@ -334,30 +123,32 @@ export function FilePreviewContent({
                   onError={onImageError}
                 />
               </div>
-              {!imageLoaded && (
+              {!imageLoaded ? (
                 <div className="absolute flex items-center justify-center inset-0">
                   <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-purple-500" />
                 </div>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
-          {isPDF && blobUrl && (
-            <div className="flex h-full w-full min-h-0 items-center justify-center pointer-events-none">
-              <div
-                className="pointer-events-auto h-full max-h-full w-full max-w-full overflow-hidden rounded-lg"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <iframe
-                  src={blobUrl}
-                  title={file.original_filename}
-                  className="h-full w-full border-0 bg-white"
-                />
-              </div>
-            </div>
-          )}
+          {isPDF && blobUrl ? (
+            <Suspense
+              fallback={
+                <div className="flex flex-col items-center gap-4">
+                  <SpinnerIcon className="h-12 w-12 text-purple-500" />
+                  <span className="text-sm text-white/60">加载 PDF…</span>
+                </div>
+              }
+            >
+              <PdfPreview
+                blobUrl={blobUrl}
+                title={file.original_filename}
+                onClose={onClose}
+              />
+            </Suspense>
+          ) : null}
 
-          {isVideo && blobUrl && (
+          {isVideo && blobUrl ? (
             <div className="flex h-full w-full min-h-0 items-center justify-center">
               <video
                 ref={videoRef}
@@ -375,9 +166,9 @@ export function FilePreviewContent({
                 您的浏览器不支持视频播放
               </video>
             </div>
-          )}
+          ) : null}
 
-          {isAudio && blobUrl && (
+          {isAudio && blobUrl ? (
             <div className="flex h-full w-full flex-col items-center justify-center pointer-events-none">
               <div
                 className="pointer-events-auto flex flex-col items-center gap-6 rounded-2xl bg-white/5 px-12 py-10"
@@ -398,9 +189,9 @@ export function FilePreviewContent({
                 </audio>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {isText && textContent !== null && (
+          {isText && textContent !== null ? (
             <div className="flex h-full w-full items-center justify-center pointer-events-none">
               <div
                 className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,60rem)] overflow-hidden rounded-xl bg-gray-900/80 shadow-2xl"
@@ -411,7 +202,7 @@ export function FilePreviewContent({
                     {isMarkdown ? 'md' : file.mime_type}
                   </span>
                   <div className="flex items-center gap-3">
-                    {isMarkdown && (
+                    {isMarkdown ? (
                       <div className="flex items-center gap-1 text-[0.7rem] text-white/50">
                         <span>主题</span>
                         <button
@@ -439,7 +230,7 @@ export function FilePreviewContent({
                           浅色
                         </button>
                       </div>
-                    )}
+                    ) : null}
                     <span className="text-xs text-white/40">
                       {textContent.split('\n').length} 行
                     </span>
@@ -465,11 +256,11 @@ export function FilePreviewContent({
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
 
-      {!loading && !error && !supported && (
+      {!loading && !error && !supported ? (
         <div className="flex h-full w-full items-center justify-center pointer-events-none">
           <article
             className="pointer-events-auto group relative rounded-md transition-colors bg-purple-900/40 backdrop-blur-md hover:bg-purple-800/50 max-w-[min(92vw,22rem)] scale-[2]"
@@ -502,7 +293,7 @@ export function FilePreviewContent({
             </div>
           </article>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

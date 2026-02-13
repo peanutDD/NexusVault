@@ -124,7 +124,7 @@ export function getMimeTypeColor(mime: string): string {
 // ============================================================================
 
 /** 判断文件类型是否支持预览 */
-export function isPreviewSupported(mime: string, _filename?: string): boolean {
+export function isPreviewSupported(mime: string): boolean {
   return (
     isImageType(mime) ||
     isPdfType(mime) ||
@@ -139,7 +139,7 @@ export function getPreviewKind(mime: string, filename?: string) {
   const isGif = isGifType(mime);
 
   return {
-    supported: isPreviewSupported(mime, filename),
+    supported: isPreviewSupported(mime),
     // GIF 在预览层面按“视频”处理（走 <video> 管线），避免大 GIF 卡顿
     isImage: isImageType(mime) && !isGif,
     isPDF: isPdfType(mime),

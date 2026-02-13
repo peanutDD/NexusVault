@@ -189,7 +189,7 @@ export default function Settings() {
     } finally {
       setSendingCode(false);
     }
-  }, [profileForm.email, user?.email]);
+  }, [profileForm.email, user]);
 
   // Profile update
   const handleUpdateProfile = useCallback(

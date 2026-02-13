@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import axios from 'axios';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './store/authStore';
 import { useHydrationStore } from './store/hydrationStore';
 import { useThemeStore } from './store/themeStore';
@@ -7,12 +9,37 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Spinner from './components/common/feedback/Spinner';
 import BrowserCompatibilityWarning from './components/common/BrowserCompatibilityWarning';
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes
+      retry: (failureCount, error: unknown) => {
+        // Don't retry on 401, 403, 404
+        if (axios.isAxiosError(error)) {
+          const status = error.response?.status;
+          if (status != null && [401, 403, 404].includes(status)) return false;
+        }
+        return failureCount < 3;
+      },
+      refetchOnWindowFocus: false, // Default to false for better UX in file util
+    },
+  },
+});
+
 const Login = lazy(() => import('./components/auth/Login'));
 const Register = lazy(() => import('./components/auth/Register'));
 const GithubCallback = lazy(() => import('./components/auth/GithubCallback'));
 const Files = lazy(() => import('./pages/Files'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Share = lazy(() => import('./pages/Share'));
+const ReactQueryDevtools = import.meta.env.DEV
+  ? lazy(() =>
+      import('@tanstack/react-query-devtools').then((mod) => ({
+        default: mod.ReactQueryDevtools,
+      }))
+    )
+  : null;
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const hydrated = useHydrationStore((s) => s.hydrated);
@@ -58,7 +85,7 @@ function App() {
   }, [effectiveTheme]);
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <BrowserCompatibilityWarning />
       <ErrorBoundary>
         <BrowserRouter>
@@ -115,11 +142,16 @@ function App() {
                 </PrivateRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/files" replace />} />
+            <Route path="*" element={<Navigate to="/files" replace />} />
           </Routes>
         </BrowserRouter>
       </ErrorBoundary>
-    </>
+      {ReactQueryDevtools && (
+        <Suspense fallback={null}>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </Suspense>
+      )}
+    </QueryClientProvider>
   );
 }
 

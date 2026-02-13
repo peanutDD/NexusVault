@@ -15,11 +15,9 @@ import { cn } from '../../../utils/cn';
 import { getPreviewKind, getMimeTypeLabel } from '../../../utils/mimeType';
 import type { FileMetadata } from '../../../types';
 
-import {
-  useFilePreviewData,
-  useFilePreviewNavigation,
-  useFilePreviewEffects,
-} from './hooks';
+import { useFilePreviewData } from './hooks/useFilePreviewData';
+import { useFilePreviewNavigation } from './hooks/useFilePreviewNavigation';
+import { useFilePreviewEffects } from './hooks/useFilePreviewEffects';
 import { FilePreviewContent } from './FilePreviewContent.tsx';
 import { FilePreviewToolbar } from './FilePreviewToolbar.tsx';
 import { truncateFilename, formatPreviewDate } from './utils';
@@ -79,7 +77,6 @@ export default function FilePreview({
     useHls,
     imageLoaded,
     setImageLoaded,
-    setGifFirstFrameUrl,
     videoRef,
     tryVideoAudioFallback,
     tryVideoAudioFallbackRef,
@@ -126,13 +123,6 @@ export default function FilePreview({
   // -------------------------------------------------------------------------
   // 文件切换时重置视图状态
   // -------------------------------------------------------------------------
-  useEffect(() => {
-    setZoom(1);
-    setRotation(0);
-    setImageLoaded(false);
-    setGifFirstFrameUrl(null);
-    setIsLooping(true);
-  }, [file?.id, setImageLoaded, setGifFirstFrameUrl]);
 
   // -------------------------------------------------------------------------
   // 将 zoom/rotation 同步到图片容器的 transform

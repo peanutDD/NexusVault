@@ -5,11 +5,8 @@
  * 
  * @param props 组件属性
  * @param props.files 文件列表
- * @param props.folderPath 当前文件夹路径
  * @param props.selectedFiles 选中的文件
  * @param props.selectedFolders 选中的文件夹
- * @param props.selectedFileIds 选中的文件 ID
- * @param props.selectedFolderIds 选中的文件夹 ID
  * @param props.currentFolderId 当前文件夹 ID
  * @param props.error 错误信息
  * @param props.isLoading 是否正在加载
@@ -18,8 +15,6 @@
  * @param props.isGroupByType 是否按类型分组
  * @param props.groupedFiles 分组后的文件
  * @param props.displayFolders 要显示的文件夹
- * @param props.displayFiles 要显示的文件
- * @param props.displayFileIndexById 文件 ID 到索引的映射
  * @param props.totalPages 总页数
  * @param props.page 当前页码
  * @param props.hasMore 是否有更多数据
@@ -31,9 +26,6 @@
  * @param props.handleSelectFolder 选择文件夹的回调函数
  * @param props.handleOpenFolder 打开文件夹的回调函数
  * @param props.handleRenameFolder 重命名文件夹的回调函数
- * @param props.handleRenameFolderSubmit 提交文件夹重命名的回调函数
- * @param props.getOptimisticMoveRollback 获取乐观移动回滚函数的回调函数
- * @param props.navigateToFolder 导航到文件夹的回调函数
  * @param props.handleDelete 删除文件/文件夹的回调函数
  * @param props.handleDownload 下载文件的回调函数
  * @param props.handleBatchDownload 批量下载文件的回调函数
@@ -42,31 +34,9 @@
  * @param props.handleShowBatchShare 显示批量分享对话框的回调函数
  * @param props.handleFileDragStart 文件拖拽开始的回调函数
  * @param props.handleDropOnFolder 拖放到文件夹上的回调函数
- * @param props.loadFiles 加载文件的回调函数
- * @param props.loadFolders 加载文件夹的回调函数
- * @param props.clearSelection 清除选择的回调函数
- * @param props.addFolderToList 添加文件夹到列表的回调函数
- * @param props.previewFile 预览的文件
- * @param props.setPreviewFile 设置预览文件的回调函数
- * @param props.shareFile 分享的文件
- * @param props.setShareFile 设置分享文件的回调函数
- * @param props.showBatchShare 是否显示批量分享对话框
- * @param props.setShowBatchShare 设置是否显示批量分享对话框的回调函数
- * @param props.batchShareFileIds 批量分享的文件 ID
- * @param props.setBatchShareFileIds 设置批量分享的文件 ID 的回调函数
- * @param props.showBatchMove 是否显示批量移动对话框
- * @param props.setShowBatchMove 设置是否显示批量移动对话框的回调函数
- * @param props.showCreateFolder 是否显示创建文件夹对话框
- * @param props.setShowCreateFolder 设置是否显示创建文件夹对话框的回调函数
- * @param props.renamingFolder 正在重命名的文件夹
- * @param props.setRenamingFolder 设置正在重命名的文件夹的回调函数
- * @param props.deleteConfirm 删除确认信息
- * @param props.deleteLoading 是否正在删除
- * @param props.executeDelete 执行删除操作的回调函数
- * @param props.setDeleteConfirm 设置删除确认信息的回调函数
  * @param props.batchDownloading 是否正在批量下载
  */
-import React, { useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import FileGrid from '../grid/FileGrid';
 import VirtualizedFileGrid from '../grid/VirtualizedFileGrid';
 import FolderGrid from '../grid/FolderGrid';
@@ -76,19 +46,21 @@ import ErrorMessage from '../../common/feedback/ErrorMessage';
 import { FileCardSkeleton } from '../../common/feedback/Skeleton';
 import { FILE_LIST } from '../../../constants';
 import InfiniteScrollSentinel from '../InfiniteScrollSentinel';
-import { EmptyState } from '../../common';
+import { EmptyState } from '../../common/EmptyState';
 import type { FileMetadata, Folder } from '../../../types';
 
 /** 移动端宽度阈值：小于此宽度禁用虚拟列表 */
 const MOBILE_WIDTH_THRESHOLD = 768;
 
+interface MenuState {
+  type: 'file' | 'folder';
+  id: string;
+}
+
 interface FileListContentProps {
   files: FileMetadata[];
-  folderPath: { id: string; name: string }[];
   selectedFiles: Set<string>;
   selectedFolders: Set<string>;
-  selectedFileIds: string[];
-  selectedFolderIds: string[];
   currentFolderId: string | null;
   error: string | null;
   isLoading: boolean;
@@ -99,8 +71,6 @@ interface FileListContentProps {
   groupedFiles: { key: string; files: FileMetadata[]; icon: React.ReactNode; label: string }[] | null;
   timeGroupedFiles: { key: string; label: string; sortKey: number; files: FileMetadata[] }[] | null;
   displayFolders: Folder[];
-  displayFiles: FileMetadata[];
-  displayFileIndexById: Map<string, number>;
   totalPages: number;
   page: number;
   hasMore: boolean;
@@ -112,9 +82,6 @@ interface FileListContentProps {
   handleSelectFolder: (folderId: string, selected: boolean) => void;
   handleOpenFolder: (folderId: string) => void;
   handleRenameFolder: (folder: Folder) => void;
-  handleRenameFolderSubmit: (folderId: string, newName: string) => void;
-  getOptimisticMoveRollback: (fileIds: string[], folderIds: string[], targetFolderId: string) => () => void;
-  navigateToFolder: (folderId: string | null) => void;
   handleDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
   handleDownload: (file: FileMetadata) => void;
   handleBatchDownload: () => void;
@@ -123,28 +90,8 @@ interface FileListContentProps {
   handleShowBatchShare: () => void;
   handleFileDragStart: (fileId: string, e: React.DragEvent) => void;
   handleDropOnFolder: (folderId: string, fileIds: string[], folderIds: string[]) => void;
-  loadFiles: () => void;
-  loadFolders: () => void;
-  clearSelection: () => void;
-  addFolderToList: (folder: Folder) => void;
-  previewFile: FileMetadata | null;
   setPreviewFile: (file: FileMetadata | null) => void;
-  shareFile: FileMetadata | null;
   setShareFile: (file: FileMetadata | null) => void;
-  showBatchShare: boolean;
-  setShowBatchShare: (show: boolean) => void;
-  batchShareFileIds: string[];
-  setBatchShareFileIds: (ids: string[]) => void;
-  showBatchMove: boolean;
-  setShowBatchMove: (show: boolean) => void;
-  showCreateFolder: boolean;
-  setShowCreateFolder: (show: boolean) => void;
-  renamingFolder: Folder | null;
-  setRenamingFolder: (folder: Folder | null) => void;
-  deleteConfirm: { type: 'file' | 'folder' | 'batch'; id?: string; name?: string; fileCount?: number; folderCount?: number } | null;
-  deleteLoading: boolean;
-  executeDelete: () => void;
-  setDeleteConfirm: (confirm: { type: 'file' | 'folder' | 'batch'; id?: string; name?: string; fileCount?: number; folderCount?: number } | null) => void;
   batchDownloading: boolean;
 }
 
@@ -185,17 +132,37 @@ const FileListContent: React.FC<FileListContentProps> = ({
   setPreviewFile,
   setShareFile,
 }) => {
-  // 检测是否为移动端（仅在首次挂载时检测，避免切换导致布局跳动）
-  const isMobileRef = useRef(
+  const [isMobile] = useState(
     typeof window !== 'undefined' && window.innerWidth < MOBILE_WIDTH_THRESHOLD
   );
+  const shouldUseVirtualList = !isMobile && files.length > FILE_LIST.VIRTUAL_THRESHOLD;
+  const [openMenu, setOpenMenu] = useState<MenuState | null>(null);
+  const openFileMenuId = openMenu?.type === 'file' ? openMenu.id : null;
+  const openFolderMenuId = openMenu?.type === 'folder' ? openMenu.id : null;
+  const listKey = currentFolderId ?? 'root';
 
-  // 记住是否应该使用虚拟列表（一旦决定使用，就一直使用，避免切换导致无限加载）
-  const shouldUseVirtualListRef = useRef<boolean | null>(null);
-  if (shouldUseVirtualListRef.current === null && files.length > 0) {
-    shouldUseVirtualListRef.current = !isMobileRef.current && files.length > FILE_LIST.VIRTUAL_THRESHOLD;
-  }
-  const shouldUseVirtualList = shouldUseVirtualListRef.current ?? false;
+  const closeMenu = useCallback(() => {
+    setOpenMenu(null);
+  }, []);
+
+  const toggleFileMenu = useCallback((id: string) => {
+    setOpenMenu((prev) => (prev?.type === 'file' && prev.id === id ? null : { type: 'file', id }));
+  }, []);
+
+  const toggleFolderMenu = useCallback((id: string) => {
+    setOpenMenu((prev) => (prev?.type === 'folder' && prev.id === id ? null : { type: 'folder', id }));
+  }, []);
+
+  useEffect(() => {
+    if (!openMenu) return;
+    const exists =
+      openMenu.type === 'file'
+        ? files.some((f) => f.id === openMenu.id)
+        : displayFolders.some((f) => f.id === openMenu.id);
+    if (!exists) {
+      queueMicrotask(() => setOpenMenu(null));
+    }
+  }, [openMenu, files, displayFolders]);
 
   return (
     <>
@@ -373,12 +340,15 @@ const FileListContent: React.FC<FileListContentProps> = ({
                       if (folder) handleDelete(folder, 'folder');
                     }}
                     onDrop={handleDropOnFolder}
+                    openFolderMenuId={openFolderMenuId}
+                    onToggleMenu={toggleFolderMenu}
+                    onCloseMenu={closeMenu}
                   />
                 </div>
               )}
               {/* 各类型文件分组 */}
               {groupedFiles.map((group) => (
-                <div key={`group-${group.key}-${files.length}`}>
+                <div key={`group-${group.key}`}>
                   <div className="mb-3 flex items-center gap-3">
                     {/* 分组全选复选框 */}
                     <GroupSelectCheckbox
@@ -396,7 +366,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <FileGrid
-                    key={`group-grid-${group.key}-${files.length}`}
+                    key={`group-grid-${group.key}`}
                     files={group.files}
                     selectedFiles={selectedFiles}
                     onSelect={handleSelectFile}
@@ -405,6 +375,9 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     onDownload={handleDownload}
                     onDelete={handleDelete}
                     onDragStart={handleFileDragStart}
+                    openFileMenuId={openFileMenuId}
+                    onToggleMenu={toggleFileMenu}
+                    onCloseMenu={closeMenu}
                   />
                 </div>
               ))}
@@ -444,12 +417,15 @@ const FileListContent: React.FC<FileListContentProps> = ({
                       if (folder) handleDelete(folder, 'folder');
                     }}
                     onDrop={handleDropOnFolder}
+                    openFolderMenuId={openFolderMenuId}
+                    onToggleMenu={toggleFolderMenu}
+                    onCloseMenu={closeMenu}
                   />
                 </div>
               )}
               {/* 各月份文件分组 */}
               {timeGroupedFiles.map((group) => (
-                <div key={`time-group-${group.key}-${files.length}`}>
+                <div key={`time-group-${group.key}`}>
                   <div className="mb-3 flex items-center gap-3">
                     {/* 分组全选复选框 */}
                     <GroupSelectCheckbox
@@ -469,7 +445,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
                   <FileGrid
-                    key={`time-group-grid-${group.key}-${files.length}`}
+                    key={`time-group-grid-${group.key}`}
                     files={group.files}
                     selectedFiles={selectedFiles}
                     onSelect={handleSelectFile}
@@ -478,6 +454,9 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     onDownload={handleDownload}
                     onDelete={handleDelete}
                     onDragStart={handleFileDragStart}
+                    openFileMenuId={openFileMenuId}
+                    onToggleMenu={toggleFileMenu}
+                    onCloseMenu={closeMenu}
                   />
                 </div>
               ))}
@@ -496,10 +475,13 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   if (folder) handleDelete(folder, 'folder');
                 }}
                 onDrop={handleDropOnFolder}
+                openFolderMenuId={openFolderMenuId}
+                onToggleMenu={toggleFolderMenu}
+                onCloseMenu={closeMenu}
               />
               {shouldUseVirtualList ? (
                 <VirtualizedFileGrid
-                  key={`virtual-${files.length}`}
+                  key={`virtual-${listKey}`}
                   files={files}
                   selectedFiles={selectedFiles}
                   onSelect={handleSelectFile}
@@ -508,10 +490,13 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   onDownload={handleDownload}
                   onDelete={handleDelete}
                   onDragStart={handleFileDragStart}
+                  openFileMenuId={openFileMenuId}
+                  onToggleMenu={toggleFileMenu}
+                  onCloseMenu={closeMenu}
                 />
               ) : (
                 <FileGrid
-                  key={`grid-${files.length}`}
+                  key={`grid-${listKey}`}
                   files={files}
                   selectedFiles={selectedFiles}
                   onSelect={handleSelectFile}
@@ -520,6 +505,9 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   onDownload={handleDownload}
                   onDelete={handleDelete}
                   onDragStart={handleFileDragStart}
+                  openFileMenuId={openFileMenuId}
+                  onToggleMenu={toggleFileMenu}
+                  onCloseMenu={closeMenu}
                 />
               )}
             </div>

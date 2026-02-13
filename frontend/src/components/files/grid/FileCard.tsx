@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from 'react';
+import { memo } from 'react';
 import { Download, Send, Trash2, Eye, MoreVertical } from 'lucide-react';
 import { formatFileSize } from '../../../utils/format';
 import type { FileMetadata } from '../../../types';
@@ -7,9 +7,6 @@ import { cn } from '../../../utils/cn';
 import { getMimeTypeLabel } from '../../../utils/mimeType';
 import { schedulePreload } from '../../../utils/preloadPreview';
 import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
-
-// 全局事件：关闭所有卡片菜单
-const CLOSE_ALL_MENUS_EVENT = 'closeAllCardMenus';
 
 interface FileCardProps {
   file: FileMetadata;
@@ -20,6 +17,9 @@ interface FileCardProps {
   onDownload: (file: FileMetadata) => void;
   onDelete: (id: string) => void;
   onDragStart?: (e: React.DragEvent, file: FileMetadata) => void;
+  isMenuOpen: boolean;
+  onToggleMenu: (id: string) => void;
+  onCloseMenu: () => void;
 }
 
 /**
@@ -35,29 +35,13 @@ const FileCard = memo(
     onDownload,
     onDelete,
     onDragStart,
+    isMenuOpen,
+    onToggleMenu,
+    onCloseMenu,
   }: FileCardProps) {
-    const [showMenu, setShowMenu] = useState(false);
-
-    // 监听全局关闭事件
-    useEffect(() => {
-      const handleCloseAll = (e: Event) => {
-        const detail = (e as CustomEvent).detail;
-        // 如果不是自己触发的，就关闭菜单
-        if (detail !== file.id) {
-          setShowMenu(false);
-        }
-      };
-      window.addEventListener(CLOSE_ALL_MENUS_EVENT, handleCloseAll);
-      return () => window.removeEventListener(CLOSE_ALL_MENUS_EVENT, handleCloseAll);
-    }, [file.id]);
-
     const handleToggleMenu = (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (!showMenu) {
-        // 打开前先关闭其他菜单
-        window.dispatchEvent(new CustomEvent(CLOSE_ALL_MENUS_EVENT, { detail: file.id }));
-      }
-      setShowMenu(!showMenu);
+      onToggleMenu(file.id);
     };
 
     const formattedDate = new Date(file.created_at).toLocaleString('zh-CN', {
@@ -149,11 +133,11 @@ const FileCard = memo(
               </button>
 
               {/* 玻璃拟态下拉菜单 */}
-              {showMenu && (
+              {isMenuOpen && (
                 <>
                   <div
                     className="fixed inset-0 z-40"
-                    onClick={() => setShowMenu(false)}
+                    onClick={onCloseMenu}
                   />
                   <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-violet-950 bg-violet-950 py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
                     <button
@@ -161,7 +145,7 @@ const FileCard = memo(
                       className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setShowMenu(false);
+                        onCloseMenu();
                         onDownload(file);
                       }}
                     >
@@ -173,7 +157,7 @@ const FileCard = memo(
                       className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setShowMenu(false);
+                        onCloseMenu();
                         onShare(file);
                       }}
                     >
@@ -186,7 +170,7 @@ const FileCard = memo(
                       className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setShowMenu(false);
+                        onCloseMenu();
                         onDelete(file.id);
                       }}
                     >
@@ -206,7 +190,8 @@ const FileCard = memo(
     prev.file.id === next.file.id &&
     prev.file.original_filename === next.file.original_filename &&
     prev.file.file_size === next.file.file_size &&
-    prev.isSelected === next.isSelected
+    prev.isSelected === next.isSelected &&
+    prev.isMenuOpen === next.isMenuOpen
 );
 
 export default FileCard;

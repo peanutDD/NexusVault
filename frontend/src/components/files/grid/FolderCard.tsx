@@ -1,11 +1,8 @@
-import { memo, useState, useCallback, useEffect } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { FolderOpen, PencilLine, Trash2, MoreVertical } from 'lucide-react';
 import type { Folder } from '../../../types';
 import { cn } from '../../../utils/cn';
 import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
-
-// 全局事件：关闭所有卡片菜单
-const CLOSE_ALL_MENUS_EVENT = 'closeAllCardMenus';
 
 interface FolderCardProps {
   folder: Folder;
@@ -18,6 +15,9 @@ interface FolderCardProps {
   onDragOver?: (e: React.DragEvent) => void;
   onDragLeave?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent, targetFolder: Folder) => void;
+  isMenuOpen: boolean;
+  onToggleMenu: (id: string) => void;
+  onCloseMenu: () => void;
 }
 
 /**
@@ -34,28 +34,15 @@ const FolderCard = memo(function FolderCard({
   onDragOver,
   onDragLeave,
   onDrop,
+  isMenuOpen,
+  onToggleMenu,
+  onCloseMenu,
 }: FolderCardProps) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-
-  // 监听全局关闭事件
-  useEffect(() => {
-    const handleCloseAll = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail !== folder.id) {
-        setShowMenu(false);
-      }
-    };
-    window.addEventListener(CLOSE_ALL_MENUS_EVENT, handleCloseAll);
-    return () => window.removeEventListener(CLOSE_ALL_MENUS_EVENT, handleCloseAll);
-  }, [folder.id]);
 
   const handleToggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!showMenu) {
-      window.dispatchEvent(new CustomEvent(CLOSE_ALL_MENUS_EVENT, { detail: folder.id }));
-    }
-    setShowMenu(!showMenu);
+    onToggleMenu(folder.id);
   };
 
   const handleDoubleClick = () => {
@@ -144,11 +131,11 @@ const FolderCard = memo(function FolderCard({
             </button>
 
             {/* 玻璃拟态菜单 */}
-            {showMenu && (
+            {isMenuOpen && (
               <>
                 <div
                   className="fixed inset-0 z-40"
-                  onClick={() => setShowMenu(false)}
+                  onClick={onCloseMenu}
                 />
                 <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-violet-950 bg-violet-950 py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
                   <button
@@ -156,7 +143,7 @@ const FolderCard = memo(function FolderCard({
                     className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowMenu(false);
+                      onCloseMenu();
                       onOpen(folder);
                     }}
                   >
@@ -168,7 +155,7 @@ const FolderCard = memo(function FolderCard({
                     className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowMenu(false);
+                      onCloseMenu();
                       onRename(folder);
                     }}
                   >
@@ -181,7 +168,7 @@ const FolderCard = memo(function FolderCard({
                     className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowMenu(false);
+                      onCloseMenu();
                       onDelete(folder.id);
                     }}
                   >

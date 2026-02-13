@@ -9,6 +9,9 @@ interface FolderGridProps {
   onRename: (folder: Folder) => void;
   onDelete: (folderId: string) => void;
   onDrop: (folderId: string, fileIds: string[], folderIds: string[]) => void;
+  openFolderMenuId: string | null;
+  onToggleMenu: (id: string) => void;
+  onCloseMenu: () => void;
 }
 
 /**
@@ -27,6 +30,9 @@ export default function FolderGrid({
   onRename,
   onDelete,
   onDrop,
+  openFolderMenuId,
+  onToggleMenu,
+  onCloseMenu,
 }: FolderGridProps) {
   if (folders.length === 0) return null;
 
@@ -46,6 +52,9 @@ export default function FolderGrid({
             const folderId = e.dataTransfer.getData('application/folder-id');
             onDrop(target.id, fileId ? [fileId] : [], folderId ? [folderId] : []);
           }}
+          isMenuOpen={openFolderMenuId === folder.id}
+          onToggleMenu={onToggleMenu}
+          onCloseMenu={onCloseMenu}
         />
       ))}
     </div>

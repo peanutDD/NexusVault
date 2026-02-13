@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { fileService } from '../../../services/files';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { cn } from '../../../utils/cn';
@@ -11,6 +11,14 @@ interface LazyThumbnailProps {
   filename: string;
   className?: string;
 }
+
+type ThumbnailState = {
+  fileId: string;
+  blobUrl: string | null;
+  loading: boolean;
+  showLoadingUi: boolean;
+  error: boolean;
+};
 
 // 共享 IntersectionObserver：避免长列表里“每个缩略图一个 observer”造成额外开销
 type ObserveCallback = () => void;
@@ -172,12 +180,29 @@ export default function LazyThumbnail({
   className = '',
 }: LazyThumbnailProps) {
   const showThumbnail = isImageType(mimeType);
-  const [blobUrl, setBlobUrl] = useState<string | null>(() =>
-    showThumbnail ? getCachedThumbnailUrl(fileId) ?? null : null
+  const cachedUrl = showThumbnail ? getCachedThumbnailUrl(fileId) ?? null : null;
+  const createInitialState = useCallback(
+    (): ThumbnailState => ({
+      fileId,
+      blobUrl: cachedUrl,
+      loading: false,
+      showLoadingUi: false,
+      error: false,
+    }),
+    [fileId, cachedUrl]
   );
-  const [loading, setLoading] = useState(false);
-  const [showLoadingUi, setShowLoadingUi] = useState(false);
-  const [error, setError] = useState(false);
+  const [state, setState] = useState<ThumbnailState>(() => createInitialState());
+  const effectiveState = state.fileId === fileId ? state : createInitialState();
+  const { blobUrl, loading, showLoadingUi, error } = effectiveState;
+  const updateState = useCallback(
+    (partial: Partial<ThumbnailState>) => {
+      setState((prev) => {
+        const base = prev.fileId === fileId ? prev : createInitialState();
+        return { ...base, ...partial };
+      });
+    },
+    [fileId, createInitialState]
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
   const loadingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -189,21 +214,6 @@ export default function LazyThumbnail({
       if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
     };
   }, []);
-
-  // fileId / mimeType 变化时从缓存同步并重置状态，避免虚拟列表复用时闪上一项或错误态
-  useEffect(() => {
-    if (!showThumbnail) return;
-    const cached = getCachedThumbnailUrl(fileId);
-    if (cached) {
-      setBlobUrl(cached);
-      setError(false);
-      setShowLoadingUi(false);
-    } else {
-      setBlobUrl(null);
-      setError(false);
-      setShowLoadingUi(false);
-    }
-  }, [fileId, mimeType, showThumbnail]);
 
   // Blob URL 由 thumbnailBlobCache 统一管理，淘汰时再 revoke，此处不再 revoke 避免与缓存冲突
 
@@ -218,17 +228,17 @@ export default function LazyThumbnail({
       const cached = getCachedThumbnailUrl(fileId);
       if (cached) {
         if (mountedRef.current) {
-          setBlobUrl(cached);
+          updateState({ blobUrl: cached, error: false, showLoadingUi: false });
         }
         observeCallbacks.delete(el);
         observer.unobserve(el);
         return;
       }
-      setLoading(true);
+      updateState({ loading: true });
       if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
       loadingDelayRef.current = setTimeout(() => {
         loadingDelayRef.current = null;
-        if (mountedRef.current) setShowLoadingUi(true);
+        if (mountedRef.current) updateState({ showLoadingUi: true });
       }, SHOW_LOADING_DELAY_MS);
       observeCallbacks.delete(el);
       observer.unobserve(el);
@@ -247,7 +257,7 @@ export default function LazyThumbnail({
         // ignore
       }
     };
-  }, [fileId, mimeType, showThumbnail]);
+  }, [fileId, mimeType, showThumbnail, updateState]);
 
   useEffect(() => {
     if (!showThumbnail || !loading || blobUrl || error) return;
@@ -260,22 +270,21 @@ export default function LazyThumbnail({
         if (blob === null) return; // 404/415 无缩略图，保持占位
         const url = URL.createObjectURL(blob);
         setCachedThumbnailUrl(fileId, url);
-        setBlobUrl(url);
+        updateState({ blobUrl: url });
       })
       .catch(() => {
-        if (mountedRef.current && !cancelled) setError(true);
+        if (mountedRef.current && !cancelled) updateState({ error: true });
       })
       .finally(() => {
         if (mountedRef.current) {
-          setLoading(false);
-          setShowLoadingUi(false);
+          updateState({ loading: false, showLoadingUi: false });
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [fileId, showThumbnail, loading, blobUrl, error]);
+  }, [fileId, showThumbnail, loading, blobUrl, error, updateState]);
 
   const placeholder = (
     <div
@@ -341,7 +350,7 @@ export default function LazyThumbnail({
           loading="lazy"
           decoding="async"
           fetchPriority="low"
-          onError={() => setError(true)}
+          onError={() => updateState({ error: true })}
         />
       </div>
     );

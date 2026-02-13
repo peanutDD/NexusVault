@@ -21,6 +21,9 @@ interface VirtualizedFileGridProps {
   onDownload: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
   onDragStart: (fileId: string, e: React.DragEvent) => void;
+  openFileMenuId: string | null;
+  onToggleMenu: (id: string) => void;
+  onCloseMenu: () => void;
 }
 
 /**
@@ -42,6 +45,9 @@ export default function VirtualizedFileGrid({
   onDownload,
   onDelete,
   onDragStart,
+  openFileMenuId,
+  onToggleMenu,
+  onCloseMenu,
 }: VirtualizedFileGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const topSpacerRef = useRef<HTMLDivElement>(null);
@@ -195,16 +201,19 @@ export default function VirtualizedFileGrid({
               >
                 {rowFiles.map((file) => (
                   <FileCard
-                      key={file.id}
-                      file={file}
-                      isSelected={selectedFiles.has(file.id)}
-                      onSelect={(id) => onSelect(id, !selectedFiles.has(id))}
-                      onPreview={onPreview}
-                      onShare={onShare}
-                      onDownload={onDownload}
-                      onDelete={() => onDelete(file, 'file')}
-                      onDragStart={(e, file) => onDragStart(file.id, e)}
-                    />
+                    key={file.id}
+                    file={file}
+                    isSelected={selectedFiles.has(file.id)}
+                    onSelect={(id) => onSelect(id, !selectedFiles.has(id))}
+                    onPreview={onPreview}
+                    onShare={onShare}
+                    onDownload={onDownload}
+                    onDelete={() => onDelete(file, 'file')}
+                    onDragStart={(e, file) => onDragStart(file.id, e)}
+                    isMenuOpen={openFileMenuId === file.id}
+                    onToggleMenu={onToggleMenu}
+                    onCloseMenu={onCloseMenu}
+                  />
                 ))}
               </div>
             </div>

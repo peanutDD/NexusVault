@@ -10,6 +10,9 @@ interface FileGridProps {
   onDownload: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
   onDragStart: (fileId: string, e: React.DragEvent) => void;
+  openFileMenuId: string | null;
+  onToggleMenu: (id: string) => void;
+  onCloseMenu: () => void;
 }
 
 /**
@@ -29,6 +32,9 @@ export default function FileGrid({
   onDownload,
   onDelete,
   onDragStart,
+  openFileMenuId,
+  onToggleMenu,
+  onCloseMenu,
 }: FileGridProps) {
   if (files.length === 0) return null;
 
@@ -48,6 +54,9 @@ export default function FileGrid({
           onDownload={onDownload}
           onDelete={() => onDelete(file, 'file')}
           onDragStart={(e) => onDragStart(file.id, e)}
+          isMenuOpen={openFileMenuId === file.id}
+          onToggleMenu={onToggleMenu}
+          onCloseMenu={onCloseMenu}
         />
       ))}
     </div>

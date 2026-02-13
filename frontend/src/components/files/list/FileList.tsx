@@ -103,7 +103,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     batchDownloading,
   } = useFileList();
 
-  const throttledLoadMore = useThrottledCallback(loadMore, 400);
+  const throttledLoadMore = useThrottledCallback(() => {
+    void loadMore();
+  }, 400);
 
   // 适配器函数，处理类型不匹配问题
   const handleSortChangeAdapter = (value: string) => handleSortChange(value as import('./FileListFilters').SortOption);
@@ -111,6 +113,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     // 由于 FileListContent 期望 folderId 字符串，但 handleOpenFolder 需要 Folder 对象
     // 这里简化处理，直接导航到文件夹
     navigateToFolder(folderId);
+  };
+  const handleDropOnBreadcrumbAdapter = (e: React.DragEvent, folderId: string | null) => {
+    handleDropOnBreadcrumb(folderId, e);
   };
   const handleDeleteAdapter = (item: { id: string; name?: string; original_filename?: string }, type: 'file' | 'folder') => {
     if (type === 'file') {
@@ -144,7 +149,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       <FileListHeader
         folderPath={folderPath}
         navigateToFolder={navigateToFolder}
-        handleDropOnBreadcrumb={handleDropOnBreadcrumb}
+        handleDropOnBreadcrumb={handleDropOnBreadcrumbAdapter}
         search={search}
         mimeType={mimeType}
         sortBy={sortBy}
@@ -158,11 +163,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       {/* 内容组件：包含批量操作栏、文件列表、分页等 */}
       <FileListContent
         files={files}
-        folderPath={folderPath}
         selectedFiles={selectedFiles}
         selectedFolders={selectedFolders}
-        selectedFileIds={selectedFileIds}
-        selectedFolderIds={selectedFolderIds}
         currentFolderId={currentFolderId}
         error={error}
         isLoading={isLoading}
@@ -173,8 +175,6 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         groupedFiles={groupedFiles}
         timeGroupedFiles={timeGroupedFiles}
         displayFolders={displayFolders}
-        displayFiles={displayFiles}
-        displayFileIndexById={displayFileIndexById}
         totalPages={totalPages}
         page={page}
         hasMore={hasMore}
@@ -186,9 +186,6 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         handleSelectFolder={handleSelectFolder}
         handleOpenFolder={handleOpenFolderAdapter}
         handleRenameFolder={handleRenameFolder}
-        handleRenameFolderSubmit={handleRenameFolderSubmit}
-        getOptimisticMoveRollback={getOptimisticMoveRollback}
-        navigateToFolder={navigateToFolder}
         handleDelete={handleDeleteAdapter}
         handleDownload={handleDownload}
         handleBatchDownload={handleBatchDownload}
@@ -197,28 +194,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         handleShowBatchShare={handleShowBatchShare}
         handleFileDragStart={handleFileDragStartAdapter}
         handleDropOnFolder={handleDropOnFolderAdapter}
-        loadFiles={loadFiles}
-        loadFolders={loadFolders}
-        clearSelection={clearSelection}
-        addFolderToList={addFolderToList}
-        previewFile={previewFile}
         setPreviewFile={setPreviewFile}
-        shareFile={shareFile}
         setShareFile={setShareFile}
-        showBatchShare={showBatchShare}
-        setShowBatchShare={setShowBatchShare}
-        batchShareFileIds={batchShareFileIds}
-        setBatchShareFileIds={setBatchShareFileIds}
-        showBatchMove={showBatchMove}
-        setShowBatchMove={setShowBatchMove}
-        showCreateFolder={showCreateFolder}
-        setShowCreateFolder={setShowCreateFolder}
-        renamingFolder={renamingFolder}
-        setRenamingFolder={setRenamingFolder}
-        deleteConfirm={deleteConfirm}
-        deleteLoading={deleteLoading}
-        executeDelete={executeDelete}
-        setDeleteConfirm={setDeleteConfirm}
         batchDownloading={batchDownloading}
       />
 
@@ -281,9 +258,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             open={showCreateFolder}
             parentId={currentFolderId}
             onClose={() => setShowCreateFolder(false)}
-            onCreated={(folder) => {
+            onCreated={() => {
               setShowCreateFolder(false);
-              addFolderToList(folder);
+              addFolderToList();
             }}
           />
         )}

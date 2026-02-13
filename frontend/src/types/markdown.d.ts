@@ -5,7 +5,7 @@ declare module 'react-markdown' {
     children?: ReactNode;
     remarkPlugins?: unknown[];
     rehypePlugins?: unknown[];
-    components?: Record<string, ComponentType<any>>;
+    components?: Record<string, ComponentType<Record<string, unknown>>>;
   }
 
   const ReactMarkdown: ComponentType<ReactMarkdownProps>;
@@ -26,4 +26,3 @@ declare module 'rehype-highlight' {
   const rehypeHighlight: unknown;
   export default rehypeHighlight;
 }
-

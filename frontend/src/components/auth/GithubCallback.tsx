@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config/env';
 import { useAuthStore } from '../../store/authStore';
+import type { User } from '../../types';
 import Spinner from '../common/feedback/Spinner';
 
 export default function GithubCallback() {
@@ -29,9 +30,9 @@ export default function GithubCallback() {
         if (!res.ok) {
           throw new Error(`Failed to fetch user: ${res.status}`);
         }
-        const data = (await res.json()) as { user: unknown };
+        const data = (await res.json()) as { user: User };
         // setAuth 会把 token 写入 store 和 localStorage，后续 axios 请求走统一拦截器
-        setAuth(data.user as any, token);
+        setAuth(data.user, token);
         navigate('/files', { replace: true });
       } catch {
         navigate('/login', { replace: true });
@@ -48,4 +49,3 @@ export default function GithubCallback() {
     </div>
   );
 }
-
