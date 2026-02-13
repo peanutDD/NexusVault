@@ -67,8 +67,7 @@ impl AuthService {
 
     /// 从 AppState 创建 AuthService（工厂方法）
     pub fn from_state(state: &crate::AppState) -> Self {
-        let users_repo: DynUsersRepo =
-            std::sync::Arc::new(SqlxUsersRepo::new(state.pool.clone()));
+        let users_repo: DynUsersRepo = std::sync::Arc::new(SqlxUsersRepo::new(state.pool.clone()));
         Self::new(users_repo, (*state.config).clone(), state.cache.clone())
     }
 
@@ -302,18 +301,21 @@ impl AuthService {
             }
         }
 
-        let code: String = (0..6).map(|_| rand::thread_rng().gen_range(0..10).to_string()).collect();
+        let code: String = (0..6)
+            .map(|_| rand::thread_rng().gen_range(0..10).to_string())
+            .collect();
         self.cache
             .set_email_verification_code(user_id, &req.email, &code);
 
         // SMTP 已配置则发送邮件，否则写入日志（开发环境）
         if let (Some(host), Some(from)) = (&self.config.smtp_host, &self.config.smtp_from) {
-            let to_addr = req.email.parse().map_err(|_| {
-                AppError::Validation("无效的收件人邮箱".to_string())
-            })?;
-            let from_addr = from.parse().map_err(|_| {
-                AppError::Validation("无效的发件人邮箱配置".to_string())
-            })?;
+            let to_addr = req
+                .email
+                .parse()
+                .map_err(|_| AppError::Validation("无效的收件人邮箱".to_string()))?;
+            let from_addr = from
+                .parse()
+                .map_err(|_| AppError::Validation("无效的发件人邮箱配置".to_string()))?;
 
             let email = Message::builder()
                 .from(from_addr)
@@ -397,7 +399,10 @@ impl AuthService {
                 return Err(AppError::Conflict("用户名已被占用".to_string()));
             }
         } else {
-            tracing::info!("update_profile 用户名检查: username={} 未被占用", req.username);
+            tracing::info!(
+                "update_profile 用户名检查: username={} 未被占用",
+                req.username
+            );
         }
         // 检查邮箱是否被其他用户占用
         if let Some(other) = self.users_repo.find_by_email(&req.email).await? {
@@ -485,10 +490,7 @@ impl AuthService {
                 "Password must be between 8 and 64 characters".to_string(),
             ));
         }
-        let has_letter = req
-            .password
-            .chars()
-            .any(|c| c.is_ascii_alphabetic());
+        let has_letter = req.password.chars().any(|c| c.is_ascii_alphabetic());
         let has_digit = req.password.chars().any(|c| c.is_ascii_digit());
         if !has_letter || !has_digit {
             return Err(AppError::Validation(

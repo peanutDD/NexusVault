@@ -35,7 +35,7 @@
 | 批量下载 ZIP 最大总字节 | `MAX_BATCH_ZIP_TOTAL_BYTES` | 250 MiB | 单次批量下载 |
 | 批量获取元数据最大 ID 数 | `MAX_BATCH_GET_IDS` | 100 | batch get 接口 |
 | Range 请求最大分段数 | `MAX_RANGES` | 8 | 多 range 下载 |
-| 每用户同时分片上传数 | `MAX_CONCURRENT_CHUNKED_UPLOADS` | 5 | 与前端约定 |
+| 每用户同时分片上传数 | `MAX_CONCURRENT_CHUNKED_UPLOADS` | 10 | 与前端约定（达到上限时会自动清理最旧的会话） |
 
 ## 磁盘预留（仅本地存储，constants.rs）
 

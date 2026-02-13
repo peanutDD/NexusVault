@@ -11,13 +11,13 @@ use axum::Json;
 use axum::Router;
 use serde_json::json;
 use tower::ServiceBuilder;
+use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError};
 use tower_http::{
     catch_panic::CatchPanicLayer,
-    cors::{Any, AllowOrigin, CorsLayer},
+    cors::{AllowOrigin, Any, CorsLayer},
     timeout::TimeoutLayer,
     trace::TraceLayer,
 };
-use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError};
 
 use crate::api;
 use crate::config::Config;
@@ -110,9 +110,7 @@ where
             middleware::metrics::metrics_middleware,
         ));
 
-    routes
-        .with_state(app_state)
-        .layer(middleware_stack)
+    routes.with_state(app_state).layer(middleware_stack)
 }
 
 // ---------- CORS ----------

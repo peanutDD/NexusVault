@@ -20,9 +20,8 @@ pub(crate) use batch_zip::run_zip_writer_thread;
 mod categories;
 mod chunked_upload;
 mod delete;
-mod instant_upload;
-mod video;
 mod hls;
+mod instant_upload;
 mod list;
 mod quota;
 mod read;
@@ -30,6 +29,7 @@ pub mod semantic_search;
 mod storage_factory;
 mod upload;
 mod versions;
+mod video;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -38,7 +38,10 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::config::Config;
-use crate::repositories::{DynFilesRepo, DynFileVersionsRepo, DynUsersRepo, SqlxFilesRepo, SqlxFileVersionsRepo, SqlxUsersRepo};
+use crate::repositories::{
+    DynFileVersionsRepo, DynFilesRepo, DynUsersRepo, SqlxFileVersionsRepo, SqlxFilesRepo,
+    SqlxUsersRepo,
+};
 use crate::services::embeddings::EmbeddingService;
 use crate::services::storage::StorageBackend;
 use crate::utils::AppError;
@@ -100,7 +103,8 @@ impl FileService {
     /// 使用 SQLx 实现的 Repository。
     pub fn from_state(state: &crate::AppState) -> Self {
         let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(state.pool.clone()));
-        let file_versions_repo: DynFileVersionsRepo = Arc::new(SqlxFileVersionsRepo::new(state.pool.clone()));
+        let file_versions_repo: DynFileVersionsRepo =
+            Arc::new(SqlxFileVersionsRepo::new(state.pool.clone()));
         let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(state.pool.clone()));
 
         Self::new(

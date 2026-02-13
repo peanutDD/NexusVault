@@ -517,7 +517,7 @@ export const fileService = {
   },
 
   /**
-   * 获取文件完整内容为 Blob（用于 Ugoira 等一次拉取整包、前端解析的场景，对齐 Pixiv zip 模式）
+   * 获取文件完整内容为 Blob（用于客户端侧自行解析 ZIP 等场景）
    */
   async getFileAsBlob(
     fileId: string,
@@ -531,7 +531,7 @@ export const fileService = {
   },
 
   /**
-   * 使用 Range 请求获取文件指定字节范围（用于流式 ZIP 加载，对齐 Pixiv zip_player）
+   * 使用 Range 请求获取文件指定字节范围。
    * @param fileId 文件 ID
    * @param start 起始字节位置（包含）
    * @param end 结束字节位置（包含）
@@ -824,37 +824,6 @@ export const fileService = {
         throw err;
       }
     });
-  },
-
-  /**
-   * Ugoira 元数据（frames.json），用于边播放边加载。
-   * 不走 previewQueue，避免与其它预览争用；后端会在本次请求中预填 ZIP 缓存，首帧及后续帧请求可命中缓存。
-   */
-  async fetchUgoiraMetadata(
-    fileId: string,
-    options?: { signal?: AbortSignal }
-  ): Promise<{ frames: Array<{ file?: string; delay: number }> }> {
-    const { data } = await api.get(
-      `/api/files/${fileId}/preview/ugoira/metadata`,
-      { signal: options?.signal }
-    );
-    return data;
-  },
-
-  /**
-   * Ugoira 单帧图片，用于边播放边加载。
-   * 不走 previewQueue，多帧可并行请求，避免排队；后端按 file_id 缓存 ZIP，同文件多帧复用。
-   */
-  async fetchUgoiraFrame(
-    fileId: string,
-    index: number,
-    options?: { signal?: AbortSignal }
-  ): Promise<Blob> {
-    const { data } = await api.get<Blob>(
-      `/api/files/${fileId}/preview/ugoira/frames/${index}`,
-      { responseType: 'blob', signal: options?.signal }
-    );
-    return data;
   },
 
   /**

@@ -39,7 +39,8 @@ where
 {
     type Response = Response<ResBody>;
     type Error = S::Error;
-    type Future = Pin<Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future =
+        Pin<Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
@@ -66,7 +67,8 @@ where
             .map(|s| s.to_string())
             .unwrap_or_else(|| "-".to_string());
 
-        let _guard = tracing::info_span!("request", trace_id = %trace_id, user_id = %user_id).entered();
+        let _guard =
+            tracing::info_span!("request", trace_id = %trace_id, user_id = %user_id).entered();
         let start = Instant::now();
 
         let mut inner = self.inner.clone();
@@ -94,10 +96,7 @@ where
                     trace_val.clone(),
                 );
                 // 兼容旧客户端：继续写入 X-Request-Id
-                headers.insert(
-                    header::HeaderName::from_static("x-request-id"),
-                    trace_val,
-                );
+                headers.insert(header::HeaderName::from_static("x-request-id"), trace_val);
             }
             Ok(res)
         })

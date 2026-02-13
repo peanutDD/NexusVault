@@ -22,10 +22,9 @@ pub async fn google_oauth_url_handler(State(state): State<AppState>) -> Result<R
         .google_client_id
         .clone()
         .ok_or_else(|| AppError::Validation("Google OAuth is not configured".to_string()))?;
-    let redirect_uri = config
-        .google_oauth_redirect_uri
-        .clone()
-        .ok_or_else(|| AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string()))?;
+    let redirect_uri = config.google_oauth_redirect_uri.clone().ok_or_else(|| {
+        AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string())
+    })?;
 
     // 生成随机 state，并缓存起来用于回调时校验，防止 CSRF
     let state_str = uuid::Uuid::new_v4().to_string();
@@ -67,20 +66,23 @@ pub async fn google_oauth_callback_handler(
         .google_client_id
         .clone()
         .ok_or_else(|| AppError::Validation("Google OAuth is not configured".to_string()))?;
-    let client_secret = config
-        .google_client_secret
-        .clone()
-        .ok_or_else(|| AppError::Validation("GOOGLE_CLIENT_SECRET is not configured".to_string()))?;
-    let redirect_uri = config
-        .google_oauth_redirect_uri
-        .clone()
-        .ok_or_else(|| AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string()))?;
+    let client_secret = config.google_client_secret.clone().ok_or_else(|| {
+        AppError::Validation("GOOGLE_CLIENT_SECRET is not configured".to_string())
+    })?;
+    let redirect_uri = config.google_oauth_redirect_uri.clone().ok_or_else(|| {
+        AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string())
+    })?;
 
     let frontend_base = config
         .frontend_base_url
         .clone()
         .or_else(|| {
-            let first = config.cors_origin.split(',').next().map(str::trim).unwrap_or("");
+            let first = config
+                .cors_origin
+                .split(',')
+                .next()
+                .map(str::trim)
+                .unwrap_or("");
             if first.is_empty() {
                 None
             } else {
@@ -89,7 +91,8 @@ pub async fn google_oauth_callback_handler(
         })
         .ok_or_else(|| {
             AppError::Validation(
-                "FRONTEND_BASE_URL or CORS_ORIGIN must be configured for OAuth redirect".to_string(),
+                "FRONTEND_BASE_URL or CORS_ORIGIN must be configured for OAuth redirect"
+                    .to_string(),
             )
         })?;
 
@@ -213,4 +216,3 @@ pub async fn google_oauth_callback_handler(
 
     Ok(Redirect::temporary(&redirect_url))
 }
-

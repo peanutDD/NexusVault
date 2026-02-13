@@ -72,7 +72,12 @@ pub trait StorageBackend: Send + Sync {
     async fn get_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<Vec<u8>, AppError>;
 
     /// 保存缩略图，按用户隔离存放。
-    async fn save_thumbnail(&self, file_id: Uuid, user_id: Uuid, data: &[u8]) -> Result<(), AppError>;
+    async fn save_thumbnail(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+        data: &[u8],
+    ) -> Result<(), AppError>;
 
     /// 删除缩略图（如原文件删除时）。若本就不存在则忽略。
     async fn delete_thumbnail(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError>;
@@ -253,7 +258,12 @@ impl StorageBackend for LocalStorage {
         }
     }
 
-    async fn save_thumbnail(&self, file_id: Uuid, user_id: Uuid, data: &[u8]) -> Result<(), AppError> {
+    async fn save_thumbnail(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+        data: &[u8],
+    ) -> Result<(), AppError> {
         let path = self.get_thumbnail_path(file_id, user_id);
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent)
@@ -280,10 +290,14 @@ impl StorageBackend for LocalStorage {
         // 检查存储目录是否可访问
         let path = Path::new(&self.base_path);
         if !path.exists() {
-            return Err(AppError::Storage("Storage directory does not exist".to_string()));
+            return Err(AppError::Storage(
+                "Storage directory does not exist".to_string(),
+            ));
         }
         if !path.is_dir() {
-            return Err(AppError::Storage("Storage path is not a directory".to_string()));
+            return Err(AppError::Storage(
+                "Storage path is not a directory".to_string(),
+            ));
         }
         // 尝试创建一个临时文件验证写入权限
         let test_file = path.join(".health_check");
@@ -318,7 +332,10 @@ impl S3Storage {
     }
 
     fn get_thumbnail_key(&self, file_id: Uuid, user_id: Uuid) -> String {
-        format!("{}/{}/{}.{}", user_id, THUMBNAIL_DIR, file_id, THUMBNAIL_EXT)
+        format!(
+            "{}/{}/{}.{}",
+            user_id, THUMBNAIL_DIR, file_id, THUMBNAIL_EXT
+        )
     }
 
     fn get_thumbnail_key_legacy(&self, file_id: Uuid) -> String {
@@ -500,7 +517,12 @@ impl StorageBackend for S3Storage {
         }
     }
 
-    async fn save_thumbnail(&self, file_id: Uuid, user_id: Uuid, data: &[u8]) -> Result<(), AppError> {
+    async fn save_thumbnail(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+        data: &[u8],
+    ) -> Result<(), AppError> {
         let key = self.get_thumbnail_key(file_id, user_id);
         self.client
             .put_object()
@@ -526,7 +548,10 @@ impl StorageBackend for S3Storage {
         {
             let msg = e.to_string();
             if !msg.contains("NoSuchKey") && !msg.contains("No Such Key") {
-                return Err(AppError::File(format!("Failed to delete thumbnail from S3: {}", e)));
+                return Err(AppError::File(format!(
+                    "Failed to delete thumbnail from S3: {}",
+                    e
+                )));
             }
         }
         Ok(())

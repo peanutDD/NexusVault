@@ -46,10 +46,8 @@ pub async fn chunked_upload_init_handler(
         total_size = req.total_size,
         "POST /upload/chunked/init"
     );
-    let (upload_id, chunk_size, total_parts) = state
-        .file_service
-        .init_chunked_upload(user_id, req)
-        .await?;
+    let (upload_id, chunk_size, total_parts) =
+        state.file_service.init_chunked_upload(user_id, req).await?;
     Ok(json_response(json!({
         "upload_id": upload_id,
         "chunk_size": chunk_size,

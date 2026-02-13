@@ -31,21 +31,13 @@ impl FileContentExtractor {
         // 根据 MIME 类型选择提取方法
         match mime_type {
             // 纯文本类型
-            mime if mime.starts_with("text/") => {
-                Self::extract_text_content(data)
-            }
+            mime if mime.starts_with("text/") => Self::extract_text_content(data),
             // Markdown
-            "text/markdown" | "text/x-markdown" => {
-                Self::extract_text_content(data)
-            }
+            "text/markdown" | "text/x-markdown" => Self::extract_text_content(data),
             // JSON
-            "application/json" => {
-                Self::extract_text_content(data)
-            }
+            "application/json" => Self::extract_text_content(data),
             // PDF
-            "application/pdf" => {
-                Self::extract_pdf_content(data)
-            }
+            "application/pdf" => Self::extract_pdf_content(data),
             // Word (docx)
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => {
                 Self::extract_docx_content(data)
@@ -64,17 +56,11 @@ impl FileContentExtractor {
                 Self::extract_pptx_content(data)
             }
             // HTML
-            "text/html" => {
-                Self::extract_html_content(data)
-            }
+            "text/html" => Self::extract_html_content(data),
             // XML
-            "application/xml" | "text/xml" => {
-                Self::extract_text_content(data)
-            }
+            "application/xml" | "text/xml" => Self::extract_text_content(data),
             // 其他：尝试按文件名扩展名推断
-            _ => {
-                Self::extract_by_extension(data, original_filename)
-            }
+            _ => Self::extract_by_extension(data, original_filename),
         }
     }
 
@@ -90,7 +76,7 @@ impl FileContentExtractor {
             .map(|(enc, _)| enc)
             .unwrap_or(encoding_rs::UTF_8);
         let (text, _, _) = encoding.decode(data);
-        
+
         Ok(text.into_owned())
     }
 
@@ -114,11 +100,11 @@ impl FileContentExtractor {
         let temp_dir = std::env::temp_dir().join("file-storage-backend-docx");
         std::fs::create_dir_all(&temp_dir)
             .map_err(|e| AppError::File(format!("创建临时目录失败: {}", e)))?;
-        
+
         let temp_file = temp_dir.join(format!("docx_{}", uuid::Uuid::new_v4()));
         let mut file = std::fs::File::create(&temp_file)
             .map_err(|e| AppError::File(format!("创建临时文件失败: {}", e)))?;
-        
+
         file.write_all(data)
             .map_err(|e| AppError::File(format!("写入临时文件失败: {}", e)))?;
         file.flush()
@@ -154,11 +140,11 @@ impl FileContentExtractor {
     /// 提取 HTML 内容（去除标签，只保留文本）
     fn extract_html_content(data: &[u8]) -> Result<String, AppError> {
         let html = String::from_utf8_lossy(data);
-        
+
         // 简单的 HTML 标签去除（可以使用更专业的库如 scraper）
         let mut text = String::new();
         let mut in_tag = false;
-        
+
         for ch in html.chars() {
             match ch {
                 '<' => in_tag = true,
@@ -211,7 +197,7 @@ impl FileContentExtractor {
     pub fn combine_for_embedding(filename: &str, content: &str) -> String {
         // 限制内容长度（避免超出模型输入限制）
         const MAX_CONTENT_LENGTH: usize = 2000; // 根据模型调整
-        
+
         let content_preview = if content.len() > MAX_CONTENT_LENGTH {
             &content[..MAX_CONTENT_LENGTH]
         } else {

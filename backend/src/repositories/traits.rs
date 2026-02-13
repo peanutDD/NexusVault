@@ -141,7 +141,8 @@ pub trait FilesRepository: Send + Sync {
     async fn count_by_file_path(&self, file_path: &str) -> Result<u64, AppError>;
 
     /// 批量统计多个 file_path 的引用数，一次查询减少 round-trip（用于 batch_delete 等）
-    async fn count_by_file_paths(&self, paths: &[String]) -> Result<HashMap<String, u64>, AppError>;
+    async fn count_by_file_paths(&self, paths: &[String])
+        -> Result<HashMap<String, u64>, AppError>;
 
     /// 根据 ID 和用户 ID 查询文件
     async fn find_by_id(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError>;
@@ -230,20 +231,37 @@ pub trait FileVersionsRepository: Send + Sync {
     ) -> Result<FileVersion, AppError>;
 
     /// 获取文件的所有版本列表（按版本号降序）
-    async fn list_versions(&self, file_id: Uuid, user_id: Uuid) -> Result<Vec<FileVersion>, AppError>;
+    async fn list_versions(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Vec<FileVersion>, AppError>;
 
     /// 获取指定版本
-    async fn get_version(&self, version_id: Uuid, user_id: Uuid) -> Result<Option<FileVersion>, AppError>;
+    async fn get_version(
+        &self,
+        version_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<FileVersion>, AppError>;
 
     /// 获取文件的最大版本号
     async fn get_max_version_number(&self, file_id: Uuid) -> Result<i32, AppError>;
 
     /// 更新版本标签
-    async fn update_label(&self, version_id: Uuid, user_id: Uuid, label: Option<&str>) -> Result<(), AppError>;
+    async fn update_label(
+        &self,
+        version_id: Uuid,
+        user_id: Uuid,
+        label: Option<&str>,
+    ) -> Result<(), AppError>;
 
     /// 删除指定版本（同时删除物理文件）
     async fn delete_version(&self, version_id: Uuid, user_id: Uuid) -> Result<String, AppError>;
 
     /// 删除文件的所有旧版本（保留最近 N 个版本）
-    async fn cleanup_old_versions(&self, file_id: Uuid, keep_count: i32) -> Result<Vec<String>, AppError>;
+    async fn cleanup_old_versions(
+        &self,
+        file_id: Uuid,
+        keep_count: i32,
+    ) -> Result<Vec<String>, AppError>;
 }

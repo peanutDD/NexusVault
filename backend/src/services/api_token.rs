@@ -8,8 +8,8 @@
 //! - Token 只在创建时返回一次，数据库仅存储哈希值
 
 use chrono::{Duration, Utc};
-use sha2::Sha256;
 use hmac::{Hmac, Mac};
+use sha2::Sha256;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -56,8 +56,8 @@ impl ApiTokenService {
         if self.secret.trim().is_empty() {
             return Err(AppError::Internal);
         }
-        let mut mac = HmacSha256::new_from_slice(self.secret.as_bytes())
-            .map_err(|_| AppError::Internal)?;
+        let mut mac =
+            HmacSha256::new_from_slice(self.secret.as_bytes()).map_err(|_| AppError::Internal)?;
         mac.update(token.as_bytes());
         let result = mac.finalize();
         Ok(format!("{:x}", result.into_bytes()))

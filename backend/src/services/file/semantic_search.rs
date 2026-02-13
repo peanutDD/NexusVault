@@ -40,18 +40,16 @@ impl SemanticSearchService {
                 .join(",")
         );
 
-        sqlx::query(
-            "UPDATE files SET embedding = $1::vector WHERE id = $2 AND user_id = $3",
-        )
-        .bind(&embedding_str)
-        .bind(file_id)
-        .bind(user_id)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to update file embedding: {}", e);
-            AppError::File("更新文件向量嵌入失败".to_string())
-        })?;
+        sqlx::query("UPDATE files SET embedding = $1::vector WHERE id = $2 AND user_id = $3")
+            .bind(&embedding_str)
+            .bind(file_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to update file embedding: {}", e);
+                AppError::File("更新文件向量嵌入失败".to_string())
+            })?;
 
         Ok(())
     }
@@ -125,9 +123,7 @@ impl SemanticSearchService {
         embeddings: &[Vec<f32>],
     ) -> Result<(), AppError> {
         if file_ids.len() != embeddings.len() {
-            return Err(AppError::Validation(
-                "文件 ID 和向量数量不匹配".to_string(),
-            ));
+            return Err(AppError::Validation("文件 ID 和向量数量不匹配".to_string()));
         }
 
         // 使用事务批量更新

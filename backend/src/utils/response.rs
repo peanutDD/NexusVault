@@ -8,9 +8,9 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::Serialize;
 use serde_json::json;
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 
 fn ascii_filename_fallback(filename: &str) -> String {
     // 仅保留一部分安全 ASCII 字符作为 fallback，避免 HeaderValue::from_str 失败
@@ -37,9 +37,7 @@ fn content_disposition_value(filename: &str, inline: bool) -> String {
     let disposition_type = if inline { "inline" } else { "attachment" };
     let ascii = ascii_filename_fallback(filename).replace('"', "_");
     let encoded = utf8_percent_encode(filename, NON_ALPHANUMERIC).to_string();
-    format!(
-        "{disposition_type}; filename=\"{ascii}\"; filename*=UTF-8''{encoded}"
-    )
+    format!("{disposition_type}; filename=\"{ascii}\"; filename*=UTF-8''{encoded}")
 }
 
 /// 判断是否为应强制下载的“潜在危险” MIME 类型（如 HTML / SVG）。
@@ -99,9 +97,8 @@ pub fn file_response(
     let mut headers = HeaderMap::new();
     headers.insert(
         header::CONTENT_TYPE,
-        HeaderValue::from_str(mime_type).unwrap_or_else(|_| {
-            HeaderValue::from_static("application/octet-stream")
-        }),
+        HeaderValue::from_str(mime_type)
+            .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
     );
     headers.insert(
         header::CONTENT_DISPOSITION,
@@ -135,9 +132,8 @@ pub fn stream_file_response(
     let mut headers = HeaderMap::new();
     headers.insert(
         header::CONTENT_TYPE,
-        HeaderValue::from_str(mime_type).unwrap_or_else(|_| {
-            HeaderValue::from_static("application/octet-stream")
-        }),
+        HeaderValue::from_str(mime_type)
+            .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
     );
     headers.insert(
         header::CONTENT_DISPOSITION,
@@ -150,7 +146,8 @@ pub fn stream_file_response(
     if let Some(len) = content_length {
         headers.insert(
             header::CONTENT_LENGTH,
-            HeaderValue::from_str(&len.to_string()).unwrap_or_else(|_| HeaderValue::from_static("0")),
+            HeaderValue::from_str(&len.to_string())
+                .unwrap_or_else(|_| HeaderValue::from_static("0")),
         );
     }
 

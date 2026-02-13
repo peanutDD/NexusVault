@@ -5,18 +5,10 @@
 //! - 将事件以结构化日志的方式打到后端日志中，便于后续做告警与统计
 //! - 不做复杂存储与查询逻辑，保持轻量
 
-use axum::{
-    extract::State,
-    routing::post,
-    Json, Router,
-};
+use axum::{extract::State, routing::post, Json, Router};
 use serde::Deserialize;
 
-use crate::{
-    extractors::AuthenticatedUser,
-    utils::AppError,
-    AppState,
-};
+use crate::{extractors::AuthenticatedUser, utils::AppError, AppState};
 
 /// 前端上报的遥测事件模型
 #[derive(Debug, Deserialize)]
@@ -77,4 +69,3 @@ pub async fn ingest_telemetry_event(
 pub fn create_router() -> Router<AppState> {
     Router::new().route("/events", post(ingest_telemetry_event))
 }
-

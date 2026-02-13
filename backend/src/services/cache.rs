@@ -15,7 +15,6 @@ use uuid::Uuid;
 
 use crate::models::file::File;
 use crate::models::folder::Folder;
-use crate::models::ugoira::UgoiraCacheEntry;
 use crate::models::user::User;
 
 /// 缓存键前缀
@@ -25,7 +24,6 @@ const FOLDER_PREFIX: &str = "folder:";
 const FOLDER_LIST_PREFIX: &str = "folder_list:";
 const EMAIL_VERIFICATION_PREFIX: &str = "email_verify:";
 const OAUTH_STATE_PREFIX: &str = "oauth_state:";
-const UGOIRA_DATA_PREFIX: &str = "ugoira:";
 
 /// 应用缓存服务
 #[derive(Clone)]
@@ -40,8 +38,6 @@ pub struct CacheService {
     folder_lists: Cache<String, Arc<Vec<Folder>>>,
     /// 邮箱验证码缓存（key: user_id:email, value: 6位验证码，TTL 10 分钟）
     email_verification: Cache<String, String>,
-    /// Ugoira 预解压缓存（metadata + 全部帧），命中后零 ZIP 解析
-    ugoira_data: Cache<String, Arc<UgoiraCacheEntry>>,
     /// OAuth state 缓存（key: provider:state, value: "1"，TTL 5 分钟，用于 CSRF 防护）
     oauth_states: Cache<String, String>,
 }
@@ -70,10 +66,6 @@ impl CacheService {
                 .max_capacity(10_000)
                 .time_to_live(Duration::from_secs(600)) // 10 分钟
                 .build(),
-            ugoira_data: Cache::builder()
-                .max_capacity(20)
-                .time_to_live(Duration::from_secs(60)) // 1 分钟，同一播放会话内多帧复用
-                .build(),
             oauth_states: Cache::builder()
                 .max_capacity(10_000)
                 .time_to_live(Duration::from_secs(300)) // 5 分钟内有效
@@ -84,18 +76,6 @@ impl CacheService {
     // ========================================================================
     // Ugoira 预解压缓存（按 file_id + user_id，命中后直接取帧，零 ZIP 解析）
     // ========================================================================
-
-    /// 获取已缓存的 Ugoira 预解压结果（metadata + 全部帧）
-    pub fn get_ugoira(&self, file_id: Uuid, user_id: Uuid) -> Option<Arc<UgoiraCacheEntry>> {
-        let key = format!("{}{}:{}", UGOIRA_DATA_PREFIX, file_id, user_id);
-        self.ugoira_data.get(&key)
-    }
-
-    /// 写入 Ugoira 预解压结果到缓存
-    pub fn set_ugoira(&self, file_id: Uuid, user_id: Uuid, entry: Arc<UgoiraCacheEntry>) {
-        let key = format!("{}{}:{}", UGOIRA_DATA_PREFIX, file_id, user_id);
-        self.ugoira_data.insert(key, entry);
-    }
 
     // ========================================================================
     // 邮箱验证码
@@ -217,7 +197,11 @@ impl CacheService {
     // ========================================================================
 
     /// 获取文件夹列表缓存
-    pub fn get_folder_list(&self, user_id: Uuid, parent_id: Option<Uuid>) -> Option<Arc<Vec<Folder>>> {
+    pub fn get_folder_list(
+        &self,
+        user_id: Uuid,
+        parent_id: Option<Uuid>,
+    ) -> Option<Arc<Vec<Folder>>> {
         let key = format!("{}{}:{:?}", FOLDER_LIST_PREFIX, user_id, parent_id);
         self.folder_lists.get(&key)
     }
@@ -247,7 +231,6 @@ impl CacheService {
             files_count: self.files.entry_count(),
             folders_count: self.folders.entry_count(),
             folder_lists_count: self.folder_lists.entry_count(),
-            ugoira_data_count: self.ugoira_data.entry_count(),
         }
     }
 }
@@ -265,5 +248,4 @@ pub struct CacheStats {
     pub files_count: u64,
     pub folders_count: u64,
     pub folder_lists_count: u64,
-    pub ugoira_data_count: u64,
 }

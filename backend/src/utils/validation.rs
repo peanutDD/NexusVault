@@ -62,19 +62,19 @@ pub fn validate_mime_type(mime_type: &str, allowed_types: &[String]) -> Result<(
 
     for allowed in allowed_types {
         let allowed_lower = allowed.to_lowercase().trim().to_string();
-        
+
         // 允许所有类型（使用 matches! 宏简化多值比较）
         if matches!(allowed_lower.as_str(), "*/*" | "*") {
             return Ok(());
         }
-        
+
         // 通配符匹配（如 video/* 匹配 video/mp4）
         if allowed_lower.ends_with("/*") {
             let prefix = allowed_lower.trim_end_matches("/*");
             if mime_lower.starts_with(&format!("{}/", prefix)) {
                 return Ok(());
             }
-        } 
+        }
         // 精确匹配
         else if mime_lower == allowed_lower {
             return Ok(());
@@ -108,4 +108,3 @@ pub fn validate_file_size(size: u64, max_size: u64) -> Result<(), AppError> {
         Ok(())
     }
 }
-

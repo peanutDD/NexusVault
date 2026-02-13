@@ -116,7 +116,12 @@ pub async fn semantic_search_handler(
     use crate::services::file::SemanticSearchService;
     let search_service = SemanticSearchService::new(state.pool.clone());
     let file_ids = search_service
-        .search_files(user_id, &query_embedding, Some(params.limit), Some(params.threshold))
+        .search_files(
+            user_id,
+            &query_embedding,
+            Some(params.limit),
+            Some(params.threshold),
+        )
         .await
         .map_err(|e| {
             tracing::error!("Semantic search failed: {}", e);

@@ -116,10 +116,11 @@ impl FilesRepository for SqlxFilesRepo {
     /// **用途**：删除或秒传复用存储时，仅当计数为 0 才可安全删除物理文件，避免误删仍被引用的路径。
     /// **实现**：`COUNT(*)` + `WHERE file_path = $1`，返回 `u64`。
     async fn count_by_file_path(&self, file_path: &str) -> Result<u64, AppError> {
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*)::BIGINT FROM files WHERE file_path = $1")
-            .bind(file_path)
-            .fetch_one(&self.pool)
-            .await?;
+        let count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*)::BIGINT FROM files WHERE file_path = $1")
+                .bind(file_path)
+                .fetch_one(&self.pool)
+                .await?;
         Ok(count.0 as u64) // 单列元组取 .0，转为无符号
     }
 
@@ -127,7 +128,10 @@ impl FilesRepository for SqlxFilesRepo {
     ///
     /// **实现**：`SELECT file_path, COUNT(*) FROM files WHERE file_path = ANY($1) GROUP BY file_path`。
     /// 空 paths 直接返回空 HashMap；未出现在结果中的 path 表示 0 引用。
-    async fn count_by_file_paths(&self, paths: &[String]) -> Result<HashMap<String, u64>, AppError> {
+    async fn count_by_file_paths(
+        &self,
+        paths: &[String],
+    ) -> Result<HashMap<String, u64>, AppError> {
         if paths.is_empty() {
             return Ok(HashMap::new());
         }
@@ -137,15 +141,12 @@ impl FilesRepository for SqlxFilesRepo {
         .bind(paths)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows
-            .into_iter()
-            .map(|(p, c)| (p, c as u64))
-            .collect())
+        Ok(rows.into_iter().map(|(p, c)| (p, c as u64)).collect())
     }
 
-// =============================================================================
-// 单条查询与归属校验（下载/预览/删除前）
-// =============================================================================
+    // =============================================================================
+    // 单条查询与归属校验（下载/预览/删除前）
+    // =============================================================================
 
     /// 按文件 ID 与用户 ID 查询单条记录，用于下载/预览/删除前校验归属。
     ///
@@ -201,9 +202,9 @@ impl FilesRepository for SqlxFilesRepo {
         Ok(file)
     }
 
-// =============================================================================
-// 按文件夹列表（不分页，供文件夹树等场景）
-// =============================================================================
+    // =============================================================================
+    // 按文件夹列表（不分页，供文件夹树等场景）
+    // =============================================================================
 
     /// 列出指定用户、指定文件夹下的文件（不分页，按创建时间倒序）。
     ///
@@ -223,9 +224,9 @@ impl FilesRepository for SqlxFilesRepo {
         .map_err(AppError::from)
     }
 
-// =============================================================================
-// 删除（单条 / 批量）
-// =============================================================================
+    // =============================================================================
+    // 删除（单条 / 批量）
+    // =============================================================================
 
     async fn delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
         let result = sqlx::query("DELETE FROM files WHERE id = $1 AND user_id = $2")
@@ -248,9 +249,9 @@ impl FilesRepository for SqlxFilesRepo {
         Ok(result.rows_affected())
     }
 
-// =============================================================================
-// 存储用量与分类（配额、筛选器、批量更新分类）
-// =============================================================================
+    // =============================================================================
+    // 存储用量与分类（配额、筛选器、批量更新分类）
+    // =============================================================================
 
     /// 获取指定用户的存储使用量：总字节数、文件数量。
     ///
@@ -307,9 +308,9 @@ impl FilesRepository for SqlxFilesRepo {
         Ok(result.rows_affected())
     }
 
-// =============================================================================
-// 批量查询（按 ID 列表：汇总大小、取实体、取路径）
-// =============================================================================
+    // =============================================================================
+    // 批量查询（按 ID 列表：汇总大小、取实体、取路径）
+    // =============================================================================
 
     /// 统计指定 ID 集合中属于该用户的文件数量与总大小（用于批量下载前校验或展示）。
     ///
@@ -366,9 +367,9 @@ impl FilesRepository for SqlxFilesRepo {
         .map_err(AppError::from)
     }
 
-// =============================================================================
-// 分页列表（文件列表页：搜索 / MIME / 分类 / 文件夹 / 日期 / 大小 / 排序）
-// =============================================================================
+    // =============================================================================
+    // 分页列表（文件列表页：搜索 / MIME / 分类 / 文件夹 / 日期 / 大小 / 排序）
+    // =============================================================================
 
     /// 分页查询文件列表，支持多条件筛选与排序，返回当前页数据与总条数或游标。
     ///
@@ -385,8 +386,8 @@ impl FilesRepository for SqlxFilesRepo {
     /// - SQL 构建：使用 `QueryBuilder` 动态拼接 WHERE，避免手拼字符串与注入；传统分页的 `total_count` 用窗口函数一次查出。
     /// - 超时：本查询在独立事务中执行并 `SET LOCAL statement_timeout = '3s'`，避免慢查询长时间占用连接池。
     async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<FileListResult, AppError> {
+        use chrono::{DateTime, NaiveDateTime, Utc};
         use sqlx::QueryBuilder;
-        use chrono::{DateTime, Utc, NaiveDateTime};
 
         let limit = query.limit.unwrap_or(20).min(100); // 单页最多 100 条
         let use_cursor_pagination = query.cursor.is_some(); // 是否使用游标分页
@@ -466,7 +467,9 @@ impl FilesRepository for SqlxFilesRepo {
                     .and_then(|dt| {
                         dt.date()
                             .and_hms_opt(23, 59, 59) // 当天结束，包含整天
-                            .map(|end_of_day| DateTime::<Utc>::from_naive_utc_and_offset(end_of_day, Utc))
+                            .map(|end_of_day| {
+                                DateTime::<Utc>::from_naive_utc_and_offset(end_of_day, Utc)
+                            })
                     })
             })
             .or_else(|| {
@@ -497,7 +500,7 @@ impl FilesRepository for SqlxFilesRepo {
             String(String),
             Int64(i64),
         }
-        
+
         let cursor_value: Option<CursorValue> = if use_cursor_pagination {
             let cursor_str = query.cursor.as_deref().unwrap_or("");
             match sort_column {
@@ -509,15 +512,15 @@ impl FilesRepository for SqlxFilesRepo {
                         .or_else(|| {
                             NaiveDateTime::parse_from_str(cursor_str, "%Y-%m-%d %H:%M:%S%.f")
                                 .ok()
-                                .map(|dt| CursorValue::DateTime(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)))
+                                .map(|dt| {
+                                    CursorValue::DateTime(
+                                        DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc),
+                                    )
+                                })
                         })
                 }
                 "original_filename" => Some(CursorValue::String(cursor_str.to_string())),
-                "file_size" => {
-                    cursor_str.parse::<i64>()
-                        .ok()
-                        .map(CursorValue::Int64)
-                }
+                "file_size" => cursor_str.parse::<i64>().ok().map(CursorValue::Int64),
                 _ => None,
             }
         } else {
@@ -640,7 +643,7 @@ impl FilesRepository for SqlxFilesRepo {
         }
         qb.push(" LIMIT ");
         qb.push_bind(limit as i64);
-        
+
         // 传统分页才使用 OFFSET
         if !use_cursor_pagination {
             let page = query.page.unwrap_or(1);
@@ -676,13 +679,11 @@ impl FilesRepository for SqlxFilesRepo {
         // 计算返回值：传统分页返回 total_count，游标分页返回 next_cursor
         if use_cursor_pagination {
             // 游标分页：返回 next_cursor（最后一条记录的排序字段值）
-            let next_cursor = files.last().map(|file| {
-                match sort_column {
-                    "created_at" => file.created_at.to_rfc3339(),
-                    "original_filename" => file.original_filename.clone(),
-                    "file_size" => file.file_size.to_string(),
-                    _ => String::new(),
-                }
+            let next_cursor = files.last().map(|file| match sort_column {
+                "created_at" => file.created_at.to_rfc3339(),
+                "original_filename" => file.original_filename.clone(),
+                "file_size" => file.file_size.to_string(),
+                _ => String::new(),
             });
             Ok(FileListResult {
                 files,

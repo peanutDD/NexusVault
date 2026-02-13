@@ -31,29 +31,29 @@
 //! ```
 
 pub mod api_tokens;
-pub mod files;
 pub mod file_versions;
+pub mod files;
 pub mod folders;
+pub mod organizations;
 pub mod shares;
 pub mod traits;
 pub mod upload_sessions;
 pub mod users;
-pub mod organizations;
 
 // ============================================================================
 // 重新导出：Trait + Dyn 别名
 // ============================================================================
 
-pub use traits::{DynFilesRepo, DynFileVersionsRepo, DynUsersRepo};
+pub use traits::{DynFileVersionsRepo, DynFilesRepo, DynUsersRepo};
 
 // ============================================================================
 // 重新导出：SQLx 具体实现
 // ============================================================================
 
-pub use files::SqlxFilesRepo;
 pub use file_versions::SqlxFileVersionsRepo;
-pub use users::SqlxUsersRepo;
+pub use files::SqlxFilesRepo;
 pub use organizations::OrganizationsRepo;
+pub use users::SqlxUsersRepo;
 
 // ============================================================================
 // 重新导出：其他 Repository（暂未抽象为 Trait）

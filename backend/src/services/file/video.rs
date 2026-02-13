@@ -8,9 +8,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use uuid::Uuid;
 use crate::models::file::File;
 use crate::utils::AppError;
+use uuid::Uuid;
 
 use super::FileService;
 
@@ -113,6 +113,4 @@ impl FileService {
 
         Ok(out_path)
     }
-
 }
-

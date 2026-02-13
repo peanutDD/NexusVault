@@ -127,7 +127,7 @@ export function isLargeFile(size: number): boolean {
   return size >= 10 * 1024 * 1024; // 10MB 以上使用分块上传
 }
 
-/** 大文件数量限制的阈值（与后端、前端 LARGE_FILE_UPLOAD 一致，≥100MB 计入 5 个上限） */
+/** 大文件数量限制的阈值（与后端、前端 LARGE_FILE_UPLOAD 一致，≥100MB 计入 10 个上限） */
 export const LARGE_FILE_LIMIT_THRESHOLD_BYTES = 100 * 1024 * 1024;
 
 /**

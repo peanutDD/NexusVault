@@ -123,9 +123,7 @@ impl FileShare {
     /// 在 Service 层统一判断状态时使用。
     #[allow(dead_code)]
     pub fn is_expired(&self) -> bool {
-        self.expires_at
-            .map(|exp| Utc::now() > exp)
-            .unwrap_or(false)
+        self.expires_at.map(|exp| Utc::now() > exp).unwrap_or(false)
     }
 
     /// 检查是否已达到下载次数限制。

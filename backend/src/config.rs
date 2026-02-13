@@ -75,7 +75,7 @@ pub struct Config {
     pub google_client_secret: Option<String>,
     /// Google 回调地址（需与 Google 控制台配置一致），例如：https://your-backend.com/api/auth/oauth/google/callback
     pub google_oauth_redirect_uri: Option<String>,
-    
+
     /// 前端基础地址，用于 OAuth 登录成功后重定向前端（如 https://app.example.com）
     pub frontend_base_url: Option<String>,
 
@@ -117,12 +117,15 @@ impl Config {
                 .unwrap_or_else(|_| "2147483648".to_string())
                 .parse()
                 .map_err(|_| {
-                    ConfigError::InvalidConfig("MAX_FILE_SIZE must be a positive number".to_string())
+                    ConfigError::InvalidConfig(
+                        "MAX_FILE_SIZE must be a positive number".to_string(),
+                    )
                 })?,
             // 与前端 uploadValidation 默认值保持一致：允许常见图片/视频/音频/PDF/文本、
             // Office 文档、OpenDocument、电子书和常见压缩包格式，避免「看得见却传不上」的情况。
-            allowed_mime_types: env::var("ALLOWED_MIME_TYPES").unwrap_or_else(|_| {
-                "image/*,\
+            allowed_mime_types: env::var("ALLOWED_MIME_TYPES")
+                .unwrap_or_else(|_| {
+                    "image/*,\
                  video/*,\
                  audio/*,\
                  application/pdf,\
@@ -144,8 +147,8 @@ impl Config {
                  application/x-tar,\
                  application/gzip,\
                  application/x-bzip2"
-                    .to_string()
-            })
+                        .to_string()
+                })
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect(),
@@ -157,18 +160,12 @@ impl Config {
                 "UPLOAD_SESSION_CLEANUP_INTERVAL_SECS",
                 300,
             )?,
-            upload_session_cleanup_batch_size: env_i64(
-                "UPLOAD_SESSION_CLEANUP_BATCH_SIZE",
-                200,
-            )?,
+            upload_session_cleanup_batch_size: env_i64("UPLOAD_SESSION_CLEANUP_BATCH_SIZE", 200)?,
             files_consistency_check_interval_secs: env_u64(
                 "FILES_CONSISTENCY_CHECK_INTERVAL_SECS",
                 600,
             )?,
-            files_consistency_check_batch_size: env_i64(
-                "FILES_CONSISTENCY_CHECK_BATCH_SIZE",
-                500,
-            )?,
+            files_consistency_check_batch_size: env_i64("FILES_CONSISTENCY_CHECK_BATCH_SIZE", 500)?,
             orphan_cleanup_interval_secs: env_u64("ORPHAN_CLEANUP_INTERVAL_SECS", 600)?,
             orphan_cleanup_batch_limit: env_u32("ORPHAN_CLEANUP_BATCH_LIMIT", 500)?,
 
@@ -178,26 +175,30 @@ impl Config {
             rate_limit_max_keys: env_u64("RATE_LIMIT_MAX_KEYS", 20_000)?,
 
             smtp_host: env::var("SMTP_HOST").ok().filter(|s| !s.is_empty()),
-            smtp_port: env::var("SMTP_PORT")
-                .ok()
-                .and_then(|s| s.parse().ok()),
+            smtp_port: env::var("SMTP_PORT").ok().and_then(|s| s.parse().ok()),
             smtp_username: env::var("SMTP_USERNAME").ok().filter(|s| !s.is_empty()),
             smtp_password: env::var("SMTP_PASSWORD").ok().filter(|s| !s.is_empty()),
             smtp_from: env::var("SMTP_FROM").ok().filter(|s| !s.is_empty()),
 
             github_client_id: env::var("GITHUB_CLIENT_ID").ok().filter(|s| !s.is_empty()),
-            github_client_secret: env::var("GITHUB_CLIENT_SECRET").ok().filter(|s| !s.is_empty()),
+            github_client_secret: env::var("GITHUB_CLIENT_SECRET")
+                .ok()
+                .filter(|s| !s.is_empty()),
             github_oauth_redirect_uri: env::var("GITHUB_OAUTH_REDIRECT_URI")
                 .ok()
                 .filter(|s| !s.is_empty()),
             google_client_id: env::var("GOOGLE_CLIENT_ID").ok().filter(|s| !s.is_empty()),
-            google_client_secret: env::var("GOOGLE_CLIENT_SECRET").ok().filter(|s| !s.is_empty()),
+            google_client_secret: env::var("GOOGLE_CLIENT_SECRET")
+                .ok()
+                .filter(|s| !s.is_empty()),
             google_oauth_redirect_uri: env::var("GOOGLE_OAUTH_REDIRECT_URI")
                 .ok()
                 .filter(|s| !s.is_empty()),
             frontend_base_url: env::var("FRONTEND_BASE_URL").ok().filter(|s| !s.is_empty()),
 
-            huggingface_api_token: env::var("HUGGINGFACE_API_TOKEN").ok().filter(|s| !s.is_empty()),
+            huggingface_api_token: env::var("HUGGINGFACE_API_TOKEN")
+                .ok()
+                .filter(|s| !s.is_empty()),
             huggingface_model_id: env::var("HUGGINGFACE_MODEL_ID")
                 .unwrap_or_else(|_| "sentence-transformers/all-MiniLM-L6-v2".to_string()),
             huggingface_api_url: env::var("HUGGINGFACE_API_URL")
@@ -239,7 +240,8 @@ impl Config {
                 "Maintenance task interval env vars must be greater than 0".to_string(),
             ));
         }
-        if self.ip_rate_limit == 0 || self.user_rate_limit == 0 || self.rate_limit_window_secs == 0 {
+        if self.ip_rate_limit == 0 || self.user_rate_limit == 0 || self.rate_limit_window_secs == 0
+        {
             return Err(ConfigError::InvalidConfig(
                 "IP_RATE_LIMIT, USER_RATE_LIMIT, RATE_LIMIT_WINDOW_SECS must be greater than 0"
                     .to_string(),
@@ -252,7 +254,10 @@ impl Config {
 fn parse_port() -> Result<u16, ConfigError> {
     let raw = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let port: u16 = raw.parse().map_err(|_| {
-        ConfigError::InvalidConfig(format!("PORT must be a number in range {}..={}", PORT_MIN, PORT_MAX))
+        ConfigError::InvalidConfig(format!(
+            "PORT must be a number in range {}..={}",
+            PORT_MIN, PORT_MAX
+        ))
     })?;
     if port < PORT_MIN || port > PORT_MAX {
         return Err(ConfigError::InvalidConfig(format!(
@@ -281,9 +286,9 @@ fn env_u64(key: &str, default: u64) -> Result<u64, ConfigError> {
 
 fn env_i64(key: &str, default: i64) -> Result<i64, ConfigError> {
     match env::var(key) {
-        Ok(s) => s.parse().map_err(|_| {
-            ConfigError::InvalidConfig(format!("{} must be an integer", key))
-        }),
+        Ok(s) => s
+            .parse()
+            .map_err(|_| ConfigError::InvalidConfig(format!("{} must be an integer", key))),
         Err(_) => Ok(default),
     }
 }

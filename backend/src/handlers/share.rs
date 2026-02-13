@@ -84,7 +84,10 @@ pub async fn access_share_handler(
     }
 
     // 获取文件信息
-    let file = state.file_service.get_file(share.file_id, share.user_id).await?;
+    let file = state
+        .file_service
+        .get_file(share.file_id, share.user_id)
+        .await?;
 
     // 增加下载计数
     share_service.increment_download_count(share.id).await?;
@@ -115,7 +118,10 @@ pub async fn download_shared_file_handler(
     let share = share_service.get_share_by_token(&token).await?;
 
     // 获取文件
-    let file = state.file_service.get_file(share.file_id, share.user_id).await?;
+    let file = state
+        .file_service
+        .get_file(share.file_id, share.user_id)
+        .await?;
     let data = state.file_service.get_file_data(&file).await?;
 
     // 增加下载计数

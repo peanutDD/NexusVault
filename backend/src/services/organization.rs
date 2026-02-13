@@ -15,11 +15,13 @@ use uuid::Uuid;
 use crate::config::Config;
 use crate::models::file::FileResponse;
 use crate::models::organization::{
-    AddMemberRequest, CreateOrganizationRequest, OrganizationResponse, OrganizationMemberResponse,
+    AddMemberRequest, CreateOrganizationRequest, OrganizationMemberResponse, OrganizationResponse,
     OrganizationRole,
 };
 use crate::models::user::User;
-use crate::repositories::{OrganizationsRepo, SqlxUsersRepo, SqlxFilesRepo, DynFilesRepo, DynUsersRepo};
+use crate::repositories::{
+    DynFilesRepo, DynUsersRepo, OrganizationsRepo, SqlxFilesRepo, SqlxUsersRepo,
+};
 use crate::utils::AppError;
 
 pub struct OrganizationService {
@@ -191,10 +193,7 @@ impl OrganizationService {
         // 验证文件属于当前用户（避免越权共享）
         let files_repo = SqlxFilesRepo::new(self.pool.clone());
         use crate::repositories::traits::FilesRepository;
-        if !files_repo
-            .belongs_to_user(file_id, actor_user_id)
-            .await?
-        {
+        if !files_repo.belongs_to_user(file_id, actor_user_id).await? {
             return Err(AppError::Unauthorized);
         }
 
@@ -231,4 +230,3 @@ impl OrganizationService {
         Ok(files.into_iter().map(FileResponse::from).collect())
     }
 }
-

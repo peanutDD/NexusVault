@@ -88,12 +88,11 @@ impl<'a> ApiTokensRepo<'a> {
 
     /// 删除 API Token
     pub async fn delete(&self, token_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
-        let result =
-            sqlx::query("DELETE FROM api_tokens WHERE id = $1 AND user_id = $2")
-                .bind(token_id)
-                .bind(user_id)
-                .execute(self.pool)
-                .await?;
+        let result = sqlx::query("DELETE FROM api_tokens WHERE id = $1 AND user_id = $2")
+            .bind(token_id)
+            .bind(user_id)
+            .execute(self.pool)
+            .await?;
         Ok(result.rows_affected())
     }
 }

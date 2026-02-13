@@ -35,54 +35,43 @@ pub async fn proxy_image_handler(
         return Err(AppError::Validation("缺少 url 参数".into()));
     }
 
-    let parsed = Url::parse(&params.url)
-        .map_err(|_| AppError::Validation("无效的图片 URL".into()))?;
+    let parsed =
+        Url::parse(&params.url).map_err(|_| AppError::Validation("无效的图片 URL".into()))?;
 
     // 只允许 http/https，避免意外协议
     match parsed.scheme() {
         "http" | "https" => {}
-        _ => {
-            return Err(AppError::Validation(
-                "仅支持 http/https 图片 URL".into(),
-            ))
-        }
+        _ => return Err(AppError::Validation("仅支持 http/https 图片 URL".into())),
     }
 
     // 基本 SSRF 防护：禁止访问本地地址
     if let Some(host) = parsed.host_str() {
         let host_lower = host.to_ascii_lowercase();
-        if host_lower == "localhost"
-            || host_lower == "127.0.0.1"
-            || host_lower == "::1"
-        {
+        if host_lower == "localhost" || host_lower == "127.0.0.1" || host_lower == "::1" {
             return Err(AppError::Validation("不允许访问本地地址".into()));
         }
     }
 
     let client = reqwest::Client::new();
 
-    let upstream = client
-        .get(parsed)
-        .send()
-        .await
-        .map_err(|e| {
-            tracing::warn!("proxy image request failed: {}", e);
-            AppError::File("图片拉取失败".into())
-        })?;
+    let upstream = client.get(parsed).send().await.map_err(|e| {
+        tracing::warn!("proxy image request failed: {}", e);
+        AppError::File("图片拉取失败".into())
+    })?;
 
     if !upstream.status().is_success() {
         tracing::warn!("proxy image upstream status: {}", upstream.status());
         return Err(AppError::File("图片拉取失败".into()));
     }
-    let content_type = upstream.headers().get(reqwest::header::CONTENT_TYPE).cloned();
+    let content_type = upstream
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .cloned();
 
-    let body_bytes: Bytes = upstream
-        .bytes()
-        .await
-        .map_err(|e| {
-            tracing::warn!("proxy image read body failed: {}", e);
-            AppError::File("图片拉取失败".into())
-        })?;
+    let body_bytes: Bytes = upstream.bytes().await.map_err(|e| {
+        tracing::warn!("proxy image read body failed: {}", e);
+        AppError::File("图片拉取失败".into())
+    })?;
 
     let mut headers = HeaderMap::new();
     if let Some(ct) = content_type {
@@ -91,4 +80,3 @@ pub async fn proxy_image_handler(
 
     Ok((StatusCode::OK, headers, body_bytes))
 }
-

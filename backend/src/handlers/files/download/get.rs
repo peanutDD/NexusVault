@@ -29,12 +29,8 @@ pub async fn build_get_response(
         }
 
         if ranges.len() > 1 {
-            let (body, boundary) = build_multipart_body(
-                state.file_service.clone(),
-                file.clone(),
-                total_size,
-                ranges,
-            );
+            let (body, boundary) =
+                build_multipart_body(state.file_service.clone(), file.clone(), total_size, ranges);
 
             let mut res =
                 stream_file_response(body, &file.original_filename, &file.mime_type, inline, None)

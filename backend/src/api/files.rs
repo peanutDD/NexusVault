@@ -7,8 +7,7 @@ use axum::{
     extract::DefaultBodyLimit,
     http::StatusCode,
     routing::{delete, get, post, put},
-    Json,
-    Router,
+    Json, Router,
 };
 use serde_json::json;
 use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError, ServiceBuilder};
@@ -20,13 +19,12 @@ use crate::constants::{
 };
 use crate::handlers::files::{
     batch_delete_handler, batch_download_zip_handler, batch_download_zip_post_handler,
-    batch_get_handler, batch_move_handler, categories_handler,
-    chunked_upload_abort_handler, chunked_upload_chunk_handler, chunked_upload_complete_handler,
-    chunked_upload_init_handler, chunked_upload_status_handler, delete_file_handler,
-    delete_version_handler, download_file_handler, get_file_version_handler,
-    gif_video_preview_handler, hls_asset_handler, hls_playlist_handler,
-    instant_upload_handler, list_file_versions_handler, list_files_handler, preview_file_handler,
-    restore_version_handler, semantic_search_handler, storage_usage_handler,
+    batch_get_handler, batch_move_handler, categories_handler, chunked_upload_abort_handler,
+    chunked_upload_chunk_handler, chunked_upload_complete_handler, chunked_upload_init_handler,
+    chunked_upload_status_handler, delete_file_handler, delete_version_handler,
+    download_file_handler, get_file_version_handler, gif_video_preview_handler, hls_asset_handler,
+    hls_playlist_handler, instant_upload_handler, list_file_versions_handler, list_files_handler,
+    preview_file_handler, restore_version_handler, semantic_search_handler, storage_usage_handler,
     thumbnail_file_handler, update_version_label_handler, upload_file_handler,
     video_preview_prepare_handler, video_preview_status_handler,
 };
@@ -87,24 +85,23 @@ pub fn create_router() -> Router<AppState> {
         )
         .route(
             "/upload",
-            post(upload_file_handler)
-                .layer(
-                    ServiceBuilder::new()
-                        .layer(RequestBodyLimitLayer::new(MAX_UPLOAD_BODY))
-                        .layer(HandleErrorLayer::new(|err: BoxError| async move {
-                            tracing::warn!("concurrency limit triggered: {}", err);
-                            (
-                                StatusCode::SERVICE_UNAVAILABLE,
-                                Json(json!({
-                                    "error": "service overloaded",
-                                    "message": "服务器繁忙，请稍后重试",
-                                    "code": "SERVICE_OVERLOADED"
-                                })),
-                            )
-                        }))
-                        .layer(LoadShedLayer::new())
-                        .layer(ConcurrencyLimitLayer::new(UPLOAD_CONCURRENCY)),
-                ),
+            post(upload_file_handler).layer(
+                ServiceBuilder::new()
+                    .layer(RequestBodyLimitLayer::new(MAX_UPLOAD_BODY))
+                    .layer(HandleErrorLayer::new(|err: BoxError| async move {
+                        tracing::warn!("concurrency limit triggered: {}", err);
+                        (
+                            StatusCode::SERVICE_UNAVAILABLE,
+                            Json(json!({
+                                "error": "service overloaded",
+                                "message": "服务器繁忙，请稍后重试",
+                                "code": "SERVICE_OVERLOADED"
+                            })),
+                        )
+                    }))
+                    .layer(LoadShedLayer::new())
+                    .layer(ConcurrencyLimitLayer::new(UPLOAD_CONCURRENCY)),
+            ),
         )
         .route("/upload/instant", post(instant_upload_handler))
         .route(
@@ -129,24 +126,23 @@ pub fn create_router() -> Router<AppState> {
         // Chunk 用 Bytes extractor，须 DefaultBodyLimit 否则默认 2MB 拒收 5MB 块
         .route(
             "/upload/chunked/:id/chunk",
-            put(chunked_upload_chunk_handler)
-                .layer(
-                    ServiceBuilder::new()
-                        .layer(DefaultBodyLimit::max(MAX_CHUNK_BODY))
-                        .layer(HandleErrorLayer::new(|err: BoxError| async move {
-                            tracing::warn!("concurrency limit triggered: {}", err);
-                            (
-                                StatusCode::SERVICE_UNAVAILABLE,
-                                Json(json!({
-                                    "error": "service overloaded",
-                                    "message": "服务器繁忙，请稍后重试",
-                                    "code": "SERVICE_OVERLOADED"
-                                })),
-                            )
-                        }))
-                        .layer(LoadShedLayer::new())
-                        .layer(ConcurrencyLimitLayer::new(CHUNK_CONCURRENCY)),
-                ),
+            put(chunked_upload_chunk_handler).layer(
+                ServiceBuilder::new()
+                    .layer(DefaultBodyLimit::max(MAX_CHUNK_BODY))
+                    .layer(HandleErrorLayer::new(|err: BoxError| async move {
+                        tracing::warn!("concurrency limit triggered: {}", err);
+                        (
+                            StatusCode::SERVICE_UNAVAILABLE,
+                            Json(json!({
+                                "error": "service overloaded",
+                                "message": "服务器繁忙，请稍后重试",
+                                "code": "SERVICE_OVERLOADED"
+                            })),
+                        )
+                    }))
+                    .layer(LoadShedLayer::new())
+                    .layer(ConcurrencyLimitLayer::new(CHUNK_CONCURRENCY)),
+            ),
         )
         .route(
             "/upload/chunked/:id/status",
@@ -185,7 +181,10 @@ pub fn create_router() -> Router<AppState> {
             "/download-zip",
             get(batch_download_zip_handler).post(batch_download_zip_post_handler),
         )
-        .route("/:id/download", get(download_file_handler).head(download_file_handler))
+        .route(
+            "/:id/download",
+            get(download_file_handler).head(download_file_handler),
+        )
         // GIF → 视频预览（按需转码为 mp4，前端用 <video> 播放）
         .route("/:id/preview/video", get(gif_video_preview_handler))
         .route(
@@ -196,15 +195,24 @@ pub fn create_router() -> Router<AppState> {
             "/:id/preview/video/status",
             get(video_preview_status_handler),
         )
-        .route("/:id/preview", get(preview_file_handler).head(preview_file_handler))
+        .route(
+            "/:id/preview",
+            get(preview_file_handler).head(preview_file_handler),
+        )
         .route("/:id/thumbnail", get(thumbnail_file_handler))
         .route("/:id/hls", get(hls_playlist_handler))
         .route("/:id/hls/:filename", get(hls_asset_handler))
         // 文件版本管理
         .route("/:id/versions", get(list_file_versions_handler))
         .route("/versions/:version_id", get(get_file_version_handler))
-        .route("/versions/:version_id/label", put(update_version_label_handler))
-        .route("/:id/versions/:version_id/restore", post(restore_version_handler))
+        .route(
+            "/versions/:version_id/label",
+            put(update_version_label_handler),
+        )
+        .route(
+            "/:id/versions/:version_id/restore",
+            post(restore_version_handler),
+        )
         .route("/versions/:version_id", delete(delete_version_handler))
         .route("/:id", delete(delete_file_handler))
 }

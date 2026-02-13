@@ -46,8 +46,7 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
     ) -> Result<Self, Self::Rejection> {
         // 从请求头中提取 Authorization token
         let headers = &parts.headers;
-        let user_id =
-            extract_user_id_from_headers(headers, &state.config, &state.pool).await?;
+        let user_id = extract_user_id_from_headers(headers, &state.config, &state.pool).await?;
 
         Ok(AuthenticatedUser(user_id))
     }
@@ -139,10 +138,8 @@ pub(crate) async fn extract_user_id_from_token(
     }
 
     // 如果 JWT 失败，尝试 API token
-    let token_service = crate::services::api_token::ApiTokenService::new(
-        pool.clone(),
-        config.jwt_secret.clone(),
-    );
+    let token_service =
+        crate::services::api_token::ApiTokenService::new(pool.clone(), config.jwt_secret.clone());
     let user_id = token_service.verify_token(token).await?;
     tracing::debug!(user_id = %user_id, "Authenticated via API token");
     Ok(user_id)

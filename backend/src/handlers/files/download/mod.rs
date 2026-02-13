@@ -213,9 +213,9 @@ fn default_thumb_size() -> u32 {
     400
 }
 
-/// 图片缩略图（方案 B：先读盘，无则生成并写盘；GIF 只解第一帧；Ugoira 取首帧）
+/// 图片缩略图（方案 B：先读盘，无则生成并写盘；GIF 只解第一帧）
 ///
-/// 支持 `image/*` 与 Ugoira（`application/x-ugoira` 或 `application/zip` + `.ugoira`），返回 JPEG 缩略图。
+/// 仅支持 `image/*`，返回 JPEG 缩略图。
 /// 支持 ETag 条件请求，命中缓存时返回 304。
 pub async fn thumbnail_file_handler(
     State(state): State<AppState>,
@@ -226,12 +226,7 @@ pub async fn thumbnail_file_handler(
 ) -> Result<Response, AppError> {
     let file = state.file_service.get_file(file_id, user_id).await?;
 
-    let fname = file.original_filename.to_lowercase();
-    let is_ugoira = fname.ends_with(".ugoira");
-    let is_supported = file.mime_type.starts_with("image/")
-        || file.mime_type == "application/x-ugoira"
-        || ((file.mime_type == "application/zip" || file.mime_type == "application/octet-stream")
-            && is_ugoira);
+    let is_supported = file.mime_type.starts_with("image/");
     if !is_supported {
         return Err(AppError::NotFound);
     }
@@ -248,10 +243,18 @@ pub async fn thumbnail_file_handler(
     let etag_header = HeaderValue::from_str(&thumbnail_etag).map_err(|_| AppError::Internal)?;
 
     // 检查 If-None-Match 条件请求
-    if let Some(if_none_match) = headers.get(header::IF_NONE_MATCH).and_then(|v| v.to_str().ok()) {
+    if let Some(if_none_match) = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok())
+    {
         if if_none_match == thumbnail_etag.as_str() {
             // 检查缩略图是否存在（磁盘缓存）
-            if state.file_service.get_thumbnail(file_id, user_id).await.is_ok() {
+            if state
+                .file_service
+                .get_thumbnail(file_id, user_id)
+                .await
+                .is_ok()
+            {
                 tracing::info!(
                     file_id = %file_id,
                     width = w,
@@ -277,8 +280,8 @@ pub async fn thumbnail_file_handler(
             size_bytes = cached.len(),
             "thumbnail served from disk cache (200 OK)"
         );
-        let mut res =
-            file_response(cached, "thumb.jpg", "image/jpeg", true).map_err(|_| AppError::Internal)?;
+        let mut res = file_response(cached, "thumb.jpg", "image/jpeg", true)
+            .map_err(|_| AppError::Internal)?;
         res.headers_mut().insert(header::ETAG, etag_header);
         res.headers_mut().insert(
             header::CACHE_CONTROL,
@@ -307,7 +310,11 @@ pub async fn thumbnail_file_handler(
         Err(e) => return Err(e),
     };
 
-    if let Err(e) = state.file_service.save_thumbnail(file_id, user_id, &buf).await {
+    if let Err(e) = state
+        .file_service
+        .save_thumbnail(file_id, user_id, &buf)
+        .await
+    {
         tracing::warn!(file_id = %file_id, error = %e, "缩略图生成成功但保存失败，下次请求将重新生成");
     }
 
@@ -360,7 +367,9 @@ fn rewrite_hls_segment_refs(data: &[u8]) -> Vec<u8> {
         if !trimmed.is_empty()
             && !trimmed.starts_with('#')
             && trimmed.ends_with(".ts")
-            && trimmed.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
+            && trimmed
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
         {
             let _ = write!(out, "hls/{}\n", trimmed);
         } else {
@@ -390,7 +399,9 @@ pub async fn hls_asset_handler(
         return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
     }
     let path = out_dir.join(&filename);
-    let parent = path.parent().ok_or_else(|| AppError::Validation("无效的 HLS 资源名".to_string()))?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| AppError::Validation("无效的 HLS 资源名".to_string()))?;
     if parent != out_dir.as_path() {
         return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
     }

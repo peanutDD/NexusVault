@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use crate::extractors::AuthenticatedUser;
 use crate::models::file::{BatchDeleteRequest, BatchGetRequest, BatchMoveRequest};
 use crate::services::file::run_zip_writer_thread;
-use crate::utils::{file_response, stream_file_response, json_response, parse_uuid_list, AppError};
+use crate::utils::{file_response, json_response, parse_uuid_list, stream_file_response, AppError};
 use crate::AppState;
 
 /// 批量按 ID 查询文件元数据
@@ -34,7 +34,10 @@ pub async fn batch_get_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchGetRequest>,
 ) -> Result<Response, AppError> {
-    let files = state.file_service.get_files_by_ids(user_id, &req.ids).await?;
+    let files = state
+        .file_service
+        .get_files_by_ids(user_id, &req.ids)
+        .await?;
     Ok(json_response(json!({ "files": files })))
 }
 

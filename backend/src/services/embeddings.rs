@@ -59,8 +59,11 @@ impl EmbeddingService {
             return Err(AppError::Validation("文本不能为空".to_string()));
         }
 
-        let url = format!("{}/pipeline/feature-extraction/{}", self.api_url, self.model_id);
-        
+        let url = format!(
+            "{}/pipeline/feature-extraction/{}",
+            self.api_url, self.model_id
+        );
+
         let mut request = self.client.post(&url).json(&EmbeddingRequest {
             inputs: text.to_string(),
         });
@@ -83,10 +86,7 @@ impl EmbeddingService {
                 status,
                 error_text
             );
-            return Err(AppError::File(format!(
-                "嵌入生成失败: HTTP {}",
-                status
-            )));
+            return Err(AppError::File(format!("嵌入生成失败: HTTP {}", status)));
         }
 
         // 解析响应：Hugging Face API 返回的是二维数组 [[f32, f32, ...]]
@@ -117,8 +117,11 @@ impl EmbeddingService {
             return Ok(Vec::new());
         }
 
-        let url = format!("{}/pipeline/feature-extraction/{}", self.api_url, self.model_id);
-        
+        let url = format!(
+            "{}/pipeline/feature-extraction/{}",
+            self.api_url, self.model_id
+        );
+
         let mut request = self.client.post(&url).json(&serde_json::json!({
             "inputs": texts
         }));
@@ -140,10 +143,7 @@ impl EmbeddingService {
                 status,
                 error_text
             );
-            return Err(AppError::File(format!(
-                "批量嵌入生成失败: HTTP {}",
-                status
-            )));
+            return Err(AppError::File(format!("批量嵌入生成失败: HTTP {}", status)));
         }
 
         let embeddings: Vec<Vec<f32>> = response.json().await.map_err(|e| {

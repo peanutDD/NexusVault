@@ -76,7 +76,9 @@ pub async fn list_folders_handler(
     Query(query): Query<FolderListQuery>,
 ) -> Result<Response, AppError> {
     let folder_service = FolderService::from_state(&state);
-    let folders = folder_service.list_folders(user_id, query.parent_id).await?;
+    let folders = folder_service
+        .list_folders(user_id, query.parent_id)
+        .await?;
     Ok(json_response(json!({ "folders": folders })))
 }
 

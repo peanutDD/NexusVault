@@ -5,12 +5,12 @@
 use axum::routing::{get, post, put};
 use axum::Router;
 
+use crate::api::oauth_github::{github_oauth_callback_handler, github_oauth_url_handler};
+use crate::api::oauth_google::{google_oauth_callback_handler, google_oauth_url_handler};
 use crate::handlers::auth::{
     change_password_handler, check_profile_availability_handler, login_handler, me_handler,
     register_handler, send_email_verification_handler, update_profile_handler,
 };
-use crate::api::oauth_github::{github_oauth_callback_handler, github_oauth_url_handler};
-use crate::api::oauth_google::{google_oauth_callback_handler, google_oauth_url_handler};
 use crate::AppState;
 
 /// 创建认证相关的路由
@@ -30,18 +30,18 @@ pub fn create_router() -> Router<AppState> {
         .route("/me", get(me_handler))
         .route("/change-password", put(change_password_handler))
         .route("/update-profile", put(update_profile_handler))
-        .route("/send-email-verification", post(send_email_verification_handler))
-        .route("/check-profile-availability", get(check_profile_availability_handler))
+        .route(
+            "/send-email-verification",
+            post(send_email_verification_handler),
+        )
+        .route(
+            "/check-profile-availability",
+            get(check_profile_availability_handler),
+        )
         // 第三方登录：GitHub OAuth
         .route("/oauth/github/url", get(github_oauth_url_handler))
-        .route(
-            "/oauth/github/callback",
-            get(github_oauth_callback_handler),
-        )
+        .route("/oauth/github/callback", get(github_oauth_callback_handler))
         // 第三方登录：Google OAuth
         .route("/oauth/google/url", get(google_oauth_url_handler))
-        .route(
-            "/oauth/google/callback",
-            get(google_oauth_callback_handler),
-        )
+        .route("/oauth/google/callback", get(google_oauth_callback_handler))
 }

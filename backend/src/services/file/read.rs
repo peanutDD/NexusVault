@@ -63,7 +63,12 @@ impl FileService {
     }
 
     /// 保存缩略图（方案 B：首次生成后写盘），按用户隔离存放。
-    pub async fn save_thumbnail(&self, file_id: Uuid, user_id: Uuid, data: &[u8]) -> Result<(), AppError> {
+    pub async fn save_thumbnail(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+        data: &[u8],
+    ) -> Result<(), AppError> {
         self.storage.save_thumbnail(file_id, user_id, data).await
     }
 

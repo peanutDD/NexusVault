@@ -65,4 +65,3 @@ pub fn parse_part_number(params: &HashMap<String, String>) -> Result<u32, AppErr
             AppError::Validation("Missing or invalid 'part' query parameter".to_string())
         })
 }
-

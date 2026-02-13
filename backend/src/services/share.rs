@@ -13,7 +13,9 @@ use crate::{
         BatchShareRequest, BatchShareResponse, CreateShareRequest, FileShare, ShareResponse,
     },
     repositories::{DynFilesRepo, SharesRepo, SqlxFilesRepo},
-    utils::{calculate_expiration, generate_random_token, hash_password, verify_password, AppError},
+    utils::{
+        calculate_expiration, generate_random_token, hash_password, verify_password, AppError,
+    },
 };
 
 pub struct ShareService {
@@ -46,7 +48,11 @@ impl ShareService {
         let shares_repo = SharesRepo::new(&self.pool);
 
         // 验证文件属于该用户
-        if !self.files_repo.belongs_to_user(req.file_id, user_id).await? {
+        if !self
+            .files_repo
+            .belongs_to_user(req.file_id, user_id)
+            .await?
+        {
             return Err(AppError::NotFound);
         }
 

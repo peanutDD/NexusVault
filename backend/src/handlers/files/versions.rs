@@ -16,7 +16,10 @@ pub async fn list_file_versions_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let versions = state.file_service.list_file_versions(file_id, user_id).await?;
+    let versions = state
+        .file_service
+        .list_file_versions(file_id, user_id)
+        .await?;
     Ok(json_response(json!({ "versions": versions })))
 }
 
@@ -26,7 +29,10 @@ pub async fn get_file_version_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(version_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let version = state.file_service.get_file_version(version_id, user_id).await?;
+    let version = state
+        .file_service
+        .get_file_version(version_id, user_id)
+        .await?;
     Ok(json_response(json!({ "version": version })))
 }
 
@@ -37,7 +43,10 @@ pub async fn update_version_label_handler(
     Path(version_id): Path<Uuid>,
     axum::extract::Json(req): axum::extract::Json<UpdateVersionLabelRequest>,
 ) -> Result<Response, AppError> {
-    state.file_service.update_version_label(version_id, user_id, req).await?;
+    state
+        .file_service
+        .update_version_label(version_id, user_id, req)
+        .await?;
     Ok(json_response(json!({ "message": "版本标签已更新" })))
 }
 
@@ -48,7 +57,10 @@ pub async fn restore_version_handler(
     Path((file_id, version_id)): Path<(Uuid, Uuid)>,
     axum::extract::Json(req): axum::extract::Json<RestoreVersionRequest>,
 ) -> Result<Response, AppError> {
-    state.file_service.restore_version(file_id, version_id, user_id, req).await?;
+    state
+        .file_service
+        .restore_version(file_id, version_id, user_id, req)
+        .await?;
     Ok(json_response(json!({ "message": "版本已恢复" })))
 }
 
@@ -58,6 +70,9 @@ pub async fn delete_version_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Path(version_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    state.file_service.delete_version(version_id, user_id).await?;
+    state
+        .file_service
+        .delete_version(version_id, user_id)
+        .await?;
     Ok(json_response(json!({ "message": "版本已删除" })))
 }

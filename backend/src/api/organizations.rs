@@ -25,7 +25,10 @@ use crate::AppState;
 
 pub fn create_router() -> Router<AppState> {
     Router::new()
-        .route("/orgs", get(list_my_organizations).post(create_organization))
+        .route(
+            "/orgs",
+            get(list_my_organizations).post(create_organization),
+        )
         .route(
             "/orgs/:org_id/members",
             get(list_members).post(add_member_by_email),
@@ -78,9 +81,7 @@ async fn add_member_by_email(
     Json(req): Json<AddMemberRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let service = OrganizationService::from_state(&state);
-    let member = service
-        .add_member_by_email(user_id, org_id, req)
-        .await?;
+    let member = service.add_member_by_email(user_id, org_id, req).await?;
     Ok(Json(json!({ "member": member })))
 }
 
@@ -102,9 +103,7 @@ async fn link_file_to_org(
     Path((org_id, file_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let service = OrganizationService::from_state(&state);
-    service
-        .link_file_to_org(user_id, org_id, file_id)
-        .await?;
+    service.link_file_to_org(user_id, org_id, file_id).await?;
     Ok(Json(json!({ "ok": true })))
 }
 
@@ -120,4 +119,3 @@ async fn unlink_file_from_org(
         .await?;
     Ok(Json(json!({ "ok": true })))
 }
-

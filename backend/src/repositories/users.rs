@@ -70,14 +70,13 @@ impl UsersRepository for SqlxUsersRepo {
         email: &str,
         username: &str,
     ) -> Result<bool, AppError> {
-        let result: Option<(Uuid,)> = sqlx::query_as(
-            "SELECT id FROM users WHERE id != $1 AND (email = $2 OR username = $3)",
-        )
-        .bind(exclude_user_id)
-        .bind(email)
-        .bind(username)
-        .fetch_optional(&self.pool)
-        .await?;
+        let result: Option<(Uuid,)> =
+            sqlx::query_as("SELECT id FROM users WHERE id != $1 AND (email = $2 OR username = $3)")
+                .bind(exclude_user_id)
+                .bind(email)
+                .bind(username)
+                .fetch_optional(&self.pool)
+                .await?;
         Ok(result.is_some())
     }
 

@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
-# GIF files（本地转换输入/输出，体积大，不提交）
+# GIF files（本地转换输入，体积大，不提交）
 files/gif-files/
-files/gif2ugoira-files/
+
+# 本地 HTTPS 证书（仅开发环境使用，不提交）
+localhost.pem
+localhost-key.pem

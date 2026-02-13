@@ -43,11 +43,9 @@ uploads/
 backend/uploads/
 frontend/uploads/
 
-# GIF files（本地转换输入/输出，体积大，不提交）
+# GIF files（本地转换输入，体积大，不提交）
 frontend/files/gif-files/
-frontend/files/gif2ugoira-files/
 **/gif-files/
-**/gif2ugoira-files/
 
 # Logs
 *.log

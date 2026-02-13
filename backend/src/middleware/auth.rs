@@ -57,4 +57,3 @@ fn verify_token_simple(config: &Config, token: &str) -> Result<Uuid, AppError> {
 
     Ok(user_id)
 }
-

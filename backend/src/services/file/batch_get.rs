@@ -34,7 +34,8 @@ impl FileService {
             .into_iter()
             .map(|f| (f.id, FileResponse::from(f)))
             .collect();
-        let ordered: Vec<Option<FileResponse>> = ids.iter().map(|id| map.get(id).cloned()).collect();
+        let ordered: Vec<Option<FileResponse>> =
+            ids.iter().map(|id| map.get(id).cloned()).collect();
         Ok(ordered)
     }
 }

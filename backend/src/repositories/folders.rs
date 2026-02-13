@@ -23,7 +23,11 @@ impl<'a> FoldersRepo<'a> {
     // ========================================================================
 
     /// 根据 ID 获取文件夹
-    pub async fn find_by_id(&self, folder_id: Uuid, user_id: Uuid) -> Result<Option<Folder>, AppError> {
+    pub async fn find_by_id(
+        &self,
+        folder_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<Folder>, AppError> {
         sqlx::query_as::<_, Folder>(
             "SELECT id, user_id, name, parent_id, created_at, updated_at FROM folders WHERE id = $1 AND user_id = $2",
         )
@@ -206,7 +210,12 @@ impl<'a> FoldersRepo<'a> {
     }
 
     /// 重命名文件夹
-    pub async fn rename(&self, folder_id: Uuid, user_id: Uuid, name: &str) -> Result<Folder, AppError> {
+    pub async fn rename(
+        &self,
+        folder_id: Uuid,
+        user_id: Uuid,
+        name: &str,
+    ) -> Result<Folder, AppError> {
         sqlx::query_as::<_, Folder>(
             r#"
             UPDATE folders
@@ -272,13 +281,12 @@ impl<'a> FoldersRepo<'a> {
         folder_ids: &[Uuid],
         user_id: Uuid,
     ) -> Result<i64, AppError> {
-        let result: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM files WHERE folder_id = ANY($1) AND user_id = $2",
-        )
-        .bind(folder_ids)
-        .bind(user_id)
-        .fetch_one(self.pool)
-        .await?;
+        let result: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM files WHERE folder_id = ANY($1) AND user_id = $2")
+                .bind(folder_ids)
+                .bind(user_id)
+                .fetch_one(self.pool)
+                .await?;
         Ok(result.0)
     }
 
@@ -364,13 +372,12 @@ impl<'a> FoldersRepo<'a> {
         let folder_id_list: Vec<Uuid> = all_folder_ids.into_iter().map(|(id,)| id).collect();
 
         // 获取所有文件 ID
-        let file_ids: Vec<(Uuid,)> = sqlx::query_as(
-            "SELECT id FROM files WHERE folder_id = ANY($1) AND user_id = $2",
-        )
-        .bind(&folder_id_list)
-        .bind(user_id)
-        .fetch_all(self.pool)
-        .await?;
+        let file_ids: Vec<(Uuid,)> =
+            sqlx::query_as("SELECT id FROM files WHERE folder_id = ANY($1) AND user_id = $2")
+                .bind(&folder_id_list)
+                .bind(user_id)
+                .fetch_all(self.pool)
+                .await?;
 
         Ok(file_ids.into_iter().map(|(id,)| id).collect())
     }

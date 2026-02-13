@@ -2,7 +2,10 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
 
 fn env_u32(key: &str, default: u32) -> u32 {
-    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+    std::env::var(key)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
 }
 
 pub async fn create_pool(database_url: &str) -> anyhow::Result<PgPool> {

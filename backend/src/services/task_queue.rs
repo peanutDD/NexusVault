@@ -240,9 +240,8 @@ pub async fn run_gif_preview_worker(state: &crate::AppState) -> Result<(), AppEr
         None => return Ok(()),
     };
 
-    let payload: GifPreviewPayload = serde_json::from_value(task.payload.clone()).map_err(|e| {
-        AppError::File(format!("解析 gif_preview payload 失败: {}", e))
-    })?;
+    let payload: GifPreviewPayload = serde_json::from_value(task.payload.clone())
+        .map_err(|e| AppError::File(format!("解析 gif_preview payload 失败: {}", e)))?;
 
     let started_at = Instant::now();
 
@@ -328,5 +327,3 @@ pub async fn run_gif_preview_worker(state: &crate::AppState) -> Result<(), AppEr
 
     Ok(())
 }
-
-

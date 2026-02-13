@@ -294,7 +294,11 @@ impl IntoResponse for AppError {
                     details = %msg,
                     "Payload too large"
                 );
-                (StatusCode::PAYLOAD_TOO_LARGE, "PAYLOAD_TOO_LARGE", msg.clone())
+                (
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    "PAYLOAD_TOO_LARGE",
+                    msg.clone(),
+                )
             }
 
             // 请求过于频繁 - 429

@@ -27,9 +27,28 @@ impl FileService {
         self.ensure_can_store_quota_simple(user_id, &req.mime_type, req.total_size)
             .await?;
 
-        let active_count = crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
-            .count_active_sessions_by_user(user_id)
-            .await?;
+        let mut active_count =
+            crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
+                .count_active_sessions_by_user(user_id)
+                .await?;
+
+        // 如果达到上限，自动清理最旧的一个会话，为新上传腾出空间
+        if active_count >= MAX_CONCURRENT_CHUNKED_UPLOADS {
+            let repo = crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool);
+            if let Some((old_id, old_path)) = repo.get_oldest_active_session_by_user(user_id).await?
+            {
+                tracing::info!(
+                    user_id = %user_id,
+                    old_upload_id = %old_id,
+                    "max concurrent uploads reached, auto-aborting oldest session"
+                );
+                // 忽略物理删除错误，重点是清理 DB 记录
+                let _ = tokio::fs::remove_dir_all(&old_path).await;
+                repo.delete_session(old_id, user_id).await?;
+                active_count -= 1;
+            }
+        }
+
         if active_count >= MAX_CONCURRENT_CHUNKED_UPLOADS {
             return Err(AppError::Validation(format!(
                 "同时进行的分片上传不能超过 {} 个，请先完成或取消其他大文件上传",
@@ -116,9 +135,7 @@ impl FileService {
 
         if let Some(expected_hex) = part_sha256 {
             let actual = crate::utils::sha256_hex(&data);
-            if expected_hex.len() != 64
-                || !expected_hex.chars().all(|c| c.is_ascii_hexdigit())
-            {
+            if expected_hex.len() != 64 || !expected_hex.chars().all(|c| c.is_ascii_hexdigit()) {
                 return Err(AppError::Validation(
                     "X-Part-SHA256 须为 64 位十六进制".to_string(),
                 ));

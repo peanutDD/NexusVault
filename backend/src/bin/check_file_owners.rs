@@ -19,8 +19,8 @@
 //! 再注册过一次，会多出一个新 user_id；之后用新邮箱登录会进到新账号，旧文件仍在旧 user_id 下，
 //! 看起来就像「改了个名/邮箱就变成另一个账号」。正确做法是只在「设置 → 账户信息」里更新资料，不要用注册页。
 
-use std::path::Path;
 use sqlx::Row;
+use std::path::Path;
 use uuid::Uuid;
 
 #[tokio::main]
@@ -30,13 +30,13 @@ async fn main() -> anyhow::Result<()> {
     let delete_with_file = args.get(1).map(|s| s.as_str()) == Some("--delete-with-file");
     let delete_only = args.get(1).map(|s| s.as_str()) == Some("--delete");
     if delete_with_file || delete_only {
-        let file_id_str = args
-            .get(2)
-            .ok_or_else(|| anyhow::anyhow!("用法: --delete <file_id> 或 --delete-with-file <file_id>"))?;
-        let file_id = Uuid::parse_str(file_id_str)
-            .map_err(|e| anyhow::anyhow!("无效的 file_id: {}", e))?;
-        let url = std::env::var("DATABASE_URL")
-            .map_err(|_| anyhow::anyhow!("DATABASE_URL not set"))?;
+        let file_id_str = args.get(2).ok_or_else(|| {
+            anyhow::anyhow!("用法: --delete <file_id> 或 --delete-with-file <file_id>")
+        })?;
+        let file_id =
+            Uuid::parse_str(file_id_str).map_err(|e| anyhow::anyhow!("无效的 file_id: {}", e))?;
+        let url =
+            std::env::var("DATABASE_URL").map_err(|_| anyhow::anyhow!("DATABASE_URL not set"))?;
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(2)
             .connect(&url)
@@ -88,8 +88,7 @@ async fn main() -> anyhow::Result<()> {
         }
         return Ok(());
     }
-    let url = std::env::var("DATABASE_URL")
-        .map_err(|_| anyhow::anyhow!("DATABASE_URL not set"))?;
+    let url = std::env::var("DATABASE_URL").map_err(|_| anyhow::anyhow!("DATABASE_URL not set"))?;
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(2)
         .connect(&url)
@@ -150,14 +149,21 @@ async fn main() -> anyhow::Result<()> {
     }
 
     println!("\n=== 用户 {} 名下的文件数量 ===\n", storage_user_id);
-    let uid = Uuid::parse_str(storage_user_id)
-        .map_err(|e| anyhow::anyhow!("invalid UUID for storage_user_id {:?}: {}", storage_user_id, e))?;
-    let count: (i64,) =
-        sqlx::query_as("SELECT COUNT(*) FROM files WHERE user_id = $1")
-            .bind(uid)
-            .fetch_one(&pool)
-            .await?;
-    println!("  files 表中 user_id = {} 的记录数: {}", storage_user_id, count.0);
+    let uid = Uuid::parse_str(storage_user_id).map_err(|e| {
+        anyhow::anyhow!(
+            "invalid UUID for storage_user_id {:?}: {}",
+            storage_user_id,
+            e
+        )
+    })?;
+    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM files WHERE user_id = $1")
+        .bind(uid)
+        .fetch_one(&pool)
+        .await?;
+    println!(
+        "  files 表中 user_id = {} 的记录数: {}",
+        storage_user_id, count.0
+    );
 
     Ok(())
 }

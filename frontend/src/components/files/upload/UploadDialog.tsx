@@ -61,7 +61,7 @@ export default function UploadDialog({
   const maxBatchCount = getMaxBatchCount();
   /** 总文件数（20）超限时的提醒 */
   const [totalLimitWarning, setTotalLimitWarning] = useState('');
-  /** 大文件数（5）超限时的提醒 */
+  /** 大文件数（10）超限时的提醒 */
   const [largeLimitWarning, setLargeLimitWarning] = useState('');
   /** 重复文件（同名同大小）已忽略的提醒 */
   const [duplicateWarning, setDuplicateWarning] = useState('');
@@ -69,7 +69,7 @@ export default function UploadDialog({
   /** 文件唯一键：同名 + 同大小 + 同修改时间视为同一文件，用于去重 */
   const fileDedupKey = (f: File) => `${f.name}-${f.size}-${f.lastModified}`;
 
-  /** 唯一写入口：把 File[] 追加到上传列表。逻辑：先按同名同大小去重，再总数量最多 20、大文件最多 5，分开提醒。 */
+  /** 唯一写入口：把 File[] 追加到上传列表。逻辑：先按同名同大小去重，再总数量最多 20、大文件最多 10，分开提醒。 */
   const appendFilesToState = useCallback(
     (files: File[]) => {
       if (files.length === 0) return;

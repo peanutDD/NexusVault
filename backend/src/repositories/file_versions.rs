@@ -59,7 +59,11 @@ impl FileVersionsRepository for SqlxFileVersionsRepo {
         .map_err(AppError::from)
     }
 
-    async fn list_versions(&self, file_id: Uuid, user_id: Uuid) -> Result<Vec<FileVersion>, AppError> {
+    async fn list_versions(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Vec<FileVersion>, AppError> {
         sqlx::query_as::<_, FileVersion>(
             "SELECT * FROM file_versions
              WHERE file_id = $1 AND user_id = $2
@@ -72,7 +76,11 @@ impl FileVersionsRepository for SqlxFileVersionsRepo {
         .map_err(AppError::from)
     }
 
-    async fn get_version(&self, version_id: Uuid, user_id: Uuid) -> Result<Option<FileVersion>, AppError> {
+    async fn get_version(
+        &self,
+        version_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<FileVersion>, AppError> {
         sqlx::query_as::<_, FileVersion>(
             "SELECT * FROM file_versions
              WHERE id = $1 AND user_id = $2",
@@ -89,19 +97,23 @@ impl FileVersionsRepository for SqlxFileVersionsRepo {
             .bind(file_id)
             .fetch_one(&self.pool)
             .await?;
-        
+
         Ok(row.try_get::<i32, _>("max_version")?)
     }
 
-    async fn update_label(&self, version_id: Uuid, user_id: Uuid, label: Option<&str>) -> Result<(), AppError> {
-        let affected = sqlx::query(
-            "UPDATE file_versions SET label = $1 WHERE id = $2 AND user_id = $3",
-        )
-        .bind(label)
-        .bind(version_id)
-        .bind(user_id)
-        .execute(&self.pool)
-        .await?;
+    async fn update_label(
+        &self,
+        version_id: Uuid,
+        user_id: Uuid,
+        label: Option<&str>,
+    ) -> Result<(), AppError> {
+        let affected =
+            sqlx::query("UPDATE file_versions SET label = $1 WHERE id = $2 AND user_id = $3")
+                .bind(label)
+                .bind(version_id)
+                .bind(user_id)
+                .execute(&self.pool)
+                .await?;
 
         if affected.rows_affected() == 0 {
             return Err(AppError::NotFound);
@@ -137,7 +149,11 @@ impl FileVersionsRepository for SqlxFileVersionsRepo {
         Ok(file_path)
     }
 
-    async fn cleanup_old_versions(&self, file_id: Uuid, keep_count: i32) -> Result<Vec<String>, AppError> {
+    async fn cleanup_old_versions(
+        &self,
+        file_id: Uuid,
+        keep_count: i32,
+    ) -> Result<Vec<String>, AppError> {
         // 查询需要删除的版本（保留最新的 keep_count 个）
         let rows = sqlx::query(
             "SELECT id, file_path FROM file_versions

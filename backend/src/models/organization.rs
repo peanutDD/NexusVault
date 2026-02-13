@@ -107,4 +107,3 @@ pub struct AddMemberRequest {
     /// 角色：owner / admin / member
     pub role: String,
 }
-

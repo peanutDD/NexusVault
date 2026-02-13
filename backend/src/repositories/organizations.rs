@@ -62,7 +62,17 @@ impl OrganizationsRepo {
         &self,
         user_id: Uuid,
     ) -> Result<Vec<(Organization, OrganizationRole)>, AppError> {
-        let rows = sqlx::query_as::<_, (Uuid, String, Uuid, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>, String)>(
+        let rows = sqlx::query_as::<
+            _,
+            (
+                Uuid,
+                String,
+                Uuid,
+                chrono::DateTime<chrono::Utc>,
+                chrono::DateTime<chrono::Utc>,
+                String,
+            ),
+        >(
             r#"
             SELECT
                 o.id,
@@ -83,20 +93,22 @@ impl OrganizationsRepo {
 
         let result = rows
             .into_iter()
-            .filter_map(|(id, name, owner_user_id, created_at, updated_at, role_str)| {
-                OrganizationRole::from_str(&role_str).map(|role| {
-                    (
-                        Organization {
-                            id,
-                            name,
-                            owner_user_id,
-                            created_at,
-                            updated_at,
-                        },
-                        role,
-                    )
-                })
-            })
+            .filter_map(
+                |(id, name, owner_user_id, created_at, updated_at, role_str)| {
+                    OrganizationRole::from_str(&role_str).map(|role| {
+                        (
+                            Organization {
+                                id,
+                                name,
+                                owner_user_id,
+                                created_at,
+                                updated_at,
+                            },
+                            role,
+                        )
+                    })
+                },
+            )
             .collect();
 
         Ok(result)
@@ -118,9 +130,7 @@ impl OrganizationsRepo {
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(row.and_then(|m| {
-            OrganizationRole::from_str(&m.role).map(|role| (m, role))
-        }))
+        Ok(row.and_then(|m| OrganizationRole::from_str(&m.role).map(|role| (m, role))))
     }
 
     /// 列出组织成员
@@ -140,9 +150,7 @@ impl OrganizationsRepo {
 
         Ok(rows
             .into_iter()
-            .filter_map(|m| {
-                OrganizationRole::from_str(&m.role).map(|role| (m, role))
-            })
+            .filter_map(|m| OrganizationRole::from_str(&m.role).map(|role| (m, role)))
             .collect())
     }
 
@@ -169,11 +177,7 @@ impl OrganizationsRepo {
     }
 
     /// 将文件关联到组织（团队空间）
-    pub async fn link_file_to_org(
-        &self,
-        org_id: Uuid,
-        file_id: Uuid,
-    ) -> Result<(), AppError> {
+    pub async fn link_file_to_org(&self, org_id: Uuid, file_id: Uuid) -> Result<(), AppError> {
         let id = Uuid::new_v4();
         sqlx::query(
             "INSERT INTO organization_files (id, org_id, file_id)
@@ -189,26 +193,17 @@ impl OrganizationsRepo {
     }
 
     /// 取消文件与组织的关联
-    pub async fn unlink_file_from_org(
-        &self,
-        org_id: Uuid,
-        file_id: Uuid,
-    ) -> Result<(), AppError> {
-        sqlx::query(
-            "DELETE FROM organization_files WHERE org_id = $1 AND file_id = $2",
-        )
-        .bind(org_id)
-        .bind(file_id)
-        .execute(&self.pool)
-        .await?;
+    pub async fn unlink_file_from_org(&self, org_id: Uuid, file_id: Uuid) -> Result<(), AppError> {
+        sqlx::query("DELETE FROM organization_files WHERE org_id = $1 AND file_id = $2")
+            .bind(org_id)
+            .bind(file_id)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
     /// 列出组织下共享的所有文件
-    pub async fn list_files_for_org(
-        &self,
-        org_id: Uuid,
-    ) -> Result<Vec<File>, AppError> {
+    pub async fn list_files_for_org(&self, org_id: Uuid) -> Result<Vec<File>, AppError> {
         let files: Vec<File> = sqlx::query_as(
             r#"
             SELECT f.*
@@ -225,4 +220,3 @@ impl OrganizationsRepo {
         Ok(files)
     }
 }
-

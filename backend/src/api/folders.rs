@@ -9,9 +9,8 @@ use axum::{
 
 use crate::handlers::folders::{
     create_folder_handler, delete_folder_handler, get_files_in_folders_handler,
-    get_folder_contents_handler, get_folder_handler, get_folder_path_handler,
-    list_folders_handler, move_files_to_folder_handler, move_folder_handler,
-    rename_folder_handler,
+    get_folder_contents_handler, get_folder_handler, get_folder_path_handler, list_folders_handler,
+    move_files_to_folder_handler, move_folder_handler, rename_folder_handler,
 };
 use crate::AppState;
 

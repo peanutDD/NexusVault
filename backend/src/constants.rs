@@ -68,7 +68,7 @@ pub const CHUNK_CONCURRENCY: usize = 10;
 pub const COMPLETE_CONCURRENCY: usize = 2;
 
 /// 每用户同时进行的分片上传数量上限（与前端约定一致，大文件一次最多 N 个）
-pub const MAX_CONCURRENT_CHUNKED_UPLOADS: i64 = 5;
+pub const MAX_CONCURRENT_CHUNKED_UPLOADS: i64 = 10;
 
 // ============================================================================
 // HTTP 响应头
@@ -88,7 +88,9 @@ pub const CACHE_CONTROL_THUMBNAIL: &str = "public, max-age=86400";
 // ============================================================================
 
 /// API Token 生成字符集
-pub const API_TOKEN_CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+pub const API_TOKEN_CHARSET: &[u8] =
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 /// 通用随机字符串字符集
-pub const RANDOM_TOKEN_CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+pub const RANDOM_TOKEN_CHARSET: &[u8] =
+    b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

@@ -34,7 +34,10 @@ impl FolderService {
     /// 该 `new` 方法主要预留给单元测试或未来拆分模块单独注入 `PgPool` 的场景。
     #[allow(dead_code)]
     pub fn new(pool: PgPool) -> Self {
-        Self { pool, storage: None }
+        Self {
+            pool,
+            storage: None,
+        }
     }
 
     /// 创建带存储后端的 FolderService 实例
@@ -64,9 +67,7 @@ impl FolderService {
             return Err(AppError::Validation("文件夹名称过长".to_string()));
         }
         if name.contains('/') || name.contains('\\') || name.contains('\0') {
-            return Err(AppError::Validation(
-                "文件夹名称包含非法字符".to_string(),
-            ));
+            return Err(AppError::Validation("文件夹名称包含非法字符".to_string()));
         }
         Ok(name.to_string())
     }
@@ -175,9 +176,15 @@ impl FolderService {
 
         // 获取当前文件夹信息和路径
         let (current, path) = if let Some(fid) = folder_id {
-            let folder = repo.find_by_id(fid, user_id).await?.ok_or(AppError::NotFound)?;
+            let folder = repo
+                .find_by_id(fid, user_id)
+                .await?
+                .ok_or(AppError::NotFound)?;
             let path_folders = repo.get_path(fid, user_id).await?;
-            (Some(folder.into()), path_folders.into_iter().map(|f| f.into()).collect())
+            (
+                Some(folder.into()),
+                path_folders.into_iter().map(|f| f.into()).collect(),
+            )
         } else {
             (None, vec![])
         };
@@ -237,9 +244,7 @@ impl FolderService {
 
         // 不能移动到自身
         if req.parent_id == Some(folder_id) {
-            return Err(AppError::Validation(
-                "不能将文件夹移动到自身".to_string(),
-            ));
+            return Err(AppError::Validation("不能将文件夹移动到自身".to_string()));
         }
 
         // 获取当前文件夹信息
@@ -255,7 +260,10 @@ impl FolderService {
             }
 
             // 检查是否会造成循环
-            if repo.is_descendant_of(folder_id, new_parent_id, user_id).await? {
+            if repo
+                .is_descendant_of(folder_id, new_parent_id, user_id)
+                .await?
+            {
                 return Err(AppError::Validation(
                     "不能将文件夹移动到其子文件夹中".to_string(),
                 ));
@@ -267,9 +275,7 @@ impl FolderService {
             .name_exists_in_parent(user_id, req.parent_id, &current.name, Some(folder_id))
             .await?
         {
-            return Err(AppError::Validation(
-                "目标位置已存在同名文件夹".to_string(),
-            ));
+            return Err(AppError::Validation("目标位置已存在同名文件夹".to_string()));
         }
 
         // 移动文件夹

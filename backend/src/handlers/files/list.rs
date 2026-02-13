@@ -48,7 +48,7 @@ pub async fn list_files_handler(
     let mut response = json!({
         "files": files,
     });
-    
+
     if next_cursor.is_some() {
         // 游标分页响应
         response["next_cursor"] = json!(next_cursor);

@@ -13,7 +13,8 @@ use crate::AppState;
 /// 初始化 Prometheus metrics exporter
 ///
 /// 返回一个可以挂载的 metrics 端点处理器；安装失败时返回错误，由调用方统一处理。
-pub fn init_metrics() -> Result<impl Fn() -> String + Clone, metrics_exporter_prometheus::BuildError> {
+pub fn init_metrics() -> Result<impl Fn() -> String + Clone, metrics_exporter_prometheus::BuildError>
+{
     let builder = metrics_exporter_prometheus::PrometheusBuilder::new();
     let handle = builder.install_recorder()?;
     Ok(move || handle.render())
@@ -25,27 +26,23 @@ pub fn init_metrics() -> Result<impl Fn() -> String + Clone, metrics_exporter_pr
 /// - `http_requests_total`: HTTP 请求总数（按方法、路径、状态码分组）
 /// - `http_request_duration_seconds`: HTTP 请求延迟直方图
 /// - `http_requests_in_flight`: 当前正在处理的请求数
-pub async fn metrics_middleware(
-    State(_): State<AppState>,
-    req: Request,
-    next: Next,
-) -> Response {
+pub async fn metrics_middleware(State(_): State<AppState>, req: Request, next: Next) -> Response {
     let method = req.method().to_string();
     let path = req.uri().path().to_string();
-    
+
     // 简化路径（移除动态参数）
     let path_pattern = simplify_path(&path);
-    
+
     // 记录 in-flight 请求
     gauge!("http_requests_in_flight").increment(1.0);
-    
+
     let start = Instant::now();
     let response = next.run(req).await;
     let duration = start.elapsed();
-    
+
     // 减少 in-flight 请求
     gauge!("http_requests_in_flight").decrement(1.0);
-    
+
     let status = response.status().as_u16().to_string();
     let status_class = match response.status().as_u16() {
         200..=299 => "2xx",
@@ -54,7 +51,7 @@ pub async fn metrics_middleware(
         500..=599 => "5xx",
         _ => "other",
     };
-    
+
     // 记录请求计数
     counter!(
         "http_requests_total",
@@ -64,7 +61,7 @@ pub async fn metrics_middleware(
         "status_class" => status_class
     )
     .increment(1);
-    
+
     // 记录请求延迟
     histogram!(
         "http_request_duration_seconds",
@@ -72,7 +69,7 @@ pub async fn metrics_middleware(
         "path" => path_pattern
     )
     .record(duration.as_secs_f64());
-    
+
     response
 }
 
@@ -91,8 +88,7 @@ fn simplify_path(path: &str) -> String {
             // 纯数字
             else if part.chars().all(|c| c.is_ascii_digit()) && !part.is_empty() {
                 ":id".to_string()
-            }
-            else {
+            } else {
                 part.to_string()
             }
         })
@@ -108,7 +104,7 @@ fn simplify_path(path: &str) -> String {
 #[allow(dead_code)]
 pub fn record_db_query(operation: &str, table: &str, duration_ms: u64, success: bool) {
     let status = if success { "success" } else { "error" };
-    
+
     counter!(
         "db_queries_total",
         "operation" => operation.to_string(),
@@ -116,7 +112,7 @@ pub fn record_db_query(operation: &str, table: &str, duration_ms: u64, success: 
         "status" => status
     )
     .increment(1);
-    
+
     histogram!(
         "db_query_duration_seconds",
         "operation" => operation.to_string(),
@@ -133,14 +129,14 @@ pub fn record_db_query(operation: &str, table: &str, duration_ms: u64, success: 
 #[allow(dead_code)]
 pub fn record_file_operation(operation: &str, size_bytes: u64, success: bool) {
     let status = if success { "success" } else { "error" };
-    
+
     counter!(
         "file_operations_total",
         "operation" => operation.to_string(),
         "status" => status
     )
     .increment(1);
-    
+
     if success && size_bytes > 0 {
         histogram!(
             "file_operation_size_bytes",
@@ -158,7 +154,7 @@ pub fn record_file_operation(operation: &str, size_bytes: u64, success: bool) {
 #[allow(dead_code)]
 pub fn record_auth_attempt(method: &str, success: bool) {
     let status = if success { "success" } else { "failure" };
-    
+
     counter!(
         "auth_attempts_total",
         "method" => method.to_string(),

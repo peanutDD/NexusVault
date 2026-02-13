@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react';
 import compression from 'vite-plugin-compression';
 import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -95,6 +100,14 @@ export default defineConfig({
     host: '0.0.0.0',
     // 允许任意 Host（本地开发环境，方便同时用 IP 和 files.local 访问）
     allowedHosts: true,
+    // 开发环境下将 /api/* 请求代理到后端
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   build: {
     target: 'es2015',

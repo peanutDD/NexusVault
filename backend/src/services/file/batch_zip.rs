@@ -117,10 +117,8 @@ impl FileService {
         }
 
         // 先用数据库聚合校验总大小（避免提前读入所有文件数据）
-        let (found_count, total_size) = self
-            .files_repo
-            .sum_size_for_ids(user_id, &uniq_ids)
-            .await?;
+        let (found_count, total_size) =
+            self.files_repo.sum_size_for_ids(user_id, &uniq_ids).await?;
 
         if found_count <= 0 {
             return Err(AppError::Validation("没有可下载的文件".to_string()));
@@ -200,10 +198,8 @@ impl FileService {
             )));
         }
 
-        let (found_count, total_size) = self
-            .files_repo
-            .sum_size_for_ids(user_id, &uniq_ids)
-            .await?;
+        let (found_count, total_size) =
+            self.files_repo.sum_size_for_ids(user_id, &uniq_ids).await?;
 
         if found_count <= 0 {
             return Err(AppError::Validation("没有可下载的文件".to_string()));
@@ -257,8 +253,8 @@ pub fn run_zip_writer_thread(
         let mut zip = ZipWriter::new(&mut writer);
         while let Ok((name_opt, data)) = input_rx.recv() {
             if let Some(entry_name) = name_opt {
-                let options: zip::write::FileOptions<()> =
-                    zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
+                let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+                    .compression_method(CompressionMethod::Deflated);
                 if zip.start_file(&entry_name, options).is_err() {
                     break;
                 }

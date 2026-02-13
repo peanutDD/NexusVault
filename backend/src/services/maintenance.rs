@@ -137,12 +137,16 @@ async fn cleanup_missing_storage_files_once(
                 if let Err(e) = files_repo.delete(id, user_id).await {
                     tracing::warn!(
                         "failed to delete orphan file record id={} user_id={}: {}",
-                        id, user_id, e
+                        id,
+                        user_id,
+                        e
                     );
                 } else {
                     tracing::info!(
                         "deleted orphan file record id={} user_id={} (missing storage file: {})",
-                        id, user_id, file_path
+                        id,
+                        user_id,
+                        file_path
                     );
                 }
             }
@@ -213,10 +217,7 @@ async fn delete_orphan_storage_files_once(
         if !user_path.is_dir() {
             continue; // 只处理子目录（用户目录）
         }
-        let user_name = user_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let user_name = user_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if SKIP_DIRS.contains(&user_name) {
             continue; // .thumbnails、.hls、.chunked 不当作 user_id
         }
@@ -225,7 +226,14 @@ async fn delete_orphan_storage_files_once(
             Err(_) => continue, // 非 UUID 目录名跳过
         };
 
-        let _ = scan_user_dir_for_orphans(&files_repo, user_path.to_path_buf(), user_id, &mut deleted, batch_limit).await?;
+        let _ = scan_user_dir_for_orphans(
+            &files_repo,
+            user_path.to_path_buf(),
+            user_id,
+            &mut deleted,
+            batch_limit,
+        )
+        .await?;
         if deleted >= batch_limit {
             tracing::info!("orphan cleanup cycle finished, removed {} file(s)", deleted);
             return Ok(deleted);
@@ -258,10 +266,7 @@ async fn scan_user_dir_for_orphans(
         if *deleted >= batch_limit {
             break;
         }
-        let dir_name = dir
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let dir_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let file_id: Uuid = match dir_name.parse() {
             Ok(u) => u,
             Err(_) => {
@@ -295,12 +300,28 @@ async fn scan_user_dir_for_orphans(
 
         // 攒够一批则一次性查库并删除孤儿
         if pending.len() >= ORPHAN_DB_BATCH_SIZE {
-            flush_orphan_batch(files_repo, user_id, deleted, batch_limit, &mut pending, &mut total).await?;
+            flush_orphan_batch(
+                files_repo,
+                user_id,
+                deleted,
+                batch_limit,
+                &mut pending,
+                &mut total,
+            )
+            .await?;
         }
     }
 
     // 处理剩余 pending
-    flush_orphan_batch(files_repo, user_id, deleted, batch_limit, &mut pending, &mut total).await?;
+    flush_orphan_batch(
+        files_repo,
+        user_id,
+        deleted,
+        batch_limit,
+        &mut pending,
+        &mut total,
+    )
+    .await?;
     Ok(total)
 }
 

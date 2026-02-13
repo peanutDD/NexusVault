@@ -100,4 +100,38 @@ impl<'a> UploadSessionsRepo<'a> {
         .await?;
         Ok(row.0)
     }
+
+    /// 获取该用户最旧的一个活跃会话
+    pub async fn get_oldest_active_session_by_user(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Option<(Uuid, String)>, AppError> {
+        let row: Option<(Uuid, String)> = sqlx::query_as(
+            "SELECT id, temp_path FROM upload_sessions 
+            WHERE user_id = $1 AND expires_at > NOW() 
+            ORDER BY created_at ASC 
+            LIMIT 1",
+        )
+        .bind(user_id)
+        .fetch_optional(self.pool)
+        .await?;
+        Ok(row)
+    }
+
+    /// 删除该用户最旧的一个活跃会话（用于在达到上限时腾出空间）
+    pub async fn delete_oldest_active_session_by_user(&self, user_id: Uuid) -> Result<(), AppError> {
+        // 子查询查出最旧的一个 ID，然后删除它
+        sqlx::query(
+            "DELETE FROM upload_sessions WHERE id = (
+                SELECT id FROM upload_sessions 
+                WHERE user_id = $1 AND expires_at > NOW() 
+                ORDER BY created_at ASC 
+                LIMIT 1
+            )"
+        )
+        .bind(user_id)
+        .execute(self.pool)
+        .await?;
+        Ok(())
+    }
 }

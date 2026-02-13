@@ -126,11 +126,7 @@ impl<'a> SharesRepo<'a> {
     ///
     /// 仅允许创建该分享的用户删除，避免任意已登录用户拿到 `share_id`
     /// 后删除他人分享链接的越权风险。
-    pub async fn delete_by_id(
-        &self,
-        share_id: Uuid,
-        user_id: Uuid,
-    ) -> Result<u64, AppError> {
+    pub async fn delete_by_id(&self, share_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
         let result = sqlx::query("DELETE FROM file_shares WHERE id = $1 AND user_id = $2")
             .bind(share_id)
             .bind(user_id)

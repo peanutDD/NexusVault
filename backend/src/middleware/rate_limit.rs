@@ -165,13 +165,10 @@ pub async fn rate_limit_middleware(
     // 2. 针对「已登录用户写操作」的 user 级限流
     if is_user_scoped_write(&method, &path) {
         // 复用认证模块的 header 解析逻辑；失败时视为“无 user_id”，退回到 IP 级限流保护
-        let user_id: Option<Uuid> = extract_user_id_from_headers(
-            req.headers(),
-            app_state.config.as_ref(),
-            &app_state.pool,
-        )
-        .await
-        .ok();
+        let user_id: Option<Uuid> =
+            extract_user_id_from_headers(req.headers(), app_state.config.as_ref(), &app_state.pool)
+                .await
+                .ok();
 
         if let Some(user_id) = user_id {
             let user_key = format!("user:{}", user_id);
@@ -191,14 +188,10 @@ pub async fn rate_limit_middleware(
                     .into_response();
 
                 let headers = response.headers_mut();
-                if let Ok(limit_val) =
-                    HeaderValue::from_str(&state.user_max_requests.to_string())
-                {
+                if let Ok(limit_val) = HeaderValue::from_str(&state.user_max_requests.to_string()) {
                     headers.insert("X-RateLimit-Limit", limit_val);
                 }
-                if let Ok(window_val) =
-                    HeaderValue::from_str(&state.window_seconds.to_string())
-                {
+                if let Ok(window_val) = HeaderValue::from_str(&state.window_seconds.to_string()) {
                     headers.insert("X-RateLimit-Window", window_val);
                 }
 
