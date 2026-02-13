@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { Folder } from '../../../types';
+import type { Folder } from '../../../types/folders';
 import { getErrorMessage } from '../../../utils/error';
 import { useDialog } from '../../../hooks/common/useDialog';
 import { validateFolderName } from '../../../hooks/folders/useFolderValidation';

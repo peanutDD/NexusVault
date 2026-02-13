@@ -8,7 +8,7 @@ import Hls from 'hls.js';
 import { fileService } from '../../../../services/files';
 import { useAuthStore } from '../../../../store/authStore';
 import { getPreviewKind } from '../../../../utils/mimeType';
-import type { FileMetadata } from '../../../../types';
+import type { FileMetadata } from '../../../../types/files';
 
 // =============================================================================
 // 类型

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config/env';
 import { useAuthStore } from '../../store/authStore';
-import type { User } from '../../types';
+import type { User } from '../../types/auth';
 import Spinner from '../common/feedback/Spinner';
 
 export default function GithubCallback() {

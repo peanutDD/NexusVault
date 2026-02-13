@@ -1,9 +1,5 @@
 import api from './api';
-import type {
-  Folder,
-  FolderPathResponse,
-  FolderContentsResponse,
-} from '../types';
+import type { Folder, FolderPathResponse, FolderContentsResponse } from '../types/folders';
 
 /**
  * 文件夹服务

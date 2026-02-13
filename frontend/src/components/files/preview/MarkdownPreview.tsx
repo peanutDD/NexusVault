@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import rehypeHighlight from 'rehype-highlight';
 import { apiPath } from '../../../config/env';
 import { cn } from '../../../utils/cn';
@@ -17,7 +16,7 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw, rehypeHighlight]}
+      rehypePlugins={[rehypeHighlight]}
       components={{
         h1: ({ ...props }) => (
           <h1

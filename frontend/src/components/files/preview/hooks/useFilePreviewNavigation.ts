@@ -5,7 +5,7 @@
 
 import { useCallback } from 'react';
 import { useThrottledCallback } from '../../../../hooks/useThrottledCallback';
-import type { FileMetadata } from '../../../../types';
+import type { FileMetadata } from '../../../../types/files';
 
 // =============================================================================
 // 类型

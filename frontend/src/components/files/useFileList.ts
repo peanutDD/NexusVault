@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fileService } from '../../services/files';
-import type { FileMetadata, Folder } from '../../types';
+import type { FileMetadata } from '../../types/files';
+import type { Folder } from '../../types/folders';
 import { folderService } from '../../services/folders';
 import { getErrorMessage } from '../../utils/error';
 import { BATCH_LIMITS, MIME_FILTER_FOLDERS } from '../../constants';

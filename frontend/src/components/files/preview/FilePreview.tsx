@@ -13,7 +13,7 @@ import { fileService } from '../../../services/files';
 import { formatFileSize } from '../../../utils/format';
 import { cn } from '../../../utils/cn';
 import { getPreviewKind, getMimeTypeLabel } from '../../../utils/mimeType';
-import type { FileMetadata } from '../../../types';
+import type { FileMetadata } from '../../../types/files';
 
 import { useFilePreviewData } from './hooks/useFilePreviewData';
 import { useFilePreviewNavigation } from './hooks/useFilePreviewNavigation';

@@ -11,7 +11,7 @@ import { CHUNKED_UPLOAD, REQUEST } from '../constants';
 import { BatchRequestManager } from '../utils/batchRequest';
 import { sha256FileHex } from '../utils/sha256';
 import { useAuthStore } from '../store/authStore';
-import type { FileMetadata, FileListResponse, FileListQuery } from '../types';
+import type { FileMetadata, FileListResponse, FileListQuery } from '../types/files';
 import { trackEvent, trackError } from '../utils/telemetry';
 
 /**

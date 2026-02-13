@@ -8,7 +8,8 @@ import { fileService } from '../services/files';
 import { getCachedFileList, setCachedFileList } from '../utils/fileListCache';
 import { isRequestCanceled, getErrorMessage } from '../utils/error';
 import { FILE_LIST } from '../constants';
-import type { FileMetadata, FileListQuery, Folder } from '../types';
+import type { FileMetadata, FileListQuery } from '../types/files';
+import type { Folder } from '../types/folders';
 
 /**
  * 文件状态接口

@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import type { FileMetadata, Folder } from '../../../types';
+import type { FileMetadata } from '../../../types/files';
+import type { Folder } from '../../../types/folders';
 import FileCard from './FileCard';
 import { FILE_LIST } from '../../../constants';
 

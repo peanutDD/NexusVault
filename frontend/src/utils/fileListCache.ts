@@ -7,7 +7,7 @@
  * - 确保 LRU 列表与实际缓存一致
  * - 使用同步的读-改-写模式
  */
-import type { FileMetadata, CachedFileList } from '../types';
+import type { FileMetadata, CachedFileList } from '../types/files';
 import { FILE_LIST } from '../constants';
 
 /**

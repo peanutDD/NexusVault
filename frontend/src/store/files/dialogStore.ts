@@ -3,7 +3,8 @@
  * 管理文件相关对话框的显示/隐藏状态
  */
 import { create } from 'zustand';
-import type { FileMetadata, Folder } from '../../types';
+import type { FileMetadata } from '../../types/files';
+import type { Folder } from '../../types/folders';
 
 /**
  * 删除确认信息

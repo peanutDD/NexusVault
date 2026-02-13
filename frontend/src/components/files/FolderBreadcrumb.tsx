@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { Folder } from '../../types';
+import type { Folder } from '../../types/folders';
 import { cn } from '../../utils/cn';
 
 interface FolderBreadcrumbProps {

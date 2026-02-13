@@ -20,6 +20,33 @@ async function yieldToMain(): Promise<void> {
   });
 }
 
+function sha256WithWorker(file: File): Promise<string> {
+  if (typeof Worker === 'undefined') {
+    return Promise.reject(new Error('Worker is not supported'));
+  }
+  return new Promise<string>((resolve, reject) => {
+    const worker = new Worker(new URL('../workers/sha256.worker.ts', import.meta.url), {
+      type: 'module',
+    });
+    const cleanup = () => {
+      worker.terminate();
+    };
+    worker.onmessage = (e: MessageEvent<{ ok: boolean; hash?: string; error?: string }>) => {
+      if (e.data.ok && e.data.hash) {
+        resolve(e.data.hash);
+      } else {
+        reject(new Error(e.data.error || 'sha256 worker failed'));
+      }
+      cleanup();
+    };
+    worker.onerror = (e: ErrorEvent) => {
+      reject(new Error(e.message || 'sha256 worker error'));
+      cleanup();
+    };
+    worker.postMessage(file);
+  });
+}
+
 /**
  * 计算文件内容的 SHA-256，返回 64 位十六进制字符串。
  * 用于秒传：与后端 content_sha256 + file_size 匹配已有文件。
@@ -27,6 +54,10 @@ async function yieldToMain(): Promise<void> {
  * - HTTP：使用纯 JS 的 js-sha256，无需安全上下文即可秒传。
  */
 export async function sha256FileHex(file: File): Promise<string> {
+  const workerResult = await sha256WithWorker(file).catch(() => null);
+  if (workerResult) {
+    return workerResult;
+  }
   if (isSha256Supported()) {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buffer);

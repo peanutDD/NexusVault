@@ -3,7 +3,7 @@
  * 提供统一的错误处理、错误消息提取和错误类型判断功能
  */
 import axios from 'axios';
-import type { ErrorDetails } from '../types';
+import type { ErrorDetails } from '../types/api';
 
 /**
  * 判断是否为请求被取消的错误

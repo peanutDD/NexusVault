@@ -5,17 +5,15 @@ import { authService } from '../services/auth';
 import { fileService } from '../services/files';
 import { apiTokenService } from '../services/apiTokens';
 import type { ApiToken } from '../services/apiTokens';
-import type { StorageUsage } from '../types';
+import type { StorageUsage } from '../types/files';
 import { getErrorMessage } from '../utils/error';
 import { validateEmail } from '../utils/emailValidation';
 import ErrorMessage from '../components/common/feedback/ErrorMessage';
 import PageLayout from '../components/layout/PageLayout';
-import {
-  UserInfoSection,
-  StorageUsageSection,
-  PasswordChangeSection,
-  ApiTokenSection,
-} from '../components/settings';
+import UserInfoSection from '../components/settings/UserInfoSection';
+import StorageUsageSection from '../components/settings/StorageUsageSection';
+import PasswordChangeSection from '../components/settings/PasswordChangeSection';
+import ApiTokenSection from '../components/settings/ApiTokenSection';
 import { Settings2 } from 'lucide-react';
 
 export default function Settings() {

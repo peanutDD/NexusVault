@@ -2,7 +2,7 @@ import { memo, useRef, useEffect } from 'react';
 import { HardDrive } from 'lucide-react';
 import { formatBytes } from '../../utils/format';
 import { cn } from '../../utils/cn';
-import type { StorageUsage } from '../../types';
+import type { StorageUsage } from '../../types/files';
 import SettingsCard from './SettingsCard';
 
 interface StorageUsageSectionProps {

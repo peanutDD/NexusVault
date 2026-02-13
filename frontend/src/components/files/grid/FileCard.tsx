@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Download, Send, Trash2, Eye, MoreVertical } from 'lucide-react';
 import { formatFileSize } from '../../../utils/format';
-import type { FileMetadata } from '../../../types';
+import type { FileMetadata } from '../../../types/files';
 import LazyThumbnail from '../preview/LazyThumbnail';
 import { cn } from '../../../utils/cn';
 import { getMimeTypeLabel } from '../../../utils/mimeType';

@@ -1,4 +1,4 @@
-import type { Folder } from '../../../types';
+import type { Folder } from '../../../types/folders';
 import FolderCard from './FolderCard';
 
 interface FolderGridProps {

@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react';
 import { FolderOpen, PencilLine, Trash2, MoreVertical } from 'lucide-react';
-import type { Folder } from '../../../types';
+import type { Folder } from '../../../types/folders';
 import { cn } from '../../../utils/cn';
 import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
 

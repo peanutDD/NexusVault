@@ -47,7 +47,8 @@ import { FileCardSkeleton } from '../../common/feedback/Skeleton';
 import { FILE_LIST } from '../../../constants';
 import InfiniteScrollSentinel from '../InfiniteScrollSentinel';
 import { EmptyState } from '../../common/EmptyState';
-import type { FileMetadata, Folder } from '../../../types';
+import type { FileMetadata } from '../../../types/files';
+import type { Folder } from '../../../types/folders';
 
 /** 移动端宽度阈值：小于此宽度禁用虚拟列表 */
 const MOBILE_WIDTH_THRESHOLD = 768;

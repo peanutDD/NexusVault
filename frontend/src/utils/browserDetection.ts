@@ -2,7 +2,7 @@
  * 浏览器检测工具
  * 用于检测用户浏览器类型、版本以及是否支持
  */
-import type { BrowserInfo } from '../types';
+import type { BrowserInfo } from '../types/browser';
 
 /**
  * 支持的浏览器版本配置

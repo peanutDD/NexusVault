@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import type { FileMetadata, Folder } from '../../types';
+import type { FileMetadata } from '../../types/files';
+import type { Folder } from '../../types/folders';
 
 interface UseFileSelectionReturn {
   /** 选中的文件 ID 集合 */

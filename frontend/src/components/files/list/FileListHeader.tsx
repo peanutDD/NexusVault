@@ -19,7 +19,7 @@ import React from 'react';
 import FolderBreadcrumb from '../FolderBreadcrumb';
 import FileListFilters from './FileListFilters';
 
-import type { Folder } from '../../../types';
+import type { Folder } from '../../../types/folders';
 
 interface FileListHeaderProps {
   folderPath: Folder[];

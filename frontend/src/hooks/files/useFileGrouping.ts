@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import type { FileMetadata } from '../../types';
+import type { FileMetadata } from '../../types/files';
 
 /** 超过该数量时在 Worker 中分组，避免主线程卡顿 */
 const GROUP_FILES_WORKER_THRESHOLD = 50;

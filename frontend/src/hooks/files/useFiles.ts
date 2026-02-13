@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { fileService } from '../../services/files';
 import { FILE_LIST } from '../../constants';
-import type { FileListQuery } from '../../types';
+import type { FileListQuery } from '../../types/files';
 
 /**
  * 获取文件列表的无限滚动 Hook
