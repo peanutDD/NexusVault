@@ -4,6 +4,7 @@
 
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Once;
+use url::Url;
 
 static INIT: Once = Once::new();
 
@@ -28,14 +29,72 @@ pub fn init_test_env() {
 /// 使用 DATABASE_URL 环境变量或默认测试数据库
 pub async fn create_test_pool() -> PgPool {
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://postgres:postgres@localhost:5432/file_storage_test".to_string()
+        let user = std::env::var("PGUSER")
+            .or_else(|_| std::env::var("USER"))
+            .unwrap_or_else(|_| "postgres".to_string());
+        let password = std::env::var("PGPASSWORD").ok();
+        match password {
+            Some(p) if !p.is_empty() => {
+                format!("postgres://{}:{}@localhost:5432/file_storage_test", user, p)
+            }
+            _ => format!("postgres://{}@localhost:5432/file_storage_test", user),
+        }
     });
 
-    PgPoolOptions::new()
+    ensure_test_database(&database_url).await;
+
+    let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&database_url)
         .await
-        .expect("Failed to create test database pool")
+        .expect("Failed to create test database pool");
+
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run test database migrations");
+
+    pool
+}
+
+async fn ensure_test_database(database_url: &str) {
+    let mut url = Url::parse(database_url).expect("Invalid DATABASE_URL");
+    let db_name = url.path().trim_start_matches('/').to_string();
+    if db_name.is_empty() {
+        return;
+    }
+    if !db_name
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_')
+    {
+        panic!("Invalid database name");
+    }
+
+    url.set_path("/postgres");
+    let admin_pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(url.as_str())
+        .await
+        .expect("Failed to connect to postgres database");
+
+    let exists: Option<i32> = sqlx::query_scalar("SELECT 1 FROM pg_database WHERE datname = $1")
+        .bind(&db_name)
+        .fetch_optional(&admin_pool)
+        .await
+        .expect("Failed to check database existence");
+
+    if exists.is_none() {
+        let create_sql = format!("CREATE DATABASE \"{}\"", db_name);
+        if let Err(err) = sqlx::query(&create_sql).execute(&admin_pool).await {
+            let should_ignore = err
+                .as_database_error()
+                .and_then(|db_err| db_err.code().map(|code| code == "42P04" || code == "23505"))
+                .unwrap_or(false);
+            if !should_ignore {
+                panic!("Failed to create test database: {}", err);
+            }
+        }
+    }
 }
 
 /// 清理测试数据
@@ -58,6 +117,7 @@ pub async fn cleanup_test_data(pool: &PgPool) {
 /// 创建测试用户
 ///
 /// 返回 (user_id, email, password)
+#[allow(dead_code)]
 pub async fn create_test_user(pool: &PgPool, suffix: &str) -> (uuid::Uuid, String, String) {
     let email = format!("test_{}@test.com", suffix);
     let username = format!("test_user_{}", suffix);
@@ -81,6 +141,7 @@ pub async fn create_test_user(pool: &PgPool, suffix: &str) -> (uuid::Uuid, Strin
 }
 
 /// 创建测试文件记录
+#[allow(dead_code)]
 pub async fn create_test_file(pool: &PgPool, user_id: uuid::Uuid, filename: &str) -> uuid::Uuid {
     let file_id = uuid::Uuid::new_v4();
     let file_path = format!("/test/{}/{}", user_id, file_id);
@@ -101,6 +162,7 @@ pub async fn create_test_file(pool: &PgPool, user_id: uuid::Uuid, filename: &str
 }
 
 /// 创建测试文件夹
+#[allow(dead_code)]
 pub async fn create_test_folder(
     pool: &PgPool,
     user_id: uuid::Uuid,

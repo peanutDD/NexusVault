@@ -48,6 +48,7 @@ use crate::utils::AppError;
 
 pub use semantic_search::SemanticSearchService;
 pub use storage_factory::create_storage;
+pub(crate) use upload::{CreateFileFromPathInput, EmbeddingTaskInput};
 
 /// 文件服务
 ///

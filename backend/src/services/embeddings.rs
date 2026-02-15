@@ -3,7 +3,6 @@
 //! 使用 Hugging Face Inference API 生成文本向量嵌入，用于语义搜索。
 
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 use crate::config::Config;
 use crate::utils::AppError;
@@ -15,6 +14,7 @@ struct EmbeddingRequest {
 }
 
 /// Hugging Face Inference API 响应体
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct EmbeddingResponse {
     #[serde(default)]

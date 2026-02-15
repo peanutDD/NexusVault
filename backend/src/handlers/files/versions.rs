@@ -1,6 +1,6 @@
 //! 文件版本管理 API handlers
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::response::Response;
 use serde_json::json;
 use uuid::Uuid;

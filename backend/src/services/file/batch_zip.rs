@@ -74,7 +74,7 @@ fn unique_zip_entry_name(name: &str, name_count: &mut HashMap<String, u32>) -> S
     let (base, ext) = if let Some(dot) = name.rfind('.') {
         (&name[..dot], &name[dot + 1..])
     } else {
-        (name.as_ref(), "")
+        (name, "")
     };
 
     if ext.is_empty() {

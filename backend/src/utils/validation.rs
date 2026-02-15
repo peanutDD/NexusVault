@@ -27,9 +27,7 @@ pub fn sanitize_filename(filename: &str) -> Result<String, AppError> {
     // Remove path components and dangerous characters
     let sanitized = filename
         .replace("..", "")
-        .replace('/', "")
-        .replace('\\', "")
-        .replace('\0', "")
+        .replace(['/', '\\', '\0'], "")
         .trim()
         .to_string();
 

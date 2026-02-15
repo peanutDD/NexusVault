@@ -16,6 +16,7 @@ impl<'a> UploadSessionsRepo<'a> {
         Self { pool }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_session(
         &self,
         upload_id: Uuid,
@@ -119,6 +120,7 @@ impl<'a> UploadSessionsRepo<'a> {
     }
 
     /// 删除该用户最旧的一个活跃会话（用于在达到上限时腾出空间）
+    #[allow(dead_code)]
     pub async fn delete_oldest_active_session_by_user(
         &self,
         user_id: Uuid,

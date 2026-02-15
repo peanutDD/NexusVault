@@ -362,7 +362,7 @@ pub async fn hls_playlist_handler(
 fn rewrite_hls_segment_refs(data: &[u8]) -> Vec<u8> {
     use std::io::{BufRead, BufReader, Write};
     let mut out = Vec::with_capacity(data.len() + 64);
-    for line in BufReader::new(data).lines().flatten() {
+    for line in BufReader::new(data).lines().map_while(Result::ok) {
         let trimmed = line.trim();
         if !trimmed.is_empty()
             && !trimmed.starts_with('#')
@@ -371,7 +371,7 @@ fn rewrite_hls_segment_refs(data: &[u8]) -> Vec<u8> {
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
         {
-            let _ = write!(out, "hls/{}\n", trimmed);
+            let _ = writeln!(out, "hls/{}", trimmed);
         } else {
             let _ = writeln!(out, "{}", line);
         }

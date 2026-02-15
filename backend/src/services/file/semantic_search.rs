@@ -117,6 +117,7 @@ impl SemanticSearchService {
     /// # 参数
     /// - `file_ids`: 文件 ID 列表
     /// - `embeddings`: 对应的向量列表（每个向量 384 维）
+    #[allow(dead_code)]
     pub async fn batch_update_embeddings(
         &self,
         file_ids: &[Uuid],

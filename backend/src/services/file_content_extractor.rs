@@ -2,10 +2,7 @@
 //!
 //! 从各种文件格式中提取文本内容，用于语义搜索。
 
-use std::io::Cursor;
 use std::path::Path;
-
-use uuid::Uuid;
 
 use crate::utils::AppError;
 
@@ -122,7 +119,7 @@ impl FileContentExtractor {
     }
 
     /// 提取 XLSX 内容（简化版，只提取文本单元格）
-    fn extract_xlsx_content(data: &[u8]) -> Result<String, AppError> {
+    fn extract_xlsx_content(_data: &[u8]) -> Result<String, AppError> {
         // XLSX 解析比较复杂，这里使用简化方法
         // 实际项目中可能需要使用专门的 Excel 解析库（如 calamine）
         // 暂时返回空字符串，后续可以扩展
@@ -131,7 +128,7 @@ impl FileContentExtractor {
     }
 
     /// 提取 PPTX 内容
-    fn extract_pptx_content(data: &[u8]) -> Result<String, AppError> {
+    fn extract_pptx_content(_data: &[u8]) -> Result<String, AppError> {
         // PPTX 解析比较复杂，暂时跳过
         tracing::warn!("PPTX content extraction not implemented yet");
         Ok(String::new())

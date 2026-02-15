@@ -19,19 +19,20 @@ use crate::models::organization::{
     OrganizationRole,
 };
 use crate::models::user::User;
-use crate::repositories::{
-    DynFilesRepo, DynUsersRepo, OrganizationsRepo, SqlxFilesRepo, SqlxUsersRepo,
-};
+use crate::repositories::{OrganizationsRepo, SqlxFilesRepo, SqlxUsersRepo};
 use crate::utils::AppError;
 
 pub struct OrganizationService {
     pool: PgPool,
-    config: Arc<Config>,
+    _config: Arc<Config>,
 }
 
 impl OrganizationService {
     pub fn new(pool: PgPool, config: Arc<Config>) -> Self {
-        Self { pool, config }
+        Self {
+            pool,
+            _config: config,
+        }
     }
 
     pub fn from_state(state: &crate::AppState) -> Self {

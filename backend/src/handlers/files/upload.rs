@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::constants::DISK_RESERVE_UPLOAD;
 use crate::extractors::AuthenticatedUser;
+use crate::services::file::CreateFileFromPathInput;
 use crate::utils::{json_response, AppError};
 use crate::AppState;
 
@@ -74,7 +75,7 @@ pub async fn upload_file_handler(
                 .ok_or_else(|| AppError::File("Missing filename".to_string()))?
                 .to_string();
 
-            let mut mime_type = field
+            let mime_type = field
                 .content_type()
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "application/octet-stream".to_string());
@@ -148,15 +149,15 @@ pub async fn upload_file_handler(
 
     let file = match state
         .file_service
-        .create_file_from_path(
+        .create_file_from_path(CreateFileFromPathInput {
             user_id,
             original_filename,
             mime_type,
             file_size,
-            &tmp_path,
-            content_sha256.as_deref(),
+            source_path: &tmp_path,
+            content_sha256: content_sha256.as_deref(),
             folder_id,
-        )
+        })
         .await
     {
         Ok(file) => file,

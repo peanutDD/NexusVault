@@ -116,6 +116,7 @@ pub trait UsersRepository: Send + Sync {
 #[async_trait]
 pub trait FilesRepository: Send + Sync {
     /// 插入新文件记录
+    #[allow(clippy::too_many_arguments)]
     async fn insert(
         &self,
         file_id: Uuid,
@@ -216,6 +217,7 @@ pub trait FilesRepository: Send + Sync {
 #[async_trait]
 pub trait FileVersionsRepository: Send + Sync {
     /// 创建文件版本（将当前文件保存为历史版本）
+    #[allow(clippy::too_many_arguments)]
     async fn create_version(
         &self,
         file_id: Uuid,

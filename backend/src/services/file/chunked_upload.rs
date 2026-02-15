@@ -21,7 +21,7 @@ impl FileService {
     pub async fn init_chunked_upload(
         &self,
         user_id: Uuid,
-        mut req: InitChunkedUploadRequest,
+        req: InitChunkedUploadRequest,
     ) -> Result<(Uuid, u32, u32), AppError> {
         // 复用统一校验逻辑，但保持原先错误信息（更短、更贴近该场景）
         self.ensure_can_store_quota_simple(user_id, &req.mime_type, req.total_size)
@@ -274,15 +274,15 @@ impl FileService {
         );
 
         let file = self
-            .create_file_from_path(
+            .create_file_from_path(super::CreateFileFromPathInput {
                 user_id,
-                s.filename.clone(),
-                s.mime_type.clone(),
-                s.total_size as u64,
-                &merged_path,
+                original_filename: s.filename.clone(),
+                mime_type: s.mime_type.clone(),
+                file_size: s.total_size as u64,
+                source_path: &merged_path,
                 content_sha256,
-                req.folder_id,
-            )
+                folder_id: req.folder_id,
+            })
             .await?;
 
         tracing::info!(

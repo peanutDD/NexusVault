@@ -30,7 +30,6 @@ use crate::{
     utils::{hash_password, now_timestamp, parse_jwt_expiry, verify_password, AppError},
 };
 use lettre::message::header::ContentType;
-use lettre::message::Mailbox;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use rand::Rng;
@@ -247,7 +246,7 @@ impl AuthService {
     ) -> Result<(), AppError> {
         // 验证新密码：与注册规则一致（长度 8–64，且至少包含 1 个字母和 1 个数字）
         let len = new_password.len();
-        if len < 8 || len > 64 {
+        if !(8..=64).contains(&len) {
             return Err(AppError::Validation(
                 "New password must be between 8 and 64 characters".to_string(),
             ));
@@ -485,7 +484,7 @@ impl AuthService {
             return Err(AppError::Validation("Invalid email format".to_string()));
         }
         let len = req.password.len();
-        if len < 8 || len > 64 {
+        if !(8..=64).contains(&len) {
             return Err(AppError::Validation(
                 "Password must be between 8 and 64 characters".to_string(),
             ));

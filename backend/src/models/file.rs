@@ -97,7 +97,7 @@ pub struct FileListQuery {
     /// - 如果 `sort_by = created_at`：ISO 8601 时间戳字符串
     /// - 如果 `sort_by = filename`：文件名字符串
     /// - 如果 `sort_by = file_size`：文件大小数字（字符串形式）
-    /// 如果提供了 `cursor`，则使用游标分页（WHERE sort_column > cursor），否则使用传统分页（OFFSET）
+    ///   如果提供了 `cursor`，则使用游标分页（WHERE sort_column > cursor），否则使用传统分页（OFFSET）
     pub cursor: Option<String>,
     /// 搜索关键词（匹配文件名）
     pub search: Option<String>,
@@ -132,7 +132,7 @@ pub struct FileListResult {
     /// - 如果 `sort_by = created_at`：ISO 8601 时间戳字符串
     /// - 如果 `sort_by = filename`：文件名字符串
     /// - 如果 `sort_by = file_size`：文件大小数字（字符串形式）
-    /// 如果返回 None，表示已到末尾，没有更多数据
+    ///   如果返回 None，表示已到末尾，没有更多数据
     pub next_cursor: Option<String>,
 }
 

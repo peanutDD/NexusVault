@@ -48,7 +48,7 @@ pub fn build_multipart_body(
             let part_stream = file_service
                 .open_file_stream_range(&file, start, end)
                 .await
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
 
             match part_stream {
                 StorageReadStream::Local(mut f) => {

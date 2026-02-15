@@ -15,6 +15,27 @@ use sqlx::PgPool;
 
 use super::FileService;
 
+pub(crate) struct CreateFileFromPathInput<'a> {
+    pub user_id: Uuid,
+    pub original_filename: String,
+    pub mime_type: String,
+    pub file_size: u64,
+    pub source_path: &'a Path,
+    pub content_sha256: Option<&'a str>,
+    pub folder_id: Option<Uuid>,
+}
+
+pub(crate) struct EmbeddingTaskInput {
+    pub embedding_service: Arc<EmbeddingService>,
+    pub storage: Arc<dyn StorageBackend>,
+    pub file: File,
+    pub mime_type: String,
+    pub original_filename: String,
+    pub file_id: Uuid,
+    pub user_id: Uuid,
+    pub pool: PgPool,
+}
+
 pub(crate) fn build_storage_filename(
     file_id: Uuid,
     original_filename: &str,
@@ -81,16 +102,19 @@ impl FileService {
     /// 1. 将当前文件保存为新版本
     /// 2. 将旧文件保存为历史版本
     /// 3. 清理超过保留数量的旧版本（只保留最近2个）
-    pub async fn create_file_from_path(
+    pub(crate) async fn create_file_from_path(
         &self,
-        user_id: Uuid,
-        original_filename: String,
-        mime_type: String,
-        file_size: u64,
-        source_path: &Path,
-        content_sha256: Option<&str>,
-        folder_id: Option<Uuid>,
+        input: CreateFileFromPathInput<'_>,
     ) -> Result<FileResponse, AppError> {
+        let CreateFileFromPathInput {
+            user_id,
+            original_filename,
+            mime_type,
+            file_size,
+            source_path,
+            content_sha256,
+            folder_id,
+        } = input;
         self.ensure_can_store_detailed(user_id, &mime_type, file_size)
             .await?;
 
@@ -176,26 +200,19 @@ impl FileService {
                     .find_by_id(existing_file_id, user_id)
                     .await?
                     .ok_or(AppError::NotFound)?;
-                let embedding_service_clone = embedding_service.clone();
-                let storage_clone = self.storage.clone();
-                let mime_type_clone = mime_type.clone();
-                let original_filename_clone = original_filename.clone();
-                let file_id_clone = file_response.id;
-                let user_id_clone = user_id;
-                let pool_clone = self.pool.clone();
+                let task = EmbeddingTaskInput {
+                    embedding_service: embedding_service.clone(),
+                    storage: self.storage.clone(),
+                    file: file_clone,
+                    mime_type: mime_type.clone(),
+                    original_filename: original_filename.clone(),
+                    file_id: file_response.id,
+                    user_id,
+                    pool: self.pool.clone(),
+                };
 
                 tokio::spawn(async move {
-                    Self::generate_embedding_with_content(
-                        &embedding_service_clone,
-                        &storage_clone,
-                        &file_clone,
-                        &mime_type_clone,
-                        &original_filename_clone,
-                        file_id_clone,
-                        user_id_clone,
-                        pool_clone,
-                    )
-                    .await;
+                    Self::generate_embedding_with_content(task).await;
                 });
             }
 
@@ -242,26 +259,19 @@ impl FileService {
                     .find_by_id(file_response.id, user_id)
                     .await?
                     .ok_or(AppError::NotFound)?;
-                let embedding_service_clone = embedding_service.clone();
-                let storage_clone = self.storage.clone();
-                let mime_type_clone = mime_type.clone();
-                let original_filename_clone = original_filename.clone();
-                let file_id_clone = file_response.id;
-                let user_id_clone = user_id;
-                let pool_clone = self.pool.clone();
+                let task = EmbeddingTaskInput {
+                    embedding_service: embedding_service.clone(),
+                    storage: self.storage.clone(),
+                    file: file_clone,
+                    mime_type: mime_type.clone(),
+                    original_filename: original_filename.clone(),
+                    file_id: file_response.id,
+                    user_id,
+                    pool: self.pool.clone(),
+                };
 
                 tokio::spawn(async move {
-                    Self::generate_embedding_with_content(
-                        &embedding_service_clone,
-                        &storage_clone,
-                        &file_clone,
-                        &mime_type_clone,
-                        &original_filename_clone,
-                        file_id_clone,
-                        user_id_clone,
-                        pool_clone,
-                    )
-                    .await;
+                    Self::generate_embedding_with_content(task).await;
                 });
             }
 
@@ -274,16 +284,17 @@ impl FileService {
     /// 异步生成文件向量嵌入（包含文件名和内容）
     ///
     /// 这是一个辅助函数，用于在后台任务中提取文件内容并生成向量
-    pub async fn generate_embedding_with_content(
-        embedding_service: &EmbeddingService,
-        storage: &Arc<dyn StorageBackend>,
-        file: &File,
-        mime_type: &str,
-        original_filename: &str,
-        file_id: Uuid,
-        user_id: Uuid,
-        pool: PgPool,
-    ) {
+    pub(crate) async fn generate_embedding_with_content(task: EmbeddingTaskInput) {
+        let EmbeddingTaskInput {
+            embedding_service,
+            storage,
+            file,
+            mime_type,
+            original_filename,
+            file_id,
+            user_id,
+            pool,
+        } = task;
         // 1. 读取文件内容
         let file_data = match storage.get_file(&file.file_path).await {
             Ok(data) => data,
@@ -299,7 +310,7 @@ impl FileService {
 
         // 2. 提取文本内容
         let content =
-            match FileContentExtractor::extract_text(&file_data, mime_type, original_filename) {
+            match FileContentExtractor::extract_text(&file_data, &mime_type, &original_filename) {
                 Ok(text) => {
                     if text.trim().is_empty() {
                         tracing::debug!("No text content extracted from file {}", file_id);
@@ -317,7 +328,7 @@ impl FileService {
             };
 
         // 3. 组合文件名和内容用于生成向量
-        let search_text = FileContentExtractor::combine_for_embedding(original_filename, &content);
+        let search_text = FileContentExtractor::combine_for_embedding(&original_filename, &content);
 
         // 4. 生成向量嵌入
         match embedding_service.generate_embedding(&search_text).await {

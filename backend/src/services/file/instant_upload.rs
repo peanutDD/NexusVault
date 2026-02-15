@@ -23,7 +23,7 @@ impl FileService {
     pub async fn instant_upload(
         &self,
         user_id: Uuid,
-        mut req: InstantUploadRequest,
+        req: InstantUploadRequest,
     ) -> Result<Option<FileResponse>, AppError> {
         let hash = req.content_sha256.trim();
         if hash.len() != SHA256_HEX_LEN || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -146,31 +146,24 @@ impl FileService {
 
             // 如果配置了嵌入服务，异步提取内容并生成向量嵌入（不阻塞上传流程）
             if let Some(embedding_service) = &self.embedding_service {
-                if let Ok(file_clone) = self.files_repo.find_by_id(existing_file_id, user_id).await
+                if let Ok(Some(file_clone)) =
+                    self.files_repo.find_by_id(existing_file_id, user_id).await
                 {
-                    if let Some(file_clone) = file_clone {
-                        let embedding_service_clone = embedding_service.clone();
-                        let storage_clone = self.storage.clone();
-                        let mime_type_clone = req.mime_type.clone();
-                        let original_filename_clone = req.filename.clone();
-                        let file_id_clone = file_response.id;
-                        let user_id_clone = user_id;
-                        let pool_clone = self.pool.clone();
+                    let task = crate::services::file::EmbeddingTaskInput {
+                        embedding_service: embedding_service.clone(),
+                        storage: self.storage.clone(),
+                        file: file_clone,
+                        mime_type: req.mime_type.clone(),
+                        original_filename: req.filename.clone(),
+                        file_id: file_response.id,
+                        user_id,
+                        pool: self.pool.clone(),
+                    };
 
-                        tokio::spawn(async move {
-                            crate::services::file::FileService::generate_embedding_with_content(
-                                &embedding_service_clone,
-                                &storage_clone,
-                                &file_clone,
-                                &mime_type_clone,
-                                &original_filename_clone,
-                                file_id_clone,
-                                user_id_clone,
-                                pool_clone,
-                            )
+                    tokio::spawn(async move {
+                        crate::services::file::FileService::generate_embedding_with_content(task)
                             .await;
-                        });
-                    }
+                    });
                 }
             }
 
@@ -196,31 +189,24 @@ impl FileService {
 
             // 如果配置了嵌入服务，异步提取内容并生成向量嵌入（不阻塞上传流程）
             if let Some(embedding_service) = &self.embedding_service {
-                if let Ok(file_clone) = self.files_repo.find_by_id(file_response.id, user_id).await
+                if let Ok(Some(file_clone)) =
+                    self.files_repo.find_by_id(file_response.id, user_id).await
                 {
-                    if let Some(file_clone) = file_clone {
-                        let embedding_service_clone = embedding_service.clone();
-                        let storage_clone = self.storage.clone();
-                        let mime_type_clone = req.mime_type.clone();
-                        let original_filename_clone = req.filename.clone();
-                        let file_id_clone = file_response.id;
-                        let user_id_clone = user_id;
-                        let pool_clone = self.pool.clone();
+                    let task = crate::services::file::EmbeddingTaskInput {
+                        embedding_service: embedding_service.clone(),
+                        storage: self.storage.clone(),
+                        file: file_clone,
+                        mime_type: req.mime_type.clone(),
+                        original_filename: req.filename.clone(),
+                        file_id: file_response.id,
+                        user_id,
+                        pool: self.pool.clone(),
+                    };
 
-                        tokio::spawn(async move {
-                            crate::services::file::FileService::generate_embedding_with_content(
-                                &embedding_service_clone,
-                                &storage_clone,
-                                &file_clone,
-                                &mime_type_clone,
-                                &original_filename_clone,
-                                file_id_clone,
-                                user_id_clone,
-                                pool_clone,
-                            )
+                    tokio::spawn(async move {
+                        crate::services::file::FileService::generate_embedding_with_content(task)
                             .await;
-                        });
-                    }
+                    });
                 }
             }
 

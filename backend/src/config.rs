@@ -211,7 +211,7 @@ impl Config {
 
     /// 启动时完整校验，非法则返回 ConfigError 并退出
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.port < PORT_MIN || self.port > PORT_MAX {
+        if !(PORT_MIN..=PORT_MAX).contains(&self.port) {
             return Err(ConfigError::InvalidConfig(format!(
                 "PORT must be in range {}..={}",
                 PORT_MIN, PORT_MAX
@@ -259,7 +259,7 @@ fn parse_port() -> Result<u16, ConfigError> {
             PORT_MIN, PORT_MAX
         ))
     })?;
-    if port < PORT_MIN || port > PORT_MAX {
+    if !(PORT_MIN..=PORT_MAX).contains(&port) {
         return Err(ConfigError::InvalidConfig(format!(
             "PORT must be in range {}..={}",
             PORT_MIN, PORT_MAX

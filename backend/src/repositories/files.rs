@@ -23,7 +23,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait; // 为 trait 方法提供 async fn 语法
-use chrono::{DateTime, NaiveDateTime, Utc}; // 日期解析与存库用 UTC
+use chrono::{DateTime, Utc}; // 日期解析与存库用 UTC
 use sqlx::{postgres::PgRow, PgPool, Row}; // PgRow 用于 list 中取 total_count
 use uuid::Uuid;
 

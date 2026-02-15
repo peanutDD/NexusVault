@@ -1,6 +1,5 @@
 //! 文件版本管理相关
 
-use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::file::{FileVersionResponse, RestoreVersionRequest, UpdateVersionLabelRequest};

@@ -82,11 +82,9 @@ fn simplify_path(path: &str) -> String {
         .iter()
         .map(|part| {
             // UUID 模式
-            if part.len() == 36 && part.chars().filter(|c| *c == '-').count() == 4 {
-                ":id".to_string()
-            }
-            // 纯数字
-            else if part.chars().all(|c| c.is_ascii_digit()) && !part.is_empty() {
+            if (part.len() == 36 && part.chars().filter(|c| *c == '-').count() == 4)
+                || (part.chars().all(|c| c.is_ascii_digit()) && !part.is_empty())
+            {
                 ":id".to_string()
             } else {
                 part.to_string()

@@ -186,7 +186,10 @@ pub fn create_router() -> Router<AppState> {
             get(download_file_handler).head(download_file_handler),
         )
         // GIF → 视频预览（按需转码为 mp4，前端用 <video> 播放）
-        .route("/:id/preview/video", get(gif_video_preview_handler))
+        .route(
+            "/:id/preview/video",
+            get(gif_video_preview_handler).head(gif_video_preview_handler),
+        )
         .route(
             "/:id/preview/video/prepare",
             post(video_preview_prepare_handler),
