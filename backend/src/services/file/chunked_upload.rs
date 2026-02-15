@@ -35,7 +35,8 @@ impl FileService {
         // 如果达到上限，自动清理最旧的一个会话，为新上传腾出空间
         if active_count >= MAX_CONCURRENT_CHUNKED_UPLOADS {
             let repo = crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool);
-            if let Some((old_id, old_path)) = repo.get_oldest_active_session_by_user(user_id).await?
+            if let Some((old_id, old_path)) =
+                repo.get_oldest_active_session_by_user(user_id).await?
             {
                 tracing::info!(
                     user_id = %user_id,

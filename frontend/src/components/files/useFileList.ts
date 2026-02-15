@@ -207,7 +207,18 @@ export function useFileList() {
     sort_order: sortOrder,
   });
 
-  const files = useMemo(() => filesData?.pages.flatMap((page) => page.files) ?? [], [filesData]);
+  const files = useMemo(() => {
+    const flat = filesData?.pages.flatMap((page) => page.files) ?? [];
+    if (flat.length <= 1) return flat;
+    const seen = new Set<string>();
+    const deduped: FileMetadata[] = [];
+    for (const file of flat) {
+      if (seen.has(file.id)) continue;
+      seen.add(file.id);
+      deduped.push(file);
+    }
+    return deduped;
+  }, [filesData]);
   const totalItems = filesData?.pages[0]?.total ?? 0;
 
   // 使用 TanStack Query 获取文件夹内容

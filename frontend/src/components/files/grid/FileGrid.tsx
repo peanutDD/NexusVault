@@ -38,13 +38,26 @@ export default function FileGrid({
   onCloseMenu,
 }: FileGridProps) {
   if (files.length === 0) return null;
+  const uniqueFiles =
+    files.length <= 1
+      ? files
+      : (() => {
+          const seen = new Set<string>();
+          const deduped: FileMetadata[] = [];
+          for (const file of files) {
+            if (seen.has(file.id)) continue;
+            seen.add(file.id);
+            deduped.push(file);
+          }
+          return deduped;
+        })();
 
   return (
     <div
       // 去掉 content-visibility:auto，避免少数浏览器在页面刚渲染完时延迟鼠标事件 / hover 呈现
       className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
     >
-      {files.map((file) => (
+      {uniqueFiles.map((file) => (
         <FileCard
           key={file.id}
           file={file}

@@ -1,5 +1,6 @@
 import { useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import PageLayout from '../components/layout/PageLayout';
 import FileList from '../components/files/list/FileList';
@@ -10,6 +11,7 @@ const UploadDialog = lazy(() => import('../components/files/upload/UploadDialog'
 
 export default function Files() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -22,8 +24,9 @@ export default function Files() {
 
   const handleUploadComplete = useCallback(() => {
     clearFileListCache();
+    queryClient.invalidateQueries({ queryKey: ['files'] });
     setRefreshKey((k) => k + 1);
-  }, []);
+  }, [queryClient]);
 
   return (
     <PageLayout username={user?.username} onLogout={handleLogout}>

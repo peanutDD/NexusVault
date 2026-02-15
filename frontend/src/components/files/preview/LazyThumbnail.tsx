@@ -172,6 +172,8 @@ function getFileTypeDisplay(mimeType: string) {
 }
 
 const SHOW_LOADING_DELAY_MS = 100; // 延迟显示加载骨架，缓存命中或快速响应时不再闪一下
+const RETRY_MAX = 3;
+const RETRY_BASE_MS = 800;
 
 export default function LazyThumbnail({
   fileId,
@@ -206,16 +208,32 @@ export default function LazyThumbnail({
   const containerRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
   const loadingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestStateRef = useRef({ blobUrl: null as string | null, error: false });
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     };
   }, []);
 
   // Blob URL 由 thumbnailBlobCache 统一管理，淘汰时再 revoke，此处不再 revoke 避免与缓存冲突
+
+  useEffect(() => {
+    latestStateRef.current = { blobUrl, error };
+  }, [blobUrl, error]);
+
+  useEffect(() => {
+    retryCountRef.current = 0;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, [fileId]);
 
   useEffect(() => {
     if (!showThumbnail) return;
@@ -263,11 +281,40 @@ export default function LazyThumbnail({
     if (!showThumbnail || !loading || blobUrl || error) return;
 
     let cancelled = false;
+    const scheduleRetry = () => {
+      if (retryCountRef.current >= RETRY_MAX) return;
+      retryCountRef.current += 1;
+      const delay = RETRY_BASE_MS * retryCountRef.current;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        if (!mountedRef.current || cancelled) return;
+        const latest = latestStateRef.current;
+        if (latest.blobUrl || latest.error) return;
+        fileService
+          .fetchThumbnailBlob(fileId)
+          .then((retryBlob) => {
+            if (!mountedRef.current || cancelled) return;
+            if (retryBlob === null) {
+              scheduleRetry();
+              return;
+            }
+            const url = URL.createObjectURL(retryBlob);
+            setCachedThumbnailUrl(fileId, url);
+            updateState({ blobUrl: url });
+          })
+          .catch(() => {
+            if (mountedRef.current && !cancelled) updateState({ error: true });
+          });
+      }, delay);
+    };
     fileService
       .fetchThumbnailBlob(fileId)
       .then((blob) => {
         if (!mountedRef.current || cancelled) return;
-        if (blob === null) return; // 404/415 无缩略图，保持占位
+        if (blob === null) {
+          scheduleRetry();
+          return;
+        }
         const url = URL.createObjectURL(blob);
         setCachedThumbnailUrl(fileId, url);
         updateState({ blobUrl: url });

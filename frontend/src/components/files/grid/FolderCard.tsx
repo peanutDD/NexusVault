@@ -93,16 +93,23 @@ const FolderCard = memo(function FolderCard({
         isSelected && 'bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25',
         isDragOver && 'bg-blue-500/20 hover:bg-blue-500/25 active:bg-blue-500/30'
       )}
-      draggable
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
       onDoubleClick={handleDoubleClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onOpen(folder);
+      }}
     >
       <div className="p-3">
         {/* 文件夹图标：使用和视频文件相同的主色（text-purple-400），但缩小尺寸避免过于抢眼 */}
-        <div className="relative mb-3 flex aspect-square items-center justify-center rounded-lg bg-black/20">
+        <div
+          className="relative mb-3 flex aspect-square items-center justify-center rounded-lg bg-black/20"
+          draggable
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <SelectionCheckbox
             isSelected={isSelected}
             onClick={handleSelect}

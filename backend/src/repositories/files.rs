@@ -431,15 +431,17 @@ impl FilesRepository for SqlxFilesRepo {
             }
         });
 
-        // 根目录（null/root/空）不按 folder_id 过滤，列表页展示该用户全部文件；传具体 folder UUID 时只返回该文件夹下文件。
-        let folder_id_filter: Option<Option<Uuid>> = query.folder_id.as_ref().and_then(|s| {
-            let t = s.trim();
-            if t.is_empty() || t.to_lowercase() == "null" || t == "root" {
-                None // 不传条件，返回全部
-            } else {
-                Uuid::parse_str(t).ok().map(Some) // 解析成功则 Some(Some(uuid))
+        let folder_id_filter: Option<Option<Uuid>> = match query.folder_id.as_deref() {
+            None => None,
+            Some(s) => {
+                let t = s.trim();
+                if t.is_empty() || t.eq_ignore_ascii_case("null") || t == "root" {
+                    Some(None)
+                } else {
+                    Uuid::parse_str(t).ok().map(Some)
+                }
             }
-        });
+        };
 
         // 日期范围：支持 YYYY-MM-DD 或 RFC3339；date_to 解析为当日 23:59:59 以包含整天
         let date_from: Option<DateTime<Utc>> = query

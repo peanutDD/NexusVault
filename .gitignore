@@ -74,3 +74,6 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Mobile client
+/mobile/

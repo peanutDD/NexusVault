@@ -185,13 +185,21 @@ export const fileService = {
       onProgress?.(0, '计算指纹…');
       const content_sha256 = await sha256FileHex(file);
       const mime = file.type || 'application/octet-stream';
-      const result = await this.uploadInstant({
-        content_sha256,
-        filename: file.name,
-        file_size: file.size,
-        mime_type: mime,
-        folder_id: null,
-      });
+      let result: { file: FileMetadata } | null = null;
+      try {
+        result = await this.uploadInstant({
+          content_sha256,
+          filename: file.name,
+          file_size: file.size,
+          mime_type: mime,
+          folder_id: null,
+        });
+      } catch (instantErr) {
+        trackError(instantErr, {
+          action: 'upload_instant_failed',
+          fileSize: file.size,
+        });
+      }
       if (result === null) {
         console.info('[秒传] 服务器暂无相同文件，将走普通/分片上传');
         onProgress?.(0, '秒传未命中，正在上传…');
