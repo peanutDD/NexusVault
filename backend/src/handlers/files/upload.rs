@@ -41,6 +41,7 @@ pub async fn upload_file_handler(
 
     // 解析 multipart 表单：以流式方式写入临时文件，避免把整个文件载入内存
     let mut file_meta: Option<(String, String, u64, std::path::PathBuf)> = None;
+    let mut folder_id: Option<Uuid> = None;
 
     while let Some(field) = multipart
         .next_field()
@@ -49,7 +50,25 @@ pub async fn upload_file_handler(
     {
         let name = field.name().unwrap_or("").to_string();
 
+        if name == "folder_id" {
+            let value = field
+                .text()
+                .await
+                .map_err(|e| AppError::File(format!("Failed to read folder_id: {}", e)))?;
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                folder_id = Some(
+                    Uuid::parse_str(trimmed)
+                        .map_err(|_| AppError::Validation("无效的 folder_id".to_string()))?,
+                );
+            }
+            continue;
+        }
+
         if name == "file" {
+            if file_meta.is_some() {
+                continue;
+            }
             let filename = field
                 .file_name()
                 .ok_or_else(|| AppError::File("Missing filename".to_string()))?
@@ -113,7 +132,6 @@ pub async fn upload_file_handler(
                 .map_err(|e| AppError::Storage(format!("Failed to flush temp file: {}", e)))?;
 
             file_meta = Some((filename, mime_type, file_size, tmp_path));
-            break;
         }
     }
 
@@ -137,7 +155,7 @@ pub async fn upload_file_handler(
             file_size,
             &tmp_path,
             content_sha256.as_deref(),
-            None, // TODO: 从请求中获取 folder_id
+            folder_id,
         )
         .await
     {

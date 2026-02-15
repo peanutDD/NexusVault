@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { fileService } from '../../../services/files';
 import { getErrorMessage } from '../../../utils/error';
 import {
@@ -32,6 +33,7 @@ export default function UploadDialog({
   onClose,
   onUploadComplete,
 }: UploadDialogProps) {
+  const [searchParams] = useSearchParams();
   const [dragActive, setDragActive] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [urlInput, setUrlInput] = useState('');
@@ -59,6 +61,7 @@ export default function UploadDialog({
   }, [open, onClose]);
 
   const maxBatchCount = getMaxBatchCount();
+  const folderId = searchParams.get('folder') || null;
   /** 总文件数（20）超限时的提醒 */
   const [totalLimitWarning, setTotalLimitWarning] = useState('');
   /** 大文件数（10）超限时的提醒 */
@@ -219,7 +222,7 @@ export default function UploadDialog({
         try {
           await uploadQueue.add(
             taskId,
-            () => fileService.uploadFileWithInstant(file, updateProgress),
+            () => fileService.uploadFileWithInstant(file, updateProgress, folderId),
             { fileSize: file.size, priority }
           );
 
@@ -246,7 +249,7 @@ export default function UploadDialog({
     if (hasNewSuccess) {
       onUploadComplete();
     }
-  }, [onUploadComplete, onClose, updateUploadFiles]);
+  }, [onUploadComplete, onClose, updateUploadFiles, folderId]);
 
   // 重试单个文件
   const handleRetry = useCallback((id: string) => {

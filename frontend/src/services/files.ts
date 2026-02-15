@@ -168,7 +168,8 @@ export const fileService = {
    */
   async uploadFileWithInstant(
     file: globalThis.File,
-    onProgress?: (percent: number, message?: string) => void
+    onProgress?: (percent: number, message?: string) => void,
+    folderId?: string | null
   ): Promise<{ file: FileMetadata }> {
     const startedAt = performance.now();
     const useChunked =
@@ -192,7 +193,7 @@ export const fileService = {
           filename: file.name,
           file_size: file.size,
           mime_type: mime,
-          folder_id: null,
+          folder_id: folderId ?? null,
         });
       } catch (instantErr) {
         trackError(instantErr, {
@@ -205,8 +206,8 @@ export const fileService = {
         onProgress?.(0, '秒传未命中，正在上传…');
         const progressOnly = (p: number) => onProgress?.(p);
         const uploaded = await (useChunked
-          ? this.uploadFileChunked(file, progressOnly)
-          : this.uploadFile(file, progressOnly));
+          ? this.uploadFileChunked(file, progressOnly, folderId)
+          : this.uploadFile(file, progressOnly, folderId));
 
         trackEvent({
           eventType: 'upload',
@@ -248,10 +249,14 @@ export const fileService = {
    */
   async uploadFile(
     file: globalThis.File,
-    onProgress?: (percent: number) => void
+    onProgress?: (percent: number) => void,
+    folderId?: string | null
   ): Promise<{ file: FileMetadata }> {
     const formData = new FormData();
     formData.append('file', file);
+    if (folderId) {
+      formData.append('folder_id', folderId);
+    }
 
     const response = await api.post<{ file: FileMetadata }>(
       '/api/files/upload',
@@ -338,11 +343,12 @@ export const fileService = {
   async chunkedUploadComplete(
     uploadId: string,
     filename: string,
-    mimeType: string
+    mimeType: string,
+    folderId?: string | null
   ): Promise<{ file: FileMetadata }> {
     const { data } = await api.post<{ file: FileMetadata }>(
       `/api/files/upload/chunked/${uploadId}/complete`,
-      { filename, mime_type: mimeType }
+      { filename, mime_type: mimeType, folder_id: folderId ?? null }
     );
     return data;
   },
@@ -368,7 +374,8 @@ export const fileService = {
    */
   async uploadFileChunked(
     file: globalThis.File,
-    onProgress?: (percent: number) => void
+    onProgress?: (percent: number) => void,
+    folderId?: string | null
   ): Promise<{ file: FileMetadata }> {
     const mimeType = file.type || 'application/octet-stream';
     
@@ -485,7 +492,7 @@ export const fileService = {
     }
 
     // 完成分块上传
-    return this.chunkedUploadComplete(upload_id, file.name, mimeType);
+    return this.chunkedUploadComplete(upload_id, file.name, mimeType, folderId);
   },
 
   /**
