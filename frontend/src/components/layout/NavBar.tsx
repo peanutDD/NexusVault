@@ -22,9 +22,17 @@ export default function NavBar({
   showSettings = true,
 }: NavBarProps) {
   const navigate = useNavigate();
+  const handleDoubleClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 overflow-hidden bg-slate-950/90 backdrop-blur-md">
+    <nav
+      className="fixed inset-x-0 top-0 z-50 overflow-hidden bg-slate-950/90 backdrop-blur-md"
+      onDoubleClick={handleDoubleClick}
+    >
       {/* 顶部紫色微光线条（对齐参考图） */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent" />
       {/* 底部青绿色分隔线（对齐参考图） */}
@@ -58,10 +66,10 @@ export default function NavBar({
             )}
 
             <div className="flex items-center gap-4 min-w-0">
-              <div className="shrink-0">
+              <div className="shrink-0 select-none">
                 <CyberPrismLogo className="h-12 w-12 sm:h-14 sm:w-14" />
               </div>
-              <h1 className="nav-title-fluid font-brand truncate font-normal tracking-widest text-slate-300 drop-shadow-sm">
+              <h1 className="nav-title-fluid font-brand truncate font-normal tracking-widest text-slate-300 drop-shadow-sm select-none">
                 {title}
               </h1>
             </div>

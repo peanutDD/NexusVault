@@ -166,7 +166,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
   }, [openMenu, files, displayFolders]);
 
   return (
-    <>
+    <div>
       {error && (
         <ErrorMessage
           message={error}
@@ -531,7 +531,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
           />
         </>
       )}
-    </>
+    </div>
   );
 };
 
