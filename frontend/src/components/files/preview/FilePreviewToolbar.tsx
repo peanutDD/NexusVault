@@ -117,7 +117,7 @@ export function FilePreviewToolbar({
                 e.stopPropagation();
                 onZoomIn();
               }}
-              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
+              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 active:bg-white/15 transition-transform transition-colors duration-150 active:scale-95 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
               aria-label="放大"
             >
               +
@@ -128,7 +128,7 @@ export function FilePreviewToolbar({
                 e.stopPropagation();
                 onZoomOut();
               }}
-              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
+              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 active:bg-white/15 transition-transform transition-colors duration-150 active:scale-95 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
               aria-label="缩小"
             >
               −
@@ -139,7 +139,7 @@ export function FilePreviewToolbar({
                 e.stopPropagation();
                 onRotate();
               }}
-              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
+              className="flex items-center justify-center rounded-full font-semibold text-white/85 hover:bg-white/10 active:bg-white/15 transition-transform transition-colors duration-150 active:scale-95 w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] text-[clamp(0.85rem,2vw,1.125rem)]"
               aria-label="旋转 90 度"
             >
               ⤾
@@ -150,7 +150,7 @@ export function FilePreviewToolbar({
                 e.stopPropagation();
                 onResetView();
               }}
-              className="rounded-full font-semibold text-white/80 hover:bg-white/10 mt-[clamp(0.15rem,0.4vw,0.25rem)] px-[clamp(0.35rem,0.8vw,0.5rem)] py-[clamp(0.1rem,0.3vw,0.15rem)] text-[clamp(0.5rem,1.2vw,0.625rem)]"
+              className="rounded-full font-semibold text-white/80 hover:bg-white/10 active:bg-white/15 transition-transform transition-colors duration-150 active:scale-95 mt-[clamp(0.15rem,0.4vw,0.25rem)] px-[clamp(0.35rem,0.8vw,0.5rem)] py-[clamp(0.1rem,0.3vw,0.15rem)] text-[clamp(0.5rem,1.2vw,0.625rem)]"
             >
               Reset
             </button>
