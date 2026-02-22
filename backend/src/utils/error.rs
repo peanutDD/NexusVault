@@ -140,8 +140,15 @@ impl AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
+        use axum::http::header;
+        use axum::http::HeaderValue;
         use chrono::Utc;
 
+        // ---------------------------------------------------------------------
+        // 错误标识
+        // ---------------------------------------------------------------------
+        //
+        // 生成短 error_id，便于用户反馈时携带，同时方便运维在日志中快速定位。
         // 生成唯一的错误 ID，用于关联日志和用户报告
         let error_id = Uuid::new_v4().to_string()[..8].to_string();
         let timestamp = Utc::now();
@@ -338,6 +345,16 @@ impl IntoResponse for AppError {
             "timestamp": timestamp.to_rfc3339(),
         }));
 
-        (status, body).into_response()
+        // ---------------------------------------------------------------------
+        // 响应加固
+        // ---------------------------------------------------------------------
+        //
+        // 错误响应不应被缓存：一方面可能包含用户态信息，另一方面缓存出来的错误会造成“已修复但仍报错”的错觉。
+        let mut res = (status, body).into_response();
+        res.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("private, no-store"),
+        );
+        res
     }
 }

@@ -10,6 +10,12 @@ use crate::extractors::AuthenticatedUser;
 use crate::utils::{json_response, AppError};
 use crate::AppState;
 
+// =============================================================================
+// Categories
+// =============================================================================
+//
+// Cached because it is frequently used to build filter dropdowns and nav chips.
+// It is invalidated by bumping the per-user cache version on any write path.
 /// 获取文件分类列表
 ///
 /// 返回用户所有文件的分类列表（去重）。

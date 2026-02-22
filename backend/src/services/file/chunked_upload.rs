@@ -18,11 +18,15 @@ use crate::utils::AppError;
 use super::FileService;
 
 impl FileService {
+    // =============================================================================
+    // 会话初始化
+    // =============================================================================
     pub async fn init_chunked_upload(
         &self,
         user_id: Uuid,
         req: InitChunkedUploadRequest,
     ) -> Result<(Uuid, u32, u32), AppError> {
+        // 先做配额/类型校验，避免创建一个“无论如何都无法完成”的会话，徒增清理成本。
         // 复用统一校验逻辑，但保持原先错误信息（更短、更贴近该场景）
         self.ensure_can_store_quota_simple(user_id, &req.mime_type, req.total_size)
             .await?;
@@ -32,6 +36,7 @@ impl FileService {
                 .count_active_sessions_by_user(user_id)
                 .await?;
 
+        // 达到上限时，尝试自动取消最旧会话以腾出名额，避免用户被“永久卡死在上限”。
         // 如果达到上限，自动清理最旧的一个会话，为新上传腾出空间
         if active_count >= MAX_CONCURRENT_CHUNKED_UPLOADS {
             let repo = crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool);
@@ -58,6 +63,7 @@ impl FileService {
         }
 
         let upload_id = Uuid::new_v4();
+        // API 中 part 是从 1 开始；磁盘落盘使用 0-based（part_0..part_{n-1}）便于顺序合并。
         let total_parts = req.total_size.div_ceil(CHUNK_SIZE as u64) as u32;
         let temp_path = self.chunked_temp_dir(upload_id);
         tokio::fs::create_dir_all(&temp_path)
@@ -91,6 +97,9 @@ impl FileService {
         Ok((upload_id, CHUNK_SIZE, total_parts))
     }
 
+    // =============================================================================
+    // 会话读取 / 过期处理
+    // =============================================================================
     pub async fn get_upload_session(
         &self,
         upload_id: Uuid,
@@ -101,6 +110,7 @@ impl FileService {
             .await?
             .ok_or(AppError::NotFound)?;
 
+        // 访问到过期会话时立即清理，避免临时目录长期堆积占用磁盘空间。
         if s.expires_at < Utc::now() {
             self.abort_chunked_upload(upload_id, user_id).await?;
             return Err(AppError::Validation("上传会话已过期".to_string()));
@@ -108,6 +118,9 @@ impl FileService {
         Ok(s)
     }
 
+    // =============================================================================
+    // 分块上传
+    // =============================================================================
     pub async fn upload_chunk(
         &self,
         upload_id: Uuid,
@@ -134,6 +147,8 @@ impl FileService {
             )));
         }
 
+        // 可选完整性校验：客户端通过 X-Part-SHA256 提供分块摘要，服务端校验通过才写入，
+        // 用于防止断点续传状态错乱或传输中数据损坏。
         if let Some(expected_hex) = part_sha256 {
             let actual = crate::utils::sha256_hex(&data);
             if expected_hex.len() != 64 || !expected_hex.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -157,11 +172,13 @@ impl FileService {
             }
         }
 
+        // 磁盘分块命名：part_{0-based}，保证合并时顺序确定。
         let path = Path::new(&s.temp_path).join(format!("part_{}", part - 1));
         tokio::fs::write(&path, &data)
             .await
             .map_err(|e| AppError::Storage(format!("Failed to write chunk: {}", e)))?;
 
+        // 上传进度写入 DB：断线/刷新后可继续断点续传。
         crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
             .append_uploaded_part(upload_id, user_id, part)
             .await?;
@@ -175,6 +192,9 @@ impl FileService {
         Ok(())
     }
 
+    // =============================================================================
+    // 状态查询
+    // =============================================================================
     pub async fn chunked_upload_status(
         &self,
         upload_id: Uuid,
@@ -191,6 +211,9 @@ impl FileService {
         Ok((s.uploaded_parts, total_parts))
     }
 
+    // =============================================================================
+    // 完成（合并 + 创建文件记录）
+    // =============================================================================
     pub async fn complete_chunked_upload(
         &self,
         upload_id: Uuid,
@@ -225,6 +248,7 @@ impl FileService {
             "chunked upload complete: start merge"
         );
 
+        // 合并采用流式 copy，避免把整文件读入 Vec<u8>（高并发下有 OOM 风险）。
         // 流式合并：避免把整个文件读入 Vec<u8>，高并发下防止 OOM
         let base_path = Path::new(&s.temp_path);
         let merged_path = base_path.join("merged_upload");
@@ -256,6 +280,7 @@ impl FileService {
             return Err(AppError::Validation("文件大小不匹配".to_string()));
         }
 
+        // 整文件 SHA-256 用于秒传/内容匹配等逻辑（同时作为内容指纹便于后续优化）。
         let content_sha256: Option<String> = match tokio::task::spawn_blocking({
             let p = merged_path.clone();
             move || crate::utils::sha256_file_hex(&p)
@@ -294,11 +319,15 @@ impl FileService {
         Ok(file)
     }
 
+    // =============================================================================
+    // 取消（清理）
+    // =============================================================================
     pub async fn abort_chunked_upload(
         &self,
         upload_id: Uuid,
         user_id: Uuid,
     ) -> Result<(), AppError> {
+        // 磁盘清理 best-effort；DB 记录删除是“事实来源”，不能因为磁盘问题阻塞取消流程。
         let temp_path = self.chunked_temp_dir(upload_id);
         let existed = temp_path.exists();
         if existed {

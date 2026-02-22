@@ -7,9 +7,7 @@ use std::time::Duration;
 
 use axum::http::StatusCode;
 use axum::routing::get;
-use axum::Json;
 use axum::Router;
-use serde_json::json;
 use tower::ServiceBuilder;
 use tower::{limit::ConcurrencyLimitLayer, load_shed::LoadShedLayer, BoxError};
 use tower_http::{
@@ -23,6 +21,7 @@ use crate::api;
 use crate::config::Config;
 use crate::handlers::health;
 use crate::middleware;
+use crate::utils::error_response;
 use crate::AppState;
 
 // ---------- 应用创建 ----------
@@ -55,13 +54,11 @@ where
         .layer(axum::error_handling::HandleErrorLayer::new(
             |err: BoxError| async move {
                 tracing::warn!("global overload triggered: {}", err);
-                (
+                // 过载保护也应保持与 AppError 一致的错误结构，便于客户端统一解析错误响应。
+                error_response(
                     StatusCode::SERVICE_UNAVAILABLE,
-                    Json(json!({
-                        "error": "service overloaded",
-                        "message": "服务器繁忙，请稍后重试",
-                        "code": "SERVICE_OVERLOADED"
-                    })),
+                    "SERVICE_OVERLOADED",
+                    "服务器繁忙，请稍后重试",
                 )
             },
         ))
@@ -95,8 +92,8 @@ where
         .route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             move |axum::extract::State(app_state_for_mw): axum::extract::State<AppState>,
-                  req,
-                  next| {
+                req,
+                next| {
                 let limit_state = rate_limit_state.clone();
                 middleware::rate_limit::rate_limit_middleware(
                     app_state_for_mw,

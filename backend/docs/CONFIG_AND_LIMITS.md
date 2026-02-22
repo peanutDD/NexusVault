@@ -7,6 +7,7 @@
 | 环境变量 | 说明 | 默认值 |
 |----------|------|--------|
 | `DATABASE_URL` | PostgreSQL 连接串 | 必填 |
+| `REDIS_URL` | Redis 连接串（不配置则禁用 Redis 能力） | 可选 |
 | `JWT_SECRET` | JWT 签名密钥 | 必填 |
 | `JWT_EXPIRY` | JWT 过期时间 | `24h` |
 | `PORT` | 服务监听端口 | `3000` |

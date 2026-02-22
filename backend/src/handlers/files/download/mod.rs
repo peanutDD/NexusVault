@@ -23,6 +23,7 @@ use deadpool_redis::redis::cmd;
 use uuid::Uuid;
 
 use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
+use crate::utils::hls_processing_response;
 use crate::utils::response::file_response;
 use crate::utils::thumbnail::generate_thumbnail_jpeg;
 use crate::utils::AppError;
@@ -225,6 +226,14 @@ pub async fn thumbnail_file_handler(
     Query(q): Query<ThumbnailQuery>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
+    // -------------------------------------------------------------------------
+    // 缩略图：磁盘缓存 + 可选 Redis 锁（防击穿）
+    // -------------------------------------------------------------------------
+    //
+    // 为什么需要锁：
+    // - 缩略图生成属于 CPU 密集（解码/缩放/编码）
+    // - 多实例情况下同一文件的缩略图请求可能并发打到不同副本
+    // - 更偏好“一个实例生成，其它实例短暂等待磁盘缓存出现”
     let file = state.file_service.get_file(file_id, user_id).await?;
 
     let is_supported = file.mime_type.starts_with("image/");
@@ -291,6 +300,7 @@ pub async fn thumbnail_file_handler(
         return Ok(res);
     }
 
+    let mut thumb_lock_key: Option<String> = None;
     if let Some(pool) = &state.redis {
         if let Ok(mut conn) = pool.get().await {
             let lock_key = format!("lock:thumb:{}:{}", file_id, w);
@@ -303,7 +313,10 @@ pub async fn thumbnail_file_handler(
                 .query_async(&mut conn)
                 .await;
 
-            if acquired.ok().flatten().is_none() {
+            if acquired.ok().flatten().is_some() {
+                thumb_lock_key = Some(lock_key.clone());
+            } else {
+                // 其他实例正在生成：短暂等待磁盘缓存出现，避免重复生成。
                 for _ in 0..10 {
                     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                     if let Ok(cached) = state.file_service.get_thumbnail(file_id, user_id).await {
@@ -316,6 +329,19 @@ pub async fn thumbnail_file_handler(
                         );
                         return Ok(res);
                     }
+                }
+
+                // 仍未就绪：再尝试抢一次锁，减少长尾等待导致的重复请求放大。
+                let acquired_again: Result<Option<String>, _> = cmd("SET")
+                    .arg(&lock_key)
+                    .arg("1")
+                    .arg("NX")
+                    .arg("PX")
+                    .arg(30000)
+                    .query_async(&mut conn)
+                    .await;
+                if acquired_again.ok().flatten().is_some() {
+                    thumb_lock_key = Some(lock_key.clone());
                 }
             }
         }
@@ -349,6 +375,14 @@ pub async fn thumbnail_file_handler(
         tracing::warn!(file_id = %file_id, error = %e, "缩略图生成成功但保存失败，下次请求将重新生成");
     }
 
+    // best-effort 提前释放：生成成功后立即释放锁，缩短其它请求等待时间；
+    // 同时保留 TTL 作为兜底，防止进程崩溃导致锁永久占用。
+    if let (Some(pool), Some(lock_key)) = (&state.redis, thumb_lock_key.as_ref()) {
+        if let Ok(mut conn) = pool.get().await {
+            let _: Result<i32, _> = cmd("DEL").arg(lock_key).query_async(&mut conn).await;
+        }
+    }
+
     tracing::info!(
         file_id = %file_id,
         width = w,
@@ -372,13 +406,21 @@ pub async fn hls_playlist_handler(
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
+    // -------------------------------------------------------------------------
+    // HLS：分布式锁 + “可重试 503”占位响应
+    // -------------------------------------------------------------------------
+    //
+    // 为什么返回 m3u8 占位：
+    // - hls.js 将 m3u8/ts 拉取视为媒体流水线的一部分
+    // - 若 503 返回 JSON，通常会触发 fatal 错误，导致过早降级
+    // - 返回最小 m3u8 + Retry-After，前端可实现温和重试与更好的体验
     let file = state.file_service.get_file(file_id, user_id).await?;
     let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
+    let lock_key = format!("lock:hls:{}", file_id);
     let mut acquired = false;
     if let Some(pool) = &state.redis {
         if let Ok(mut conn) = pool.get().await {
-            let lock_key = format!("lock:hls:{}", file_id);
             let r: Result<Option<String>, _> = cmd("SET")
                 .arg(&lock_key)
                 .arg("1")
@@ -392,6 +434,11 @@ pub async fn hls_playlist_handler(
     }
     if acquired {
         state.file_service.ensure_hls_ready(&file).await?;
+        if let Some(pool) = &state.redis {
+            if let Ok(mut conn) = pool.get().await {
+                let _: Result<i32, _> = cmd("DEL").arg(&lock_key).query_async(&mut conn).await;
+            }
+        }
     } else {
         let mut ready = false;
         for _ in 0..60 {
@@ -405,7 +452,7 @@ pub async fn hls_playlist_handler(
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
         if !ready {
-            state.file_service.ensure_hls_ready(&file).await?;
+            return Ok(hls_processing_response(2));
         }
     }
     let data = tokio::fs::read(&playlist_path)
@@ -455,10 +502,10 @@ pub async fn hls_asset_handler(
     }
     let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
+    let lock_key = format!("lock:hls:{}", file_id);
     let mut acquired = false;
     if let Some(pool) = &state.redis {
         if let Ok(mut conn) = pool.get().await {
-            let lock_key = format!("lock:hls:{}", file_id);
             let r: Result<Option<String>, _> = cmd("SET")
                 .arg(&lock_key)
                 .arg("1")
@@ -472,6 +519,11 @@ pub async fn hls_asset_handler(
     }
     if acquired {
         state.file_service.ensure_hls_ready(&file).await?;
+        if let Some(pool) = &state.redis {
+            if let Ok(mut conn) = pool.get().await {
+                let _: Result<i32, _> = cmd("DEL").arg(&lock_key).query_async(&mut conn).await;
+            }
+        }
     } else {
         let mut ready = false;
         for _ in 0..60 {
@@ -485,7 +537,7 @@ pub async fn hls_asset_handler(
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
         if !ready {
-            state.file_service.ensure_hls_ready(&file).await?;
+            return Ok(hls_processing_response(2));
         }
     }
     let safe_name = filename

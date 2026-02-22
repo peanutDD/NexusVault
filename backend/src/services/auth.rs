@@ -79,7 +79,12 @@ impl AuthService {
             .as_ref()
             .cloned()
             .map(crate::services::redis::RedisService::new);
-        Self::new(users_repo, (*state.config).clone(), state.cache.clone(), redis)
+        Self::new(
+            users_repo,
+            (*state.config).clone(),
+            state.cache.clone(),
+            redis,
+        )
     }
 
     /// 用户注册
@@ -316,7 +321,8 @@ impl AuthService {
             .map(|_| rand::thread_rng().gen_range(0..10).to_string())
             .collect();
         if let Some(redis) = &self.redis {
-            redis.set_email_verification_code(user_id, &req.email, &code)
+            redis
+                .set_email_verification_code(user_id, &req.email, &code)
                 .await
                 .map_err(|_| AppError::Internal)?;
         } else {
@@ -396,7 +402,8 @@ impl AuthService {
                 })?;
 
             let ok = if let Some(redis) = &self.redis {
-                redis.verify_and_consume_email_code(user_id, &req.email, code)
+                redis
+                    .verify_and_consume_email_code(user_id, &req.email, code)
                     .await
                     .map_err(|_| AppError::Internal)?
             } else {

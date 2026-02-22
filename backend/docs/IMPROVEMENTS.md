@@ -1,7 +1,15 @@
 # 后端改进记录
 
+## 2026-02-22 Redis/缓存/API 与数据库优化（补充）
+
+- **数据库一致性**：为避免并发上传导致同目录重复文件名，增加数据库唯一约束（并在迁移中清理历史重复）：[`019_add_files_unique_constraint.sql`](../migrations/019_add_files_unique_constraint.sql)
+- **查询可观测性**：启用 `pg_stat_statements`（迁移创建扩展 + compose preload；若数据库用户无 `CREATE EXTENSION` 权限，需要由管理员预先创建扩展或用具备权限的账号执行迁移）：[`020_enable_pg_stat_statements.sql`](../migrations/020_enable_pg_stat_statements.sql)、[docker-compose.yml](file:///Users/tyone/github/upload-download-util/docker-compose.yml)
+- **分页性能**：文件列表支持 `include_total=false` 跳过总数计算（大表优化），游标分页保持不算 total：[repositories/files.rs](file:///Users/tyone/github/upload-download-util/backend/src/repositories/files.rs)、[models/file.rs](file:///Users/tyone/github/upload-download-util/backend/src/models/file.rs)
+- **Redis 落地**：引入可选 Redis 连接池，覆盖验证码/OAuth state、限流、多实例共享读缓存、缩略图与 HLS 分布式锁：[redis.rs](file:///Users/tyone/github/upload-download-util/backend/src/services/redis.rs)、[API_AND_CACHING_SELF_CHECK.md](./API_AND_CACHING_SELF_CHECK.md)
+
 ## 2026-02-09 秒传路径一致性修正
 
+- **问题**：秒传时，新用户的记录会复用「首传用户」的 `file_path`，导致 DB 记录的 `user_id` 与路径中的 `user_id` 不一致（例如：DB 里 `user_id = A`，但路径是 `uploads/B/...`）。
 - **问题**：秒传时，新用户的记录会复用「首传用户」的 `file_path`，导致 DB 记录的 `user_id` 与路径中的 `user_id` 不一致（例如：DB 里 `user_id = A`，但路径是 `uploads/B/...`）。
 - **根因**：旧实现直接复用任意已有文件的路径，未检查路径是否属于当前用户。
 - **修正**：
@@ -72,11 +80,11 @@ fn hash_token(token: &str) -> String {
 }
 
 // 修复后
-fn hash_token(&self, token: &str) -> String {
+fn hash_token(&self, token: &str) -> Result<String, AppError> {
     let mut mac = HmacSha256::new_from_slice(self.secret.as_bytes())
-        .expect("HMAC can take key of any size");
+        .map_err(|_| AppError::Internal)?;
     mac.update(token.as_bytes());
-    format!("{:x}", mac.finalize().into_bytes())
+    Ok(format!("{:x}", mac.finalize().into_bytes()))
 }
 ```
 

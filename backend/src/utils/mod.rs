@@ -34,7 +34,10 @@ pub use time::{calculate_expiration, now_timestamp, parse_jwt_expiry};
 pub use parse::{parse_part_number, parse_uuid_list};
 
 // Response
-pub use response::{file_response, json_response, stream_file_response, success_response};
+pub use response::{
+    error_response, file_response, hls_processing_response, json_response, stream_file_response,
+    success_response,
+};
 
 // Validation
 pub use validation::{validate_file_size, validate_mime_type};

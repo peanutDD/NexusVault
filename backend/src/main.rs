@@ -46,7 +46,6 @@ use std::time::Duration; // 定时任务间隔（如清理周期）
 use config::Config; // 应用配置
 use database::pool::create_pool; // 创建 PostgreSQL 连接池
 use services::file::create_storage; // 根据配置创建存储后端（本地 / S3）
-use services::redis::create_pool as create_redis_pool;
 use services::maintenance::{
     // 维护任务：孤儿清理、一致性检查、上传会话清理
     run_orphan_cleanup_once,
@@ -54,6 +53,7 @@ use services::maintenance::{
     spawn_orphan_storage_files_cleanup,
     spawn_upload_session_cleanup,
 };
+use services::redis::create_pool as create_redis_pool;
 
 // =============================================================================
 // 程序入口

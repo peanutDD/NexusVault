@@ -61,17 +61,39 @@ export function useFilePreviewEffects({
 
     if (Hls.isSupported()) {
       const token = useAuthStore.getState().token ?? localStorage.getItem('token');
+      let retryTimer: number | undefined;
+      let processingRetries = 0;
       const hls = new Hls({
         xhrSetup(xhr) {
           if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         },
+        manifestLoadingMaxRetry: 20,
+        levelLoadingMaxRetry: 20,
+        fragLoadingMaxRetry: 20,
+        manifestLoadingRetryDelay: 1000,
+        levelLoadingRetryDelay: 1000,
+        fragLoadingRetryDelay: 1000,
       });
       hls.loadSource(blobUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.ERROR, (_, data) => {
+        const code = (data as any)?.response?.code;
+        const isProcessing = code === 503;
+        if (isProcessing) {
+          if (retryTimer) window.clearTimeout(retryTimer);
+          processingRetries += 1;
+          const delay = Math.min(10000, 1000 + processingRetries * 500);
+          retryTimer = window.setTimeout(() => {
+            hls.startLoad(-1);
+          }, delay);
+          return;
+        }
         if (data.fatal) tryVideoAudioFallbackRef.current();
       });
-      return () => hls.destroy();
+      return () => {
+        if (retryTimer) window.clearTimeout(retryTimer);
+        hls.destroy();
+      };
     }
     video.src = blobUrl;
   }, [kind.isVideo, useHls, blobUrl, videoRef, tryVideoAudioFallbackRef]);

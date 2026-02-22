@@ -12,6 +12,18 @@ use crate::utils::crypto::sha256_hex;
 use crate::utils::{json_response, AppError};
 use crate::AppState;
 
+// =============================================================================
+// 文件列表
+// =============================================================================
+//
+// 为什么在这里做缓存：
+// - 该接口属于高频路径（文件夹切换、无限滚动、筛选条件变化）
+// - 响应体是小 JSON，短期缓存收益明显
+//
+// 缓存设计：
+// - cache-aside：GET 命中直接返回；未命中则查询后 SETEX
+// - 版本号失效：写路径 bump `cachever:user:{user_id}`，读 key 带版本号自动失效
+// - fingerprint + hash：避免 Redis key 过长（把所有影响结果的 query 先拼串再 sha256）
 /// 获取文件列表
 ///
 /// 支持分页、搜索、过滤等功能。
@@ -46,6 +58,7 @@ pub async fn list_files_handler(
     let limit = query.limit.unwrap_or(20);
 
     if let Some(pool) = &state.redis {
+        // fingerprint 必须覆盖所有会影响结果的查询字段，否则可能返回“错误的缓存命中”。
         let fingerprint = format!(
             "page={:?}&limit={:?}&cursor={:?}&search={:?}&mime_type={:?}&category={:?}&folder_id={:?}&date_from={:?}&date_to={:?}&size_min={:?}&size_max={:?}&sort_by={:?}&sort_order={:?}&include_total={:?}",
             query.page,
@@ -90,6 +103,7 @@ pub async fn list_files_handler(
 
         if let Ok(mut conn) = pool.get().await {
             if let Ok(body) = serde_json::to_string(&response) {
+                // 仅缓存成功的 JSON 响应体；错误不缓存，避免把瞬时故障固化成“稳定失败”。
                 let _: Result<(), _> = cmd("SETEX")
                     .arg(&cache_key)
                     .arg(20)

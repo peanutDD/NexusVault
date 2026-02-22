@@ -32,7 +32,9 @@
 | **批量删除 count_by_file_path** | ~~每路径一次查询~~ | ✅ 新增 `count_by_file_paths(paths: &[String]) -> HashMap<String, u64>`，单次 `WHERE file_path = ANY($1) GROUP BY file_path`；`batch_delete` 改为一次查后按 count==0 删存储 | 中 |
 | **文件夹删除存储** | `folder::delete_folder` 中 `for path in &file_paths { storage.delete_file(path).await }` 串行 | 可限制并发（如 `futures::stream::iter` + `buffer_unordered(8)`）删存储，避免一次删上千文件时阻塞过久 | 低 |
 | **连接池 statement_timeout** | 池级 `SET statement_timeout = '20s'`，list 已用 `SET LOCAL 3s` | 保持；若有其他长耗时查询（如复杂报表），可单独开连接或 `SET LOCAL` 放大超时 | - |
-| **list 总条数** | 使用 `COUNT(*) OVER()` 一次查出一页+总数，数据量极大时可能偏重 | 可选：总数改为单独 `COUNT(*)` 或缓存/近似计数，降低单次 list 延迟（需权衡一致性） | 低 |
+| **list 总条数** | ✅ 已支持 `include_total=false` 跳过 `COUNT(*) OVER()`；游标分页天然不算 total | 默认优先游标分页；传统分页仅在需要 total 时开启 include_total | 低 |
+| **DB 并发一致性** | 高并发上传时可能出现重复文件名记录 | ✅ 通过数据库唯一约束修复：`UNIQUE NULLS NOT DISTINCT (user_id, folder_id, original_filename)`，并在迁移中清理历史重复 | 中 |
+| **查询可观测性** | 缺少慢 SQL 统计 | ✅ 启用 `pg_stat_statements`（docker-compose preload + 迁移创建扩展） | 中 |
 
 ---
 
@@ -54,7 +56,7 @@
 | **请求日志** | ~~仅 method/path/status/elapsed_ms~~ | ✅ request_id：从 `X-Request-ID` 读取或生成 8 位，打入 `tracing::info_span!("request", request_id)`，整请求 span 生效；响应头回写 `X-Request-ID`，便于与 error_id 关联 | 中 |
 | **健康检查** | `/health` 检查 DB + 存储，返回 503 时 body 含 checks | 保持；若有依赖（如 Redis）可扩展 checks；考虑加 `/health/ready` 与 `/health/live` 语义区分（当前 /readyz 与 /health 相同） | 低 |
 | **后台任务监控** | 维护任务仅打 log，失败后下一轮继续 | 可对「连续失败次数」打 metric 或告警；或暴露 `orphan_cleanup_last_run_timestamp` 等，便于监控 | 低 |
-| **速率限制** | 按 IP、固定窗口、moka 缓存，分片上传路径豁免 | 已考虑 max_keys 防内存膨胀；可选项：按 user_id 限流（需先认证）、或对敏感路径（如登录）单独更严限制 | 低 |
+| **速率限制** | ✅ Redis 可用时使用 Redis 计数（多实例一致）；未配置 Redis 时回退 moka（单实例） | 保持分片上传路径豁免；敏感路径可单独更严（如登录/验证码发送） | 中 |
 
 ---
 
@@ -74,8 +76,11 @@
 - **配置与启动（一）**：Config 启动校验（端口、MAX_FILE_SIZE、JWT、local 存储路径、维护间隔）；维护任务参数抽到 Config/环境变量；RUST_LOG 生产建议注释。
 - **错误与安全（二）**：CatchPanicLayer 自定义 JSON 响应；API Token HMAC 去掉 expect、校验 secret；Prometheus init 返回 Result；query token 仅 GET 接受并加文档。
 - **性能与数据库（三）**：`count_by_file_paths` 批量查引用数，batch_delete 一次查后删存储；files 仓库此前已有空 ids 防护、get_storage_usage 用 fetch_one、list_by_folder 单条 SQL、013 迁移索引。
+- **数据库与可观测（补充）**：并发上传一致性约束（019 迁移清理 + UNIQUE）；启用 `pg_stat_statements`（020 迁移 + compose preload）。
+- **分页性能（补充）**：文件列表支持 `include_total=false` 跳过 total 计算，配合游标分页降低大表延迟。
 - **代码质量与可维护性（四）**：API 路由抽成 `api::create_api_routes()` 复用；**FileService 注入 AppState**（`AppState` 持有一份 `Arc<FileService>`，handlers 使用 `state.file_service`，不再在每次请求内 `from_state`）；bin/check_file_owners 去掉 unwrap；[CONFIG_AND_LIMITS.md](./CONFIG_AND_LIMITS.md) 列清常量与配置对应关系。
 - **可观测与运维（五·请求日志）**：request_id（X-Request-ID 或生成）打入 tracing span，响应头回写，便于与 error_id 关联。
+- **Redis（补充）**：接入 Redis 连接池（可选），用于验证码/OAuth state、限流、多实例共享缓存、分布式锁（缩略图与 HLS 生成），并为高频读接口引入“版本号失效”策略避免 SCAN。
 - **孤儿清理**：批量 find_by_ids、每轮 info 日志；可选按负载调 ORPHAN_DB_BATCH_SIZE。
 - **GIF 预览异步转码与任务队列**：引入 `background_tasks` 表与 `TaskQueue` 服务，用 `enqueue_task/dequeue_pending_task` 管理 GIF 预览转码任务；`FileService::transcode_gif_to_mp4` 封装 GIF→mp4 转码逻辑，`run_gif_preview_worker` 后台 Worker 以 FOR UPDATE SKIP LOCKED 方式并行消费；`/api/files/:id/preview/video/prepare` 与 `/status` 接口改为基于任务队列与派生文件是否存在返回 `ready/processing` 状态，`/preview/video` 仅在派生 mp4 已存在时流式返回视频。
 

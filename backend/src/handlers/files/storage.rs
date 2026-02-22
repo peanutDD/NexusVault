@@ -10,6 +10,12 @@ use crate::extractors::AuthenticatedUser;
 use crate::utils::{json_response, AppError};
 use crate::AppState;
 
+// =============================================================================
+// Storage usage
+// =============================================================================
+//
+// Cached briefly because this endpoint is commonly polled by UI (quota bars).
+// It is invalidated by bumping the per-user cache version on uploads/deletes.
 /// 获取存储使用情况
 ///
 /// 返回用户的存储使用量和配额信息。

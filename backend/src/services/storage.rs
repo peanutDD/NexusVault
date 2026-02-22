@@ -388,7 +388,7 @@ impl StorageBackend for S3Storage {
             .await
             .map_err(|e| AppError::Storage(format!("Failed to upload to S3: {}", e)))?;
 
-        // Best-effort cleanup of the local source file
+        // best-effort 清理：S3 已接管数据后，尽量删除本地临时源文件以节省磁盘空间
         let _ = tokio::fs::remove_file(source_path).await;
 
         Ok(key)

@@ -532,7 +532,7 @@ impl FilesRepository for SqlxFilesRepo {
         // ---- 动态拼接 SELECT + WHERE + ORDER BY + LIMIT/OFFSET 或 LIMIT（游标分页） ----
         // 传统分页使用 COUNT(*) OVER() 获取总条数（除非 include_total=false），游标分页不需要
         let should_count_total = !use_cursor_pagination && query.include_total.unwrap_or(true);
-        
+
         let mut qb: QueryBuilder<sqlx::Postgres> = if should_count_total {
             QueryBuilder::new(
                 "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at, COUNT(*) OVER() AS total_count FROM files WHERE user_id = "

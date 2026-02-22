@@ -15,6 +15,9 @@ use sqlx::PgPool;
 
 use super::FileService;
 
+// =============================================================================
+// 输入结构
+// =============================================================================
 pub(crate) struct CreateFileFromPathInput<'a> {
     pub user_id: Uuid,
     pub original_filename: String,
@@ -25,6 +28,9 @@ pub(crate) struct CreateFileFromPathInput<'a> {
     pub folder_id: Option<Uuid>,
 }
 
+// =============================================================================
+// 后台任务：向量嵌入
+// =============================================================================
 pub(crate) struct EmbeddingTaskInput {
     pub embedding_service: Arc<EmbeddingService>,
     pub storage: Arc<dyn StorageBackend>,
@@ -36,6 +42,13 @@ pub(crate) struct EmbeddingTaskInput {
     pub pool: PgPool,
 }
 
+// =============================================================================
+// 文件名策略
+// =============================================================================
+//
+// 存储侧文件名与“展示文件名”分离：
+// - 展示名（original_filename）可重复、可包含特殊字符
+// - 存储名用于落盘/对象存储 key，需可控且尽量避免冲突
 pub(crate) fn build_storage_filename(
     file_id: Uuid,
     original_filename: &str,
@@ -45,6 +58,9 @@ pub(crate) fn build_storage_filename(
 }
 
 impl FileService {
+    // =============================================================================
+    // 创建文件（bytes）
+    // =============================================================================
     /// 从内存数据创建文件。
     ///
     /// 当前 HTTP 上传路径统一走 multipart / 分片上传，因此暂未直接使用该方法；
@@ -65,7 +81,7 @@ impl FileService {
         let file_id = Uuid::new_v4();
         let storage_filename = build_storage_filename(file_id, &original_filename)?;
 
-        // Save file to storage
+        // 写入存储后端（本地/S3 等）
         let file_path = self
             .storage
             .save_file(user_id, file_id, &storage_filename, &data)
@@ -96,6 +112,9 @@ impl FileService {
         inserted
     }
 
+    // =============================================================================
+    // 创建文件（本地路径 -> 存储 + 数据库）
+    // =============================================================================
     /// 从本地路径创建文件，可选传入已计算的内容 SHA256（用于秒传落库）
     ///
     /// 如果已存在同名文件（在同一文件夹下），会自动创建版本：
@@ -118,6 +137,7 @@ impl FileService {
         self.ensure_can_store_detailed(user_id, &mime_type, file_size)
             .await?;
 
+        // 同目录同名文件：用“版本化覆盖”保证用户体验（同名上传即更新），同时保留历史版本回滚能力。
         // 检查是否存在同名文件（在同一文件夹下）
         let existing_file = self
             .files_repo
@@ -128,6 +148,7 @@ impl FileService {
             // 存在同名文件，需要创建版本
             let existing_file_id = existing.id;
 
+            // 版本号递增：以 files.id 为聚合根，file_versions 记录历史快照。
             // 获取当前最大版本号（如果没有版本，max_version = 0）
             let max_version = self
                 .file_versions_repo
@@ -152,6 +173,7 @@ impl FileService {
                 )
                 .await;
 
+            // 新内容写入存储后端：使用 existing_file_id 复用同一个 files 记录。
             // 将新文件保存为当前文件（更新 files 表）
             let storage_filename = build_storage_filename(existing_file_id, &original_filename)?;
             let file_path = self
@@ -222,7 +244,7 @@ impl FileService {
             let new_file_id = Uuid::new_v4();
             let storage_filename = build_storage_filename(new_file_id, &original_filename)?;
 
-            // Save file to storage without loading into memory
+            // 从本地路径写入存储后端，避免把文件整体读入内存
             let file_path = self
                 .storage
                 .save_file_from_path(user_id, new_file_id, &storage_filename, source_path)
@@ -281,6 +303,9 @@ impl FileService {
         Ok(file_id)
     }
 
+    // =============================================================================
+    // 向量嵌入（异步）
+    // =============================================================================
     /// 异步生成文件向量嵌入（包含文件名和内容）
     ///
     /// 这是一个辅助函数，用于在后台任务中提取文件内容并生成向量

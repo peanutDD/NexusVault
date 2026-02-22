@@ -56,6 +56,9 @@ export default function VirtualizedFileGrid({
   const [columns, setColumns] = useState(() =>
     getColumnsFromWidth(typeof window !== 'undefined' ? window.innerWidth : 1280)
   );
+  const [containerWidth, setContainerWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1280
+  );
   /** 容器顶部相对于视口顶部的偏移（<0 表示已向上滚过） */
   const [containerTop, setContainerTop] = useState(0);
   /** 容器在视口内的可见高度（像素） */
@@ -135,12 +138,32 @@ export default function VirtualizedFileGrid({
     };
   }, [updateViewport, scheduleUpdate]);
 
+  // 监听容器宽度变化：行高估算依赖“每卡的实际宽度”（aspect-square）
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setContainerWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    setContainerWidth(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
+
   // 当 files 或 columns 变化时重新计算
   useEffect(() => {
     updateViewport();
   }, [files.length, columns, updateViewport]);
 
-  const rowHeight = FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
+  const rowHeight = useMemo(() => {
+    if (!containerWidth || columns <= 0) return FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
+    const gap = 8; // tailwind gap-2 = 0.5rem
+    const cardWidth = Math.max(0, (containerWidth - gap * (columns - 1)) / columns);
+    const extraHeight = 92; // p-3 + meta 区 + 间距（经验值，避免明显过高导致底部空白）
+    return Math.max(FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT, Math.round(cardWidth + extraHeight));
+  }, [containerWidth, columns]);
   const rowCount = Math.ceil(files.length / columns);
   const overscan = 2;
 
@@ -172,6 +195,10 @@ export default function VirtualizedFileGrid({
     const el = containerRef.current;
     if (el) el.style.setProperty('--grid-cols', String(columns));
   }, [columns]);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (el) el.style.setProperty('--virtual-row-height', `${rowHeight}px`);
+  }, [rowHeight]);
   useEffect(() => {
     const el = topSpacerRef.current;
     if (el) el.style.setProperty('height', `${topSpacerHeight}px`);

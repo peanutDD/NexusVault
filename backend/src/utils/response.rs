@@ -8,10 +8,15 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use chrono::Utc;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::Serialize;
 use serde_json::json;
+use uuid::Uuid;
 
+// =============================================================================
+// Header 辅助
+// =============================================================================
 fn ascii_filename_fallback(filename: &str) -> String {
     // 仅保留一部分安全 ASCII 字符作为 fallback，避免 HeaderValue::from_str 失败
     let mut out = String::with_capacity(filename.len().min(128));
@@ -54,6 +59,13 @@ fn is_dangerous_mime(mime_type: &str) -> bool {
         || mt.starts_with("image/svg+xml;")
 }
 
+// =============================================================================
+// JSON 响应
+// =============================================================================
+//
+// 默认使用 "private, no-store" 的原因：
+// - 大多数 API 响应是用户态数据（Authorization / Query token）
+// - 避免浏览器/代理误缓存敏感响应体
 /// 构建标准的 JSON 成功响应
 ///
 /// # 示例
@@ -65,7 +77,58 @@ fn is_dangerous_mime(mime_type: &str) -> bool {
 /// })))
 /// ```
 pub fn json_response<T: Serialize>(data: T) -> Response {
-    Json(data).into_response()
+    let mut res = Json(data).into_response();
+    res.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, no-store"),
+    );
+    res
+}
+
+// 给非 AppError 场景（如中间件）复用的标准 JSON 错误体，保证客户端只需解析一套结构。
+pub fn error_response(status: axum::http::StatusCode, code: &str, message: &str) -> Response {
+    let error_id = Uuid::new_v4().to_string()[..8].to_string();
+    let timestamp = Utc::now().to_rfc3339();
+    let mut res = (
+        status,
+        Json(json!({
+            "message": message,
+            "code": code,
+            "error_id": error_id,
+            "timestamp": timestamp,
+        })),
+    )
+        .into_response();
+    res.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, no-store"),
+    );
+    res
+}
+
+// =============================================================================
+// 媒体响应
+// =============================================================================
+//
+// HLS 生成中：
+// - hls.js 期待拿到 m3u8；若返回 JSON，通常会表现为 fatal network error
+// - 503 + Retry-After 表达“尚未就绪，请稍后重试”，便于播放器实现温和重试
+pub fn hls_processing_response(retry_after_seconds: u32) -> Response {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/vnd.apple.mpegurl"),
+    );
+    headers.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, no-store"),
+    );
+    if let Ok(v) = HeaderValue::from_str(&retry_after_seconds.to_string()) {
+        headers.insert(header::RETRY_AFTER, v);
+    }
+    let body =
+        Body::from("#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:1\n#EXT-X-MEDIA-SEQUENCE:0\n");
+    (axum::http::StatusCode::SERVICE_UNAVAILABLE, headers, body).into_response()
 }
 
 /// 构建文件下载响应

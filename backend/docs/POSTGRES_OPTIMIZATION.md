@@ -35,6 +35,7 @@
 引入“按需计数”策略，并结合游标分页（Cursor Pagination）。
 
 - **代码变更**：[`FilesRepository::list`](../src/repositories/files.rs)
+- **查询参数变更**：[`FileListQuery#include_total`](../src/models/file.rs)
 - **优化逻辑**：
   1.  **游标分页（无限滚动）**：完全跳过总数计算，性能极大提升。
   2.  **传统分页**：新增 `include_total` 参数。前端可选择性关闭总数计算（例如在移动端或非首屏加载时），仅查询数据行。
@@ -54,6 +55,9 @@
 - **配置变更**：
   - [`docker-compose.yml`](../../docker-compose.yml): 添加启动参数 `-c shared_preload_libraries=pg_stat_statements`
   - [迁移文件](../migrations/020_enable_pg_stat_statements.sql): 执行 `CREATE EXTENSION`
+- **权限说明**：
+  - 生产/托管数据库通常限制 `CREATE EXTENSION` 权限；若应用用户无权限，该迁移会失败并阻塞启动。
+  - 解决方式：由数据库管理员预先启用扩展（或用具备权限的账号执行迁移），并配置 `shared_preload_libraries`。
 - **收益**：
   可通过查询 `pg_stat_statements` 视图获取最耗时的 SQL 语句，为后续索引优化提供数据支持。
 

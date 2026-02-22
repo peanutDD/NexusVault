@@ -2,13 +2,11 @@ use axum::{
     extract::Request,
     http::{HeaderMap, HeaderValue, Method, StatusCode},
     middleware::Next,
-    response::{IntoResponse, Response},
-    Json,
+    response::Response,
 };
-use deadpool_redis::Pool as RedisPool;
 use deadpool_redis::redis::cmd;
+use deadpool_redis::Pool as RedisPool;
 use moka::sync::Cache;
-use serde_json::json;
 use std::{
     sync::atomic::{AtomicU32, Ordering},
     sync::Arc,
@@ -17,8 +15,12 @@ use std::{
 use uuid::Uuid;
 
 use crate::extractors::auth::extract_user_id_from_headers;
+use crate::utils::error_response;
 use crate::AppState;
 
+// =============================================================================
+// 状态
+// =============================================================================
 #[derive(Clone)]
 pub struct RateLimitState {
     /// 以“固定窗口 + TTL”实现的 IP 级计数器：
@@ -37,6 +39,9 @@ pub struct RateLimitState {
 }
 
 impl RateLimitState {
+    // -------------------------------------------------------------------------
+    // 构造
+    // -------------------------------------------------------------------------
     fn new(
         ip_max_requests: u32,
         user_max_requests: u32,
@@ -61,6 +66,17 @@ impl RateLimitState {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Redis 计数器（多实例一致）
+    // -------------------------------------------------------------------------
+    //
+    // 为什么用 EVAL：
+    // - 固定窗口计数需要“INCR + 首次设置 TTL”作为一个原子操作
+    // - 若分成 INCR/EXPIRE 两步，在并发下可能丢 TTL，导致 key 永不过期
+    //
+    // 失败策略：
+    // - Redis 不可用时 fail-open（返回 true），避免把 Redis 抖动升级为全站不可用
+    // - 单实例场景仍有进程内 moka 兜底（但多实例不一致）
     async fn check_ip_rate_limit(&self, key: &str) -> bool {
         if let Some(pool) = &self.redis {
             let mut conn = match pool.get().await {
@@ -71,20 +87,23 @@ impl RateLimitState {
                 }
             };
             let redis_key = format!("rl:ip:{}", key);
-            let current: i64 = match cmd("INCR").arg(&redis_key).query_async(&mut conn).await {
+            let script = "local current = redis.call('INCR', KEYS[1]); \
+                          if current == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]); end; \
+                          return current;";
+            let current: i64 = match cmd("EVAL")
+                .arg(script)
+                .arg(1)
+                .arg(&redis_key)
+                .arg(self.window_seconds as usize)
+                .query_async(&mut conn)
+                .await
+            {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::warn!("rate_limit redis incr failed: {}", e);
                     return true;
                 }
             };
-            if current == 1 {
-                let _: Result<(), _> = cmd("EXPIRE")
-                    .arg(redis_key)
-                    .arg(self.window_seconds as usize)
-                    .query_async(&mut conn)
-                    .await;
-            }
             return current as u32 <= self.ip_max_requests;
         }
         let counter = self
@@ -104,20 +123,23 @@ impl RateLimitState {
                 }
             };
             let redis_key = format!("rl:user:{}", key);
-            let current: i64 = match cmd("INCR").arg(&redis_key).query_async(&mut conn).await {
+            let script = "local current = redis.call('INCR', KEYS[1]); \
+                          if current == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]); end; \
+                          return current;";
+            let current: i64 = match cmd("EVAL")
+                .arg(script)
+                .arg(1)
+                .arg(&redis_key)
+                .arg(self.window_seconds as usize)
+                .query_async(&mut conn)
+                .await
+            {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::warn!("rate_limit redis incr failed: {}", e);
                     return true;
                 }
             };
-            if current == 1 {
-                let _: Result<(), _> = cmd("EXPIRE")
-                    .arg(redis_key)
-                    .arg(self.window_seconds as usize)
-                    .query_async(&mut conn)
-                    .await;
-            }
             return current as u32 <= self.user_max_requests;
         }
         let counter = self
@@ -128,6 +150,9 @@ impl RateLimitState {
     }
 }
 
+// =============================================================================
+// 工厂函数
+// =============================================================================
 pub fn create_rate_limit_middleware(
     ip_max_requests: u32,
     user_max_requests: u32,
@@ -144,6 +169,9 @@ pub fn create_rate_limit_middleware(
     )
 }
 
+// =============================================================================
+// 辅助函数（请求分类）
+// =============================================================================
 fn get_client_ip(headers: &HeaderMap) -> String {
     // 使用 Option 链式调用替代嵌套 if-let
     headers
@@ -183,6 +211,9 @@ fn is_user_scoped_write(method: &Method, path: &str) -> bool {
         || path.starts_with("/api/v1/org")
 }
 
+// =============================================================================
+// 中间件入口
+// =============================================================================
 pub async fn rate_limit_middleware(
     app_state: AppState,
     state: RateLimitState,
@@ -199,19 +230,11 @@ pub async fn rate_limit_middleware(
 
     // 1. 全局 IP 级限流（包含所有请求）
     if !state.check_ip_rate_limit(&ip_key).await {
-        let mut response = (
+        let mut response = error_response(
             StatusCode::TOO_MANY_REQUESTS,
-            [
-                ("X-RateLimit-Limit", state.ip_max_requests.to_string()),
-                ("X-RateLimit-Window", state.window_seconds.to_string()),
-            ],
-            Json(json!({
-                "error": "Too many requests",
-                "message": "来自当前 IP 的请求过于频繁，请稍后再试",
-                "code": "IP_RATE_LIMIT_EXCEEDED"
-            })),
-        )
-            .into_response();
+            "IP_RATE_LIMIT_EXCEEDED",
+            "来自当前 IP 的请求过于频繁，请稍后再试",
+        );
 
         let headers = response.headers_mut();
         if let Ok(limit_val) = HeaderValue::from_str(&state.ip_max_requests.to_string()) {
@@ -235,19 +258,11 @@ pub async fn rate_limit_middleware(
         if let Some(user_id) = user_id {
             let user_key = format!("user:{}", user_id);
             if !state.check_user_rate_limit(&user_key).await {
-                let mut response = (
+                let mut response = error_response(
                     StatusCode::TOO_MANY_REQUESTS,
-                    [
-                        ("X-RateLimit-Limit", state.user_max_requests.to_string()),
-                        ("X-RateLimit-Window", state.window_seconds.to_string()),
-                    ],
-                    Json(json!({
-                        "error": "Too many requests",
-                        "message": "当前账号写操作过于频繁，请稍后再试",
-                        "code": "USER_WRITE_RATE_LIMIT_EXCEEDED"
-                    })),
-                )
-                    .into_response();
+                    "USER_WRITE_RATE_LIMIT_EXCEEDED",
+                    "当前账号写操作过于频繁，请稍后再试",
+                );
 
                 let headers = response.headers_mut();
                 if let Ok(limit_val) = HeaderValue::from_str(&state.user_max_requests.to_string()) {

@@ -43,6 +43,21 @@ else
     exit 1
 fi
 
+# 检查 pg_stat_statements 扩展（用于查询性能自检）
+echo ""
+echo "2.1 检查 pg_stat_statements..."
+if psql postgresql://file_storage:file_storage_password@localhost:5432/file_storage -c "SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements';" &> /dev/null; then
+    echo "   ✅ pg_stat_statements 已启用"
+else
+    echo "   ⚠️  pg_stat_statements 未启用或无权限创建"
+    echo "      说明：该扩展通常需要超级用户权限 + shared_preload_libraries=pg_stat_statements"
+    echo "      解决方式（本地 Docker）："
+    echo "        docker exec -it file_storage_db psql -U file_storage -d file_storage -c \"CREATE EXTENSION IF NOT EXISTS pg_stat_statements;\""
+    echo "      解决方式（本地 brew Postgres）："
+    echo "        1) 在 postgresql.conf 设置 shared_preload_libraries=pg_stat_statements 并重启"
+    echo "        2) 用管理员账号执行：CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+fi
+
 # 检查后端
 echo ""
 echo "3. 检查后端..."

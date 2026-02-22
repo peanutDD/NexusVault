@@ -8,8 +8,8 @@ export const MIME_FILTER_FOLDERS = '__folders__' as const;
 export const FILE_LIST = {
   ROW_HEIGHT: 72,
   LIST_HEIGHT: 480,
-  /** 网格模式下每行估算高度（用于虚拟列表，需 ≥ 单卡实际高度：缩略图 aspect-square + 文案 + 按钮 + 间距，小屏 2 列时卡更高） */
-  VIRTUAL_GRID_ROW_HEIGHT: 360,
+  /** 网格模式下每行估算高度（用于虚拟列表 fallback；实际运行会按容器宽度动态估算） */
+  VIRTUAL_GRID_ROW_HEIGHT: 320,
   // 单页文件数量：减小以降低首屏渲染压力
   LIMIT: 60,
   CACHE_MINUTES: 5,
