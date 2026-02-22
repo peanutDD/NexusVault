@@ -113,9 +113,9 @@ const FileCard = memo(
           {/* 文件信息 + 设置按钮 */}
           <div className="flex w-full items-center justify-between gap-2">
             <div className="min-w-0 flex-1 space-y-0.5">
-              <h3 className="truncate whitespace-nowrap text-[clamp(8px,2.2vw,10px)] font-medium text-white" title={file.original_filename}>
+              <p className="truncate whitespace-nowrap text-[clamp(8px,2.2vw,10px)] font-medium text-white" title={file.original_filename}>
                 {file.original_filename}
-              </h3>
+              </p>
               <p className="flex items-center gap-1 whitespace-nowrap text-[clamp(7px,1.8vw,8px)] text-gray-400">
                 <span>{formatFileSize(file.file_size)}</span>
                 <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden />

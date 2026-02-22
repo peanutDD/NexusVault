@@ -298,12 +298,12 @@ export function FilePreviewContent({
               </div>
               <div className="flex w-full items-center justify-center">
                 <div className="min-w-0 flex-1 space-y-0.5 text-center">
-                  <h3
+                  <p
                     className="truncate whitespace-nowrap text-[clamp(7px,2vw,9px)] font-medium text-white"
                     title={file.original_filename}
                   >
                     不支持预览
-                  </h3>
+                  </p>
                   <p className="flex items-center justify-center gap-1 whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-gray-400">
                     <span>{formatFileSize(file.file_size)}</span>
                     <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden />

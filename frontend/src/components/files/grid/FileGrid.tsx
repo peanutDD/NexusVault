@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FileMetadata } from '../../../types/files';
 import type { Folder } from '../../../types/folders';
 import { fileService } from '../../../services/files';
+import { useAuthStore } from '../../../store/authStore';
 import { getCachedThumbnailUrl, setCachedThumbnailUrl } from '../../../utils/thumbnailBlobCache';
 import { isImageType } from '../../../utils/mimeType';
 import FileCard from './FileCard';
@@ -81,25 +82,35 @@ export default function FileGrid({
     if (priorityCount <= 0) return;
     let cancelled = false;
     const targets = files.slice(0, priorityCount);
+    const token =
+      useAuthStore.getState().token ??
+      (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
     targets.forEach((file) => {
       if (!isImageType(file.mime_type)) return;
       if (preheatedRef.current.has(file.id)) return;
-      const cached = getCachedThumbnailUrl(file.id);
-      if (cached) {
-        preheatedRef.current.add(file.id);
-        return;
-      }
       preheatedRef.current.add(file.id);
-      fileService
-        .fetchThumbnailBlob(file.id)
-        .then((blob) => {
-          if (cancelled || !blob) return;
-          const url = URL.createObjectURL(blob);
-          setCachedThumbnailUrl(file.id, url);
-        })
-        .catch(() => {
-          if (!cancelled) preheatedRef.current.delete(file.id);
-        });
+      const cached = getCachedThumbnailUrl(file.id);
+      if (cached) return;
+      const url = fileService.getThumbnailUrl(file.id, { width: 400, token });
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = url;
+      img.onerror = () => {
+        if (cancelled) return;
+        fileService
+          .fetchThumbnailBlob(file.id)
+          .then((blob) => {
+            if (cancelled || !blob) {
+              preheatedRef.current.delete(file.id);
+              return;
+            }
+            const blobUrl = URL.createObjectURL(blob);
+            setCachedThumbnailUrl(file.id, blobUrl);
+          })
+          .catch(() => {
+            if (!cancelled) preheatedRef.current.delete(file.id);
+          });
+      };
     });
     return () => {
       cancelled = true;

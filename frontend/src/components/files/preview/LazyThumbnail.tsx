@@ -3,6 +3,7 @@ import { fileService } from '../../../services/files';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { cn } from '../../../utils/cn';
 import { isImageType, isVideoType, isPdfType, isAudioType } from '../../../utils/mimeType';
+import { useAuthStore } from '../../../store/authStore';
 import { getCachedThumbnailUrl, setCachedThumbnailUrl } from '../../../utils/thumbnailBlobCache';
 
 interface LazyThumbnailProps {
@@ -15,7 +16,7 @@ interface LazyThumbnailProps {
 
 type ThumbnailState = {
   fileId: string;
-  blobUrl: string | null;
+  imageUrl: string | null;
   loading: boolean;
   showLoadingUi: boolean;
   error: boolean;
@@ -173,8 +174,6 @@ function getFileTypeDisplay(mimeType: string) {
 }
 
 const SHOW_LOADING_DELAY_MS = 100; // 延迟显示加载骨架，缓存命中或快速响应时不再闪一下
-const RETRY_MAX = 3;
-const RETRY_BASE_MS = 800;
 
 export default function LazyThumbnail({
   fileId,
@@ -185,20 +184,25 @@ export default function LazyThumbnail({
 }: LazyThumbnailProps) {
   const showThumbnail = isImageType(mimeType);
   const eagerLoad = priority === 'high';
-  const cachedUrl = showThumbnail ? getCachedThumbnailUrl(fileId) ?? null : null;
+  const token =
+    useAuthStore.getState().token ??
+    (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
+  const thumbnailUrl = showThumbnail
+    ? fileService.getThumbnailUrl(fileId, { width: 400, token })
+    : null;
   const createInitialState = useCallback(
     (): ThumbnailState => ({
       fileId,
-      blobUrl: cachedUrl,
-      loading: false,
+      imageUrl: eagerLoad && thumbnailUrl ? thumbnailUrl : null,
+      loading: eagerLoad && !!thumbnailUrl,
       showLoadingUi: false,
       error: false,
     }),
-    [fileId, cachedUrl]
+    [fileId, eagerLoad, thumbnailUrl]
   );
   const [state, setState] = useState<ThumbnailState>(() => createInitialState());
   const effectiveState = state.fileId === fileId ? state : createInitialState();
-  const { blobUrl, loading, showLoadingUi, error } = effectiveState;
+  const { imageUrl, showLoadingUi, error } = effectiveState;
   const updateState = useCallback(
     (partial: Partial<ThumbnailState>) => {
       setState((prev) => {
@@ -211,31 +215,76 @@ export default function LazyThumbnail({
   const containerRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
   const loadingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const retryCountRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestStateRef = useRef({ blobUrl: null as string | null, error: false });
+  const fallbackAttemptedRef = useRef(false);
+  const handleImageLoad = useCallback(() => {
+    if (loadingDelayRef.current) {
+      clearTimeout(loadingDelayRef.current);
+      loadingDelayRef.current = null;
+    }
+    updateState({ loading: false, showLoadingUi: false });
+  }, [updateState]);
+  const handleImageError = useCallback(() => {
+    if (loadingDelayRef.current) {
+      clearTimeout(loadingDelayRef.current);
+      loadingDelayRef.current = null;
+    }
+    if (!showThumbnail) {
+      updateState({ error: true, loading: false, showLoadingUi: false });
+      return;
+    }
+    if (!fallbackAttemptedRef.current && fileId) {
+      fallbackAttemptedRef.current = true;
+      const cached = getCachedThumbnailUrl(fileId);
+      if (cached) {
+        updateState({
+          imageUrl: cached,
+          error: false,
+          loading: false,
+          showLoadingUi: false,
+        });
+        return;
+      }
+      fileService
+        .fetchThumbnailBlob(fileId)
+        .then((blob) => {
+          if (!mountedRef.current) return;
+          if (!blob) {
+            updateState({ error: true, loading: false, showLoadingUi: false });
+            return;
+          }
+          const url = URL.createObjectURL(blob);
+          setCachedThumbnailUrl(fileId, url);
+          updateState({
+            imageUrl: url,
+            error: false,
+            loading: false,
+            showLoadingUi: false,
+          });
+        })
+        .catch(() => {
+          if (mountedRef.current) {
+            updateState({ error: true, loading: false, showLoadingUi: false });
+          }
+        });
+      return;
+    }
+    updateState({ error: true, loading: false, showLoadingUi: false });
+  }, [fileId, showThumbnail, updateState]);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     };
   }, []);
 
-  // Blob URL 由 thumbnailBlobCache 统一管理，淘汰时再 revoke，此处不再 revoke 避免与缓存冲突
-
   useEffect(() => {
-    latestStateRef.current = { blobUrl, error };
-  }, [blobUrl, error]);
-
-  useEffect(() => {
-    retryCountRef.current = 0;
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
+    if (loadingDelayRef.current) {
+      clearTimeout(loadingDelayRef.current);
+      loadingDelayRef.current = null;
     }
+    fallbackAttemptedRef.current = false;
   }, [fileId]);
 
   useEffect(() => {
@@ -246,14 +295,18 @@ export default function LazyThumbnail({
     if (!el) return;
 
     const triggerLoad = () => {
-      const cached = getCachedThumbnailUrl(fileId);
-      if (cached) {
-        if (mountedRef.current) {
-          updateState({ blobUrl: cached, error: false, showLoadingUi: false });
-        }
-        return;
-      }
-      updateState({ loading: true });
+      if (!thumbnailUrl) return;
+      setState((prev) => {
+        const base = prev.fileId === fileId ? prev : createInitialState();
+        if (base.imageUrl) return base;
+        return {
+          ...base,
+          imageUrl: thumbnailUrl,
+          loading: true,
+          showLoadingUi: false,
+          error: false,
+        };
+      });
       if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
       loadingDelayRef.current = setTimeout(() => {
         loadingDelayRef.current = null;
@@ -285,63 +338,7 @@ export default function LazyThumbnail({
         // ignore
       }
     };
-  }, [fileId, mimeType, showThumbnail, updateState, eagerLoad]);
-
-  useEffect(() => {
-    if (!showThumbnail || !loading || blobUrl || error) return;
-
-    let cancelled = false;
-    const scheduleRetry = () => {
-      if (retryCountRef.current >= RETRY_MAX) return;
-      retryCountRef.current += 1;
-      const delay = RETRY_BASE_MS * retryCountRef.current;
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = setTimeout(() => {
-        if (!mountedRef.current || cancelled) return;
-        const latest = latestStateRef.current;
-        if (latest.blobUrl || latest.error) return;
-        fileService
-          .fetchThumbnailBlob(fileId)
-          .then((retryBlob) => {
-            if (!mountedRef.current || cancelled) return;
-            if (retryBlob === null) {
-              scheduleRetry();
-              return;
-            }
-            const url = URL.createObjectURL(retryBlob);
-            setCachedThumbnailUrl(fileId, url);
-            updateState({ blobUrl: url });
-          })
-          .catch(() => {
-            if (mountedRef.current && !cancelled) updateState({ error: true });
-          });
-      }, delay);
-    };
-    fileService
-      .fetchThumbnailBlob(fileId)
-      .then((blob) => {
-        if (!mountedRef.current || cancelled) return;
-        if (blob === null) {
-          scheduleRetry();
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        setCachedThumbnailUrl(fileId, url);
-        updateState({ blobUrl: url });
-      })
-      .catch(() => {
-        if (mountedRef.current && !cancelled) updateState({ error: true });
-      })
-      .finally(() => {
-        if (mountedRef.current) {
-          updateState({ loading: false, showLoadingUi: false });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [fileId, showThumbnail, loading, blobUrl, error, updateState]);
+  }, [fileId, showThumbnail, updateState, eagerLoad, thumbnailUrl, createInitialState]);
 
   const placeholder = (
     <div
@@ -397,17 +394,18 @@ export default function LazyThumbnail({
     );
   }
 
-  if (blobUrl) {
+  if (imageUrl) {
     return (
       <div ref={containerRef} className={cn('rounded overflow-hidden shrink-0', className)}>
         <ResponsivePicture
-          src={blobUrl}
+          src={imageUrl}
           alt={filename}
           className="w-full h-full object-cover"
           loading={eagerLoad ? 'eager' : 'lazy'}
           decoding="async"
           fetchPriority={eagerLoad ? 'high' : 'low'}
-          onError={() => updateState({ error: true })}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
         />
       </div>
     );

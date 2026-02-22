@@ -2,6 +2,14 @@
 
 > 基于十年前端开发经验，对本项目进行全面的性能审计与优化方案
 
+## 近期变更（2026-02-22）
+
+- **预览 3D 背景延迟加载**：FilePreview 的 three.js 改为动态导入，仅在预览开启时加载 3D 背景，降低首屏未使用 JS。
+- **重型依赖拆包**：Vite manualChunks 增加 `vendor-three` 与 `vendor-sentry`，避免进入 vendor-other，便于按需加载与分析。
+- **SEO 基础修复**：补充 `robots.txt` 正确文本格式，避免爬虫误读 HTML。
+- **Meta 描述补齐**：首页增加 `meta name="description"`，提升搜索摘要可读性。
+- **导航按钮可访问性**：为无文本按钮补充 `aria-label`，避免读屏仅报 “button”。
+
 ## 近期变更（2026-02-07）
 
 - **列表缩略图**：列表卡片图片改为请求后端 `GET /api/files/:id/thumbnail`（压缩后 JPEG），不再用预览原图接口，减轻加载与带宽；`fileService.fetchThumbnailBlob` 在 404/415 时返回 `null`，前端显示占位图标。详见后端 `ENGINEERING_PLAYBOOK.md` 第 17 节。

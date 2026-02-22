@@ -767,6 +767,18 @@ export const fileService = {
     return `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/hls`;
   },
 
+  getThumbnailUrl(
+    fileId: string,
+    options?: { width?: number; token?: string | null }
+  ): string {
+    const base = `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`;
+    const params = new URLSearchParams();
+    if (options?.width) params.set('w', String(options.width));
+    if (options?.token) params.set('token', options.token);
+    const query = params.toString();
+    return query ? `${base}?${query}` : base;
+  },
+
   /**
    * 获取图片缩略图 Blob（仅 image/*，列表卡片用，压缩后体积小）
    * @param fileId 文件 ID

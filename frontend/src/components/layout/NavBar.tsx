@@ -118,6 +118,7 @@ export default function NavBar({
                 <button
                   type="button"
                   onClick={() => navigate('/settings')}
+                  aria-label="Settings"
                   className={cn(
                     'nav-btn inline-flex items-center justify-center rounded-md whitespace-nowrap',
                     'nav-ui-fluid font-semibold tracking-wide text-slate-200',
@@ -134,6 +135,7 @@ export default function NavBar({
               <button
                 type="button"
                 onClick={onLogout}
+                aria-label="Logout"
                 className={cn(
                   'nav-btn inline-flex items-center justify-center rounded-md whitespace-nowrap',
                   'nav-ui-fluid font-brand font-semibold tracking-wide text-slate-100',
