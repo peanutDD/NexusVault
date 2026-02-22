@@ -10,9 +10,15 @@ import { getMimeTypeLabel } from '../../../utils/mimeType';
 import { cn } from '../../../utils/cn';
 import { ErrorIcon, FileIcon, AudioIcon, SpinnerIcon } from './FilePreviewIcons';
 
+// -------------------------------------------------------------------------
+// 动态加载的预览组件（降低首屏体积）
+// -------------------------------------------------------------------------
 const MarkdownPreview = lazy(() => import('./MarkdownPreview'));
 const PdfPreview = lazy(() => import('./PdfPreview'));
 
+// -------------------------------------------------------------------------
+// 预览内容区所需参数（由父层负责数据准备与状态控制）
+// -------------------------------------------------------------------------
 export interface FilePreviewContentProps {
   file: {
     id: string;
@@ -70,17 +76,25 @@ export function FilePreviewContent({
   onClose,
   formatDate,
 }: FilePreviewContentProps) {
+  // -----------------------------------------------------------------------
+  // 仅用于 Markdown 的主题切换（不影响其他类型）
+  // -----------------------------------------------------------------------
   const [markdownTheme, setMarkdownTheme] = useState<'dark' | 'light'>('dark');
   return (
     <div
+      // 预览容器：统一处理视差透视与点击关闭
       className="relative z-[3] flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pl-[clamp(4.5rem,13vw,7rem)] pr-[clamp(4.5rem,13vw,7rem)] py-[clamp(1rem,4vh,2.5rem)]"
       style={{ perspective: '1400px' }}
       onClick={onClose}
     >
+      {/* ----------------------------- */}
+      {/* 3D 视差承载层（只负责位移与旋转） */}
+      {/* ----------------------------- */}
       <div
         className="relative h-[min(72vh,44rem)] w-[min(92vw,70rem)] pointer-events-auto"
         data-preview-content
         style={{
+          // 由外层 3D 交互驱动，保持视差与拖拽时的整体位移
           transform:
             'translate3d(var(--preview-orbit-x, 0px), var(--preview-orbit-y, 0px), var(--preview-orbit-z, 0px)) rotateY(var(--preview-orbit-ry, 0deg)) rotateX(var(--preview-orbit-rx, 0deg))',
           transformStyle: 'preserve-3d',
@@ -88,18 +102,37 @@ export function FilePreviewContent({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* ----------------------------- */}
+        {/* 视差倾斜层（鼠标轻微摆动） */}
+        {/* ----------------------------- */}
         <div
           className="relative h-full w-full"
           style={{
+            // 将倾斜缩放参数拆分到 CSS 变量，便于复用动画驱动
             transform:
               'rotateX(calc(var(--preview-tilt-x, 0deg) * var(--preview-tilt-scale, 1))) rotateY(calc(var(--preview-tilt-y, 0deg) * var(--preview-tilt-scale, 1)))',
             transformStyle: 'preserve-3d',
             transition: 'transform 120ms ease-out',
           }}
         >
+          {/* 装饰光晕与描边，增强卡片层次 */}
           <div className="absolute -inset-6 rounded-[32px] bg-gradient-to-br from-cyan-400/20 via-transparent to-fuchsia-500/20 blur-2xl" />
           <div className="absolute -inset-4 rounded-[30px] border border-cyan-300/30 shadow-[0_0_40px_rgba(34,211,238,0.25)]" />
+          <div className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 translate-y-[clamp(0.55rem,1.6vw,1rem)]">
+            <div className="relative mx-auto h-[clamp(1.2rem,3.2vw,2.1rem)] w-[clamp(1.6rem,3.8vw,2.5rem)] rounded-[clamp(0.32rem,0.8vw,0.5rem)] border border-emerald-300/45 bg-gradient-to-b from-emerald-200/70 via-emerald-300/55 to-emerald-500/75 shadow-[0_12px_24px_rgba(10,255,160,0.38)]">
+              <div className="absolute inset-[clamp(0.18rem,0.45vw,0.3rem)] rounded-[clamp(0.24rem,0.6vw,0.38rem)] border border-emerald-100/30 bg-gradient-to-br from-white/35 via-emerald-100/15 to-transparent" />
+              <div className="absolute inset-x-[clamp(0.2rem,0.55vw,0.34rem)] bottom-[clamp(0.12rem,0.3vw,0.22rem)] h-[clamp(0.18rem,0.45vw,0.28rem)] rounded-full bg-emerald-900/40" />
+            </div>
+            <div className="relative mx-auto -mt-[clamp(0.18rem,0.38vw,0.32rem)] h-[clamp(0.55rem,1.3vw,0.9rem)] w-[clamp(5.2rem,12.5vw,7rem)] rounded-[clamp(0.7rem,1.6vw,1.1rem)] border border-emerald-200/35 bg-gradient-to-r from-emerald-400/65 via-emerald-200/75 to-emerald-400/65 shadow-[0_14px_28px_rgba(10,255,160,0.45)]">
+              <div className="absolute inset-[clamp(0.12rem,0.3vw,0.2rem)] rounded-[clamp(0.6rem,1.4vw,0.95rem)] border border-white/20 bg-gradient-to-r from-white/15 via-transparent to-white/10" />
+              <div className="absolute left-1/2 top-0 h-[clamp(0.2rem,0.5vw,0.32rem)] w-[clamp(3.2rem,7.5vw,4.4rem)] -translate-x-1/2 rounded-b-full bg-emerald-600/40 blur-[clamp(4px,1vw,8px)]" />
+            </div>
+            <div className="mx-auto -mt-[clamp(0.35rem,0.6vw,0.55rem)] h-[clamp(0.3rem,0.8vw,0.5rem)] w-[clamp(4.2rem,10vw,5.8rem)] rounded-full bg-emerald-300/25 blur-[clamp(6px,1.6vw,12px)]" />
+          </div>
           <div className="relative h-full w-full overflow-hidden rounded-[26px] border border-white/15 bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-slate-950/90 shadow-[0_25px_80px_rgba(2,6,23,0.65)]">
+      {/* ============================= */}
+      {/* 加载与错误状态 */}
+      {/* ============================= */}
       {loading ? (
         <div className="flex h-full w-full flex-col items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
           <SpinnerIcon className="h-12 w-12 text-purple-500" />
@@ -112,6 +145,7 @@ export function FilePreviewContent({
           className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-2xl bg-white/5 px-8 py-10 text-center"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* 明确错误提示 + 快速关闭入口 */}
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20">
             <ErrorIcon />
           </div>
@@ -126,13 +160,26 @@ export function FilePreviewContent({
         </div>
       ) : null}
 
+      {/* ============================= */}
+      {/* 支持的预览类型 */}
+      {/* ============================= */}
       {!loading && !error && supported ? (
-        <div className="flex h-full w-full items-center justify-center p-[clamp(1rem,3vw,2rem)]">
+        <div className="relative flex h-full w-full items-center justify-center p-[clamp(1rem,3vw,2rem)]">
+          <div className="pointer-events-none absolute left-[clamp(0.8rem,2vw,1.6rem)] top-[clamp(0.6rem,1.6vw,1.2rem)]">
+            <div className="text-[clamp(0.7rem,1.8vw,1.1rem)] font-semibold uppercase tracking-[0.35em] text-emerald-300 drop-shadow-[0_0_14px_rgba(16,255,160,0.65)]">
+              SSTV
+            </div>
+            <div className="mt-[clamp(0.1rem,0.4vw,0.25rem)] h-[clamp(0.12rem,0.3vw,0.18rem)] w-[clamp(2.8rem,7vw,4.6rem)] rounded-full bg-emerald-300/70 shadow-[0_0_18px_rgba(16,255,160,0.6)]" />
+          </div>
+          {/* ----------------------------- */}
+          {/* 图片 / GIF 首帧 */}
+          {/* ----------------------------- */}
           {isImage && (blobUrl || gifFirstFrameUrl) ? (
             <div className="relative flex h-full w-full min-h-0 items-center justify-center">
               <div
                 ref={imageTransformRef}
                 className={cn(
+                  // 缩放与旋转由父层注入 transform，避免重新布局
                   'flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-lg origin-center transition-transform duration-500 ease-out cursor-pointer',
                   imageLoaded ? 'opacity-100' : 'opacity-0'
                 )}
@@ -147,6 +194,7 @@ export function FilePreviewContent({
                   onError={onImageError}
                 />
               </div>
+              {/* 图片未完成解码时保持中心 Loading，避免抖动 */}
               {!imageLoaded ? (
                 <div className="absolute flex items-center justify-center inset-0">
                   <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-purple-500" />
@@ -155,6 +203,9 @@ export function FilePreviewContent({
             </div>
           ) : null}
 
+          {/* ----------------------------- */}
+          {/* PDF（按需加载） */}
+          {/* ----------------------------- */}
           {isPDF && blobUrl ? (
             <Suspense
               fallback={
@@ -172,6 +223,9 @@ export function FilePreviewContent({
             </Suspense>
           ) : null}
 
+          {/* ----------------------------- */}
+          {/* 视频（含 HLS 回退逻辑） */}
+          {/* ----------------------------- */}
           {isVideo && blobUrl ? (
             <div className="flex h-full w-full min-h-0 items-center justify-center">
               <video
@@ -192,6 +246,9 @@ export function FilePreviewContent({
             </div>
           ) : null}
 
+          {/* ----------------------------- */}
+          {/* 音频（独立的交互卡片） */}
+          {/* ----------------------------- */}
           {isAudio && blobUrl ? (
             <div className="flex h-full w-full flex-col items-center justify-center pointer-events-none">
               <div
@@ -215,12 +272,16 @@ export function FilePreviewContent({
             </div>
           ) : null}
 
+          {/* ----------------------------- */}
+          {/* 文本 / Markdown */}
+          {/* ----------------------------- */}
           {isText && textContent !== null ? (
             <div className="flex h-full w-full items-center justify-center pointer-events-none">
               <div
                 className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,60rem)] overflow-hidden rounded-xl bg-gray-900/80 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* 顶部信息栏：类型、主题与行数 */}
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
                   <span className="text-xs text-white/40">
                     {isMarkdown ? 'md' : file.mime_type}
@@ -260,6 +321,7 @@ export function FilePreviewContent({
                     </span>
                   </div>
                 </div>
+                {/* 正文区域：Markdown 渲染 or 原始文本 */}
                 <div
                   className={cn(
                     'h-[calc(100%-40px)] overflow-auto p-4 text-sm leading-relaxed',
@@ -284,6 +346,9 @@ export function FilePreviewContent({
         </div>
       ) : null}
 
+      {/* ============================= */}
+      {/* 不支持预览 */}
+      {/* ============================= */}
       {!loading && !error && !supported ? (
         <div className="flex h-full w-full items-center justify-center pointer-events-none">
           <article
@@ -291,11 +356,13 @@ export function FilePreviewContent({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-3">
+              {/* 文件类型图标 */}
               <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-black/20">
                 <div className="flex h-full w-full items-center justify-center rounded overflow-hidden shrink-0 bg-purple-900/30">
                   <FileIcon />
                 </div>
               </div>
+              {/* 基础元信息：大小 / 类型 / 日期 */}
               <div className="flex w-full items-center justify-center">
                 <div className="min-w-0 flex-1 space-y-0.5 text-center">
                   <p
