@@ -301,7 +301,7 @@ frontend/
   - `FILE_LIST.LIMIT` 控制单页返回量（默认为 60），降低单次渲染压力。  
   - `InfiniteScrollSentinel` + `loadMore`：滑动到底部自动加载下一页，  
     同时提供 `Load more` 按钮兜底（防止某些环境下 IntersectionObserver 不稳定）。  
-  - 通过冷却时间与请求 ID 竞态检查，避免频繁触底导致的「并发 loadMore 洪泛」。
+  - 通过冷却时间、请求 ID 竞态检查、以及“仅向下滚动且哨兵从未进入→进入时触发”，避免上下回滚造成重复加载。  
 - **虚拟列表与分组 Worker**  
   - 当文件数量超过 `FILE_LIST.VIRTUAL_THRESHOLD` 时，自动切换为 `VirtualizedFileGrid`，  
     仅渲染可视区域的网格行，显著降低大列表滚动成本。  

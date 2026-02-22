@@ -5,6 +5,7 @@
 
 import { useEffect } from 'react';
 import Hls from 'hls.js';
+import type { ErrorData } from 'hls.js';
 import { fileService } from '../../../../services/files';
 import { useAuthStore } from '../../../../store/authStore';
 import { getPreviewKind } from '../../../../utils/mimeType';
@@ -77,7 +78,9 @@ export function useFilePreviewEffects({
       hls.loadSource(blobUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.ERROR, (_, data) => {
-        const code = (data as any)?.response?.code;
+        const errorData = data as ErrorData;
+        const code =
+          typeof errorData.response?.code === 'number' ? errorData.response.code : undefined;
         const isProcessing = code === 503;
         if (isProcessing) {
           if (retryTimer) window.clearTimeout(retryTimer);

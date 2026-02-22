@@ -25,6 +25,11 @@ const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
   const onLoadMoreRef = useRef(onLoadMore);
   const userScrolledRecentlyRef = useRef(!requireUserScroll);
   const listSizeRef = useRef(listSize);
+  const wasIntersectingRef = useRef(false);
+  const lastScrollYRef = useRef(
+    typeof window !== 'undefined' ? window.scrollY : 0
+  );
+  const scrollDirectionRef = useRef<'up' | 'down'>('down');
   /** 上次触发 loadMore 时的列表长度，只有 listSize > 此值时才允许再次触发 */
   const lastTriggeredListSizeRef = useRef(-1);
 
@@ -44,6 +49,13 @@ const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
       return;
     }
     const onScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY > lastScrollYRef.current) {
+        scrollDirectionRef.current = 'down';
+      } else if (currentY < lastScrollYRef.current) {
+        scrollDirectionRef.current = 'up';
+      }
+      lastScrollYRef.current = currentY;
       userScrolledRecentlyRef.current = true;
       window.setTimeout(() => {
         userScrolledRecentlyRef.current = false;
@@ -61,9 +73,15 @@ const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
-        if (!entry?.isIntersecting) return;
+        if (!entry?.isIntersecting) {
+          wasIntersectingRef.current = false;
+          return;
+        }
+        if (wasIntersectingRef.current) return;
+        wasIntersectingRef.current = true;
         if (!hasMoreRef.current || loadingMoreRef.current) return;
         if (requireUserScroll && !userScrolledRecentlyRef.current) return;
+        if (requireUserScroll && scrollDirectionRef.current !== 'down') return;
         const size = listSizeRef.current;
         if (size <= lastTriggeredListSizeRef.current) return;
         lastTriggeredListSizeRef.current = size;
