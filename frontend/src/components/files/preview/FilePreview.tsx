@@ -165,12 +165,12 @@ export default function FilePreview({
     );
     camera.position.set(0, 0, 8);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-    const keyLight = new THREE.DirectionalLight(0x7dd3fc, 1.4);
+    const ambient = new THREE.AmbientLight(0xe2fffb, 0.75);
+    const keyLight = new THREE.DirectionalLight(0x22f3a6, 1.55);
     keyLight.position.set(6, 4, 8);
-    const rimLight = new THREE.DirectionalLight(0xc084fc, 0.8);
+    const rimLight = new THREE.DirectionalLight(0xb455ff, 0.95);
     rimLight.position.set(-6, -3, -6);
-    const pulseLight = new THREE.PointLight(0x22d3ee, 1.2, 30);
+    const pulseLight = new THREE.PointLight(0xd946ef, 1.35, 30);
     pulseLight.position.set(0, 0, 6);
     scene.add(ambient, keyLight, rimLight, pulseLight);
 
@@ -179,20 +179,20 @@ export default function FilePreview({
 
     const coreGeometry = new THREE.SphereGeometry(1.6, 64, 64);
     const coreMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1e3a8a,
-      metalness: 0.2,
-      roughness: 0.45,
-      emissive: 0x0b1024,
-      emissiveIntensity: 0.5,
+      color: 0x0b1d18,
+      metalness: 0.25,
+      roughness: 0.4,
+      emissive: 0x08211b,
+      emissiveIntensity: 0.6,
     });
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
     group.add(core);
 
     const atmosphereGeometry = new THREE.SphereGeometry(1.72, 64, 64);
     const atmosphereMaterial = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
+      color: 0x22f3a6,
       transparent: true,
-      opacity: 0.18,
+      opacity: 0.2,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
     });
@@ -208,22 +208,22 @@ export default function FilePreview({
 
     const frameGeometry = new THREE.BoxGeometry(4.9, 3.1, 0.28);
     const frameMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0f172a,
-      metalness: 0.9,
-      roughness: 0.25,
-      emissive: 0x050812,
-      emissiveIntensity: 0.6,
+      color: 0x0a0f14,
+      metalness: 0.85,
+      roughness: 0.28,
+      emissive: 0x140a1f,
+      emissiveIntensity: 0.7,
     });
     const frame = new THREE.Mesh(frameGeometry, frameMaterial);
     screenGroup.add(frame);
 
     const screenGeometry = new THREE.PlaneGeometry(4.4, 2.6, 1, 1);
     const screenMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0ea5e9,
-      metalness: 0.1,
-      roughness: 0.15,
-      emissive: 0x0b2b46,
-      emissiveIntensity: 1.2,
+      color: 0x1bd98a,
+      metalness: 0.15,
+      roughness: 0.12,
+      emissive: 0x0b3a26,
+      emissiveIntensity: 1.25,
     });
     const screen = new THREE.Mesh(screenGeometry, screenMaterial);
     screen.position.z = 0.16;
@@ -231,9 +231,9 @@ export default function FilePreview({
 
     const screenGlowGeometry = new THREE.PlaneGeometry(4.8, 2.95, 1, 1);
     const screenGlowMaterial = new THREE.MeshBasicMaterial({
-      color: 0x22d3ee,
+      color: 0xb455ff,
       transparent: true,
-      opacity: 0.25,
+      opacity: 0.3,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
@@ -243,11 +243,11 @@ export default function FilePreview({
 
     const ringGeometry = new THREE.TorusGeometry(2.2, 0.06, 16, 120);
     const ringMaterial = new THREE.MeshStandardMaterial({
-      color: 0x7c3aed,
-      metalness: 0.85,
-      roughness: 0.25,
-      emissive: 0x1a0b2e,
-      emissiveIntensity: 0.7,
+      color: 0xb455ff,
+      metalness: 0.9,
+      roughness: 0.22,
+      emissive: 0x2a0f3d,
+      emissiveIntensity: 0.75,
     });
     const ring = new THREE.Mesh(ringGeometry, ringMaterial);
     ring.rotation.x = Math.PI / 2.2;
@@ -256,11 +256,11 @@ export default function FilePreview({
 
     const shardGeometry = new THREE.BoxGeometry(0.2, 1.2, 0.2);
     const shardMaterial = new THREE.MeshStandardMaterial({
-      color: 0x22d3ee,
-      metalness: 0.45,
-      roughness: 0.3,
-      emissive: 0x061426,
-      emissiveIntensity: 0.6,
+      color: 0x22f3a6,
+      metalness: 0.5,
+      roughness: 0.28,
+      emissive: 0x07301f,
+      emissiveIntensity: 0.65,
     });
     const shards: THREE.Mesh[] = [];
     for (let i = 0; i < 22; i += 1) {
@@ -292,10 +292,10 @@ export default function FilePreview({
       new THREE.BufferAttribute(particlePositions, 3)
     );
     const particleMaterial = new THREE.PointsMaterial({
-      color: 0xffffff,
+      color: 0xd7fff1,
       size: 0.04,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.55,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
@@ -304,9 +304,9 @@ export default function FilePreview({
 
     const hudRingGeometry = new THREE.RingGeometry(2.8, 3.05, 64);
     const hudRingMaterial = new THREE.MeshBasicMaterial({
-      color: 0x22d3ee,
+      color: 0x22f3a6,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.38,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -318,9 +318,9 @@ export default function FilePreview({
 
     const hudRingInnerGeometry = new THREE.RingGeometry(1.6, 1.9, 48);
     const hudRingInnerMaterial = new THREE.MeshBasicMaterial({
-      color: 0xa855f7,
+      color: 0xd946ef,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.45,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -330,7 +330,7 @@ export default function FilePreview({
     hudRingInner.rotation.y = -Math.PI / 5;
     group.add(hudRingInner);
 
-    const grid = new THREE.GridHelper(14, 80, 0x22d3ee, 0x1e293b);
+    const grid = new THREE.GridHelper(14, 80, 0x22f3a6, 0x220b3a);
     grid.position.z = -3.2;
     grid.material.opacity = 0.25;
     grid.material.transparent = true;
@@ -541,14 +541,15 @@ export default function FilePreview({
   return (
     <div
       ref={previewRootRef}
-      className="fixed inset-0 z-50 flex flex-col overflow-hidden"
+      className="preview-cyberpunk-root fixed inset-0 z-50 flex flex-col overflow-hidden"
       role="dialog"
       aria-modal="true"
       aria-labelledby="preview-title"
     >
       {/* ---- 背景层（点击关闭） ---- */}
       <div
-        className="absolute inset-0 z-0 bg-gray-950/90 backdrop-blur-xl"
+        className="absolute inset-0 z-0 backdrop-blur-xl"
+        style={{ backgroundColor: 'rgba(var(--preview-ink), 0.92)' }}
         onClick={onClose}
         aria-hidden
       />
@@ -557,32 +558,50 @@ export default function FilePreview({
 
       <div className="pointer-events-none absolute inset-0 z-[2]">
         <div
-          className="absolute inset-0 opacity-40 mix-blend-screen"
+          className="absolute inset-0 opacity-45 mix-blend-screen"
           style={{
             backgroundImage:
-              'linear-gradient(180deg, rgba(56,189,248,0.16), rgba(168,85,247,0.08) 45%, rgba(8,47,73,0.2)), radial-gradient(circle at 50% 30%, rgba(34,211,238,0.2), transparent 55%)',
+              'linear-gradient(180deg, rgba(var(--preview-green), 0.26), rgba(var(--preview-purple), 0.18) 45%, rgba(var(--preview-ink), 0.55)), radial-gradient(circle at 50% 30%, rgba(var(--preview-green), 0.3), transparent 55%)',
           }}
         />
         <div
           className="absolute inset-0 opacity-30"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(56,189,248,0.25) 1px, transparent 1px)',
+              'linear-gradient(rgba(var(--preview-green), 0.25) 1px, transparent 1px)',
             backgroundSize: '100% 4px',
           }}
         />
-        <div className="absolute left-[8%] top-[12%] h-10 w-24 border border-cyan-400/40 rounded-sm shadow-[0_0_25px_rgba(34,211,238,0.35)]" />
-        <div className="absolute right-[10%] top-[18%] h-12 w-28 border border-fuchsia-400/35 rounded-sm shadow-[0_0_25px_rgba(168,85,247,0.35)]" />
-        <div className="absolute left-[12%] bottom-[18%] h-8 w-20 border border-sky-400/30 rounded-sm shadow-[0_0_20px_rgba(56,189,248,0.35)]" />
-        <div className="absolute right-[14%] bottom-[12%] h-10 w-24 border border-violet-400/30 rounded-sm shadow-[0_0_20px_rgba(139,92,246,0.35)]" />
-        <div className="absolute left-1/2 top-[8%] h-[120px] w-[120px] -translate-x-1/2 rounded-full border border-cyan-300/30 shadow-[0_0_30px_rgba(34,211,238,0.35)]" />
+        <div className="preview-neon-frame absolute left-[8%] top-[12%] h-10 w-24 rounded-sm" />
+        <div className="preview-neon-frame alt absolute right-[10%] top-[18%] h-12 w-28 rounded-sm" />
+        <div className="preview-neon-frame soft absolute left-[12%] bottom-[18%] h-8 w-20 rounded-sm" />
+        <div className="preview-neon-frame alt soft absolute right-[14%] bottom-[12%] h-10 w-24 rounded-sm" />
+        <div className="preview-neon-ring absolute left-1/2 top-[8%] h-[120px] w-[120px] -translate-x-1/2 rounded-full" />
       </div>
 
       {/* ---- 装饰渐变 ---- */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full bg-purple-600/20 blur-3xl" />
-        <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-blue-600/15 blur-3xl" />
-        <div className="absolute left-1/2 top-1/2 h-1/3 w-1/3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div
+          className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full blur-3xl"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(var(--preview-green), 0.22), transparent 65%)',
+          }}
+        />
+        <div
+          className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full blur-3xl"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(var(--preview-purple), 0.2), transparent 65%)',
+          }}
+        />
+        <div
+          className="absolute left-1/2 top-1/2 h-1/3 w-1/3 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(var(--preview-magenta), 0.16), transparent 65%)',
+          }}
+        />
       </div>
 
       {/* ---- 网格纹理 ---- */}
@@ -629,7 +648,7 @@ export default function FilePreview({
               {typeof gifTranscodeProgress === 'number' && (
                 <div className="relative h-1.5 w-40 overflow-hidden rounded-full bg-white/10">
                   <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-purple-400 via-pink-400 to-sky-400 transition-all duration-300"
+                    className="preview-progress-fill absolute inset-y-0 left-0 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(Math.max(gifTranscodeProgress, 5), 100)}%` }}
                   />
                 </div>

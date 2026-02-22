@@ -414,11 +414,48 @@ html {
 
 /* 预览页面网格纹理 */
 .preview-grid-pattern {
-  opacity: 0.02;
+  opacity: 0.08;
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.1) 0.0625rem, transparent 0.0625rem),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0.0625rem, transparent 0.0625rem);
+    linear-gradient(rgba(var(--preview-grid, 255, 255, 255), 0.14) 0.0625rem, transparent 0.0625rem),
+    linear-gradient(90deg, rgba(var(--preview-grid, 255, 255, 255), 0.14) 0.0625rem, transparent 0.0625rem);
   background-size: 3.125rem 3.125rem;
+}
+
+.preview-cyberpunk-root {
+  --preview-green: 34, 243, 166;
+  --preview-purple: 180, 85, 255;
+  --preview-magenta: 217, 70, 239;
+  --preview-ink: 6, 8, 14;
+  --preview-grid: 34, 243, 166;
+}
+
+.preview-neon-frame {
+  border: 1px solid rgba(var(--preview-green), 0.45);
+  box-shadow: 0 0 28px rgba(var(--preview-green), 0.45);
+}
+
+.preview-neon-frame.alt {
+  border-color: rgba(var(--preview-purple), 0.45);
+  box-shadow: 0 0 28px rgba(var(--preview-purple), 0.45);
+}
+
+.preview-neon-frame.soft {
+  border-color: rgba(var(--preview-green), 0.28);
+  box-shadow: 0 0 22px rgba(var(--preview-green), 0.35);
+}
+
+.preview-neon-ring {
+  border: 1px solid rgba(var(--preview-magenta), 0.35);
+  box-shadow: 0 0 34px rgba(var(--preview-magenta), 0.45);
+}
+
+.preview-progress-fill {
+  background: linear-gradient(
+    90deg,
+    rgba(var(--preview-green), 0.9),
+    rgba(var(--preview-magenta), 0.85),
+    rgba(var(--preview-purple), 0.9)
+  );
 }
 
 /* 删除确认弹窗 - 科幻风玻璃拟态 */
