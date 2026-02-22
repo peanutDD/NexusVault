@@ -4,7 +4,6 @@
  */
 
 import { useEffect } from 'react';
-import Hls from 'hls.js';
 import type { ErrorData } from 'hls.js';
 import { fileService } from '../../../../services/files';
 import { useAuthStore } from '../../../../store/authStore';
@@ -59,46 +58,57 @@ export function useFilePreviewEffects({
     if (!kind.isVideo || !useHls || !blobUrl) return;
     const video = videoRef.current;
     if (!video) return;
+    let cancelled = false;
+    let retryTimer: number | undefined;
+    let hls: import('hls.js').default | null = null;
 
-    if (Hls.isSupported()) {
-      const token = useAuthStore.getState().token ?? localStorage.getItem('token');
-      let retryTimer: number | undefined;
-      let processingRetries = 0;
-      const hls = new Hls({
-        xhrSetup(xhr) {
-          if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        },
-        manifestLoadingMaxRetry: 20,
-        levelLoadingMaxRetry: 20,
-        fragLoadingMaxRetry: 20,
-        manifestLoadingRetryDelay: 1000,
-        levelLoadingRetryDelay: 1000,
-        fragLoadingRetryDelay: 1000,
-      });
-      hls.loadSource(blobUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        const errorData = data as ErrorData;
-        const code =
-          typeof errorData.response?.code === 'number' ? errorData.response.code : undefined;
-        const isProcessing = code === 503;
-        if (isProcessing) {
-          if (retryTimer) window.clearTimeout(retryTimer);
-          processingRetries += 1;
-          const delay = Math.min(10000, 1000 + processingRetries * 500);
-          retryTimer = window.setTimeout(() => {
-            hls.startLoad(-1);
-          }, delay);
-          return;
-        }
-        if (data.fatal) tryVideoAudioFallbackRef.current();
-      });
-      return () => {
-        if (retryTimer) window.clearTimeout(retryTimer);
-        hls.destroy();
-      };
-    }
-    video.src = blobUrl;
+    const setup = async () => {
+      const { default: Hls } = await import('hls.js');
+      if (cancelled) return;
+      if (Hls.isSupported()) {
+        const token = useAuthStore.getState().token ?? localStorage.getItem('token');
+        let processingRetries = 0;
+        hls = new Hls({
+          xhrSetup(xhr) {
+            if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          },
+          manifestLoadingMaxRetry: 20,
+          levelLoadingMaxRetry: 20,
+          fragLoadingMaxRetry: 20,
+          manifestLoadingRetryDelay: 1000,
+          levelLoadingRetryDelay: 1000,
+          fragLoadingRetryDelay: 1000,
+        });
+        hls.loadSource(blobUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          const errorData = data as ErrorData;
+          const code =
+            typeof errorData.response?.code === 'number' ? errorData.response.code : undefined;
+          const isProcessing = code === 503;
+          if (isProcessing) {
+            if (retryTimer) window.clearTimeout(retryTimer);
+            processingRetries += 1;
+            const delay = Math.min(10000, 1000 + processingRetries * 500);
+            retryTimer = window.setTimeout(() => {
+              hls?.startLoad(-1);
+            }, delay);
+            return;
+          }
+          if (data.fatal) tryVideoAudioFallbackRef.current();
+        });
+        return;
+      }
+      video.src = blobUrl;
+    };
+
+    void setup();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) window.clearTimeout(retryTimer);
+      hls?.destroy();
+    };
   }, [kind.isVideo, useHls, blobUrl, videoRef, tryVideoAudioFallbackRef]);
 
   // -------------------------------------------------------------------------

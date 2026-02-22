@@ -11,7 +11,7 @@ export const FILE_LIST = {
   /** 网格模式下每行估算高度（用于虚拟列表 fallback；实际运行会按容器宽度动态估算） */
   VIRTUAL_GRID_ROW_HEIGHT: 320,
   // 单页文件数量：减小以降低首屏渲染压力
-  LIMIT: 60,
+  LIMIT: 30,
   CACHE_MINUTES: 5,
   /** 超过该数量时启用虚拟列表 */
   VIRTUAL_THRESHOLD: 24,

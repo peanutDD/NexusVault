@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { useMemo, useState, useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { fileService } from '../../../services/files';
 import { formatFileSize } from '../../../utils/format';
 import { cn } from '../../../utils/cn';
@@ -101,6 +101,8 @@ export default function FilePreview({
   const [isLooping, setIsLooping] = useState(true);
   const [isRotationPaused, setIsRotationPaused] = useState(true);
   const isRotationPausedRef = useRef(true);
+  const [threeReady, setThreeReady] = useState(false);
+  const threeRef = useRef<typeof import('three') | null>(null);
   const imageTransformRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const previewRootRef = useRef<HTMLDivElement>(null);
@@ -143,9 +145,23 @@ export default function FilePreview({
   }, [isRotationPaused]);
 
   useEffect(() => {
+    if (threeRef.current) return;
+    let cancelled = false;
+    import('three').then((mod) => {
+      if (cancelled) return;
+      threeRef.current = mod;
+      setThreeReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const container = backdropRef.current;
     const root = previewRootRef.current;
-    if (!container) return;
+    const THREE = threeRef.current;
+    if (!container || !THREE) return;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -794,7 +810,7 @@ export default function FilePreview({
       renderer.dispose();
       container.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [threeReady]);
 
   // -------------------------------------------------------------------------
   // 文件名展示（中间省略）

@@ -1,5 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import type { FileMetadata } from '../../../types/files';
 import type { Folder } from '../../../types/folders';
+import { fileService } from '../../../services/files';
+import { getCachedThumbnailUrl, setCachedThumbnailUrl } from '../../../utils/thumbnailBlobCache';
+import { isImageType } from '../../../utils/mimeType';
 import FileCard from './FileCard';
 
 interface FileGridProps {
@@ -37,27 +41,79 @@ export default function FileGrid({
   onToggleMenu,
   onCloseMenu,
 }: FileGridProps) {
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [priorityCount, setPriorityCount] = useState(6);
+  const preheatedRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    const calc = () => {
+      const el = gridRef.current;
+      if (!el || typeof window === 'undefined') return;
+      const rect = el.getBoundingClientRect();
+      const styles = getComputedStyle(el);
+      const columns = Math.max(1, styles.gridTemplateColumns.split(' ').length);
+      const first = el.firstElementChild as HTMLElement | null;
+      if (!first) return;
+      const itemRect = first.getBoundingClientRect();
+      const rowGap = Number.parseFloat(styles.rowGap || '0');
+      const rowHeight = itemRect.height + rowGap;
+      const visibleHeight = Math.max(
+        0,
+        Math.min(rect.height, window.innerHeight - Math.max(0, rect.top))
+      );
+      const rows = rowHeight > 0 ? Math.max(1, Math.ceil(visibleHeight / rowHeight)) : 2;
+      const count = Math.min(files.length, Math.max(6, (rows + 1) * columns));
+      setPriorityCount(count);
+    };
+    const schedule = () => window.requestAnimationFrame(calc);
+    schedule();
+    window.addEventListener('resize', schedule);
+    const el = gridRef.current;
+    const observer = el ? new ResizeObserver(schedule) : null;
+    if (el && observer) observer.observe(el);
+    return () => {
+      window.removeEventListener('resize', schedule);
+      observer?.disconnect();
+    };
+  }, [files.length]);
+
+  useEffect(() => {
+    if (priorityCount <= 0) return;
+    let cancelled = false;
+    const targets = files.slice(0, priorityCount);
+    targets.forEach((file) => {
+      if (!isImageType(file.mime_type)) return;
+      if (preheatedRef.current.has(file.id)) return;
+      const cached = getCachedThumbnailUrl(file.id);
+      if (cached) {
+        preheatedRef.current.add(file.id);
+        return;
+      }
+      preheatedRef.current.add(file.id);
+      fileService
+        .fetchThumbnailBlob(file.id)
+        .then((blob) => {
+          if (cancelled || !blob) return;
+          const url = URL.createObjectURL(blob);
+          setCachedThumbnailUrl(file.id, url);
+        })
+        .catch(() => {
+          if (!cancelled) preheatedRef.current.delete(file.id);
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [priorityCount, files]);
+
   if (files.length === 0) return null;
-  const uniqueFiles =
-    files.length <= 1
-      ? files
-      : (() => {
-          const seen = new Set<string>();
-          const deduped: FileMetadata[] = [];
-          for (const file of files) {
-            if (seen.has(file.id)) continue;
-            seen.add(file.id);
-            deduped.push(file);
-          }
-          return deduped;
-        })();
 
   return (
     <div
-      // 去掉 content-visibility:auto，避免少数浏览器在页面刚渲染完时延迟鼠标事件 / hover 呈现
+      ref={gridRef}
       className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
     >
-      {uniqueFiles.map((file) => (
+      {files.map((file, index) => (
         <FileCard
           key={file.id}
           file={file}
@@ -71,6 +127,7 @@ export default function FileGrid({
           isMenuOpen={openFileMenuId === file.id}
           onToggleMenu={onToggleMenu}
           onCloseMenu={onCloseMenu}
+          thumbnailPriority={index < priorityCount ? 'high' : 'low'}
         />
       ))}
     </div>

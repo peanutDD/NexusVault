@@ -472,12 +472,26 @@ function App() {
         >
           <span className="pointer-events-none absolute inset-0 bg-gradient-to-br from-fuchsia-500/25 via-white/5 to-cyan-400/25 opacity-80 transition-opacity group-hover:opacity-100" />
           <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(255,255,255,0.35),transparent_55%)] opacity-70" />
-          <img
-            src="/image.png"
-            alt=""
-            className="relative z-10 h-8 w-8 select-none rounded-full object-cover sm:h-7 sm:w-7"
-            draggable={false}
-          />
+          <svg
+            viewBox="0 0 64 64"
+            aria-hidden="true"
+            className="relative z-10 h-8 w-8 select-none sm:h-7 sm:w-7"
+          >
+            <defs>
+              <linearGradient id="devtools-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.9" />
+                <stop offset="55%" stopColor="#a855f7" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#ec4899" stopOpacity="0.85" />
+              </linearGradient>
+            </defs>
+            <circle cx="32" cy="32" r="30" fill="url(#devtools-grad)" />
+            <circle cx="32" cy="32" r="18" fill="#0f172a" opacity="0.75" />
+            <path
+              d="M28 18h8l-4 10h8l-12 18 4-12h-8l4-16z"
+              fill="#f8fafc"
+              opacity="0.9"
+            />
+          </svg>
         </button>
       )}
     </QueryClientProvider>

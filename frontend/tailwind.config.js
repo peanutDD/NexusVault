@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        brand: ['Inter', 'system-ui', 'sans-serif'],
+        brand: ['system-ui', 'sans-serif'],
       },
     },
   },

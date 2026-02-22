@@ -104,6 +104,10 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    host: '0.0.0.0',
+    allowedHosts: true,
+  },
   build: {
     target: 'es2015',
     rollupOptions: {
@@ -139,8 +143,14 @@ export default defineConfig({
             if (id.includes('hls.js')) {
               return 'vendor-hls';
             }
+            if (id.includes('three')) {
+              return 'vendor-three';
+            }
             if (id.includes('zip.js') || id.includes('jszip')) {
               return 'vendor-zip';
+            }
+            if (id.includes('@sentry')) {
+              return 'vendor-sentry';
             }
             // 其他 node_modules 依赖
             return 'vendor-other';
@@ -164,7 +174,19 @@ export default defineConfig({
             return 'chunk-auth';
           }
           
-          // 文件相关组件（较大，单独拆分）
+          // 文件预览（重型：three.js / hls.js）
+          if (id.includes('/src/components/files/preview/')) {
+            return 'chunk-files-preview';
+          }
+          // 文件上传（重型对话框）
+          if (id.includes('/src/components/files/upload/')) {
+            return 'chunk-files-upload';
+          }
+          // 文件相关对话框（懒加载）
+          if (id.includes('/src/components/files/dialogs/')) {
+            return 'chunk-files-dialogs';
+          }
+          // 文件相关组件（列表等核心组件）
           if (id.includes('/src/components/files/')) {
             return 'chunk-files-components';
           }

@@ -43,7 +43,11 @@ function getTimeGroupInfo(dateStr: string): { key: string; label: string; sortKe
   return { key, label, sortKey };
 }
 
-function useFileGroupingWithIcons(files: FileMetadata[], isGroupByType: boolean) {
+function useFileGroupingWithIcons(
+  files: FileMetadata[],
+  isGroupByType: boolean,
+  shouldBuildIndex: boolean
+) {
   const typeOrderForWorker = useMemo(
     () => Object.fromEntries(Object.entries(FILE_TYPE_LABELS).map(([k, v]) => [k, v.order])),
     []
@@ -118,13 +122,15 @@ function useFileGroupingWithIcons(files: FileMetadata[], isGroupByType: boolean)
     return groupedFiles.flatMap((group) => group.files);
   }, [files, isGroupByType, groupedFiles]);
 
+  const emptyIndex = useMemo(() => new Map<string, number>(), []);
   const displayFileIndexById = useMemo(() => {
+    if (!shouldBuildIndex) return emptyIndex;
     const m = new Map<string, number>();
     for (let i = 0; i < displayFiles.length; i += 1) {
       m.set(displayFiles[i]!.id, i);
     }
     return m;
-  }, [displayFiles]);
+  }, [displayFiles, shouldBuildIndex, emptyIndex]);
 
   return {
     groupedFiles,
@@ -252,12 +258,14 @@ export function useFileList() {
     setSelectedFolders,
   } = useFileSelection(files, folders);
 
+  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+
   // 使用带 icon 的分组 Hook
   const {
     groupedFiles,
     displayFiles,
     displayFileIndexById,
-  } = useFileGroupingWithIcons(files, isGroupByType);
+  } = useFileGroupingWithIcons(files, isGroupByType, previewFile !== null);
 
   // 使用时间分组 Hook
   const {
@@ -266,7 +274,6 @@ export function useFileList() {
   } = useTimeGrouping(files, isGroupByTime);
 
   // 对话框状态
-  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
   const [shareFile, setShareFile] = useState<FileMetadata | null>(null);
   const [showBatchShare, setShowBatchShare] = useState(false);
   const [batchShareFileIds, setBatchShareFileIds] = useState<string[]>([]);

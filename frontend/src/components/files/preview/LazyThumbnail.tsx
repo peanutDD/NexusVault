@@ -10,6 +10,7 @@ interface LazyThumbnailProps {
   mimeType: string;
   filename: string;
   className?: string;
+  priority?: 'high' | 'low';
 }
 
 type ThumbnailState = {
@@ -180,8 +181,10 @@ export default function LazyThumbnail({
   mimeType,
   filename,
   className = '',
+  priority = 'low',
 }: LazyThumbnailProps) {
   const showThumbnail = isImageType(mimeType);
+  const eagerLoad = priority === 'high';
   const cachedUrl = showThumbnail ? getCachedThumbnailUrl(fileId) ?? null : null;
   const createInitialState = useCallback(
     (): ThumbnailState => ({
@@ -240,16 +243,14 @@ export default function LazyThumbnail({
 
     const observer = getSharedObserver();
     const el = containerRef.current;
-    if (!observer || !el) return;
+    if (!el) return;
 
-    observeCallbacks.set(el, () => {
+    const triggerLoad = () => {
       const cached = getCachedThumbnailUrl(fileId);
       if (cached) {
         if (mountedRef.current) {
           updateState({ blobUrl: cached, error: false, showLoadingUi: false });
         }
-        observeCallbacks.delete(el);
-        observer.unobserve(el);
         return;
       }
       updateState({ loading: true });
@@ -258,6 +259,15 @@ export default function LazyThumbnail({
         loadingDelayRef.current = null;
         if (mountedRef.current) updateState({ showLoadingUi: true });
       }, SHOW_LOADING_DELAY_MS);
+    };
+
+    if (eagerLoad || !observer) {
+      triggerLoad();
+      return;
+    }
+
+    observeCallbacks.set(el, () => {
+      triggerLoad();
       observeCallbacks.delete(el);
       observer.unobserve(el);
     });
@@ -275,7 +285,7 @@ export default function LazyThumbnail({
         // ignore
       }
     };
-  }, [fileId, mimeType, showThumbnail, updateState]);
+  }, [fileId, mimeType, showThumbnail, updateState, eagerLoad]);
 
   useEffect(() => {
     if (!showThumbnail || !loading || blobUrl || error) return;
@@ -394,9 +404,9 @@ export default function LazyThumbnail({
           src={blobUrl}
           alt={filename}
           className="w-full h-full object-cover"
-          loading="lazy"
+          loading={eagerLoad ? 'eager' : 'lazy'}
           decoding="async"
-          fetchPriority="low"
+          fetchPriority={eagerLoad ? 'high' : 'low'}
           onError={() => updateState({ error: true })}
         />
       </div>

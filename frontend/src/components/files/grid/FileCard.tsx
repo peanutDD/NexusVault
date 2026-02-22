@@ -20,6 +20,7 @@ interface FileCardProps {
   isMenuOpen: boolean;
   onToggleMenu: (id: string) => void;
   onCloseMenu: () => void;
+  thumbnailPriority?: 'high' | 'low';
 }
 
 /**
@@ -38,6 +39,7 @@ const FileCard = memo(
     isMenuOpen,
     onToggleMenu,
     onCloseMenu,
+    thumbnailPriority,
   }: FileCardProps) {
     const handleToggleMenu = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -89,6 +91,7 @@ const FileCard = memo(
               mimeType={file.mime_type}
               filename={file.original_filename}
               className="h-full w-full"
+              priority={thumbnailPriority}
             />
 
             {/* 悬浮预览按钮 */}

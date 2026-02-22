@@ -73,16 +73,24 @@ export function useFilePreviewData({
   const requestIdRef = useRef(0);
   const videoFallbackTriedRef = useRef(false);
   const gifFallbackTriedRef = useRef(false);
+  const imageFallbackTriedRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const onImageError = useCallback(() => {
-    if (!file || file.mime_type.toLowerCase() !== 'image/gif') return;
-    if (blobUrl?.startsWith('blob:')) return;
-    if (gifFallbackTriedRef.current) {
-      setError('GIF 加载失败');
+    if (!file) return;
+    const isImage = file.mime_type.toLowerCase().startsWith('image/');
+    if (!isImage) return;
+    if (blobUrl?.startsWith('blob:')) {
+      setError('图片加载失败');
+      setLoading(false);
       return;
     }
-    gifFallbackTriedRef.current = true;
+    if (imageFallbackTriedRef.current) {
+      setError('图片加载失败');
+      setLoading(false);
+      return;
+    }
+    imageFallbackTriedRef.current = true;
     setError(null);
     setLoading(true);
     fileService
@@ -135,6 +143,7 @@ export function useFilePreviewData({
       }
     };
     const isGif = file.mime_type.toLowerCase() === 'image/gif';
+    imageFallbackTriedRef.current = false;
 
     if (kind.isText) {
       fileService
@@ -232,6 +241,16 @@ export function useFilePreviewData({
       return;
     }
 
+    if (kind.isImage) {
+      if (!isValidRequest()) return;
+      Promise.resolve().then(() => {
+        if (!isValidRequest()) return;
+        setBlobUrl(getStreamUrl(file.id));
+      });
+      finish();
+      return;
+    }
+
     fileService
       .fetchPreviewBlob(file.id)
       .then((b) => {
@@ -243,7 +262,7 @@ export function useFilePreviewData({
         setError(e instanceof Error ? e.message : '加载失败');
       })
       .finally(finish);
-  }, [file, kind.supported, kind.isText, kind.isVideo, kind.isAudio]);
+  }, [file, kind.supported, kind.isText, kind.isVideo, kind.isAudio, kind.isImage]);
 
   useEffect(() => {
     return () => {

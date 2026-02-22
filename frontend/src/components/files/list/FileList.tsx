@@ -1,10 +1,9 @@
 import { lazy, Suspense } from 'react';
 import './FileListGlass.css';
-import FileListHeader from './FileListHeader';
-import FileListContent from './FileListContent';
 import { useFileList } from '../useFileList';
 import { clearFileListCache } from '../../../utils/fileListCache';
 import { useThrottledCallback } from '../../../hooks/useThrottledCallback';
+import { FileCardSkeleton } from '../../common/feedback/Skeleton';
 
 interface FileListProps {
   onOpenUpload?: () => void;
@@ -12,6 +11,8 @@ interface FileListProps {
 
 // 懒加载重型对话框组件
 const FilePreview = lazy(() => import('../preview/FilePreview'));
+const FileListHeader = lazy(() => import('./FileListHeader'));
+const FileListContent = lazy(() => import('./FileListContent'));
 const ShareDialog = lazy(() => import('../dialogs/ShareDialog'));
 const BatchShareDialog = lazy(() => import('../dialogs/BatchShareDialog'));
 const BatchMoveDialog = lazy(() => import('../dialogs/BatchMoveDialog'));
@@ -146,58 +147,68 @@ export default function FileList({ onOpenUpload }: FileListProps) {
   return (
     <div className="fileListGlassScope flex flex-col" style={{ gap: 'var(--bar-gap)' }}>
       {/* 头部组件：包含面包屑和工具栏 */}
-      <FileListHeader
-        folderPath={folderPath}
-        navigateToFolder={navigateToFolder}
-        handleDropOnBreadcrumb={handleDropOnBreadcrumbAdapter}
-        search={search}
-        mimeType={mimeType}
-        sortBy={sortBy}
-        onSearchChange={handleSearchChange}
-        onMimeTypeChange={handleMimeTypeChange}
-        onSortChange={handleSortChangeAdapter}
-        onOpenUpload={onOpenUpload}
-        setShowCreateFolder={setShowCreateFolder}
-      />
+      <Suspense fallback={<div className="h-[84px] sm:h-[96px]" />}>
+        <FileListHeader
+          folderPath={folderPath}
+          navigateToFolder={navigateToFolder}
+          handleDropOnBreadcrumb={handleDropOnBreadcrumbAdapter}
+          search={search}
+          mimeType={mimeType}
+          sortBy={sortBy}
+          onSearchChange={handleSearchChange}
+          onMimeTypeChange={handleMimeTypeChange}
+          onSortChange={handleSortChangeAdapter}
+          onOpenUpload={onOpenUpload}
+          setShowCreateFolder={setShowCreateFolder}
+        />
+      </Suspense>
 
       {/* 内容组件：包含批量操作栏、文件列表、分页等 */}
-      <FileListContent
-        files={files}
-        selectedFiles={selectedFiles}
-        selectedFolders={selectedFolders}
-        currentFolderId={currentFolderId}
-        error={error}
-        isLoading={isLoading}
-        isRevalidating={isRevalidating}
-        totalItems={totalItems}
-        isGroupByType={isGroupByType}
-        isGroupByTime={isGroupByTime}
-        groupedFiles={groupedFiles}
-        timeGroupedFiles={timeGroupedFiles}
-        displayFolders={displayFolders}
-        totalPages={totalPages}
-        page={page}
-        hasMore={hasMore}
-        loadingMore={loadingMore}
-        loadMore={throttledLoadMore}
-        allFilesSelected={allFilesSelected}
-        toggleSelectAll={toggleSelectAll}
-        handleSelectFile={handleSelectFile}
-        handleSelectFolder={handleSelectFolder}
-        handleOpenFolder={handleOpenFolderAdapter}
-        handleRenameFolder={handleRenameFolder}
-        handleDelete={handleDeleteAdapter}
-        handleDownload={handleDownload}
-        handleBatchDownload={handleBatchDownload}
-        handleBatchDelete={handleBatchDelete}
-        handleShowBatchMove={handleShowBatchMove}
-        handleShowBatchShare={handleShowBatchShare}
-        handleFileDragStart={handleFileDragStartAdapter}
-        handleDropOnFolder={handleDropOnFolderAdapter}
-        setPreviewFile={setPreviewFile}
-        setShareFile={setShareFile}
-        batchDownloading={batchDownloading}
-      />
+      <Suspense
+        fallback={
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+            <FileCardSkeleton count={12} />
+          </div>
+        }
+      >
+        <FileListContent
+          files={files}
+          selectedFiles={selectedFiles}
+          selectedFolders={selectedFolders}
+          currentFolderId={currentFolderId}
+          error={error}
+          isLoading={isLoading}
+          isRevalidating={isRevalidating}
+          totalItems={totalItems}
+          isGroupByType={isGroupByType}
+          isGroupByTime={isGroupByTime}
+          groupedFiles={groupedFiles}
+          timeGroupedFiles={timeGroupedFiles}
+          displayFolders={displayFolders}
+          totalPages={totalPages}
+          page={page}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          loadMore={throttledLoadMore}
+          allFilesSelected={allFilesSelected}
+          toggleSelectAll={toggleSelectAll}
+          handleSelectFile={handleSelectFile}
+          handleSelectFolder={handleSelectFolder}
+          handleOpenFolder={handleOpenFolderAdapter}
+          handleRenameFolder={handleRenameFolder}
+          handleDelete={handleDeleteAdapter}
+          handleDownload={handleDownload}
+          handleBatchDownload={handleBatchDownload}
+          handleBatchDelete={handleBatchDelete}
+          handleShowBatchMove={handleShowBatchMove}
+          handleShowBatchShare={handleShowBatchShare}
+          handleFileDragStart={handleFileDragStartAdapter}
+          handleDropOnFolder={handleDropOnFolderAdapter}
+          setPreviewFile={setPreviewFile}
+          setShareFile={setShareFile}
+          batchDownloading={batchDownloading}
+        />
+      </Suspense>
 
       {/* 对话框 - 懒加载 */}
       <Suspense fallback={null}>
