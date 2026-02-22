@@ -330,12 +330,218 @@ export default function FilePreview({
     hudRingInner.rotation.y = -Math.PI / 5;
     group.add(hudRingInner);
 
+    const hudArcGroup = new THREE.Group();
+    hudArcGroup.position.set(0, 0, 0.2);
+    group.add(hudArcGroup);
+    const hudArcs: { mesh: THREE.Mesh; material: THREE.MeshBasicMaterial }[] = [];
+    const arcConfigs = [
+      { inner: 3.1, outer: 3.25, start: Math.PI * 0.1, length: Math.PI * 1.1, color: 0x22f3a6, opacity: 0.3, tiltX: Math.PI / 2.3, tiltY: 0.28, rotZ: 0.25 },
+      { inner: 2.2, outer: 2.35, start: Math.PI * 1.2, length: Math.PI * 0.9, color: 0xb455ff, opacity: 0.26, tiltX: Math.PI / 2.15, tiltY: -0.18, rotZ: -0.35 },
+      { inner: 1.35, outer: 1.5, start: Math.PI * 1.85, length: Math.PI * 1.3, color: 0x2bffb9, opacity: 0.22, tiltX: Math.PI / 2.05, tiltY: 0.1, rotZ: 0.6 },
+    ];
+    arcConfigs.forEach((config) => {
+      const geometry = new THREE.RingGeometry(
+        config.inner,
+        config.outer,
+        96,
+        1,
+        config.start,
+        config.length
+      );
+      const material = new THREE.MeshBasicMaterial({
+        color: config.color,
+        transparent: true,
+        opacity: config.opacity,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.set(config.tiltX, config.tiltY, config.rotZ);
+      hudArcGroup.add(mesh);
+      hudArcs.push({ mesh, material });
+    });
+
+    const scanSheets: { mesh: THREE.Mesh; material: THREE.MeshBasicMaterial; speed: number; amplitude: number }[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const geometry = new THREE.PlaneGeometry(18, 4.8, 1, 1);
+      const material = new THREE.MeshBasicMaterial({
+        color: i === 0 ? 0x22f3a6 : 0xb455ff,
+        transparent: true,
+        opacity: 0.06,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(-1.6 + i * 2.4, -1.2 + i * 0.6, -2.4 - i * 0.4);
+      mesh.rotation.x = Math.PI / 2.55;
+      mesh.rotation.z = i === 0 ? 0.14 : -0.08;
+      scene.add(mesh);
+      scanSheets.push({
+        mesh,
+        material,
+        speed: 0.22 + i * 0.1,
+        amplitude: 0.7 + i * 0.4,
+      });
+    }
+
     const grid = new THREE.GridHelper(14, 80, 0x22f3a6, 0x220b3a);
     grid.position.z = -3.2;
     grid.material.opacity = 0.25;
     grid.material.transparent = true;
     grid.rotation.x = Math.PI / 2.1;
     scene.add(grid);
+
+    const meteorCount = 72;
+    const meteorPositions = new Float32Array(meteorCount * 6);
+    const meteorColors = new Float32Array(meteorCount * 6);
+    const meteorVelocity = new Float32Array(meteorCount * 3);
+    const meteorHeadPositions = new Float32Array(meteorCount * 3);
+    const meteorTailLength = new Float32Array(meteorCount);
+    const meteorBrightness = new Float32Array(meteorCount);
+    const meteorBounds = { x: 12, y: 7, z: 10 };
+    const meteorRadiant = new THREE.Vector3(7.5, 5.2, 6.8);
+    const meteorBaseDir = new THREE.Vector3(-1, -0.75, -1).normalize();
+    const meteorHeadColor = new THREE.Color();
+    const meteorTailColor = new THREE.Color();
+    const resetMeteor = (index: number) => {
+      const base = index * 6;
+      const baseVel = index * 3;
+      const headX = meteorRadiant.x + (Math.random() - 0.5) * 2.5;
+      const headY = meteorRadiant.y + (Math.random() - 0.5) * 2.2;
+      const headZ = meteorRadiant.z + (Math.random() - 0.5) * 2.8;
+      const direction = meteorBaseDir
+        .clone()
+        .add(
+          new THREE.Vector3(
+            (Math.random() - 0.5) * 0.25,
+            (Math.random() - 0.5) * 0.2,
+            (Math.random() - 0.5) * 0.25
+          )
+        )
+        .normalize();
+      const speed = 1.8 + Math.random() * 2.1;
+      meteorVelocity[baseVel] = direction.x * speed;
+      meteorVelocity[baseVel + 1] = direction.y * speed;
+      meteorVelocity[baseVel + 2] = direction.z * speed;
+      meteorTailLength[index] = 1.4 + Math.random() * 2.2;
+      meteorBrightness[index] = 0.55 + Math.random() * 0.45;
+      meteorPositions[base] = headX;
+      meteorPositions[base + 1] = headY;
+      meteorPositions[base + 2] = headZ;
+      meteorHeadPositions[baseVel] = headX;
+      meteorHeadPositions[baseVel + 1] = headY;
+      meteorHeadPositions[baseVel + 2] = headZ;
+      meteorHeadColor.setRGB(0.78, 1, 0.95).multiplyScalar(meteorBrightness[index]);
+      meteorTailColor.set(0x7a5cff).lerp(meteorHeadColor, 0.25);
+      meteorColors[base] = meteorHeadColor.r;
+      meteorColors[base + 1] = meteorHeadColor.g;
+      meteorColors[base + 2] = meteorHeadColor.b;
+      meteorColors[base + 3] = meteorTailColor.r;
+      meteorColors[base + 4] = meteorTailColor.g;
+      meteorColors[base + 5] = meteorTailColor.b;
+      meteorPositions[base + 3] = headX - direction.x * meteorTailLength[index];
+      meteorPositions[base + 4] = headY - direction.y * meteorTailLength[index];
+      meteorPositions[base + 5] = headZ - direction.z * meteorTailLength[index];
+    };
+    for (let i = 0; i < meteorCount; i += 1) {
+      resetMeteor(i);
+    }
+    const meteorGeometry = new THREE.BufferGeometry();
+    meteorGeometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(meteorPositions, 3)
+    );
+    meteorGeometry.setAttribute(
+      'color',
+      new THREE.BufferAttribute(meteorColors, 3)
+    );
+    const meteorMaterial = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.75,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const meteors = new THREE.LineSegments(meteorGeometry, meteorMaterial);
+    meteors.position.set(2.2, 1.2, 1.2);
+    meteors.rotation.set(-0.18, 0.32, 0.03);
+    scene.add(meteors);
+    const meteorHeadGeometry = new THREE.BufferGeometry();
+    meteorHeadGeometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(meteorHeadPositions, 3)
+    );
+    const meteorHeadMaterial = new THREE.PointsMaterial({
+      color: 0xf4fff9,
+      size: 0.08,
+      transparent: true,
+      opacity: 0.7,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const meteorHeads = new THREE.Points(meteorHeadGeometry, meteorHeadMaterial);
+    meteorHeads.position.copy(meteors.position);
+    meteorHeads.rotation.copy(meteors.rotation);
+    scene.add(meteorHeads);
+
+    const auroraGroup = new THREE.Group();
+    auroraGroup.position.set(0.6, 2.6, -3.1);
+    auroraGroup.rotation.set(-0.48, 0.25, 0.05);
+    scene.add(auroraGroup);
+    const auroraColorA = new THREE.Color(0x2bffb9);
+    const auroraColorB = new THREE.Color(0x9dfef3);
+    const auroraColorC = new THREE.Color(0xb455ff);
+    const auroraRibbons: {
+      mesh: THREE.Mesh;
+      basePositions: Float32Array;
+      amplitude: number;
+      speed: number;
+      phase: number;
+      flutter: number;
+    }[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      const width = 16;
+      const height = 3.6;
+      const geometry = new THREE.PlaneGeometry(width, height, 120, 18);
+      const positionAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
+      const colorAttr = new Float32Array(positionAttr.count * 3);
+      for (let v = 0; v < positionAttr.count; v += 1) {
+        const x = positionAttr.getX(v);
+        const y = positionAttr.getY(v);
+        const xMix = (x / width) + 0.5;
+        const yMix = (y / height) + 0.5;
+        const color = auroraColorA.clone().lerp(auroraColorB, Math.min(1, yMix * 1.1));
+        color.lerp(auroraColorC, Math.max(0, yMix - 0.1) * 0.85);
+        color.lerp(auroraColorB, Math.abs(Math.sin(x * 1.3)) * 0.1 + xMix * 0.08);
+        colorAttr[v * 3] = color.r;
+        colorAttr[v * 3 + 1] = color.g;
+        colorAttr[v * 3 + 2] = color.b;
+      }
+      geometry.setAttribute('color', new THREE.BufferAttribute(colorAttr, 3));
+      const material = new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.42 - i * 0.1,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(-2.2 + i * 0.9, 0.1 + i * 0.18, -i * 0.8);
+      mesh.rotation.y = -0.18 + i * 0.1;
+      mesh.rotation.z = 0.12 - i * 0.07;
+      auroraGroup.add(mesh);
+      auroraRibbons.push({
+        mesh,
+        basePositions: new Float32Array(positionAttr.array as Float32Array),
+        amplitude: 0.28 + i * 0.15,
+        speed: 0.35 + i * 0.14,
+        phase: Math.random() * Math.PI * 2,
+        flutter: 0.6 + Math.random() * 0.4,
+      });
+    }
 
     let frameId = 0;
     let targetX = 0;
@@ -420,12 +626,86 @@ export default function FilePreview({
         0.22 + Math.sin(elapsed * 1.8) * 0.08;
       hudRing.rotation.z = -elapsed * 0.25;
       hudRingInner.rotation.z = elapsed * 0.4;
+      hudArcs.forEach((arc, index) => {
+        arc.mesh.rotation.z += 0.002 + index * 0.0006;
+        arc.material.opacity = 0.18 + Math.sin(elapsed * 1.1 + index) * 0.06;
+      });
       shards.forEach((shard, index) => {
         shard.rotation.y += 0.003 + index * 0.0001;
         shard.rotation.x += 0.001;
       });
       particles.rotation.y = elapsed * 0.05;
       particles.rotation.x = elapsed * 0.02;
+      const meteorPositionAttr = meteorGeometry.getAttribute('position') as THREE.BufferAttribute;
+      const meteorHeadAttr = meteorHeadGeometry.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < meteorCount; i += 1) {
+        const base = i * 6;
+        const vel = i * 3;
+        meteorVelocity[vel + 1] -= delta * 0.08;
+        meteorVelocity[vel] += Math.sin(elapsed * 0.7 + i) * delta * 0.04;
+        meteorPositions[base] += meteorVelocity[vel] * delta;
+        meteorPositions[base + 1] += meteorVelocity[vel + 1] * delta;
+        meteorPositions[base + 2] += meteorVelocity[vel + 2] * delta;
+        if (
+          meteorPositions[base + 1] < -meteorBounds.y ||
+          meteorPositions[base] < -meteorBounds.x ||
+          meteorPositions[base + 2] < -meteorBounds.z
+        ) {
+          resetMeteor(i);
+        } else {
+          const vx = meteorVelocity[vel];
+          const vy = meteorVelocity[vel + 1];
+          const vz = meteorVelocity[vel + 2];
+          const inv = 1 / Math.max(0.0001, Math.sqrt(vx * vx + vy * vy + vz * vz));
+          const tail = meteorTailLength[i];
+          meteorPositions[base + 3] = meteorPositions[base] - vx * inv * tail;
+          meteorPositions[base + 4] = meteorPositions[base + 1] - vy * inv * tail;
+          meteorPositions[base + 5] = meteorPositions[base + 2] - vz * inv * tail;
+          meteorHeadPositions[vel] = meteorPositions[base];
+          meteorHeadPositions[vel + 1] = meteorPositions[base + 1];
+          meteorHeadPositions[vel + 2] = meteorPositions[base + 2];
+        }
+      }
+      meteorPositionAttr.needsUpdate = true;
+      meteorHeadAttr.needsUpdate = true;
+      auroraRibbons.forEach((ribbon, index) => {
+        const geometry = ribbon.mesh.geometry as THREE.PlaneGeometry;
+        const position = geometry.getAttribute('position') as THREE.BufferAttribute;
+        for (let v = 0; v < position.count; v += 1) {
+          const baseIndex = v * 3;
+          const x = ribbon.basePositions[baseIndex];
+          const y = ribbon.basePositions[baseIndex + 1];
+          const z = ribbon.basePositions[baseIndex + 2];
+          const heightFactor = (y / 3.6) + 0.55;
+          const curtain =
+            Math.sin(x * 1.2 + ribbon.phase * 2.2 + elapsed * ribbon.speed * 0.6) *
+            ribbon.amplitude *
+            0.6;
+          const flutter =
+            Math.sin(x * 0.35 + y * 1.4 + elapsed * ribbon.speed * ribbon.flutter + index) *
+            ribbon.amplitude;
+          const drift =
+            Math.cos(x * 0.25 + elapsed * ribbon.speed * 0.5 + ribbon.phase) *
+            ribbon.amplitude *
+            0.35;
+          position.setXYZ(
+            v,
+            x,
+            y + (curtain + flutter) * heightFactor,
+            z + drift * (0.35 + heightFactor * 0.35)
+          );
+        }
+        position.needsUpdate = true;
+        ribbon.mesh.position.y = 0.1 + Math.sin(elapsed * ribbon.speed + ribbon.phase) * 0.18;
+        ribbon.mesh.rotation.z = 0.1 + Math.sin(elapsed * ribbon.speed * 0.7) * 0.1;
+      });
+      scanSheets.forEach((sheet, index) => {
+        sheet.mesh.position.y =
+          -1.3 +
+          Math.sin(elapsed * sheet.speed + index * 1.4) * sheet.amplitude;
+        sheet.material.opacity =
+          0.04 + Math.max(0, Math.sin(elapsed * sheet.speed * 1.2 + index)) * 0.05;
+      });
       pulseLight.intensity = 1 + Math.sin(elapsed * 1.4) * 0.35;
       group.position.y = Math.sin(elapsed * 0.7) * 0.15;
       if (root) {
@@ -488,6 +768,27 @@ export default function FilePreview({
       } else {
         gridMaterial.dispose();
       }
+      meteorGeometry.dispose();
+      meteorMaterial.dispose();
+      meteorHeadGeometry.dispose();
+      meteorHeadMaterial.dispose();
+      hudArcs.forEach((arc) => {
+        arc.mesh.geometry.dispose();
+        arc.material.dispose();
+      });
+      scanSheets.forEach((sheet) => {
+        sheet.mesh.geometry.dispose();
+        sheet.material.dispose();
+      });
+      auroraRibbons.forEach((ribbon) => {
+        ribbon.mesh.geometry.dispose();
+        const mat = ribbon.mesh.material as THREE.Material | THREE.Material[];
+        if (Array.isArray(mat)) {
+          mat.forEach((item) => item.dispose());
+        } else {
+          mat.dispose();
+        }
+      });
       particleGeometry.dispose();
       particleMaterial.dispose();
       renderer.dispose();
