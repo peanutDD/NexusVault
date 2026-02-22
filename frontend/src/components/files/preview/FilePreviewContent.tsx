@@ -73,11 +73,35 @@ export function FilePreviewContent({
   const [markdownTheme, setMarkdownTheme] = useState<'dark' | 'light'>('dark');
   return (
     <div
-      className="relative z-0 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pl-[clamp(4.5rem,13vw,7rem)] pr-[clamp(4.5rem,13vw,7rem)] py-[clamp(1rem,4vh,2.5rem)]"
+      className="relative z-[3] flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pl-[clamp(4.5rem,13vw,7rem)] pr-[clamp(4.5rem,13vw,7rem)] py-[clamp(1rem,4vh,2.5rem)]"
+      style={{ perspective: '1400px' }}
       onClick={onClose}
     >
+      <div
+        className="relative h-[min(72vh,44rem)] w-[min(92vw,70rem)] pointer-events-auto"
+        data-preview-content
+        style={{
+          transform:
+            'translate3d(var(--preview-orbit-x, 0px), var(--preview-orbit-y, 0px), var(--preview-orbit-z, 0px)) rotateY(var(--preview-orbit-ry, 0deg)) rotateX(var(--preview-orbit-rx, 0deg))',
+          transformStyle: 'preserve-3d',
+          willChange: 'transform',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="relative h-full w-full"
+          style={{
+            transform:
+              'rotateX(calc(var(--preview-tilt-x, 0deg) * var(--preview-tilt-scale, 1))) rotateY(calc(var(--preview-tilt-y, 0deg) * var(--preview-tilt-scale, 1)))',
+            transformStyle: 'preserve-3d',
+            transition: 'transform 120ms ease-out',
+          }}
+        >
+          <div className="absolute -inset-6 rounded-[32px] bg-gradient-to-br from-cyan-400/20 via-transparent to-fuchsia-500/20 blur-2xl" />
+          <div className="absolute -inset-4 rounded-[30px] border border-cyan-300/30 shadow-[0_0_40px_rgba(34,211,238,0.25)]" />
+          <div className="relative h-full w-full overflow-hidden rounded-[26px] border border-white/15 bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-slate-950/90 shadow-[0_25px_80px_rgba(2,6,23,0.65)]">
       {loading ? (
-        <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex h-full w-full flex-col items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
           <SpinnerIcon className="h-12 w-12 text-purple-500" />
           <span className="text-sm text-white/60">加载中…</span>
         </div>
@@ -85,7 +109,7 @@ export function FilePreviewContent({
 
       {error && !loading ? (
         <div
-          className="flex flex-col items-center gap-4 rounded-2xl bg-white/5 px-8 py-10 text-center"
+          className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-2xl bg-white/5 px-8 py-10 text-center"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20">
@@ -103,7 +127,7 @@ export function FilePreviewContent({
       ) : null}
 
       {!loading && !error && supported ? (
-        <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center p-[clamp(1rem,3vw,2rem)]">
           {isImage && (blobUrl || gifFirstFrameUrl) ? (
             <div className="relative flex h-full w-full min-h-0 items-center justify-center">
               <div
@@ -294,6 +318,9 @@ export function FilePreviewContent({
           </article>
         </div>
       ) : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -154,6 +154,31 @@ export function LoopIcon() {
   );
 }
 
+export function PauseIcon() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 shrink-0"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <rect x="6.5" y="5" width="4" height="14" rx="1.2" />
+      <rect x="13.5" y="5" width="4" height="14" rx="1.2" />
+    </svg>
+  );
+}
+
+export function PlayIcon() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 shrink-0"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M8 5.5v13l10-6.5-10-6.5z" />
+    </svg>
+  );
+}
+
 // =============================================================================
 // 加载图标
 // =============================================================================
