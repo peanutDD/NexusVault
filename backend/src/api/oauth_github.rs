@@ -28,7 +28,14 @@ pub async fn github_oauth_url_handler(State(state): State<AppState>) -> Result<R
 
     // 生成随机 state，并缓存起来用于回调时校验，防止 CSRF
     let state_str = Uuid::new_v4().to_string();
-    state.cache.set_oauth_state("github", &state_str);
+    if let Some(pool) = &state.redis {
+        crate::services::redis::RedisService::new(pool.clone())
+            .set_oauth_state("github", &state_str)
+            .await
+            .map_err(|_| AppError::Internal)?;
+    } else {
+        state.cache.set_oauth_state("github", &state_str);
+    }
 
     let authorize_url = format!(
         "https://github.com/login/oauth/authorize?client_id={}&redirect_uri={}&scope={}&state={}",
@@ -54,10 +61,17 @@ pub async fn github_oauth_callback_handler(
     Query(query): Query<GithubCallbackQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     // 校验 state，防止 CSRF
-    if !state
-        .cache
-        .verify_and_consume_oauth_state("github", &query.state)
-    {
+    let ok = if let Some(pool) = &state.redis {
+        crate::services::redis::RedisService::new(pool.clone())
+            .verify_and_consume_oauth_state("github", &query.state)
+            .await
+            .map_err(|_| AppError::Internal)?
+    } else {
+        state
+            .cache
+            .verify_and_consume_oauth_state("github", &query.state)
+    };
+    if !ok {
         return Err(AppError::Auth("Invalid OAuth state".to_string()));
     }
 

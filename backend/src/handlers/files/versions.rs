@@ -61,6 +61,11 @@ pub async fn restore_version_handler(
         .file_service
         .restore_version(file_id, version_id, user_id, req)
         .await?;
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
     Ok(json_response(json!({ "message": "版本已恢复" })))
 }
 

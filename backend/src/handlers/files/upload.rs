@@ -170,5 +170,11 @@ pub async fn upload_file_handler(
     // 记录上传文件体积指标（成功路径）
     crate::middleware::metrics::record_file_operation("upload", file_size, true);
 
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
+
     Ok(json_response(json!({ "file": file })))
 }

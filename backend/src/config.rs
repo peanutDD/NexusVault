@@ -14,6 +14,7 @@ const PORT_MAX: u16 = 65535;
 #[allow(dead_code)]
 pub struct Config {
     pub database_url: String,
+    pub redis_url: Option<String>,
     pub jwt_secret: String,
     pub jwt_expiry: String,
     pub storage_backend: String,
@@ -104,6 +105,7 @@ impl Config {
         let config = Config {
             database_url: env::var("DATABASE_URL")
                 .map_err(|_| ConfigError::MissingEnvVar("DATABASE_URL".to_string()))?,
+            redis_url: env::var("REDIS_URL").ok().filter(|s| !s.is_empty()),
             jwt_secret: env::var("JWT_SECRET")
                 .map_err(|_| ConfigError::MissingEnvVar("JWT_SECRET".to_string()))?,
             jwt_expiry: env::var("JWT_EXPIRY").unwrap_or_else(|_| "24h".to_string()),

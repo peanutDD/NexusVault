@@ -131,6 +131,11 @@ pub async fn chunked_upload_complete_handler(
         .file_service
         .complete_chunked_upload(upload_id, user_id, req)
         .await?;
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
     Ok(json_response(json!({ "file": file })))
 }
 

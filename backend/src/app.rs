@@ -47,6 +47,7 @@ where
         config.user_rate_limit,
         config.rate_limit_window_secs,
         config.rate_limit_max_keys,
+        app_state.redis.clone(),
     );
 
     // Router::layer 要求 L::Service: Clone。RequestLogLayer 及其 Service 已实现 Clone。

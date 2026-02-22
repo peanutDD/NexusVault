@@ -5,6 +5,8 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use deadpool_redis::Pool as RedisPool;
+use deadpool_redis::redis::cmd;
 use moka::sync::Cache;
 use serde_json::json;
 use std::{
@@ -31,6 +33,7 @@ pub struct RateLimitState {
     user_max_requests: u32,
     /// 固定窗口大小（秒），IP 与 user 共用同一窗口长度
     window_seconds: u64,
+    redis: Option<RedisPool>,
 }
 
 impl RateLimitState {
@@ -39,6 +42,7 @@ impl RateLimitState {
         user_max_requests: u32,
         window_seconds: u64,
         max_keys: u64,
+        redis: Option<RedisPool>,
     ) -> Self {
         let ttl = Duration::from_secs(window_seconds);
         Self {
@@ -53,10 +57,36 @@ impl RateLimitState {
                 .max_capacity(max_keys)
                 .time_to_live(ttl)
                 .build(),
+            redis,
         }
     }
 
     async fn check_ip_rate_limit(&self, key: &str) -> bool {
+        if let Some(pool) = &self.redis {
+            let mut conn = match pool.get().await {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::warn!("rate_limit redis get connection failed: {}", e);
+                    return true;
+                }
+            };
+            let redis_key = format!("rl:ip:{}", key);
+            let current: i64 = match cmd("INCR").arg(&redis_key).query_async(&mut conn).await {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!("rate_limit redis incr failed: {}", e);
+                    return true;
+                }
+            };
+            if current == 1 {
+                let _: Result<(), _> = cmd("EXPIRE")
+                    .arg(redis_key)
+                    .arg(self.window_seconds as usize)
+                    .query_async(&mut conn)
+                    .await;
+            }
+            return current as u32 <= self.ip_max_requests;
+        }
         let counter = self
             .ip_counters
             .get_with(key.to_string(), || Arc::new(AtomicU32::new(0)));
@@ -65,6 +95,31 @@ impl RateLimitState {
     }
 
     async fn check_user_rate_limit(&self, key: &str) -> bool {
+        if let Some(pool) = &self.redis {
+            let mut conn = match pool.get().await {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::warn!("rate_limit redis get connection failed: {}", e);
+                    return true;
+                }
+            };
+            let redis_key = format!("rl:user:{}", key);
+            let current: i64 = match cmd("INCR").arg(&redis_key).query_async(&mut conn).await {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!("rate_limit redis incr failed: {}", e);
+                    return true;
+                }
+            };
+            if current == 1 {
+                let _: Result<(), _> = cmd("EXPIRE")
+                    .arg(redis_key)
+                    .arg(self.window_seconds as usize)
+                    .query_async(&mut conn)
+                    .await;
+            }
+            return current as u32 <= self.user_max_requests;
+        }
         let counter = self
             .user_counters
             .get_with(key.to_string(), || Arc::new(AtomicU32::new(0)));
@@ -78,8 +133,15 @@ pub fn create_rate_limit_middleware(
     user_max_requests: u32,
     window_seconds: u64,
     max_keys: u64,
+    redis: Option<RedisPool>,
 ) -> RateLimitState {
-    RateLimitState::new(ip_max_requests, user_max_requests, window_seconds, max_keys)
+    RateLimitState::new(
+        ip_max_requests,
+        user_max_requests,
+        window_seconds,
+        max_keys,
+        redis,
+    )
 }
 
 fn get_client_ip(headers: &HeaderMap) -> String {

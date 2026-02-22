@@ -8,7 +8,6 @@ services:
       POSTGRES_USER: file_storage
       POSTGRES_PASSWORD: file_storage_password
       POSTGRES_DB: file_storage
-    # 使用字符串格式以避免潜在的解析问题
     command: postgres -c shared_preload_libraries=pg_stat_statements
     ports:
       - "5432:5432"
@@ -20,6 +19,17 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: file_storage_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -27,6 +37,7 @@ services:
     container_name: file_storage_backend
     environment:
       DATABASE_URL: postgresql://file_storage:file_storage_password@postgres:5432/file_storage
+      REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       JWT_EXPIRY: 24h
       STORAGE_BACKEND: local
@@ -42,6 +53,8 @@ services:
       - backend_uploads:/app/uploads
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
 

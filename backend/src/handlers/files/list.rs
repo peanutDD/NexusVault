@@ -4,8 +4,11 @@ use axum::extract::{Query, State};
 use axum::response::Response;
 use serde_json::json;
 
+use deadpool_redis::redis::cmd;
+
 use crate::extractors::AuthenticatedUser;
 use crate::models::file::FileListQuery;
+use crate::utils::crypto::sha256_hex;
 use crate::utils::{json_response, AppError};
 use crate::AppState;
 
@@ -41,6 +44,63 @@ pub async fn list_files_handler(
     // 提取分页参数（在移动 query 之前）
     let page = query.page.unwrap_or(1);
     let limit = query.limit.unwrap_or(20);
+
+    if let Some(pool) = &state.redis {
+        let fingerprint = format!(
+            "page={:?}&limit={:?}&cursor={:?}&search={:?}&mime_type={:?}&category={:?}&folder_id={:?}&date_from={:?}&date_to={:?}&size_min={:?}&size_max={:?}&sort_by={:?}&sort_order={:?}&include_total={:?}",
+            query.page,
+            query.limit,
+            query.cursor,
+            query.search,
+            query.mime_type,
+            query.category,
+            query.folder_id,
+            query.date_from,
+            query.date_to,
+            query.size_min,
+            query.size_max,
+            query.sort_by,
+            query.sort_order,
+            query.include_total,
+        );
+        let hash = sha256_hex(fingerprint.as_bytes());
+        let redis = crate::services::redis::RedisService::new(pool.clone());
+        let ver = redis.get_user_cache_version(user_id).await.unwrap_or(1);
+        let cache_key = format!("cache:files:list:{}:{}:{}", user_id, ver, hash);
+
+        if let Ok(mut conn) = pool.get().await {
+            let cached: Result<Option<String>, _> =
+                cmd("GET").arg(&cache_key).query_async(&mut conn).await;
+            if let Ok(Some(s)) = cached {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                    return Ok(json_response(v));
+                }
+            }
+        }
+
+        let (files, total, next_cursor) = state.file_service.list_files(user_id, query).await?;
+        let mut response = json!({ "files": files });
+        if next_cursor.is_some() {
+            response["next_cursor"] = json!(next_cursor);
+        } else {
+            response["total"] = json!(total.unwrap_or(0));
+            response["page"] = json!(page);
+            response["limit"] = json!(limit);
+        }
+
+        if let Ok(mut conn) = pool.get().await {
+            if let Ok(body) = serde_json::to_string(&response) {
+                let _: Result<(), _> = cmd("SETEX")
+                    .arg(&cache_key)
+                    .arg(20)
+                    .arg(body)
+                    .query_async(&mut conn)
+                    .await;
+            }
+        }
+
+        return Ok(json_response(response));
+    }
 
     let (files, total, next_cursor) = state.file_service.list_files(user_id, query).await?;
 

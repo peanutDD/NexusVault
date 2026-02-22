@@ -19,6 +19,7 @@ mod responses;
 use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
+use deadpool_redis::redis::cmd;
 use uuid::Uuid;
 
 use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
@@ -290,6 +291,36 @@ pub async fn thumbnail_file_handler(
         return Ok(res);
     }
 
+    if let Some(pool) = &state.redis {
+        if let Ok(mut conn) = pool.get().await {
+            let lock_key = format!("lock:thumb:{}:{}", file_id, w);
+            let acquired: Result<Option<String>, _> = cmd("SET")
+                .arg(&lock_key)
+                .arg("1")
+                .arg("NX")
+                .arg("PX")
+                .arg(30000)
+                .query_async(&mut conn)
+                .await;
+
+            if acquired.ok().flatten().is_none() {
+                for _ in 0..10 {
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    if let Ok(cached) = state.file_service.get_thumbnail(file_id, user_id).await {
+                        let mut res = file_response(cached, "thumb.jpg", "image/jpeg", true)
+                            .map_err(|_| AppError::Internal)?;
+                        res.headers_mut().insert(header::ETAG, etag_header);
+                        res.headers_mut().insert(
+                            header::CACHE_CONTROL,
+                            HeaderValue::from_static(CACHE_CONTROL_THUMBNAIL),
+                        );
+                        return Ok(res);
+                    }
+                }
+            }
+        }
+    }
+
     // 无缓存：在阻塞线程中生成缩略图，避免长时间占用 async 工作线程导致超时或无法正确返回
     tracing::info!(
         file_id = %file_id,
@@ -342,8 +373,41 @@ pub async fn hls_playlist_handler(
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
     let file = state.file_service.get_file(file_id, user_id).await?;
-    let out_dir = state.file_service.ensure_hls_ready(&file).await?;
+    let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
+    let mut acquired = false;
+    if let Some(pool) = &state.redis {
+        if let Ok(mut conn) = pool.get().await {
+            let lock_key = format!("lock:hls:{}", file_id);
+            let r: Result<Option<String>, _> = cmd("SET")
+                .arg(&lock_key)
+                .arg("1")
+                .arg("NX")
+                .arg("PX")
+                .arg(600000)
+                .query_async(&mut conn)
+                .await;
+            acquired = r.ok().flatten().is_some();
+        }
+    }
+    if acquired {
+        state.file_service.ensure_hls_ready(&file).await?;
+    } else {
+        let mut ready = false;
+        for _ in 0..60 {
+            if tokio::fs::try_exists(&playlist_path)
+                .await
+                .map_err(|e| AppError::File(e.to_string()))?
+            {
+                ready = true;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+        if !ready {
+            state.file_service.ensure_hls_ready(&file).await?;
+        }
+    }
     let data = tokio::fs::read(&playlist_path)
         .await
         .map_err(|e| AppError::File(format!("读取 HLS 列表失败: {}", e)))?;
@@ -389,7 +453,41 @@ pub async fn hls_asset_handler(
     if !state.file_service.should_use_hls(&file) {
         return Err(AppError::NotFound);
     }
-    let out_dir = state.file_service.ensure_hls_ready(&file).await?;
+    let out_dir = state.file_service.hls_output_dir(file_id);
+    let playlist_path = out_dir.join("playlist.m3u8");
+    let mut acquired = false;
+    if let Some(pool) = &state.redis {
+        if let Ok(mut conn) = pool.get().await {
+            let lock_key = format!("lock:hls:{}", file_id);
+            let r: Result<Option<String>, _> = cmd("SET")
+                .arg(&lock_key)
+                .arg("1")
+                .arg("NX")
+                .arg("PX")
+                .arg(600000)
+                .query_async(&mut conn)
+                .await;
+            acquired = r.ok().flatten().is_some();
+        }
+    }
+    if acquired {
+        state.file_service.ensure_hls_ready(&file).await?;
+    } else {
+        let mut ready = false;
+        for _ in 0..60 {
+            if tokio::fs::try_exists(&playlist_path)
+                .await
+                .map_err(|e| AppError::File(e.to_string()))?
+            {
+                ready = true;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+        if !ready {
+            state.file_service.ensure_hls_ready(&file).await?;
+        }
+    }
     let safe_name = filename
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')

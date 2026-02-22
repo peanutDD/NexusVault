@@ -55,6 +55,13 @@ pub async fn batch_delete_handler(
     axum::Json(req): axum::Json<BatchDeleteRequest>,
 ) -> Result<Response, AppError> {
     let deleted = state.file_service.batch_delete(&req.ids, user_id).await?;
+    if deleted > 0 {
+        if let Some(pool) = &state.redis {
+            let _ = crate::services::redis::RedisService::new(pool.clone())
+                .bump_user_cache_version(user_id)
+                .await;
+        }
+    }
     Ok(json_response(json!({
         "deleted": deleted,
         "message": "Batch delete completed"
@@ -158,6 +165,13 @@ pub async fn batch_move_handler(
     axum::Json(req): axum::Json<BatchMoveRequest>,
 ) -> Result<Response, AppError> {
     let moved = state.file_service.batch_move(user_id, req).await?;
+    if moved > 0 {
+        if let Some(pool) = &state.redis {
+            let _ = crate::services::redis::RedisService::new(pool.clone())
+                .bump_user_cache_version(user_id)
+                .await;
+        }
+    }
     Ok(json_response(json!({
         "moved": moved,
         "message": "Batch move completed"

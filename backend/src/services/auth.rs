@@ -52,22 +52,34 @@ pub struct AuthService {
     users_repo: DynUsersRepo,
     config: Config,
     cache: CacheService,
+    redis: Option<crate::services::redis::RedisService>,
 }
 
 impl AuthService {
     /// 创建新的 AuthService 实例
-    pub fn new(users_repo: DynUsersRepo, config: Config, cache: CacheService) -> Self {
+    pub fn new(
+        users_repo: DynUsersRepo,
+        config: Config,
+        cache: CacheService,
+        redis: Option<crate::services::redis::RedisService>,
+    ) -> Self {
         Self {
             users_repo,
             config,
             cache,
+            redis,
         }
     }
 
     /// 从 AppState 创建 AuthService（工厂方法）
     pub fn from_state(state: &crate::AppState) -> Self {
         let users_repo: DynUsersRepo = std::sync::Arc::new(SqlxUsersRepo::new(state.pool.clone()));
-        Self::new(users_repo, (*state.config).clone(), state.cache.clone())
+        let redis = state
+            .redis
+            .as_ref()
+            .cloned()
+            .map(crate::services::redis::RedisService::new);
+        Self::new(users_repo, (*state.config).clone(), state.cache.clone(), redis)
     }
 
     /// 用户注册
@@ -303,8 +315,14 @@ impl AuthService {
         let code: String = (0..6)
             .map(|_| rand::thread_rng().gen_range(0..10).to_string())
             .collect();
-        self.cache
-            .set_email_verification_code(user_id, &req.email, &code);
+        if let Some(redis) = &self.redis {
+            redis.set_email_verification_code(user_id, &req.email, &code)
+                .await
+                .map_err(|_| AppError::Internal)?;
+        } else {
+            self.cache
+                .set_email_verification_code(user_id, &req.email, &code);
+        }
 
         // SMTP 已配置则发送邮件，否则写入日志（开发环境）
         if let (Some(host), Some(from)) = (&self.config.smtp_host, &self.config.smtp_from) {
@@ -377,10 +395,15 @@ impl AuthService {
                     AppError::Validation("修改邮箱需要先获取并填写验证码".to_string())
                 })?;
 
-            if !self
-                .cache
-                .verify_and_consume_email_code(user_id, &req.email, code)
-            {
+            let ok = if let Some(redis) = &self.redis {
+                redis.verify_and_consume_email_code(user_id, &req.email, code)
+                    .await
+                    .map_err(|_| AppError::Internal)?
+            } else {
+                self.cache
+                    .verify_and_consume_email_code(user_id, &req.email, code)
+            };
+            if !ok {
                 return Err(AppError::Validation("验证码错误或已过期".to_string()));
             }
         }

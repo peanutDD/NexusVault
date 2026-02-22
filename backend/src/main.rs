@@ -46,6 +46,7 @@ use std::time::Duration; // 定时任务间隔（如清理周期）
 use config::Config; // 应用配置
 use database::pool::create_pool; // 创建 PostgreSQL 连接池
 use services::file::create_storage; // 根据配置创建存储后端（本地 / S3）
+use services::redis::create_pool as create_redis_pool;
 use services::maintenance::{
     // 维护任务：孤儿清理、一致性检查、上传会话清理
     run_orphan_cleanup_once,
@@ -127,6 +128,11 @@ async fn async_main() -> anyhow::Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("Failed to create storage backend: {}", e))?;
 
+    let redis = match config.redis_url.as_deref() {
+        Some(url) => Some(create_redis_pool(url)?),
+        None => None,
+    };
+
     // ---------- 可选：单次孤儿清理后退出 ----------
     // 用于一次性运维任务：清理 DB 无引用或磁盘孤立的文件后退出
     if std::env::var("RUN_ORPHAN_CLEANUP_ONCE").as_deref() == Ok("1") {
@@ -141,7 +147,7 @@ async fn async_main() -> anyhow::Result<()> {
     }
 
     // ---------- 应用状态（注入到路由与 handler） ----------
-    let app_state = AppState::new(config.clone(), pool, storage);
+    let app_state = AppState::new(config.clone(), pool, storage, redis);
 
     // ---------- 后台任务 Worker：GIF 转码等资源密集型操作 ----------
     if config.storage_backend == "local" {

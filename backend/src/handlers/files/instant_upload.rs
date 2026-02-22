@@ -36,7 +36,14 @@ pub async fn instant_upload_handler(
 ) -> Result<axum::response::Response, AppError> {
     let result = state.file_service.instant_upload(user_id, req).await?;
     match result {
-        Some(file) => Ok((StatusCode::CREATED, Json(json!({ "file": file }))).into_response()),
+        Some(file) => {
+            if let Some(pool) = &state.redis {
+                let _ = crate::services::redis::RedisService::new(pool.clone())
+                    .bump_user_cache_version(user_id)
+                    .await;
+            }
+            Ok((StatusCode::CREATED, Json(json!({ "file": file }))).into_response())
+        }
         None => Ok((StatusCode::OK, Json(json!({ "instant": false }))).into_response()),
     }
 }

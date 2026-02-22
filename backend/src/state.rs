@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use deadpool_redis::Pool as RedisPool;
 use sqlx::PgPool;
 
 use crate::config::Config;
@@ -44,6 +45,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     /// 数据库连接池
     pub pool: PgPool,
+    pub redis: Option<RedisPool>,
     /// 存储后端（本地文件系统或 S3）
     pub storage: Arc<dyn StorageBackend>,
     /// 内存缓存服务
@@ -63,7 +65,12 @@ impl AppState {
     /// - `config`: 应用配置
     /// - `pool`: 数据库连接池
     /// - `storage`: 存储后端
-    pub fn new(config: Arc<Config>, pool: PgPool, storage: Arc<dyn StorageBackend>) -> Self {
+    pub fn new(
+        config: Arc<Config>,
+        pool: PgPool,
+        storage: Arc<dyn StorageBackend>,
+        redis: Option<RedisPool>,
+    ) -> Self {
         let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(pool.clone()));
         let file_versions_repo: DynFileVersionsRepo =
             Arc::new(SqlxFileVersionsRepo::new(pool.clone()));
@@ -91,6 +98,7 @@ impl AppState {
         Self {
             config,
             pool,
+            redis,
             storage,
             cache: CacheService::new(),
             file_service,
