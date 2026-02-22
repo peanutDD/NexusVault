@@ -119,6 +119,9 @@ pub struct FileListQuery {
     pub sort_by: Option<String>,
     /// 排序方向：desc（默认）、asc
     pub sort_order: Option<String>,
+    /// 是否包含总条数（传统分页默认 true，游标分页强制 false）
+    /// 在数据量极大时，设为 false 可避免执行 COUNT(*) 提升性能
+    pub include_total: Option<bool>,
 }
 
 /// 文件列表查询结果（支持传统分页和游标分页）

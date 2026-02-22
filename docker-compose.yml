@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: file_storage
       POSTGRES_PASSWORD: file_storage_password
       POSTGRES_DB: file_storage
+    # 使用字符串格式以避免潜在的解析问题
+    command: postgres -c shared_preload_libraries=pg_stat_statements
     ports:
       - "5432:5432"
     volumes:
