@@ -131,6 +131,7 @@ function App() {
   }));
   const posRef = useRef(devtoolsPos);
   const devtoolsContainerRef = useRef<HTMLDivElement | null>(null);
+  const devtoolsButtonRef = useRef<HTMLButtonElement | null>(null);
   const dragRef = useRef({
     active: false,
     moved: false,
@@ -139,6 +140,9 @@ function App() {
     startY: 0,
     originX: 0,
     originY: 0,
+    pointerId: null as number | null,
+    pointerType: 'mouse',
+    threshold: 6,
   });
 
   // 初始化主题应用到 DOM
@@ -253,9 +257,18 @@ function App() {
     if (typeof window === 'undefined') return;
     const onMove = (e: PointerEvent) => {
       if (!dragRef.current.active) return;
+      if (
+        dragRef.current.pointerId != null &&
+        e.pointerId !== dragRef.current.pointerId
+      ) {
+        return;
+      }
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
-      if (!dragRef.current.dragging && Math.abs(dx) + Math.abs(dy) < 6) {
+      if (
+        !dragRef.current.dragging &&
+        Math.abs(dx) + Math.abs(dy) < dragRef.current.threshold
+      ) {
         return;
       }
       if (!dragRef.current.dragging) {
@@ -271,11 +284,28 @@ function App() {
         setDevtoolsPos(next);
       }
     };
-    const onUp = () => {
+    const onUp = (e?: PointerEvent) => {
       if (!dragRef.current.active) return;
+      if (
+        e &&
+        dragRef.current.pointerId != null &&
+        e.pointerId !== dragRef.current.pointerId
+      ) {
+        return;
+      }
       const wasDragging = dragRef.current.dragging;
       dragRef.current.active = false;
       dragRef.current.dragging = false;
+      dragRef.current.pointerId = null;
+      dragRef.current.pointerType = 'mouse';
+      dragRef.current.threshold = 6;
+      if (devtoolsButtonRef.current && e) {
+        try {
+          devtoolsButtonRef.current.releasePointerCapture(e.pointerId);
+        } catch {
+          return;
+        }
+      }
       if (wasDragging) {
         const margin = 8;
         const left = margin;
@@ -290,14 +320,17 @@ function App() {
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     return () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
     };
   }, []);
 
   const handleDevtoolsPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.button !== 0) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
     dragRef.current.active = true;
     dragRef.current.moved = false;
     dragRef.current.dragging = false;
@@ -305,6 +338,14 @@ function App() {
     dragRef.current.startY = e.clientY;
     dragRef.current.originX = posRef.current.x;
     dragRef.current.originY = posRef.current.y;
+    dragRef.current.pointerId = e.pointerId;
+    dragRef.current.pointerType = e.pointerType;
+    dragRef.current.threshold = e.pointerType === 'touch' ? 2 : 6;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      return;
+    }
   };
 
   const handleDevtoolsClick = () => {
@@ -423,9 +464,10 @@ function App() {
         <button
           type="button"
           aria-label="React Query Devtools"
+          ref={devtoolsButtonRef}
           onPointerDown={handleDevtoolsPointerDown}
           onPointerUp={handleDevtoolsPointerUp}
-          className={`group fixed z-[9999] flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_12px_40px_rgba(0,0,0,0.35),0_0_24px_rgba(168,85,247,0.22),0_0_32px_rgba(34,211,238,0.18)] backdrop-blur-md transition-transform active:scale-95 cursor-grab active:cursor-grabbing sm:h-11 sm:w-11 transition-[left,top] duration-200 ease-out ${devtoolsBounce ? 'devtools-bounce' : ''}`}
+          className={`group fixed z-[9999] flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_12px_40px_rgba(0,0,0,0.35),0_0_24px_rgba(168,85,247,0.22),0_0_32px_rgba(34,211,238,0.18)] backdrop-blur-md transition-transform active:scale-95 cursor-grab active:cursor-grabbing sm:h-11 sm:w-11 transition-[left,top] duration-200 ease-out touch-none select-none ${devtoolsBounce ? 'devtools-bounce' : ''}`}
           style={{ left: devtoolsPos.x, top: devtoolsPos.y }}
         >
           <span className="pointer-events-none absolute inset-0 bg-gradient-to-br from-fuchsia-500/25 via-white/5 to-cyan-400/25 opacity-80 transition-opacity group-hover:opacity-100" />
