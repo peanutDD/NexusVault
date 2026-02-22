@@ -51,6 +51,10 @@ export interface UseFilePreviewDataResult {
   setImageLoaded: (v: boolean) => void;
   setGifFirstFrameUrl: (v: string | null) => void;
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  hlsStartTimeRef: React.MutableRefObject<number | null>;
+  hlsStartPausedRef: React.MutableRefObject<boolean | null>;
+  hlsStartVolumeRef: React.MutableRefObject<number | null>;
+  hlsStartMutedRef: React.MutableRefObject<boolean | null>;
   tryVideoAudioFallback: () => void;
   tryVideoAudioFallbackRef: React.MutableRefObject<() => void>;
   onImageError: () => void;
@@ -75,6 +79,10 @@ export function useFilePreviewData({
   const gifFallbackTriedRef = useRef(false);
   const imageFallbackTriedRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsStartTimeRef = useRef<number | null>(null);
+  const hlsStartPausedRef = useRef<boolean | null>(null);
+  const hlsStartVolumeRef = useRef<number | null>(null);
+  const hlsStartMutedRef = useRef<boolean | null>(null);
 
   const onImageError = useCallback(() => {
     if (!file) return;
@@ -118,6 +126,12 @@ export function useFilePreviewData({
     videoFallbackTriedRef.current = true;
     setError(null);
     setLoading(true);
+    if (file.mime_type.toLowerCase().startsWith('video/') || file.mime_type.toLowerCase().startsWith('audio/')) {
+      setUseHls(false);
+      setBlobUrl(getStreamUrl(file.id));
+      setLoading(false);
+      return;
+    }
     fileService
       .fetchPreviewBlob(file.id)
       .then((b) => setBlobUrl(URL.createObjectURL(b)))
@@ -230,8 +244,48 @@ export function useFilePreviewData({
       Promise.resolve().then(() => {
         if (!isValidRequest()) return;
         if (kind.isVideo && file.file_size >= HLS_THRESHOLD_BYTES) {
-          setBlobUrl(getHlsUrl(file.id));
-          setUseHls(true);
+          setUseHls(false);
+          setBlobUrl(getStreamUrl(file.id));
+          (async () => {
+            try {
+              const initial = await fileService.prepareHlsPreview(file.id);
+              if (!isValidRequest()) return;
+              if (initial === 'ready') {
+                setUseHls(true);
+                setBlobUrl(getHlsUrl(file.id));
+                return;
+              }
+              if (initial === 'unsupported') return;
+              const maxAttempts = 20;
+              const intervalMs = 1500;
+              for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                await new Promise((resolve) => setTimeout(resolve, intervalMs));
+                const status = await fileService.getHlsPreviewStatus(file.id);
+                if (!isValidRequest()) return;
+                if (status === 'ready') {
+                const canSwap = !videoRef.current || videoRef.current.currentTime < 2;
+                const currentVideo = videoRef.current;
+                const currentTime = currentVideo?.currentTime ?? 0;
+                const isPaused = currentVideo ? currentVideo.paused : null;
+                const volume =
+                  typeof currentVideo?.volume === 'number' ? currentVideo.volume : null;
+                const muted = typeof currentVideo?.muted === 'boolean' ? currentVideo.muted : null;
+                if (canSwap || currentTime > 0) {
+                  hlsStartTimeRef.current = currentTime > 0 ? currentTime : null;
+                  hlsStartPausedRef.current = isPaused;
+                  hlsStartVolumeRef.current = volume;
+                  hlsStartMutedRef.current = muted;
+                  setUseHls(true);
+                  setBlobUrl(getHlsUrl(file.id));
+                }
+                  return;
+                }
+                if (status === 'unsupported') return;
+              }
+            } catch {
+              return;
+            }
+          })();
         } else {
           setBlobUrl(getStreamUrl(file.id));
           setUseHls(false);
@@ -285,6 +339,10 @@ export function useFilePreviewData({
     setImageLoaded,
     setGifFirstFrameUrl,
     videoRef,
+    hlsStartTimeRef,
+    hlsStartPausedRef,
+    hlsStartVolumeRef,
+    hlsStartMutedRef,
     tryVideoAudioFallback,
     tryVideoAudioFallbackRef,
     onImageError,

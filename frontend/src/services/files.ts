@@ -767,6 +767,24 @@ export const fileService = {
     return `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/hls`;
   },
 
+  async prepareHlsPreview(
+    fileId: string
+  ): Promise<'ready' | 'processing' | 'unsupported'> {
+    const { data } = await api.post<{ status: 'ready' | 'processing' | 'unsupported' }>(
+      `/api/files/${fileId}/hls/prepare`
+    );
+    return data.status;
+  },
+
+  async getHlsPreviewStatus(
+    fileId: string
+  ): Promise<'ready' | 'processing' | 'unsupported'> {
+    const { data } = await api.get<{ status: 'ready' | 'processing' | 'unsupported' }>(
+      `/api/files/${fileId}/hls/status`
+    );
+    return data.status;
+  },
+
   getThumbnailUrl(
     fileId: string,
     options?: { width?: number; token?: string | null }

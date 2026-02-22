@@ -23,10 +23,11 @@ use crate::handlers::files::{
     chunked_upload_chunk_handler, chunked_upload_complete_handler, chunked_upload_init_handler,
     chunked_upload_status_handler, delete_file_handler, delete_version_handler,
     download_file_handler, get_file_version_handler, gif_video_preview_handler, hls_asset_handler,
-    hls_playlist_handler, instant_upload_handler, list_file_versions_handler, list_files_handler,
-    preview_file_handler, restore_version_handler, semantic_search_handler, storage_usage_handler,
-    thumbnail_file_handler, update_version_label_handler, upload_file_handler,
-    video_preview_prepare_handler, video_preview_status_handler,
+    hls_playlist_handler, hls_prepare_handler, hls_status_handler, instant_upload_handler,
+    list_file_versions_handler, list_files_handler, preview_file_handler, restore_version_handler,
+    semantic_search_handler, storage_usage_handler, thumbnail_file_handler,
+    update_version_label_handler, upload_file_handler, video_preview_prepare_handler,
+    video_preview_status_handler,
 };
 use crate::AppState;
 
@@ -203,6 +204,8 @@ pub fn create_router() -> Router<AppState> {
             get(preview_file_handler).head(preview_file_handler),
         )
         .route("/:id/thumbnail", get(thumbnail_file_handler))
+        .route("/:id/hls/prepare", post(hls_prepare_handler))
+        .route("/:id/hls/status", get(hls_status_handler))
         .route("/:id/hls", get(hls_playlist_handler))
         .route("/:id/hls/:filename", get(hls_asset_handler))
         // 文件版本管理

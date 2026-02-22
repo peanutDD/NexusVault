@@ -25,6 +25,10 @@ export interface UseFilePreviewEffectsParams {
   canGoPrev: boolean;
   canGoNext: boolean;
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  hlsStartTimeRef: React.MutableRefObject<number | null>;
+  hlsStartPausedRef: React.MutableRefObject<boolean | null>;
+  hlsStartVolumeRef: React.MutableRefObject<number | null>;
+  hlsStartMutedRef: React.MutableRefObject<boolean | null>;
   tryVideoAudioFallbackRef: React.MutableRefObject<() => void>;
   onClose: () => void;
   goToPrev: () => void;
@@ -46,6 +50,10 @@ export function useFilePreviewEffects({
   canGoPrev,
   canGoNext,
   videoRef,
+  hlsStartTimeRef,
+  hlsStartPausedRef,
+  hlsStartVolumeRef,
+  hlsStartMutedRef,
   tryVideoAudioFallbackRef,
   onClose,
   goToPrev,
@@ -60,7 +68,41 @@ export function useFilePreviewEffects({
     if (!video) return;
     let cancelled = false;
     let retryTimer: number | undefined;
+    let manifestTimer: number | undefined;
+    let manifestReady = false;
     let hls: import('hls.js').default | null = null;
+    const applyStartTime = () => {
+      const startAt = hlsStartTimeRef.current;
+      if (startAt === null) return;
+      if (!Number.isFinite(startAt)) {
+        hlsStartTimeRef.current = null;
+        return;
+      }
+      if (Number.isNaN(video.duration) || video.readyState < 1) return;
+      const duration = Number.isFinite(video.duration) ? video.duration : startAt;
+      const safeTime = Math.min(startAt, Math.max(0, duration - 0.5));
+      video.currentTime = safeTime;
+      hlsStartTimeRef.current = null;
+      const volume = hlsStartVolumeRef.current;
+      const muted = hlsStartMutedRef.current;
+      hlsStartVolumeRef.current = null;
+      hlsStartMutedRef.current = null;
+      if (typeof muted === 'boolean') {
+        video.muted = muted;
+      }
+      if (typeof volume === 'number' && Number.isFinite(volume)) {
+        const safeVolume = Math.min(1, Math.max(0, volume));
+        video.volume = safeVolume;
+      }
+      const shouldPause = hlsStartPausedRef.current;
+      hlsStartPausedRef.current = null;
+      if (shouldPause === null) return;
+      if (shouldPause) {
+        video.pause();
+      } else {
+        void video.play();
+      }
+    };
 
     const setup = async () => {
       const { default: Hls } = await import('hls.js');
@@ -81,6 +123,28 @@ export function useFilePreviewEffects({
         });
         hls.loadSource(blobUrl);
         hls.attachMedia(video);
+        video.addEventListener('loadedmetadata', applyStartTime);
+        video.addEventListener('canplay', applyStartTime);
+        manifestTimer = window.setTimeout(() => {
+          if (!manifestReady) {
+            tryVideoAudioFallbackRef.current();
+          }
+        }, 20000);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          manifestReady = true;
+          if (manifestTimer) window.clearTimeout(manifestTimer);
+          applyStartTime();
+        });
+        hls.on(Hls.Events.LEVEL_LOADED, () => {
+          manifestReady = true;
+          if (manifestTimer) window.clearTimeout(manifestTimer);
+          applyStartTime();
+        });
+        hls.on(Hls.Events.FRAG_LOADED, () => {
+          manifestReady = true;
+          if (manifestTimer) window.clearTimeout(manifestTimer);
+          applyStartTime();
+        });
         hls.on(Hls.Events.ERROR, (_, data) => {
           const errorData = data as ErrorData;
           const code =
@@ -99,7 +163,7 @@ export function useFilePreviewEffects({
         });
         return;
       }
-      video.src = blobUrl;
+      tryVideoAudioFallbackRef.current();
     };
 
     void setup();
@@ -107,9 +171,22 @@ export function useFilePreviewEffects({
     return () => {
       cancelled = true;
       if (retryTimer) window.clearTimeout(retryTimer);
+      if (manifestTimer) window.clearTimeout(manifestTimer);
+      video.removeEventListener('loadedmetadata', applyStartTime);
+      video.removeEventListener('canplay', applyStartTime);
       hls?.destroy();
     };
-  }, [kind.isVideo, useHls, blobUrl, videoRef, tryVideoAudioFallbackRef]);
+  }, [
+    kind.isVideo,
+    useHls,
+    blobUrl,
+    videoRef,
+    hlsStartTimeRef,
+    hlsStartPausedRef,
+    hlsStartVolumeRef,
+    hlsStartMutedRef,
+    tryVideoAudioFallbackRef,
+  ]);
 
   // -------------------------------------------------------------------------
   // 键盘事件：ESC 关闭，左右箭头切换

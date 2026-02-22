@@ -19,7 +19,9 @@ mod responses;
 use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use deadpool_redis::redis::cmd;
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
@@ -399,6 +401,86 @@ pub async fn thumbnail_file_handler(
     Ok(res)
 }
 
+pub async fn hls_prepare_handler(
+    State(state): State<AppState>,
+    AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
+    Path(file_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let file = state.file_service.get_file(file_id, user_id).await?;
+    if !state.file_service.should_use_hls(&file) || file.storage_backend != "local" {
+        return Ok(Json(json!({ "status": "unsupported" })));
+    }
+    let out_dir = state.file_service.hls_output_dir(file_id);
+    let playlist_path = out_dir.join("playlist.m3u8");
+    if tokio::fs::try_exists(&playlist_path)
+        .await
+        .map_err(|e| AppError::File(e.to_string()))?
+    {
+        return Ok(Json(json!({ "status": "ready" })));
+    }
+
+    let mut acquired = false;
+    if let Some(pool) = &state.redis {
+        if let Ok(mut conn) = pool.get().await {
+            let r: Result<Option<String>, _> = cmd("SET")
+                .arg(format!("lock:hls:{}", file_id))
+                .arg("1")
+                .arg("NX")
+                .arg("PX")
+                .arg(600000)
+                .query_async(&mut conn)
+                .await;
+            acquired = r.ok().flatten().is_some();
+        }
+    } else {
+        acquired = true;
+    }
+
+    if acquired {
+        let state_for_task = state.clone();
+        let file_for_task = file.clone();
+        let lock_key_for_task = format!("lock:hls:{}", file_id);
+        tokio::spawn(async move {
+            let _ = state_for_task
+                .file_service
+                .ensure_hls_ready(&file_for_task)
+                .await;
+            if let Some(pool) = &state_for_task.redis {
+                if let Ok(mut conn) = pool.get().await {
+                    let _: Result<i32, _> = cmd("DEL")
+                        .arg(lock_key_for_task)
+                        .query_async(&mut conn)
+                        .await;
+                }
+            }
+        });
+    }
+
+    Ok(Json(json!({ "status": "processing" })))
+}
+
+pub async fn hls_status_handler(
+    State(state): State<AppState>,
+    AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
+    Path(file_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let file = state.file_service.get_file(file_id, user_id).await?;
+    if !state.file_service.should_use_hls(&file) || file.storage_backend != "local" {
+        return Ok(Json(json!({ "status": "unsupported" })));
+    }
+    let out_dir = state.file_service.hls_output_dir(file_id);
+    let playlist_path = out_dir.join("playlist.m3u8");
+    let status = if tokio::fs::try_exists(&playlist_path)
+        .await
+        .map_err(|e| AppError::File(e.to_string()))?
+    {
+        "ready"
+    } else {
+        "processing"
+    };
+    Ok(Json(json!({ "status": status })))
+}
+
 /// 返回 HLS 主列表（playlist.m3u8），供前端 hls.js 加载。仅对超过阈值的视频生效。
 /// 将 m3u8 内的 segment*.ts 引用重写为 hls/segment*.ts，使相对 URL 解析到 /api/files/:id/hls/segment*.ts。
 pub async fn hls_playlist_handler(
@@ -433,7 +515,29 @@ pub async fn hls_playlist_handler(
         }
     }
     if acquired {
-        state.file_service.ensure_hls_ready(&file).await?;
+        let exists = tokio::fs::try_exists(&playlist_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?;
+        if !exists {
+            let state_for_task = state.clone();
+            let file_for_task = file.clone();
+            let lock_key_for_task = lock_key.clone();
+            tokio::spawn(async move {
+                let _ = state_for_task
+                    .file_service
+                    .ensure_hls_ready(&file_for_task)
+                    .await;
+                if let Some(pool) = &state_for_task.redis {
+                    if let Ok(mut conn) = pool.get().await {
+                        let _: Result<i32, _> = cmd("DEL")
+                            .arg(&lock_key_for_task)
+                            .query_async(&mut conn)
+                            .await;
+                    }
+                }
+            });
+            return Ok(hls_processing_response(2));
+        }
         if let Some(pool) = &state.redis {
             if let Ok(mut conn) = pool.get().await {
                 let _: Result<i32, _> = cmd("DEL").arg(&lock_key).query_async(&mut conn).await;
@@ -518,7 +622,29 @@ pub async fn hls_asset_handler(
         }
     }
     if acquired {
-        state.file_service.ensure_hls_ready(&file).await?;
+        let exists = tokio::fs::try_exists(&playlist_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?;
+        if !exists {
+            let state_for_task = state.clone();
+            let file_for_task = file.clone();
+            let lock_key_for_task = lock_key.clone();
+            tokio::spawn(async move {
+                let _ = state_for_task
+                    .file_service
+                    .ensure_hls_ready(&file_for_task)
+                    .await;
+                if let Some(pool) = &state_for_task.redis {
+                    if let Ok(mut conn) = pool.get().await {
+                        let _: Result<i32, _> = cmd("DEL")
+                            .arg(&lock_key_for_task)
+                            .query_async(&mut conn)
+                            .await;
+                    }
+                }
+            });
+            return Ok(hls_processing_response(2));
+        }
         if let Some(pool) = &state.redis {
             if let Ok(mut conn) = pool.get().await {
                 let _: Result<i32, _> = cmd("DEL").arg(&lock_key).query_async(&mut conn).await;
