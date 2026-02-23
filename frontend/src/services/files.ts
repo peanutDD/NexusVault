@@ -68,6 +68,22 @@ const fileMetadataBatch = new BatchRequestManager<FileMetadata | null, 'metadata
   fetchFilesByIds
 );
 
+const previewBlobUrlCache = new Map<string, string>();
+
+function cachePreviewBlobUrlInternal(fileId: string, url: string): void {
+  const existing = previewBlobUrlCache.get(fileId);
+  if (existing && existing !== url && existing.startsWith('blob:')) {
+    URL.revokeObjectURL(existing);
+  }
+  previewBlobUrlCache.set(fileId, url);
+}
+
+function takePreviewBlobUrlInternal(fileId: string): string | undefined {
+  const url = previewBlobUrlCache.get(fileId);
+  if (url) previewBlobUrlCache.delete(fileId);
+  return url;
+}
+
 /**
  * 文件服务对象
  * 提供文件相关的所有 API 操作
@@ -869,6 +885,14 @@ export const fileService = {
         throw err;
       }
     });
+  },
+
+  cachePreviewBlobUrl(fileId: string, url: string): void {
+    cachePreviewBlobUrlInternal(fileId, url);
+  },
+
+  takeCachedPreviewBlobUrl(fileId: string): string | undefined {
+    return takePreviewBlobUrlInternal(fileId);
   },
 
   /**

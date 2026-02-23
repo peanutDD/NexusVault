@@ -235,18 +235,15 @@ export function useFilePreviewEffects({
         .fetchPreviewBlob(fileToPreload.id)
         .then((blob) => {
           const url = URL.createObjectURL(blob);
-          const img = new Image();
-          img.src = url;
-          img.onload = () => URL.revokeObjectURL(url);
-          img.onerror = () => URL.revokeObjectURL(url);
+          fileService.cachePreviewBlobUrl(fileToPreload.id, url);
         })
         .catch(() => {});
     };
 
     const timer = setTimeout(() => {
-      if (canGoPrev) preloadImage(files[currentIndex - 1]);
       if (canGoNext) preloadImage(files[currentIndex + 1]);
-    }, 300);
+      if (canGoPrev) preloadImage(files[currentIndex - 1]);
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [loading, file, currentIndex, files, canGoPrev, canGoNext]);

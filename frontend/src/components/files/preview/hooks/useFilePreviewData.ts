@@ -299,6 +299,11 @@ export function useFilePreviewData({
       if (!isValidRequest()) return;
       Promise.resolve().then(() => {
         if (!isValidRequest()) return;
+        const cached = fileService.takeCachedPreviewBlobUrl(file.id);
+        if (cached) {
+          setBlobUrl(cached);
+          return;
+        }
         setBlobUrl(getStreamUrl(file.id));
       });
       finish();
