@@ -314,8 +314,6 @@
   max-width: none;
   min-width: 0;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   text-align: right;
   color: rgba(255, 255, 255, 0.86);
   font-weight: 400;
@@ -540,4 +538,3 @@
 }
 
 /* NOTE: 避免重复的空 media block（已移除） */
-
