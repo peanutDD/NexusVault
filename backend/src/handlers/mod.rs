@@ -21,6 +21,7 @@
 
 pub mod api_token;
 pub mod auth;
+pub mod admin;
 pub mod files;
 pub mod folders;
 pub mod health;

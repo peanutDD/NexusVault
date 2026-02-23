@@ -7,5 +7,7 @@
 //! - 其他可复用的提取器
 
 pub mod auth;
+pub mod admin;
 
 pub use auth::{AuthenticatedUser, AuthenticatedUserQuery};
+pub use admin::AdminToken;

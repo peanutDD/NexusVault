@@ -5,12 +5,19 @@
 //! ## 使用示例
 //!
 //! ```rust
+//! use axum::extract::State;
+//! use axum::response::Response;
+//! use file_storage_backend::extractors::AuthenticatedUser;
+//! use file_storage_backend::utils::AppError;
+//! use file_storage_backend::AppState;
+//!
 //! pub async fn handler(
-//!     State(state): State<AppState>,
-//!     AuthenticatedUser(user_id): AuthenticatedUser,
+//!     State(_state): State<AppState>,
+//!     AuthenticatedUser(_user_id): AuthenticatedUser,
 //!     // ...
 //! ) -> Result<Response, AppError> {
 //!     // user_id 已经验证，可以直接使用
+//!     unimplemented!()
 //! }
 //! ```
 

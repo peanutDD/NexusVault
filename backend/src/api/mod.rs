@@ -14,6 +14,7 @@ use crate::AppState;
 
 pub mod api_token;
 pub mod auth;
+pub mod admin;
 pub mod files;
 pub mod folders;
 pub mod oauth_github;
@@ -28,6 +29,7 @@ pub mod telemetry;
 pub fn create_api_routes() -> Router<AppState> {
     Router::new()
         .nest("/auth", auth::create_router())
+        .nest("/admin", admin::create_router())
         .nest("/org", organizations::create_router())
         .nest("/files", files::create_router())
         .nest("/folders", folders::create_router())

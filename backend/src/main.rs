@@ -16,44 +16,24 @@
 //! - `config.rs`: 配置管理
 
 // =============================================================================
-// 模块声明：按功能划分的 crate 内部模块
-// =============================================================================
-
-mod api; // HTTP 路由注册（auth、files、folders、share、tokens 等）
-mod app; // 应用组装：CORS、中间件栈、路由挂载、全局错误处理
-mod config; // 配置：从环境变量加载（数据库、JWT、存储、端口等）
-mod constants; // 常量（上传大小、并发数、分片参数等）
-mod database; // 数据库连接池（SQLx PgPool 创建与配置）
-mod extractors; // Axum 提取器（认证用户、Query token 等）
-mod handlers; // HTTP 处理器（认证、文件、文件夹、分享、API Token）
-mod middleware; // 中间件（认证、限流、指标、panic 捕获、请求日志）
-mod models; // 数据模型与 DTO（User、File、Folder、Share 等）
-mod repositories; // 数据访问层（users、files、folders、shares、upload_sessions）
-mod services; // 业务逻辑层（auth、file、folder、share、maintenance）
-mod state; // 应用状态 AppState（config、pool、storage 等共享）
-mod utils; // 工具（错误类型、响应构造、加密、校验等）
-
-// 对外暴露应用状态类型，供 handler 与中间件通过 State<T> 注入
-pub use state::AppState;
-
-// =============================================================================
 // 标准库与第三方 use
 // =============================================================================
 
 use std::sync::Arc; // 多线程共享配置与连接池的引用计数指针
 use std::time::Duration; // 定时任务间隔（如清理周期）
 
-use config::Config; // 应用配置
-use database::pool::create_pool; // 创建 PostgreSQL 连接池
-use services::file::create_storage; // 根据配置创建存储后端（本地 / S3）
-use services::maintenance::{
+use file_storage_backend::config::Config; // 应用配置
+use file_storage_backend::database::pool::create_pool; // 创建 PostgreSQL 连接池
+use file_storage_backend::services::file::create_storage; // 根据配置创建存储后端（本地 / S3）
+use file_storage_backend::services::maintenance::{
     // 维护任务：孤儿清理、一致性检查、上传会话清理
     run_orphan_cleanup_once,
     spawn_files_consistency_checker,
     spawn_orphan_storage_files_cleanup,
     spawn_upload_session_cleanup,
 };
-use services::redis::create_pool as create_redis_pool;
+use file_storage_backend::services::redis::create_pool as create_redis_pool;
+use file_storage_backend::AppState;
 
 // =============================================================================
 // 程序入口
@@ -108,7 +88,7 @@ async fn async_main() -> anyhow::Result<()> {
     init_tracing();
 
     // ---------- 指标（Prometheus） ----------
-    let metrics_renderer = middleware::metrics::init_metrics()
+    let metrics_renderer = file_storage_backend::middleware::metrics::init_metrics()
         .map_err(|e| anyhow::anyhow!("Failed to install Prometheus recorder: {}", e))?;
     tracing::info!("Prometheus metrics initialized");
 
@@ -146,27 +126,7 @@ async fn async_main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // ---------- 应用状态（注入到路由与 handler） ----------
     let app_state = AppState::new(config.clone(), pool, storage, redis);
-
-    // ---------- 后台任务 Worker：GIF 转码等资源密集型操作 ----------
-    if config.storage_backend == "local" {
-        // GIF 预览 Worker 并行度：可按需要调整，避免一次性压满 CPU
-        let worker_concurrency: usize = 2;
-        for _ in 0..worker_concurrency {
-            let state_for_worker = app_state.clone();
-            tokio::spawn(async move {
-                loop {
-                    if let Err(e) =
-                        crate::services::task_queue::run_gif_preview_worker(&state_for_worker).await
-                    {
-                        tracing::error!("gif_preview worker iteration failed: {}", e);
-                    }
-                    tokio::time::sleep(Duration::from_secs(2)).await;
-                }
-            });
-        }
-    }
 
     // ---------- 后台维护任务（常驻定时） ----------
     // 定期清理过期的分片上传会话与临时文件
@@ -198,7 +158,7 @@ async fn async_main() -> anyhow::Result<()> {
     }
 
     // ---------- 构建 Axum 应用并启动 HTTP 服务 ----------
-    let app = app::create_app(app_state, &config, metrics_renderer).await;
+    let app = file_storage_backend::app::create_app(app_state, &config, metrics_renderer).await;
     let addr = format!("0.0.0.0:{}", config.port); // 监听所有网卡
     tracing::info!("Server listening on {}", addr);
 

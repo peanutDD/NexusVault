@@ -43,10 +43,49 @@ pub struct BackgroundTask {
     pub attempts: i32,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct AdminTask {
+    pub id: Uuid,
+    pub task_type: String,
+    pub status: String,
+    pub attempts: i32,
+    pub last_error: Option<String>,
+    pub dedupe_key: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub started_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub next_run_at: chrono::DateTime<chrono::Utc>,
+    pub locked_until: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TaskQueueDepth {
+    pub pending_total: i64,
+    pub pending_ready: i64,
+    pub running: i64,
+    pub failed: i64,
+}
+
 #[derive(Debug, Clone)]
 pub struct TaskQueue {
     pool: Arc<PgPool>,
 }
+
+fn retry_delay_secs(attempts: i32, task_id: Uuid) -> i64 {
+    let exp = (attempts - 1).clamp(0, 10) as u32;
+    let base = 5_i64.saturating_mul(2_i64.saturating_pow(exp));
+    let capped = base.min(300);
+
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    task_id.hash(&mut h);
+    attempts.hash(&mut h);
+    let jitter = (h.finish() % 4) as i64;
+    capped + jitter
+}
+
+const TASK_LEASE_SECS: i64 = 600;
 
 impl TaskQueue {
     pub fn new(pool: Arc<PgPool>) -> Self {
@@ -112,6 +151,7 @@ impl TaskQueue {
              FROM background_tasks
              WHERE task_type = $1
                AND status = 'pending'
+               AND next_run_at <= NOW()
              ORDER BY created_at
              FOR UPDATE SKIP LOCKED
              LIMIT 1",
@@ -128,10 +168,15 @@ impl TaskQueue {
 
         query(
             "UPDATE background_tasks
-             SET status = 'running', attempts = attempts + 1, started_at = NOW(), updated_at = NOW()
+             SET status = 'running',
+                 attempts = attempts + 1,
+                 started_at = NOW(),
+                 updated_at = NOW(),
+                 locked_until = NOW() + make_interval(secs => $2)
              WHERE id = $1",
         )
         .bind(id)
+        .bind(TASK_LEASE_SECS)
         .execute(&mut *tx)
         .await
         .map_err(AppError::from)?;
@@ -152,7 +197,7 @@ impl TaskQueue {
 
         query(
             "UPDATE background_tasks
-             SET status = $2, completed_at = NOW(), updated_at = NOW()
+             SET status = $2, completed_at = NOW(), updated_at = NOW(), locked_until = NULL
              WHERE id = $1",
         )
         .bind(id)
@@ -168,7 +213,7 @@ impl TaskQueue {
 
         query(
             "UPDATE background_tasks
-             SET status = $2, last_error = $3, completed_at = NOW(), updated_at = NOW()
+             SET status = $2, last_error = $3, completed_at = NOW(), updated_at = NOW(), locked_until = NULL
              WHERE id = $1",
         )
         .bind(id)
@@ -181,18 +226,208 @@ impl TaskQueue {
     }
 
     /// 将任务重新标记为 pending 并记录错误信息，供后续自动重试。
-    pub async fn mark_pending_with_error(&self, id: Uuid, error: &str) -> Result<(), AppError> {
+    pub async fn mark_pending_with_error(
+        &self,
+        id: Uuid,
+        attempts: i32,
+        error: &str,
+    ) -> Result<(), AppError> {
+        let delay_secs = retry_delay_secs(attempts, id);
         query(
             "UPDATE background_tasks
-             SET status = 'pending', last_error = $2, updated_at = NOW()
+             SET status = 'pending',
+                 last_error = $2,
+                 updated_at = NOW(),
+                 next_run_at = NOW() + make_interval(secs => $3),
+                 locked_until = NULL
              WHERE id = $1",
         )
         .bind(id)
         .bind(error)
+        .bind(delay_secs)
         .execute(&*self.pool)
         .await
         .map_err(AppError::from)?;
         Ok(())
+    }
+
+    pub async fn get_queue_depth(&self, task_type: &str) -> Result<TaskQueueDepth, AppError> {
+        let rows: Vec<(String, i64)> = query_as(
+            "SELECT status, COUNT(*)::bigint
+             FROM background_tasks
+             WHERE task_type = $1
+             GROUP BY status",
+        )
+        .bind(task_type)
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+
+        let mut pending_total = 0_i64;
+        let mut running = 0_i64;
+        let mut failed = 0_i64;
+        for (status, count) in rows {
+            match status.as_str() {
+                "pending" => pending_total = count,
+                "running" => running = count,
+                "failed" => failed = count,
+                _ => {}
+            }
+        }
+
+        let pending_ready: (i64,) = query_as(
+            "SELECT COUNT(*)::bigint
+             FROM background_tasks
+             WHERE task_type = $1
+               AND status = 'pending'
+               AND next_run_at <= NOW()",
+        )
+        .bind(task_type)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+
+        Ok(TaskQueueDepth {
+            pending_total,
+            pending_ready: pending_ready.0,
+            running,
+            failed,
+        })
+    }
+
+    pub async fn requeue_stuck_tasks(
+        &self,
+        task_type: &str,
+        limit: i64,
+    ) -> Result<i64, AppError> {
+        let res = query(
+            "WITH picked AS (
+               SELECT id
+               FROM background_tasks
+               WHERE task_type = $1
+                 AND status = 'running'
+                 AND locked_until IS NOT NULL
+                 AND locked_until < NOW()
+               ORDER BY locked_until
+               LIMIT $2
+             )
+             UPDATE background_tasks t
+             SET status = 'pending',
+                 last_error = 'task lease expired',
+                 updated_at = NOW(),
+                 next_run_at = NOW(),
+                 locked_until = NULL
+             FROM picked
+             WHERE t.id = picked.id",
+        )
+        .bind(task_type)
+        .bind(limit)
+        .execute(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+
+        Ok(res.rows_affected() as i64)
+    }
+
+    pub async fn list_tasks(
+        &self,
+        task_type: Option<&str>,
+        status: Option<&str>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<AdminTask>, AppError> {
+        let rows: Vec<(
+            Uuid,
+            String,
+            String,
+            i32,
+            Option<String>,
+            Option<String>,
+            chrono::DateTime<chrono::Utc>,
+            chrono::DateTime<chrono::Utc>,
+            Option<chrono::DateTime<chrono::Utc>>,
+            Option<chrono::DateTime<chrono::Utc>>,
+            chrono::DateTime<chrono::Utc>,
+            Option<chrono::DateTime<chrono::Utc>>,
+        )> = query_as(
+            "SELECT id,
+                    task_type,
+                    status,
+                    attempts,
+                    last_error,
+                    dedupe_key,
+                    created_at,
+                    updated_at,
+                    started_at,
+                    completed_at,
+                    next_run_at,
+                    locked_until
+             FROM background_tasks
+             WHERE ($1::text IS NULL OR task_type = $1)
+               AND ($2::text IS NULL OR status = $2)
+             ORDER BY created_at DESC
+             LIMIT $3 OFFSET $4",
+        )
+        .bind(task_type)
+        .bind(status)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+
+        Ok(rows
+            .into_iter()
+            .map(
+                |(
+                    id,
+                    task_type,
+                    status,
+                    attempts,
+                    last_error,
+                    dedupe_key,
+                    created_at,
+                    updated_at,
+                    started_at,
+                    completed_at,
+                    next_run_at,
+                    locked_until,
+                )| AdminTask {
+                    id,
+                    task_type,
+                    status,
+                    attempts,
+                    last_error,
+                    dedupe_key,
+                    created_at,
+                    updated_at,
+                    started_at,
+                    completed_at,
+                    next_run_at,
+                    locked_until,
+                },
+            )
+            .collect())
+    }
+
+    pub async fn retry_task(&self, id: Uuid) -> Result<bool, AppError> {
+        let res = query(
+            "UPDATE background_tasks
+             SET status = 'pending',
+                 attempts = 0,
+                 last_error = NULL,
+                 started_at = NULL,
+                 completed_at = NULL,
+                 updated_at = NOW(),
+                 next_run_at = NOW(),
+                 locked_until = NULL
+             WHERE id = $1",
+        )
+        .bind(id)
+        .execute(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+        Ok(res.rows_affected() > 0)
     }
 
     async fn find_active_by_dedupe_key(
@@ -317,7 +552,7 @@ pub async fn run_gif_preview_worker(state: &crate::AppState) -> Result<(), AppEr
             if task.attempts < MAX_ATTEMPTS {
                 state
                     .task_queue
-                    .mark_pending_with_error(task.id, &msg)
+                    .mark_pending_with_error(task.id, task.attempts, &msg)
                     .await?;
             } else {
                 state.task_queue.mark_failed(task.id, &msg).await?;

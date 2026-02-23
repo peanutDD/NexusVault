@@ -71,10 +71,12 @@ fn is_dangerous_mime(mime_type: &str) -> bool {
 /// # 示例
 ///
 /// ```rust
-/// Ok(json_response(json!({
-///     "message": "操作成功",
-///     "data": result
-/// })))
+/// use file_storage_backend::utils::json_response;
+/// use serde_json::json;
+///
+/// let _res = json_response(json!({
+///   "message": "操作成功"
+/// }));
 /// ```
 pub fn json_response<T: Serialize>(data: T) -> Response {
     let mut res = Json(data).into_response();
@@ -142,7 +144,10 @@ pub fn hls_processing_response(retry_after_seconds: u32) -> Response {
 /// # 示例
 ///
 /// ```rust
-/// Ok(file_response(file_data, "document.pdf", "application/pdf", false))
+/// use file_storage_backend::utils::file_response;
+///
+/// let file_data = Vec::<u8>::new();
+/// let _res = file_response(file_data, "document.pdf", "application/pdf", false).unwrap();
 /// ```
 pub fn file_response(
     data: Vec<u8>,
@@ -222,7 +227,9 @@ pub fn stream_file_response(
 /// # 示例
 ///
 /// ```rust
-/// Ok(success_response("操作成功"))
+/// use file_storage_backend::utils::success_response;
+///
+/// let _res = success_response("操作成功");
 /// ```
 pub fn success_response(message: &str) -> Response {
     json_response(json!({

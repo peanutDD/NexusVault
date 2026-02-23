@@ -87,6 +87,9 @@ pub struct Config {
     pub huggingface_model_id: String,
     /// Hugging Face Inference API 基础 URL（默认：https://api-inference.huggingface.co）
     pub huggingface_api_url: String,
+
+    /// 管理接口专用 Token（可选；未配置则禁用 /api/admin/*）
+    pub admin_token: Option<String>,
 }
 
 #[derive(Error, Debug)]
@@ -205,6 +208,8 @@ impl Config {
                 .unwrap_or_else(|_| "sentence-transformers/all-MiniLM-L6-v2".to_string()),
             huggingface_api_url: env::var("HUGGINGFACE_API_URL")
                 .unwrap_or_else(|_| "https://api-inference.huggingface.co".to_string()),
+
+            admin_token: env::var("ADMIN_TOKEN").ok().filter(|s| !s.is_empty()),
         };
 
         config.validate()?;
