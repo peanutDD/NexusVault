@@ -209,6 +209,14 @@ impl FileService {
         }
 
         let updated = self.files_repo.rename(file_id, user_id, name).await?;
+        tracing::info!(
+            user_id = %user_id,
+            file_id = %file_id,
+            old_name = %current.original_filename,
+            new_name = %updated.original_filename,
+            folder_id = %updated.folder_id.map(|id| id.to_string()).unwrap_or_default(),
+            "file renamed"
+        );
         Ok(updated.into())
     }
 }
