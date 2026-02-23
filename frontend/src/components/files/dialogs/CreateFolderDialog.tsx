@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { FolderPlus } from 'lucide-react';
 import { folderService } from '../../../services/folders';
 import type { Folder } from '../../../types/folders';
 import { getErrorMessage } from '../../../utils/error';
-import { useDialog } from '../../../hooks/common/useDialog';
 import { validateFolderName } from '../../../hooks/folders/useFolderValidation';
-import './CreateFolderDialog.css';
+import ConfirmDialog from '../../common/dialog/ConfirmDialog';
+import ErrorMessage from '../../common/feedback/ErrorMessage';
 
 interface CreateFolderDialogProps {
   open: boolean;
@@ -27,102 +28,90 @@ export default function CreateFolderDialog({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { handleBackdropClick } = useDialog({
-    open,
-    onClose,
-    loading,
-    autoFocusRef: inputRef,
-  });
-
   useEffect(() => {
     if (open) {
       setName('');
       setError(null);
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 120);
     }
   }, [open]);
 
+  const handleCreate = useCallback(async () => {
+    const validation = validateFolderName(name);
+    if (!validation.valid) {
+      setError(validation.error ?? '验证失败');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const created = await folderService.create(name.trim(), parentId);
+      onCreated(created);
+      onClose();
+    } catch (err) {
+      setError(getErrorMessage(err, '创建文件夹失败'));
+    } finally {
+      setLoading(false);
+    }
+  }, [name, parentId, onCreated, onClose]);
+
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault();
-
-      const validation = validateFolderName(name);
-      if (!validation.valid) {
-        setError(validation.error ?? 'Validation failed');
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const created = await folderService.create(name.trim(), parentId);
-        onCreated(created);
-        onClose();
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to create folder'));
-      } finally {
-        setLoading(false);
-      }
+      handleCreate();
     },
-    [name, parentId, onCreated, onClose]
+    [handleCreate]
   );
 
-  if (!open) return null;
+  const inputClass =
+    'w-full rounded-lg border border-white/15 bg-transparent px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:border-rose-400 focus:outline-none';
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
-      <div
-        className="createFolderDialogScope"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          className="createFolderDialogPanel relative w-full max-w-sm animate-fade-in overflow-hidden rounded-2xl border border-white/15 p-6 shadow-2xl text-white"
-        >
-          <div
-            className="createFolderDialogHighlight pointer-events-none absolute inset-0 rounded-2xl"
-            aria-hidden
+  const message = (
+    <div className="space-y-3">
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={() => setError(null)}
+          type="error"
+        />
+      )}
+      <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2">
+        <p className="text-[0.65rem] uppercase tracking-[0.18em] text-white/55">文件夹名称</p>
+        <form onSubmit={handleSubmit} className="mt-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value.slice(0, 80))}
+            placeholder="输入文件夹名称"
+            maxLength={80}
+            className={inputClass}
+            disabled={loading}
           />
-          <div className="relative z-10">
-            <h2 className="mb-4 text-lg font-semibold text-white drop-shadow-sm">New Folder</h2>
-
-            <form onSubmit={handleSubmit}>
-              <input
-                ref={inputRef}
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value.slice(0, 50))}
-                placeholder="Enter folder name"
-                maxLength={50}
-                className="createFolderDialogInput mb-4 w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder-white/50 shadow-inner transition-colors focus:border-[#6C5DD3] focus:outline-none focus:ring-2 focus:ring-[#6C5DD3]/40"
-                disabled={loading}
-              />
-
-              {error && <p className="mb-4 text-sm text-red-300">{error}</p>}
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={loading}
-                  className="createFolderDialogCancelBtn flex-1 rounded-xl border border-white/15 bg-white/10 py-3 text-sm font-medium text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !name.trim()}
-                  className="createFolderDialogSubmitBtn flex-1 rounded-xl border border-[#6C5DD3]/40 bg-[#6C5DD3]/30 py-3 text-sm font-medium text-white transition-colors hover:bg-[#6C5DD3]/40 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </form>
       </div>
     </div>
+  );
+
+  return (
+    <ConfirmDialog
+      open={open}
+      appearance="glass"
+      variant="info"
+      icon={<FolderPlus className="h-5 w-5" />}
+      iconBgClass="bg-rose-500/15"
+      iconColorClass="text-rose-300"
+      title="新建文件夹"
+      message={message}
+      confirmText="创建"
+      cancelText="取消"
+      loading={loading}
+      onConfirm={handleCreate}
+      onCancel={onClose}
+    />
   );
 }

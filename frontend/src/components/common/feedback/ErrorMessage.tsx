@@ -6,6 +6,7 @@ interface ErrorMessageProps {
   message: string;
   onClose?: () => void;
   type?: 'error' | 'warning' | 'info';
+  className?: string;
   /** 多少毫秒后自动关闭，不传则不自动关闭 */
   autoDismissMs?: number;
 }
@@ -38,6 +39,7 @@ export default function ErrorMessage({
   message,
   onClose,
   type = 'error',
+  className,
   autoDismissMs,
 }: ErrorMessageProps) {
   const config = typeConfig[type];
@@ -57,7 +59,8 @@ export default function ErrorMessage({
         'bg-slate-900/80 backdrop-blur-xl',
         'shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.5)]',
         config.borderClass,
-        'animate-fade-in transition-all duration-200'
+        'animate-fade-in transition-all duration-200',
+        className
       )}
       role="alert"
     >

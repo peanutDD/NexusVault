@@ -526,9 +526,142 @@ export const fileService = {
     });
 
     try {
-      const response = await api.get<Blob>(`/api/files/${fileId}/download`, {
-        responseType: 'blob',
-      });
+      const url = `${API_BASE_URL.replace(/\/$/, '')}/api/files/${fileId}/download`;
+      const token = useAuthStore.getState().token ?? localStorage.getItem('token');
+
+      if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+        let writable: FileSystemWritableFileStream | null = null;
+        try {
+          const handle = await (
+            window as Window & {
+              showSaveFilePicker: (opts?: {
+                suggestedName?: string;
+                types?: Array<{ description?: string; accept?: Record<string, string[]> }>;
+              }) => Promise<FileSystemFileHandle>;
+            }
+          ).showSaveFilePicker({
+            suggestedName: filename,
+          });
+
+          const getLocalSize = async () => {
+            try {
+              const f = await handle.getFile();
+              return f.size;
+            } catch {
+              return 0;
+            }
+          };
+
+          let offset = await getLocalSize();
+          let tries = 0;
+
+          while (true) {
+            const res = await fetch(url, {
+              method: 'GET',
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(offset > 0 ? { Range: `bytes=${offset}-` } : {}),
+              },
+            });
+
+            if (!res.ok) {
+              let errorMessage = res.statusText || 'Download failed';
+              try {
+                const errorData = await res.json();
+                if (errorData.error) errorMessage = errorData.error;
+              } catch {
+                /* ignore */
+              }
+              throw new Error(errorMessage);
+            }
+
+            if (!res.body) {
+              throw new Error('Response body is empty');
+            }
+
+            if (offset > 0 && res.status !== 206) {
+              offset = 0;
+            }
+
+            if (writable) {
+              try {
+                const writableWithAbort = writable as FileSystemWritableFileStream & {
+                  abort?: () => Promise<void>;
+                };
+                if (typeof writableWithAbort.abort === 'function') {
+                  await writableWithAbort.abort();
+                } else {
+                  await writable.close();
+                }
+              } catch {
+                /* ignore */
+              }
+              writable = null;
+            }
+
+            const writableOptions: FileSystemCreateWritableOptions = {
+              keepExistingData: offset > 0,
+            };
+            writable = await handle.createWritable(writableOptions);
+            if (offset > 0) {
+              await writable.seek(offset);
+            }
+
+            const reader = res.body.getReader();
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                await writable.write(value);
+                offset += value.byteLength;
+              }
+              await writable.close();
+              writable = null;
+              break;
+            } catch (e) {
+              tries++;
+              if (tries >= 3) throw e;
+              try {
+                const f = await handle.getFile();
+                offset = f.size;
+              } catch {
+                /* ignore */
+              }
+              continue;
+            }
+          }
+
+          trackEvent({
+            eventType: 'download',
+            action: 'download_file',
+            status: 'success',
+            fileId,
+            durationMs: Math.round(performance.now() - startedAt),
+          });
+          return;
+        } catch (e) {
+          if (e instanceof Error && e.name === 'AbortError') {
+            return;
+          }
+
+          if (writable) {
+            try {
+              const writableWithAbort = writable as FileSystemWritableFileStream & {
+                abort?: () => Promise<void>;
+              };
+              if (typeof writableWithAbort.abort === 'function') {
+                await writableWithAbort.abort();
+              } else {
+                await writable.close();
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+      }
+
+      const response = await api.get<Blob>(`/api/files/${fileId}/download`, { responseType: 'blob' });
       downloadBlob(response.data, filename);
 
       trackEvent({
@@ -669,47 +802,91 @@ export const fileService = {
           ],
         });
 
-        // 2. 用户选择保存位置后，开始请求后端
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ ids }),
-        });
-
-        if (!res.ok) {
-          // 尝试读取错误信息
-          let errorMessage = res.statusText || 'Download failed';
+        const getLocalSize = async () => {
           try {
-            const errorData = await res.json();
-            if (errorData.error) errorMessage = errorData.error;
+            const f = await handle.getFile();
+            return f.size;
           } catch {
-            // 忽略 JSON 解析错误
+            return 0;
           }
-          throw new Error(errorMessage);
-        }
+        };
 
-        if (!res.body) {
-          throw new Error('Response body is empty');
-        }
+        let offset = await getLocalSize();
+        let tries = 0;
 
-        // 3. 创建可写流
-        writable = await handle.createWritable();
-        const reader = res.body.getReader();
-
-        // 4. 流式写入
         while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          await writable.write(value);
-        }
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              ...(offset > 0 ? { Range: `bytes=${offset}-` } : {}),
+            },
+            body: JSON.stringify({ ids }),
+          });
 
-        // 5. 成功完成，关闭流（这会把临时文件替换成 files.zip）
-        await writable.close();
-        writable = null; // 标记已关闭，防止 finally 重复关闭
-        return;
+          if (!res.ok) {
+            let errorMessage = res.statusText || 'Download failed';
+            try {
+              const errorData = await res.json();
+              if (errorData.error) errorMessage = errorData.error;
+            } catch {
+              /* ignore */
+            }
+            throw new Error(errorMessage);
+          }
+
+          if (!res.body) {
+            throw new Error('Response body is empty');
+          }
+
+          if (offset > 0 && res.status !== 206) {
+            offset = 0;
+          }
+
+          if (writable) {
+            try {
+              const writableWithAbort = writable as FileSystemWritableFileStream & {
+                abort?: () => Promise<void>;
+              };
+              if (typeof writableWithAbort.abort === 'function') {
+                await writableWithAbort.abort();
+              } else {
+                await writable.close();
+              }
+            } catch {
+              /* ignore */
+            }
+            writable = null;
+          }
+
+          const writableOptions: FileSystemCreateWritableOptions = {
+            keepExistingData: offset > 0,
+          };
+          writable = await handle.createWritable(writableOptions);
+          if (offset > 0) {
+            await writable.seek(offset);
+          }
+          const reader = res.body.getReader();
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              await writable.write(value);
+              offset += value.byteLength;
+            }
+
+            await writable.close();
+            writable = null;
+            return;
+          } catch (e) {
+            tries++;
+            if (tries >= 3) throw e;
+            offset = await getLocalSize();
+            continue;
+          }
+        }
       } catch (e) {
         hasError = true;
 

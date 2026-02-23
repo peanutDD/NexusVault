@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { PencilLine } from 'lucide-react';
 import type { FileMetadata } from '../../../types/files';
 import { getErrorMessage } from '../../../utils/error';
-import { useDialog } from '../../../hooks/common/useDialog';
+import ConfirmDialog from '../../common/dialog/ConfirmDialog';
+import ErrorMessage from '../../common/feedback/ErrorMessage';
 
 interface RenameFileDialogProps {
   open: boolean;
@@ -19,8 +21,8 @@ function validateFileName(name: string): { valid: boolean; error?: string } {
   if (trimmed.includes('/') || trimmed.includes('\\') || trimmed.includes('\0')) {
     return { valid: false, error: '文件名包含非法字符' };
   }
-  if (trimmed.length > 255) {
-    return { valid: false, error: '文件名过长（最大 255 字符）' };
+  if (trimmed.length > 120) {
+    return { valid: false, error: '文件名过长（最大 120 字符）' };
   }
   return { valid: true };
 }
@@ -37,13 +39,6 @@ export default function RenameFileDialog({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { handleBackdropClick } = useDialog({
-    open,
-    onClose,
-    loading,
-    autoFocusRef: inputRef,
-  });
-
   useEffect(() => {
     if (open && file) {
       setName(file.original_filename);
@@ -54,85 +49,98 @@ export default function RenameFileDialog({
     }
   }, [open, file]);
 
+  const handleRename = useCallback(async () => {
+    if (!file) return;
+
+    const trimmedName = name.trim();
+    if (trimmedName === file.original_filename) {
+      onClose();
+      return;
+    }
+
+    const validation = validateFileName(name);
+    if (!validation.valid) {
+      setError(validation.error ?? '验证失败');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await onRename(file.id, trimmedName);
+      onRenamed?.();
+      onClose();
+    } catch (err) {
+      setError(getErrorMessage(err, '重命名失败'));
+    } finally {
+      setLoading(false);
+    }
+  }, [name, file, onRename, onRenamed, onClose]);
+
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault();
-      if (!file) return;
-
-      const trimmedName = name.trim();
-      if (trimmedName === file.original_filename) {
-        onClose();
-        return;
-      }
-
-      const validation = validateFileName(name);
-      if (!validation.valid) {
-        setError(validation.error ?? '验证失败');
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        await onRename(file.id, trimmedName);
-        onRenamed?.();
-        onClose();
-      } catch (err) {
-        setError(getErrorMessage(err, '重命名失败'));
-      } finally {
-        setLoading(false);
-      }
+      handleRename();
     },
-    [name, file, onRename, onRenamed, onClose]
+    [handleRename]
   );
 
   if (!open || !file) return null;
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={handleBackdropClick}
-    >
-      <div
-        className="w-full max-w-sm animate-fade-in rounded-2xl bg-[#1C1C28] p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="mb-4 text-lg font-semibold text-white">重命名文件</h2>
+  const inputClass =
+    'w-full rounded-lg border border-white/15 bg-transparent px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:border-rose-400 focus:outline-none';
 
-        <form onSubmit={handleSubmit}>
-          <input
-            ref={inputRef}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value.slice(0, 255))}
-            placeholder="请输入新名称"
-            maxLength={255}
-            className="mb-4 w-full rounded-lg border border-[#3A3A4D] bg-transparent px-4 py-3 text-white placeholder-gray-500 focus:border-[#6C5DD3] focus:outline-none"
-            disabled={loading}
-          />
-
-          {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
-
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
+  const message = (
+    <div className="space-y-3">
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={() => setError(null)}
+          type="error"
+        />
+      )}
+      <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2">
+        <p className="text-[0.65rem] uppercase tracking-[0.18em] text-white/55">当前名称</p>
+        <p className="mt-0.5 font-brand text-sm font-normal tracking-wide text-white">
+          <span className="font-semibold text-rose-300">{file.original_filename}</span>
+        </p>
+      </div>
+      <div>
+        <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-white/55">新名称</p>
+        <div className="rounded-lg border border-white/10 bg-black/35 p-2.5">
+          <form onSubmit={handleSubmit}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value.slice(0, 120))}
+              placeholder="输入新名称"
+              maxLength={120}
+              className={inputClass}
               disabled={loading}
-              className="flex-1 rounded-full bg-[#2A2A3C] py-3 text-sm font-medium text-white transition-colors hover:bg-[#3A3A4D] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !name.trim()}
-              className="flex-1 rounded-full bg-[#6C5DD3] py-3 text-sm font-medium text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? '保存中...' : '保存'}
-            </button>
-          </div>
-        </form>
+            />
+          </form>
+        </div>
       </div>
     </div>
+  );
+
+  return (
+    <ConfirmDialog
+      open={open}
+      appearance="glass"
+      variant="info"
+      icon={<PencilLine className="h-5 w-5" />}
+      iconBgClass="bg-rose-500/15"
+      iconColorClass="text-rose-300"
+      title="重命名文件"
+      message={message}
+      confirmText="保存"
+      cancelText="取消"
+      loading={loading}
+      onConfirm={handleRename}
+      onCancel={onClose}
+    />
   );
 }

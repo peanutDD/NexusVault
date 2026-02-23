@@ -47,6 +47,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     selectedFolderIds,
     currentFolderId,
     error,
+    clearError,
     isLoading,
     isRevalidating,
     totalItems,
@@ -182,6 +183,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
           selectedFolders={selectedFolders}
           currentFolderId={currentFolderId}
           error={error}
+          onClearError={clearError}
           isLoading={isLoading}
           isRevalidating={isRevalidating}
           totalItems={totalItems}

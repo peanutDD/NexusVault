@@ -480,7 +480,7 @@ frontend/
 - `GET /api/files/upload/chunked/:id/status` - 查询已上传分片（断点续传用）
 - `POST /api/files/upload/chunked/:id/complete` - 完成分片上传
 - `DELETE /api/files/upload/chunked/:id/abort` - 取消分片上传
-- `GET /api/files/:id/download` - 下载文件
+- `GET /api/files/:id/download` - 下载文件（支持 `Range: bytes=...` 断点/分段下载，返回 206 + `Content-Range` + `Accept-Ranges`）
 - `GET /api/files/:id/preview` - 预览（流式/内联）
 - `GET /api/files/:id/preview/video` - GIF 视频预览：若派生 mp4 已存在，直接以流的形式返回，供 `<video>` 播放；若尚未生成则返回 404，由前端根据 `prepare/status` 决定 UI
 - `POST /api/files/:id/preview/video/prepare` - 触发或复用 GIF 视频预览转码后台任务：若已存在派生 mp4 则返回 `{ status: "ready" }`，否则写入 `background_tasks` 队列表并返回 `{ status: "processing" }`
@@ -490,6 +490,7 @@ frontend/
 - `GET /api/files/:id/thumbnail` - 缩略图
 - `PUT /api/files/:id` - 重命名文件（body: `{ name: "new-name" }`）
 - `DELETE /api/files/:id` - 删除文件
+- `POST /api/files/download-zip` - 批量下载 ZIP（流式边打包边传；支持 `Range: bytes=...` 单段续传，返回 206 + `Content-Range` + `Accept-Ranges`）
 - 批量：`POST /api/files/batch-delete`、`POST /api/files/batch-move`、`GET /api/files/download-zip` 等
 
 ### 代理 API

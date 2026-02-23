@@ -294,6 +294,7 @@ export function useFileList() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [batchDownloading, setBatchDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
 
   const navigateToFolder = useCallback((folderId: string | null) => {
     setSearchParams(
@@ -487,6 +488,7 @@ export function useFileList() {
     selectedFolderIds,
     currentFolderId,
     error,
+    clearError,
     isLoading: loadingFiles || loadingFolders,
     isRevalidating: isFetchingFiles,
     totalItems,

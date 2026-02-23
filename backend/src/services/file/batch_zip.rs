@@ -14,6 +14,12 @@ use crate::utils::AppError;
 
 use super::FileService;
 
+fn zip_entry_options() -> zip::write::FileOptions<'static, ()> {
+    zip::write::FileOptions::<'static, ()>::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .last_modified_time(zip::DateTime::default())
+}
+
 /// 写入 channel 的 Writer：缓冲到约 64KB 再发送；实现 Seek 仅用于报告/更新已写字节数，满足 ZipWriter 要求。
 struct ChannelWriter {
     buf: Vec<u8>,
@@ -93,7 +99,6 @@ impl FileService {
         use std::collections::HashSet;
         use std::io::Write;
         use zip::write::ZipWriter;
-        use zip::CompressionMethod;
 
         if ids.is_empty() {
             return Err(AppError::Validation("请选择要下载的文件".to_string()));
@@ -107,6 +112,7 @@ impl FileService {
                 uniq_ids.push(id);
             }
         }
+        uniq_ids.sort_unstable_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
 
         if uniq_ids.len() > MAX_BATCH_ZIP_FILES {
             return Err(AppError::Validation(format!(
@@ -155,8 +161,7 @@ impl FileService {
             };
             let data = self.get_file_data(file).await?;
             let entry_name = unique_zip_entry_name(&file.original_filename, &mut name_count);
-            let options: zip::write::FileOptions<()> =
-                zip::write::FileOptions::default().compression_method(CompressionMethod::Deflated);
+            let options = zip_entry_options();
             zip.start_file(&entry_name, options)
                 .map_err(|e| AppError::File(format!("Failed to add file to zip: {}", e)))?;
             zip.write_all(&data)
@@ -189,6 +194,7 @@ impl FileService {
                 uniq_ids.push(id);
             }
         }
+        uniq_ids.sort_unstable_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
 
         if uniq_ids.len() > MAX_BATCH_ZIP_FILES {
             return Err(AppError::Validation(format!(
@@ -240,7 +246,6 @@ pub fn run_zip_writer_thread(
 ) {
     use std::io::Write;
     use zip::write::ZipWriter;
-    use zip::CompressionMethod;
 
     let mut writer = ChannelWriter {
         buf: Vec::new(),
@@ -253,8 +258,7 @@ pub fn run_zip_writer_thread(
         let mut zip = ZipWriter::new(&mut writer);
         while let Ok((name_opt, data)) = input_rx.recv() {
             if let Some(entry_name) = name_opt {
-                let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
-                    .compression_method(CompressionMethod::Deflated);
+                let options = zip_entry_options();
                 if zip.start_file(&entry_name, options).is_err() {
                     break;
                 }
@@ -268,4 +272,30 @@ pub fn run_zip_writer_thread(
         let _ = zip.finish();
     }
     let _ = writer.flush();
+}
+
+pub fn write_zip_to_file(
+    input_rx: mpsc::Receiver<(Option<String>, Vec<u8>)>,
+    mut out: std::fs::File,
+) -> zip::result::ZipResult<u64> {
+    use std::io::{Seek, SeekFrom, Write};
+    use zip::write::ZipWriter;
+
+    {
+        let mut zip = ZipWriter::new(&mut out);
+        while let Ok((name_opt, data)) = input_rx.recv() {
+            if let Some(entry_name) = name_opt {
+                let options = zip_entry_options();
+                zip.start_file(&entry_name, options)?;
+                zip.write_all(&data)?;
+                zip.flush()?;
+            } else {
+                break;
+            }
+        }
+        let _ = zip.finish();
+    }
+
+    out.flush()?;
+    Ok(out.seek(SeekFrom::End(0))?)
 }

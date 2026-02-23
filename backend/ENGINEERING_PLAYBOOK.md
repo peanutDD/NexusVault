@@ -181,6 +181,7 @@
 - **`prepare_batch_zip_entries`**：校验数量/总大小并返回 `(File, ZIP 内条目名)` 列表，不做实际打包。
 - **`run_zip_writer_thread`**（`src/services/file/batch_zip.rs`）：独立线程内用 `ZipWriter` + **`ChannelWriter`** 边打包边写入 `mpsc::SyncSender`；`ChannelWriter` 实现 `Write` + `Seek`（仅报告当前偏移，不回退），缓冲 **8KB 即发**，**每写完一个文件调用 `flush()`**，首包/小文件也能立刻发出。
 - **handler**（`src/handlers/files/batch.rs` `batch_download_zip_post_handler`）：`prepare_batch_zip_entries` 后创建 channel，spawn 线程跑 `run_zip_writer_thread`，spawn tokio 任务按条目 `get_file_data` 并发送到 channel；响应体为 `Body::from_stream(stream)` 从 channel 读 `Bytes` 流式返回。
+- **Range 断点续传（单段）**：当请求带 `Range: bytes=...` 时，先生成临时 ZIP，再按区间返回 **206 Partial Content**（`Content-Range` + `Accept-Ranges`）。为保证续传字节一致，ZIP 条目时间戳固定且条目顺序稳定。
 
 位置：`src/services/file/batch_zip.rs`（`ChannelWriter`、`run_zip_writer_thread`、`prepare_batch_zip_entries`）、`src/handlers/files/batch.rs`（`batch_download_zip_post_handler`）。
 
@@ -503,4 +504,3 @@
 - 上传临时文件清理策略（异常退出、磁盘空间阈值）
 - 下载/预览更完善：Range 请求（断点续传）、ETag/If-None-Match、缓存控制
 - 慢查询治理（索引、keyset pagination、ILIKE/全文检索策略）
-

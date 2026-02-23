@@ -64,6 +64,7 @@ interface FileListContentProps {
   selectedFolders: Set<string>;
   currentFolderId: string | null;
   error: string | null;
+  onClearError?: () => void;
   isLoading: boolean;
   isRevalidating: boolean;
   totalItems: number;
@@ -103,6 +104,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
   selectedFolders,
   currentFolderId,
   error,
+  onClearError,
   isLoading,
   isRevalidating,
   totalItems,
@@ -173,6 +175,9 @@ const FileListContent: React.FC<FileListContentProps> = ({
         <ErrorMessage
           message={error}
           type="error"
+          onClose={onClearError}
+          autoDismissMs={5000}
+          className="mb-[var(--bar-gap)]"
         />
       )}
 

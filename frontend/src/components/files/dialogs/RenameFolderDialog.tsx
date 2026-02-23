@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { PencilLine } from 'lucide-react';
 import type { Folder } from '../../../types/folders';
 import { getErrorMessage } from '../../../utils/error';
-import { useDialog } from '../../../hooks/common/useDialog';
 import { validateFolderName } from '../../../hooks/folders/useFolderValidation';
+import ConfirmDialog from '../../common/dialog/ConfirmDialog';
+import ErrorMessage from '../../common/feedback/ErrorMessage';
 
 interface RenameFolderDialogProps {
   open: boolean;
@@ -29,14 +31,6 @@ export default function RenameFolderDialog({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 使用 useDialog hook 统一处理 ESC 和聚焦
-  const { handleBackdropClick } = useDialog({
-    open,
-    onClose,
-    loading,
-    autoFocusRef: inputRef,
-  });
-
   // 打开时设置初始值
   useEffect(() => {
     if (open && folder) {
@@ -49,88 +43,98 @@ export default function RenameFolderDialog({
     }
   }, [open, folder]);
 
+  const handleRename = useCallback(async () => {
+    if (!folder) return;
+
+    const trimmedName = name.trim();
+    if (trimmedName === folder.name) {
+      onClose();
+      return;
+    }
+
+    const validation = validateFolderName(name);
+    if (!validation.valid) {
+      setError(validation.error ?? '验证失败');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await onRename(folder.id, trimmedName);
+      onRenamed?.();
+      onClose();
+    } catch (err) {
+      setError(getErrorMessage(err, '重命名失败'));
+    } finally {
+      setLoading(false);
+    }
+  }, [name, folder, onRename, onRenamed, onClose]);
+
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault();
-      if (!folder) return;
-
-      const trimmedName = name.trim();
-      
-      // 如果名称没变，直接关闭
-      if (trimmedName === folder.name) {
-        onClose();
-        return;
-      }
-
-      // 使用统一的验证函数
-      const validation = validateFolderName(name);
-      if (!validation.valid) {
-        setError(validation.error ?? '验证失败');
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        await onRename(folder.id, trimmedName);
-        onRenamed?.();
-        onClose();
-      } catch (err) {
-        setError(getErrorMessage(err, '重命名失败'));
-      } finally {
-        setLoading(false);
-      }
+      handleRename();
     },
-    [name, folder, onRename, onRenamed, onClose]
+    [handleRename]
   );
 
   if (!open || !folder) return null;
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={handleBackdropClick}
-    >
-      <div
-        className="w-full max-w-sm animate-fade-in rounded-2xl bg-[#1C1C28] p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="mb-4 text-lg font-semibold text-white">重命名文件夹</h2>
+  const inputClass =
+    'w-full rounded-lg border border-white/15 bg-transparent px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:border-rose-400 focus:outline-none';
 
-        <form onSubmit={handleSubmit}>
-          <input
-            ref={inputRef}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value.slice(0, 50))}
-            placeholder="请输入新名称"
-            maxLength={50}
-            className="mb-4 w-full rounded-lg border border-[#3A3A4D] bg-transparent px-4 py-3 text-white placeholder-gray-500 focus:border-[#6C5DD3] focus:outline-none"
-            disabled={loading}
-          />
-
-          {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
-
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
+  const message = (
+    <div className="space-y-3">
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={() => setError(null)}
+          type="error"
+        />
+      )}
+      <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2">
+        <p className="text-[0.65rem] uppercase tracking-[0.18em] text-white/55">当前名称</p>
+        <p className="mt-0.5 font-brand text-sm font-normal tracking-wide text-white">
+          <span className="font-semibold text-rose-300">{folder.name}</span>
+        </p>
+      </div>
+      <div>
+        <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-white/55">新名称</p>
+        <div className="rounded-lg border border-white/10 bg-black/35 p-2.5">
+          <form onSubmit={handleSubmit}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value.slice(0, 80))}
+              placeholder="输入新名称"
+              maxLength={80}
+              className={inputClass}
               disabled={loading}
-              className="flex-1 rounded-full bg-[#2A2A3C] py-3 text-sm font-medium text-white transition-colors hover:bg-[#3A3A4D] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !name.trim()}
-              className="flex-1 rounded-full bg-[#6C5DD3] py-3 text-sm font-medium text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? '保存中...' : '保存'}
-            </button>
-          </div>
-        </form>
+            />
+          </form>
+        </div>
       </div>
     </div>
+  );
+
+  return (
+    <ConfirmDialog
+      open={open}
+      appearance="glass"
+      variant="info"
+      icon={<PencilLine className="h-5 w-5" />}
+      iconBgClass="bg-rose-500/15"
+      iconColorClass="text-rose-300"
+      title="重命名文件夹"
+      message={message}
+      confirmText="保存"
+      cancelText="取消"
+      loading={loading}
+      onConfirm={handleRename}
+      onCancel={onClose}
+    />
   );
 }
