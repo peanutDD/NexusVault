@@ -177,6 +177,12 @@ pub struct BatchGetRequest {
     pub ids: Vec<Uuid>,
 }
 
+/// 文件重命名请求
+#[derive(Debug, Deserialize)]
+pub struct RenameFileRequest {
+    pub name: String,
+}
+
 // ============================================================================
 // 文件版本管理
 // ============================================================================

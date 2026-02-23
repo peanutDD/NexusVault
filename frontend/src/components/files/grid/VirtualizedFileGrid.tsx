@@ -20,6 +20,7 @@ interface VirtualizedFileGridProps {
   onPreview: (file: FileMetadata) => void;
   onShare: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
+  onRename: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
   onDragStart: (fileId: string, e: React.DragEvent) => void;
   openFileMenuId: string | null;
@@ -44,6 +45,7 @@ export default function VirtualizedFileGrid({
   onPreview,
   onShare,
   onDownload,
+  onRename,
   onDelete,
   onDragStart,
   openFileMenuId,
@@ -236,6 +238,7 @@ export default function VirtualizedFileGrid({
                     onPreview={onPreview}
                     onShare={onShare}
                     onDownload={onDownload}
+                    onRename={() => onRename(file)}
                     onDelete={() => onDelete(file, 'file')}
                     onDragStart={(e, file) => onDragStart(file.id, e)}
                     isMenuOpen={openFileMenuId === file.id}

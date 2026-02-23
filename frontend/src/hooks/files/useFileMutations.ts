@@ -42,6 +42,14 @@ export function useFileMutations() {
     },
   });
 
+  // 重命名文件
+  const renameFile = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => fileService.renameFile(id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+    },
+  });
+
   // 批量移动
   const batchMove = useMutation({
     mutationFn: async ({ fileIds, folderIds, targetFolderId }: { fileIds: string[]; folderIds: string[]; targetFolderId: string | null }) => {
@@ -69,6 +77,7 @@ export function useFileMutations() {
     batchDeleteFiles,
     deleteFolder,
     renameFolder,
+    renameFile,
     batchMove,
   };
 }

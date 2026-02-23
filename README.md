@@ -488,6 +488,7 @@ frontend/
 - `GET /api/files/:id/hls` - 大视频 HLS 主列表（.m3u8）
 - `GET /api/files/:id/hls/:filename` - HLS 分片（.ts）
 - `GET /api/files/:id/thumbnail` - 缩略图
+- `PUT /api/files/:id` - 重命名文件（body: `{ name: "new-name" }`）
 - `DELETE /api/files/:id` - 删除文件
 - 批量：`POST /api/files/batch-delete`、`POST /api/files/batch-move`、`GET /api/files/download-zip` 等
 

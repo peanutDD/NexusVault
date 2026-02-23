@@ -38,6 +38,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::config::Config;
+use crate::models::file::{FileResponse, RenameFileRequest};
 use crate::repositories::{
     DynFileVersionsRepo, DynFilesRepo, DynUsersRepo, SqlxFileVersionsRepo, SqlxFilesRepo,
     SqlxUsersRepo,
@@ -166,5 +167,48 @@ impl FileService {
         Path::new(&self.config.storage_path)
             .join(".chunked")
             .join(upload_id.to_string())
+    }
+}
+
+impl FileService {
+    pub async fn rename_file(
+        &self,
+        user_id: Uuid,
+        file_id: Uuid,
+        req: RenameFileRequest,
+    ) -> Result<FileResponse, AppError> {
+        let name = req.name.trim();
+        if name.is_empty() {
+            return Err(AppError::Validation("文件名不能为空".to_string()));
+        }
+        if name.len() > 255 {
+            return Err(AppError::Validation("文件名过长".to_string()));
+        }
+        if name.contains('/') || name.contains('\\') || name.contains('\0') {
+            return Err(AppError::Validation("文件名包含非法字符".to_string()));
+        }
+
+        let current = self
+            .files_repo
+            .find_by_id(file_id, user_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        if name == current.original_filename {
+            return Ok(current.into());
+        }
+
+        if let Some(existing) = self
+            .files_repo
+            .find_by_name_and_folder(user_id, name, current.folder_id)
+            .await?
+        {
+            if existing.id != file_id {
+                return Err(AppError::Validation("同名文件已存在".to_string()));
+            }
+        }
+
+        let updated = self.files_repo.rename(file_id, user_id, name).await?;
+        Ok(updated.into())
     }
 }

@@ -18,6 +18,7 @@ const BatchShareDialog = lazy(() => import('../dialogs/BatchShareDialog'));
 const BatchMoveDialog = lazy(() => import('../dialogs/BatchMoveDialog'));
 const CreateFolderDialog = lazy(() => import('../dialogs/CreateFolderDialog'));
 const RenameFolderDialog = lazy(() => import('../dialogs/RenameFolderDialog'));
+const RenameFileDialog = lazy(() => import('../dialogs/RenameFileDialog'));
 const ConfirmDialog = lazy(() => import('../../common/dialog/ConfirmDialog'));
 
 /** 删除确认文案中显示的文件/文件夹名：过长时中间省略，最多约 19 字 */
@@ -70,6 +71,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     handleSelectFolder,
     handleRenameFolder,
     handleRenameFolderSubmit,
+    handleRenameFile,
+    handleRenameFileSubmit,
     getOptimisticMoveRollback,
     navigateToFolder,
     handleDelete,
@@ -97,6 +100,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     setShowCreateFolder,
     renamingFolder,
     setRenamingFolder,
+    renamingFile,
+    setRenamingFile,
     deleteConfirm,
     deleteLoading,
     executeDelete,
@@ -196,6 +201,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
           handleSelectFolder={handleSelectFolder}
           handleOpenFolder={handleOpenFolderAdapter}
           handleRenameFolder={handleRenameFolder}
+          handleRenameFile={handleRenameFile}
           handleDelete={handleDeleteAdapter}
           handleDownload={handleDownload}
           handleBatchDownload={handleBatchDownload}
@@ -283,6 +289,16 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             onClose={() => setRenamingFolder(null)}
             onRename={handleRenameFolderSubmit}
             onRenamed={() => setRenamingFolder(null)}
+          />
+        )}
+
+        {renamingFile && (
+          <RenameFileDialog
+            open={!!renamingFile}
+            file={renamingFile}
+            onClose={() => setRenamingFile(null)}
+            onRename={handleRenameFileSubmit}
+            onRenamed={() => setRenamingFile(null)}
           />
         )}
 

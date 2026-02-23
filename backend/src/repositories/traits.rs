@@ -159,6 +159,13 @@ pub trait FilesRepository: Send + Sync {
         folder_id: Option<Uuid>,
     ) -> Result<Option<File>, AppError>;
 
+    async fn rename(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+        original_filename: &str,
+    ) -> Result<File, AppError>;
+
     /// 列出指定文件夹下的文件。
     ///
     /// 当前文件列表接口基于统一的分页查询与过滤条件，

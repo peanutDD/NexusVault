@@ -83,6 +83,7 @@ interface FileListContentProps {
   handleSelectFolder: (folderId: string, selected: boolean) => void;
   handleOpenFolder: (folderId: string) => void;
   handleRenameFolder: (folder: Folder) => void;
+  handleRenameFile: (file: FileMetadata) => void;
   handleDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
   handleDownload: (file: FileMetadata) => void;
   handleBatchDownload: () => void;
@@ -121,6 +122,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
   handleSelectFolder,
   handleOpenFolder,
   handleRenameFolder,
+  handleRenameFile,
   handleDelete,
   handleDownload,
   handleBatchDownload,
@@ -374,6 +376,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     onPreview={setPreviewFile}
                     onShare={setShareFile}
                     onDownload={handleDownload}
+                    onRename={handleRenameFile}
                     onDelete={handleDelete}
                     onDragStart={handleFileDragStart}
                     openFileMenuId={openFileMenuId}
@@ -453,6 +456,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     onPreview={setPreviewFile}
                     onShare={setShareFile}
                     onDownload={handleDownload}
+                    onRename={handleRenameFile}
                     onDelete={handleDelete}
                     onDragStart={handleFileDragStart}
                     openFileMenuId={openFileMenuId}
@@ -489,6 +493,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   onPreview={setPreviewFile}
                   onShare={setShareFile}
                   onDownload={handleDownload}
+                  onRename={handleRenameFile}
                   onDelete={handleDelete}
                   onDragStart={handleFileDragStart}
                   openFileMenuId={openFileMenuId}
@@ -504,6 +509,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   onPreview={setPreviewFile}
                   onShare={setShareFile}
                   onDownload={handleDownload}
+                  onRename={handleRenameFile}
                   onDelete={handleDelete}
                   onDragStart={handleFileDragStart}
                   openFileMenuId={openFileMenuId}

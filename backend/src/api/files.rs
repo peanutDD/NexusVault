@@ -24,10 +24,10 @@ use crate::handlers::files::{
     chunked_upload_status_handler, delete_file_handler, delete_version_handler,
     download_file_handler, get_file_version_handler, gif_video_preview_handler, hls_asset_handler,
     hls_playlist_handler, hls_prepare_handler, hls_status_handler, instant_upload_handler,
-    list_file_versions_handler, list_files_handler, preview_file_handler, restore_version_handler,
-    semantic_search_handler, storage_usage_handler, thumbnail_file_handler,
-    update_version_label_handler, upload_file_handler, video_preview_prepare_handler,
-    video_preview_status_handler,
+    list_file_versions_handler, list_files_handler, preview_file_handler, rename_file_handler,
+    restore_version_handler, semantic_search_handler, storage_usage_handler,
+    thumbnail_file_handler, update_version_label_handler, upload_file_handler,
+    video_preview_prepare_handler, video_preview_status_handler,
 };
 use crate::AppState;
 
@@ -220,5 +220,6 @@ pub fn create_router() -> Router<AppState> {
             post(restore_version_handler),
         )
         .route("/versions/:version_id", delete(delete_version_handler))
+        .route("/:id", put(rename_file_handler))
         .route("/:id", delete(delete_file_handler))
 }

@@ -202,6 +202,28 @@ impl FilesRepository for SqlxFilesRepo {
         Ok(file)
     }
 
+    async fn rename(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+        original_filename: &str,
+    ) -> Result<File, AppError> {
+        sqlx::query_as::<_, File>(
+            r#"
+            UPDATE files
+            SET original_filename = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2 AND user_id = $3
+            RETURNING *
+            "#,
+        )
+        .bind(original_filename)
+        .bind(file_id)
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(AppError::from)
+    }
+
     // =============================================================================
     // 按文件夹列表（不分页，供文件夹树等场景）
     // =============================================================================

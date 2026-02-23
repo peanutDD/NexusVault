@@ -40,6 +40,17 @@ mod upload;
 mod versions;
 mod video;
 
+use axum::extract::{Path, State};
+use axum::response::Response;
+use axum::Json;
+use serde_json::json;
+use uuid::Uuid;
+
+use crate::extractors::AuthenticatedUser;
+use crate::models::file::RenameFileRequest;
+use crate::utils::{json_response, AppError};
+use crate::AppState;
+
 pub use batch::{
     batch_delete_handler, batch_download_zip_handler, batch_download_zip_post_handler,
     batch_get_handler, batch_move_handler,
@@ -66,3 +77,21 @@ pub use versions::{
 pub use video::{
     gif_video_preview_handler, video_preview_prepare_handler, video_preview_status_handler,
 };
+
+pub async fn rename_file_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(user_id): AuthenticatedUser,
+    Path(file_id): Path<Uuid>,
+    Json(req): Json<RenameFileRequest>,
+) -> Result<Response, AppError> {
+    let file = state
+        .file_service
+        .rename_file(user_id, file_id, req)
+        .await?;
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
+    Ok(json_response(json!({ "file": file })))
+}

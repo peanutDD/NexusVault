@@ -606,6 +606,18 @@ export const fileService = {
   },
 
   /**
+   * 重命名文件
+   * @param fileId 文件 ID
+   * @param name 新名称
+   */
+  async renameFile(fileId: string, name: string): Promise<FileMetadata> {
+    const response = await api.put<{ file: FileMetadata }>(`/api/files/${fileId}`, {
+      name,
+    });
+    return response.data.file;
+  },
+
+  /**
    * 批量删除文件
    * @param ids 文件 ID 列表
    * @returns 删除结果，包含删除的文件数

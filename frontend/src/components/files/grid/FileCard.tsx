@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Download, Send, Trash2, Eye, MoreVertical } from 'lucide-react';
+import { Download, Send, Trash2, Eye, MoreVertical, PencilLine } from 'lucide-react';
 import { formatFileSize } from '../../../utils/format';
 import type { FileMetadata } from '../../../types/files';
 import LazyThumbnail from '../preview/LazyThumbnail';
@@ -15,6 +15,7 @@ interface FileCardProps {
   onPreview: (file: FileMetadata) => void;
   onShare: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
+  onRename: (file: FileMetadata) => void;
   onDelete: (id: string) => void;
   onDragStart?: (e: React.DragEvent, file: FileMetadata) => void;
   isMenuOpen: boolean;
@@ -34,6 +35,7 @@ const FileCard = memo(
     onPreview,
     onShare,
     onDownload,
+    onRename,
     onDelete,
     onDragStart,
     isMenuOpen,
@@ -166,6 +168,18 @@ const FileCard = memo(
                     >
                       <Send className="scale-50 shrink-0 text-white" />
                       <span className="whitespace-nowrap">分享</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseMenu();
+                        onRename(file);
+                      }}
+                    >
+                      <PencilLine className="scale-50 shrink-0 text-white" />
+                      <span className="whitespace-nowrap">重命名</span>
                     </button>
                     <div className="my-0.5 border-t border-violet-900" />
                     <button

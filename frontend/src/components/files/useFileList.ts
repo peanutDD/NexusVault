@@ -243,6 +243,7 @@ export function useFileList() {
     batchDeleteFiles: batchDeleteMutation,
     deleteFolder: deleteFolderMutation,
     renameFolder: renameFolderMutation,
+    renameFile: renameFileMutation,
   } = useFileMutations();
 
   // 使用抽取的选择状态 Hook
@@ -280,6 +281,7 @@ export function useFileList() {
   const [showBatchMove, setShowBatchMove] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [renamingFolder, setRenamingFolder] = useState<Folder | null>(null);
+  const [renamingFile, setRenamingFile] = useState<FileMetadata | null>(null);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
     type: 'file' | 'folder' | 'batch';
@@ -398,6 +400,15 @@ export function useFileList() {
     }
   }, [renameFolderMutation]);
 
+  const handleRenameFileSubmit = useCallback(async (id: string, name: string) => {
+    try {
+      await renameFileMutation.mutateAsync({ id, name });
+      setRenamingFile(null);
+    } catch (err) {
+      setError(getErrorMessage(err, '重命名失败'));
+    }
+  }, [renameFileMutation]);
+
   const handleDownload = useCallback(async (file: FileMetadata) => {
     try {
       await fileService.downloadFile(file.id, file.original_filename);
@@ -499,7 +510,9 @@ export function useFileList() {
     handleSelectFile,
     handleSelectFolder,
     handleRenameFolder: setRenamingFolder,
+    handleRenameFile: setRenamingFile,
     handleRenameFolderSubmit,
+    handleRenameFileSubmit,
     getOptimisticMoveRollback: () => () => {}, // 简化处理
     navigateToFolder,
     handleDelete,
@@ -527,6 +540,8 @@ export function useFileList() {
     setShowCreateFolder,
     renamingFolder,
     setRenamingFolder,
+    renamingFile,
+    setRenamingFile,
     deleteConfirm,
     deleteLoading,
     executeDelete,
