@@ -75,15 +75,15 @@
 - url (URL 解析与验证)
 - urlencoding (安全编码 OAuth URL 参数与重定向 token)
 
-## 快速开始
+## 文档导航与快速开始
 
-**🚀 立即开始：** 查看 [`docs/QUICK_START_GUIDE.md`](./docs/QUICK_START_GUIDE.md) 获取快速启动指南
-
-**📋 设置完成总结：** 查看 [`docs/SETUP_COMPLETE.md`](./docs/SETUP_COMPLETE.md) 了解当前状态
-
-详细步骤请参考 [`docs/QUICKSTART.md`](./docs/QUICKSTART.md)
-
-**贡献与代码审查：** 提交 PR 前请阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)；审查标准见 [docs/CODE_REVIEW_GUIDE.md](./docs/CODE_REVIEW_GUIDE.md)，首次使用见 [docs/CODE_REVIEW_START.md](./docs/CODE_REVIEW_START.md)。
+- 文档总览与高并发路线：
+  - [`docs/README.md`](./docs/README.md)：项目文档目录（高并发/开关矩阵/代码审查等）
+  - 后端文档总览：[`backend/docs/README.md`](./backend/docs/README.md)
+  - 前端文档总览：[`frontend/docs/README.md`](./frontend/docs/README.md)
+- 贡献与代码审查：
+  - 提交 PR 前请阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)
+  - 审查规范见 [`docs/CODE_REVIEW_GUIDE.md`](./docs/CODE_REVIEW_GUIDE.md)，首次使用见 [`docs/CODE_REVIEW_START.md`](./docs/CODE_REVIEW_START.md)
 
 ### 前置要求
 

@@ -7,6 +7,7 @@
   - `开关矩阵与接口边界.md`：功能开关表与 provider 接口边界（本地可跑、云端可开关）
   - `前端降低后端并发压力方案.md`：前端策略（缓存、并发、滚动）降低后端压力
   - `BILIBILI_TECH_UPGRADE.md`：对标式技术升级建议（偏架构/规划）
+  - `../backend/docs/TOP_TECH.md`：顶级视频平台技术对标与本项目落地映射表
 
 - **代码审查**
   - `CODE_REVIEW_GUIDE.md`：代码审查规范（企业级）
@@ -17,5 +18,9 @@
 - **开发流程**
   - `NEXT_STEPS.md`：后续改进建议和 roadmap
   - `GITHUB_PUSH.md`：推送/权限/分支说明
+
+- **子项目文档**
+  - 后端：`backend/docs/README.md`（后端文档总览，含配置、API、自检、优化）
+  - 前端：`frontend/docs/README.md`（前端文档总览，含性能、重构、UI 系统）
 
 > 提示：从“性能/高并发落地”视角入门，先看 `高并发.md` 与 `开关矩阵与接口边界.md`。

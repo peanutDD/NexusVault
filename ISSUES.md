@@ -1,6 +1,6 @@
 # 商业化改进任务清单（Issue 列表）
 
-本文档基于 `COMMERCIALIZATION_PLAN.md`，将所有未完成的任务（⬜）拆分为具体的 issue，按「后端 / 前端 / DevOps」三类组织，便于直接在任务系统中使用。
+本文档基于 `docs/product/COMMERCIALIZATION_PLAN.md`，将所有未完成的任务（⬜）拆分为具体的 issue，按「后端 / 前端 / DevOps」三类组织，便于直接在任务系统中使用。
 
 ---
 
@@ -567,7 +567,7 @@ Google OAuth 登录的后端/前端链路已实现，但默认关闭。需要：
 [可选：技术实现细节、API 设计等]
 
 ## 相关文档
-- [COMMERCIALIZATION_PLAN.md](./COMMERCIALIZATION_PLAN.md)
+- [COMMERCIALIZATION_PLAN.md](./docs/product/COMMERCIALIZATION_PLAN.md)
 - [相关 API 文档链接]
 
 ## 优先级
@@ -580,4 +580,4 @@ Google OAuth 登录的后端/前端链路已实现，但默认关闭。需要：
 ---
 
 **最后更新：** 2026-02-11  
-**基于文档：** `COMMERCIALIZATION_PLAN.md`
+**基于文档：** `docs/product/COMMERCIALIZATION_PLAN.md`

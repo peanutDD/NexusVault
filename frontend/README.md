@@ -1,73 +1,43 @@
-# React + TypeScript + Vite
+# 前端子项目说明（frontend）
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+本目录是前端应用（React 19 + TypeScript + Vite），用于文件管理界面与交互。
 
-Currently, two official plugins are available:
+## 文档导航
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 架构与性能：
+  - [`docs/README.md`](./docs/README.md)：前端文档总览
+  - [`docs/UI_SYSTEM.md`](./docs/UI_SYSTEM.md)：UI 设计系统与组件规范
+  - [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md)：性能基线与优化策略
+  - [`docs/PERFORMANCE_ISSUES.md`](./docs/PERFORMANCE_ISSUES.md)：已知性能问题清单
+  - [`docs/REFACTORING.md`](./docs/REFACTORING.md)：前端重构方向与约定
+- 交互与 UX：
+  - [`docs/UI_UX_IMPROVEMENTS.md`](./docs/UI_UX_IMPROVEMENTS.md)：交互与体验改进总结
 
-## React Compiler
+更多跨项目文档参见仓库根目录的 [`docs/README.md`](../docs/README.md)。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 技术栈
 
-## Expanding the ESLint configuration
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- React Router
+- Zustand（状态管理）
+- React Hook Form + Zod（表单与校验）
+- Axios（HTTP 客户端）
+- react-markdown / remark-gfm / rehype-*（Markdown 渲染）
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 本地开发
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+前置：确保后端在 `http://localhost:3000` 运行。
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+```bash
+cd frontend
+cp .env.example .env
+# 将 VITE_API_BASE_URL 指向后端地址
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+默认开发地址为 `http://localhost:5173`。

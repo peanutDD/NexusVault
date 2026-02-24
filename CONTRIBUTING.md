@@ -34,6 +34,6 @@
 
 ## 文档与规范
 
-- 后端架构与性能规范见 [backend/ENGINEERING_PLAYBOOK.md](backend/ENGINEERING_PLAYBOOK.md)。
+- 后端架构与性能规范见 [backend/docs/ENGINEERING_PLAYBOOK.md](backend/docs/ENGINEERING_PLAYBOOK.md)。
 - 文件相关 SQL 的用户隔离规范见 [.cursor/rules/file-sql-user-scope.mdc](.cursor/rules/file-sql-user-scope.mdc)。
 - 前端与 Rust 编码规范见 [.cursor/rules/](.cursor/rules/)。
