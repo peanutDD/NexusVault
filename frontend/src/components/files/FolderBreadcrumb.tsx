@@ -44,7 +44,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
         )}
       >
         <HomeIcon className="h-3.5 w-3.5 shrink-0" />
-        <span>全部文件</span>
+        <span>All Files</span>
       </button>
 
       {/* 路径项 */}
