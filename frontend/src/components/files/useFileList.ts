@@ -20,7 +20,7 @@ export { FILE_TYPE_LABELS };
 const GROUP_FILES_WORKER_THRESHOLD = 50;
 
 function getTypeKey(mime: string): string {
-  if (mime === 'image/gif') return 'gif';
+  if (mime.toLowerCase().startsWith('image/gif')) return 'gif';
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
   if (mime.startsWith('audio/')) return 'audio';

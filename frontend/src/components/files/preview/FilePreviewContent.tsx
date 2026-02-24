@@ -6,7 +6,7 @@
 import { useState, lazy, Suspense } from 'react';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { formatFileSize } from '../../../utils/format';
-import { getMimeTypeLabel } from '../../../utils/mimeType';
+import { getMimeTypeLabel, isGifType } from '../../../utils/mimeType';
 import { cn } from '../../../utils/cn';
 import { ErrorIcon, FileIcon, AudioIcon, SpinnerIcon } from './FilePreviewIcons';
 
@@ -80,7 +80,7 @@ export function FilePreviewContent({
   // 仅用于 Markdown 的主题切换（不影响其他类型）
   // -----------------------------------------------------------------------
   const [markdownTheme, setMarkdownTheme] = useState<'dark' | 'light'>('dark');
-  const isGif = file.mime_type.toLowerCase() === 'image/gif';
+  const isGif = isGifType(file.mime_type);
   const showImagePreview =
     (isImage && (blobUrl || gifFirstFrameUrl)) || (isGif && !blobUrl && gifFirstFrameUrl);
   const imagePreviewSrc = isGif && !blobUrl ? gifFirstFrameUrl : blobUrl ?? gifFirstFrameUrl;

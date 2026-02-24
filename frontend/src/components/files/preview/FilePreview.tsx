@@ -13,7 +13,7 @@ import type * as THREE from 'three';
 import { fileService } from '../../../services/files';
 import { formatFileSize } from '../../../utils/format';
 import { cn } from '../../../utils/cn';
-import { getPreviewKind, getMimeTypeLabel } from '../../../utils/mimeType';
+import { getPreviewKind, getMimeTypeLabel, isGifType } from '../../../utils/mimeType';
 import type { FileMetadata } from '../../../types/files';
 
 import { useFilePreviewData } from './hooks/useFilePreviewData';
@@ -964,7 +964,7 @@ export default function FilePreview({
       >
         <div className="flex items-center gap-3" />
         <div className="flex items-center gap-2" />
-        {file.mime_type.toLowerCase() === 'image/gif' && gifTranscodeInProgress && (
+        {isGifType(file.mime_type) && gifTranscodeInProgress && (
           <div className="pointer-events-none absolute left-1/2 top-[3.1rem] -translate-x-1/2">
             <div className="inline-flex flex-col items-center rounded-full bg-black/40 px-4 py-2 text-[11px] text-white/80 backdrop-blur-md shadow-lg border border-white/15">
               <span className="mb-1">

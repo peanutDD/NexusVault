@@ -1,14 +1,27 @@
+// =============================================================================
+// 依赖：标准库
+// =============================================================================
 use std::sync::Arc;
 use std::time::Instant;
 
+// =============================================================================
+// 依赖：三方库
+// =============================================================================
 use async_trait::async_trait;
 use metrics::{counter, histogram};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, PgPool};
 use uuid::Uuid;
 
+// =============================================================================
+// 依赖：内部模块
+// =============================================================================
 use crate::models::file::File;
 use crate::utils::AppError;
+
+// =============================================================================
+// 常量与类型
+// =============================================================================
 
 /// 单个后台任务的最大自动重试次数。
 ///
@@ -16,6 +29,7 @@ use crate::utils::AppError;
 /// - 当 attempts >= MAX_ATTEMPTS 时，本次失败会被标记为最终失败（死信），不再自动重试。
 const MAX_ATTEMPTS: i32 = 3;
 
+// 任务状态枚举（存储层使用字符串落库）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TaskStatus {
     Pending,
@@ -35,6 +49,7 @@ impl TaskStatus {
     }
 }
 
+// 后台任务记录（队列核心结构）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackgroundTask {
     pub id: Uuid,
@@ -44,6 +59,7 @@ pub struct BackgroundTask {
     pub attempts: i32,
 }
 
+// 管理后台查看的任务 DTO
 #[derive(Debug, Clone, Serialize)]
 pub struct AdminTask {
     pub id: Uuid,
@@ -60,6 +76,7 @@ pub struct AdminTask {
     pub locked_until: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+// 队列深度统计
 #[derive(Debug, Clone, Copy)]
 pub struct TaskQueueDepth {
     pub pending_total: i64,
@@ -68,10 +85,15 @@ pub struct TaskQueueDepth {
     pub failed: i64,
 }
 
+// 任务队列实现（基于 Postgres）
 #[derive(Debug, Clone)]
 pub struct TaskQueue {
     pool: Arc<PgPool>,
 }
+
+// =============================================================================
+// Trait 定义
+// =============================================================================
 
 #[async_trait]
 pub trait TaskQueueProvider: Send + Sync {
@@ -115,6 +137,10 @@ pub trait TaskQueueProvider: Send + Sync {
 
 pub type DynTaskQueue = Arc<dyn TaskQueueProvider>;
 
+// =============================================================================
+// 内部工具
+// =============================================================================
+
 fn retry_delay_secs(attempts: i32, task_id: Uuid) -> i64 {
     let exp = (attempts - 1).clamp(0, 10) as u32;
     let base = 5_i64.saturating_mul(2_i64.saturating_pow(exp));
@@ -144,6 +170,10 @@ type AdminTaskRow = (
     Option<chrono::DateTime<chrono::Utc>>,
 );
 
+// =============================================================================
+// TaskQueue 主实现
+// =============================================================================
+
 impl TaskQueue {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
@@ -159,6 +189,7 @@ impl TaskQueue {
         payload: serde_json::Value,
         dedupe_key: Option<&str>,
     ) -> Result<BackgroundTask, AppError> {
+        // 同 dedupe_key 的 pending/running 任务直接复用，避免重复排队
         if let Some(key) = dedupe_key {
             if let Some(existing) = self
                 .find_active_by_dedupe_key(task_type, key)
@@ -169,6 +200,7 @@ impl TaskQueue {
             }
         }
 
+        // 创建新任务记录
         let id = Uuid::new_v4();
         let status = TaskStatus::Pending.as_str().to_string();
         let dedupe = dedupe_key.map(|s| s.to_string());
@@ -201,6 +233,7 @@ impl TaskQueue {
         &self,
         task_type: &str,
     ) -> Result<Option<BackgroundTask>, AppError> {
+        // 事务内抢占任务，避免并发重复消费
         let mut tx = self.pool.begin().await.map_err(AppError::from)?;
 
         let row: Option<(Uuid, serde_json::Value, i32)> = query_as(
@@ -218,11 +251,13 @@ impl TaskQueue {
         .await
         .map_err(AppError::from)?;
 
+        // 无任务时直接提交事务并返回
         let Some((id, payload, attempts)) = row else {
             tx.commit().await.map_err(AppError::from)?;
             return Ok(None);
         };
 
+        // 标记 running + 加 lease，避免长任务被重复领取
         query(
             "UPDATE background_tasks
              SET status = 'running',
@@ -252,6 +287,7 @@ impl TaskQueue {
     pub async fn mark_succeeded(&self, id: Uuid) -> Result<(), AppError> {
         let status = TaskStatus::Succeeded.as_str();
 
+        // 成功完成：写入完成时间
         query(
             "UPDATE background_tasks
              SET status = $2, completed_at = NOW(), updated_at = NOW(), locked_until = NULL
@@ -268,6 +304,7 @@ impl TaskQueue {
     pub async fn mark_failed(&self, id: Uuid, error: &str) -> Result<(), AppError> {
         let status = TaskStatus::Failed.as_str();
 
+        // 最终失败：记录错误信息与完成时间
         query(
             "UPDATE background_tasks
              SET status = $2, last_error = $3, completed_at = NOW(), updated_at = NOW(), locked_until = NULL
@@ -289,6 +326,7 @@ impl TaskQueue {
         attempts: i32,
         error: &str,
     ) -> Result<(), AppError> {
+        // 可重试失败：回退为 pending 并设置下次执行时间
         let delay_secs = retry_delay_secs(attempts, id);
         query(
             "UPDATE background_tasks
@@ -309,6 +347,7 @@ impl TaskQueue {
     }
 
     pub async fn get_queue_depth(&self, task_type: &str) -> Result<TaskQueueDepth, AppError> {
+        // 汇总所有状态数量
         let rows: Vec<(String, i64)> = query_as(
             "SELECT status, COUNT(*)::bigint
              FROM background_tasks
@@ -332,6 +371,7 @@ impl TaskQueue {
             }
         }
 
+        // 仅统计可立即执行的 pending
         let pending_ready: (i64,) = query_as(
             "SELECT COUNT(*)::bigint
              FROM background_tasks
@@ -353,6 +393,7 @@ impl TaskQueue {
     }
 
     pub async fn requeue_stuck_tasks(&self, task_type: &str, limit: i64) -> Result<i64, AppError> {
+        // 回收超时的 running 任务，避免永久卡死
         let res = query(
             "WITH picked AS (
                SELECT id
@@ -389,6 +430,7 @@ impl TaskQueue {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<AdminTask>, AppError> {
+        // 管理后台列表：支持 type/status 过滤
         let rows: Vec<AdminTaskRow> = query_as(
             "SELECT id,
                     task_type,
@@ -451,6 +493,7 @@ impl TaskQueue {
     }
 
     pub async fn retry_task(&self, id: Uuid) -> Result<bool, AppError> {
+        // 重置失败任务到初始状态
         let res = query(
             "UPDATE background_tasks
              SET status = 'pending',
@@ -475,6 +518,7 @@ impl TaskQueue {
         task_type: &str,
         dedupe_key: &str,
     ) -> Result<Option<BackgroundTask>, sqlx::Error> {
+        // 查询可复用的 pending/running 任务
         let rec: Option<(Uuid, String, serde_json::Value, String, i32)> = query_as(
             "SELECT id, task_type, payload, status, attempts
              FROM background_tasks
@@ -498,6 +542,10 @@ impl TaskQueue {
         }))
     }
 }
+
+// =============================================================================
+// Trait 适配实现
+// =============================================================================
 
 #[async_trait]
 impl TaskQueueProvider for TaskQueue {
@@ -557,6 +605,10 @@ impl TaskQueueProvider for TaskQueue {
     }
 }
 
+// =============================================================================
+// Worker：GIF 预览转码
+// =============================================================================
+
 /// GIF 预览转码任务的 payload 模式。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GifPreviewPayload {
@@ -572,11 +624,13 @@ pub async fn run_gif_preview_worker(
     transcode_semaphore: std::sync::Arc<tokio::sync::Semaphore>,
     task_type_semaphore: Option<std::sync::Arc<tokio::sync::Semaphore>>,
 ) -> Result<(), AppError> {
+    // 从队列抢占一条待处理任务
     let task = match state.task_queue.dequeue_pending_task("gif_preview").await? {
         Some(t) => t,
         None => return Ok(()),
     };
 
+    // 解析 payload
     let payload: GifPreviewPayload = serde_json::from_value(task.payload.clone())
         .map_err(|e| AppError::File(format!("解析 gif_preview payload 失败: {}", e)))?;
 
@@ -594,12 +648,13 @@ pub async fn run_gif_preview_worker(
         return Ok(());
     }
 
-    // 查询最新的文件记录，避免任务创建后文件被删除或移动
+    // 查询最新文件记录，避免任务创建后文件被删除或移动
     let file: File = state
         .file_service
         .get_file(payload.file_id, payload.user_id)
         .await?;
 
+    // 获取全局并发配额与任务类型配额
     let _global_permit = transcode_semaphore
         .acquire_owned()
         .await
@@ -610,9 +665,11 @@ pub async fn run_gif_preview_worker(
         None
     };
 
+    // 执行转码
     match state.file_service.transcode_gif_to_mp4(&file).await {
         Ok(_path) => {
             let elapsed = started_at.elapsed();
+            // 成功指标
             counter!(
                 "transcode_jobs_total",
                 "task_type" => "gif_preview",
@@ -625,6 +682,7 @@ pub async fn run_gif_preview_worker(
             )
             .record(elapsed.as_secs_f64());
 
+            // 成功日志
             tracing::info!(
                 task_id = %task.id,
                 user_id = %payload.user_id,
@@ -639,6 +697,7 @@ pub async fn run_gif_preview_worker(
             let elapsed = started_at.elapsed();
             let msg = format!("gif_preview transcode failed: {}", e);
 
+            // 失败指标
             counter!(
                 "transcode_jobs_total",
                 "task_type" => "gif_preview",
@@ -651,6 +710,7 @@ pub async fn run_gif_preview_worker(
             )
             .record(elapsed.as_secs_f64());
 
+            // 失败日志
             tracing::error!(
                 task_id = %task.id,
                 user_id = %payload.user_id,

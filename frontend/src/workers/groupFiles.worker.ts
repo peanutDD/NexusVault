@@ -5,7 +5,7 @@
  */
 
 function getTypeKey(mime: string): string {
-  if (mime === 'image/gif') return 'gif';
+  if (mime.toLowerCase().startsWith('image/gif')) return 'gif';
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
   if (mime.startsWith('audio/')) return 'audio';

@@ -10,6 +10,7 @@ use std::process::Command;
 
 use crate::models::file::File;
 use crate::utils::AppError;
+use tokio::io::AsyncReadExt;
 use uuid::Uuid;
 
 use super::FileService;
@@ -37,11 +38,31 @@ impl FileService {
         Ok(())
     }
 
+    pub async fn is_gif_file(&self, file: &File) -> bool {
+        if file.mime_type.to_lowercase().starts_with("image/gif") {
+            return true;
+        }
+        if file.original_filename.to_lowercase().ends_with(".gif") {
+            return true;
+        }
+        if file.storage_backend != "local" {
+            return false;
+        }
+        let Ok(mut f) = tokio::fs::File::open(&file.file_path).await else {
+            return false;
+        };
+        let mut buf = [0u8; 6];
+        if f.read_exact(&mut buf).await.is_err() {
+            return false;
+        }
+        &buf == b"GIF87a" || &buf == b"GIF89a"
+    }
+
     /// 执行 GIF → MP4 转码（供后台任务 Worker 调用）。
     ///
     /// 若目标文件已存在，则直接返回；否则调用 ffmpeg 生成。
     pub async fn transcode_gif_to_mp4(&self, file: &File) -> Result<PathBuf, AppError> {
-        if file.mime_type.to_lowercase() != "image/gif" {
+        if !self.is_gif_file(file).await {
             return Err(AppError::Validation(
                 "仅 GIF 支持视频预览，请直接使用普通预览".to_string(),
             ));

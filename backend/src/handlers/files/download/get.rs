@@ -15,6 +15,7 @@ use super::responses::range_not_satisfiable_response;
 pub async fn build_get_response(
     state: &crate::AppState,
     file: &crate::models::file::File,
+    mime_type: &str,
     inline: bool,
     total_size: u64,
     ranges: Option<Vec<ByteRange>>,
@@ -29,11 +30,16 @@ pub async fn build_get_response(
         }
 
         if ranges.len() > 1 {
-            let (body, boundary) =
-                build_multipart_body(state.file_service.clone(), file.clone(), total_size, ranges);
+            let (body, boundary) = build_multipart_body(
+                state.file_service.clone(),
+                file.clone(),
+                total_size,
+                ranges,
+                mime_type.to_string(),
+            );
 
             let mut res =
-                stream_file_response(body, &file.original_filename, &file.mime_type, inline, None)
+                stream_file_response(body, &file.original_filename, mime_type, inline, None)
                     .map_err(|_| AppError::Internal)?;
             *res.status_mut() = StatusCode::PARTIAL_CONTENT;
             res.headers_mut().insert(
@@ -72,14 +78,9 @@ pub async fn build_get_response(
             }
         };
 
-        let mut res = stream_file_response(
-            body,
-            &file.original_filename,
-            &file.mime_type,
-            inline,
-            Some(len),
-        )
-        .map_err(|_| AppError::Internal)?;
+        let mut res =
+            stream_file_response(body, &file.original_filename, mime_type, inline, Some(len))
+                .map_err(|_| AppError::Internal)?;
         *res.status_mut() = StatusCode::PARTIAL_CONTENT;
         res.headers_mut().insert(
             header::CONTENT_RANGE,
@@ -105,7 +106,7 @@ pub async fn build_get_response(
     let mut res = stream_file_response(
         body,
         &file.original_filename,
-        &file.mime_type,
+        mime_type,
         inline,
         Some(total_size),
     )

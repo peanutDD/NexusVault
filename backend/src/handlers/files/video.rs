@@ -46,9 +46,7 @@ pub async fn gif_video_preview_handler(
     let file = state.file_service.get_file(file_id, user_id).await?; // 若不存在或无权限将返回 AppError::NotFound / Forbidden
 
     // 将 MIME 类型统一转成小写，避免大小写差异导致判断失败
-    let mime = file.mime_type.to_lowercase(); // 例如 "image/gif"、"image/jpeg" 等
-                                              // 判断当前文件是否为 GIF
-    let is_gif = mime == "image/gif"; // 仅对 GIF 开启视频预览
+    let is_gif = state.file_service.is_gif_file(&file).await;
 
     // 非 GIF 文件直接返回 404，由前端降级为普通预览
     if !is_gif {
@@ -97,9 +95,7 @@ pub async fn video_preview_prepare_handler(
     let file = state.file_service.get_file(file_id, user_id).await?; // 不存在或无权限时返回相应 AppError
 
     // 将 MIME 统一转为小写，便于匹配
-    let mime = file.mime_type.to_lowercase(); // 例如 "image/gif"
-                                              // 判定是否为 GIF 文件
-    let is_gif = mime == "image/gif"; // 仅 GIF 支持本预览通道
+    let is_gif = state.file_service.is_gif_file(&file).await;
     if !is_gif {
         // 对非 GIF 文件返回验证错误，让前端降级为普通预览
         return Err(AppError::Validation("仅 GIF 支持视频预览".to_string()));

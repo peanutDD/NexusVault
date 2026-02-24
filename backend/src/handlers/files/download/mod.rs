@@ -42,6 +42,25 @@ fn compute_etag(file_id: Uuid, updated_at_unix: i64, total_size: u64) -> String 
     format!("W/\"{}-{}-{}\"", file_id, updated_at_unix, total_size)
 }
 
+fn is_gif_mime(mime_type: &str) -> bool {
+    mime_type.to_lowercase().starts_with("image/gif")
+}
+
+fn filename_is_gif(name: &str) -> bool {
+    std::path::Path::new(name)
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.eq_ignore_ascii_case("gif"))
+        .unwrap_or(false)
+}
+
+fn resolve_effective_mime(file: &crate::models::file::File) -> String {
+    if is_gif_mime(&file.mime_type) || filename_is_gif(&file.original_filename) {
+        return "image/gif".to_string();
+    }
+    file.mime_type.clone()
+}
+
 async fn file_get_or_head_response(
     state: &AppState,
     user_id: Uuid,
@@ -79,6 +98,7 @@ async fn file_get_or_head_response(
     }
 
     let total_size = file.file_size.max(0) as u64;
+    let effective_mime = resolve_effective_mime(&file);
     let etag_str = compute_etag(file.id, file.updated_at.timestamp(), total_size);
     let last_modified_str = {
         let ts = file.updated_at.timestamp().max(0) as u64;
@@ -192,7 +212,7 @@ async fn file_get_or_head_response(
     if method == Method::HEAD {
         return head::build_head_response(
             &file.original_filename,
-            &file.mime_type,
+            &effective_mime,
             inline,
             total_size,
             ranges,
@@ -200,7 +220,16 @@ async fn file_get_or_head_response(
         );
     }
 
-    get::build_get_response(state, &file, inline, total_size, ranges, &entity_headers).await
+    get::build_get_response(
+        state,
+        &file,
+        &effective_mime,
+        inline,
+        total_size,
+        ranges,
+        &entity_headers,
+    )
+    .await
 }
 
 /// 下载文件
@@ -430,7 +459,7 @@ pub async fn hls_prepare_handler(
     Path(file_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     let file = state.file_service.get_file(file_id, user_id).await?;
-    if !state.file_service.should_use_hls(&file) || file.storage_backend != "local" {
+    if !state.file_service.should_use_hls(&file).await || file.storage_backend != "local" {
         return Ok(Json(json!({ "status": "unsupported" })));
     }
     let out_dir = state.file_service.hls_output_dir(file_id);
@@ -492,7 +521,7 @@ pub async fn hls_status_handler(
     Path(file_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     let file = state.file_service.get_file(file_id, user_id).await?;
-    if !state.file_service.should_use_hls(&file) || file.storage_backend != "local" {
+    if !state.file_service.should_use_hls(&file).await || file.storage_backend != "local" {
         return Ok(Json(json!({ "status": "unsupported" })));
     }
     let out_dir = state.file_service.hls_output_dir(file_id);
@@ -648,7 +677,7 @@ pub async fn hls_asset_handler(
     Path((file_id, path)): Path<(Uuid, String)>,
 ) -> Result<Response, AppError> {
     let file = state.file_service.get_file(file_id, user_id).await?;
-    if !state.file_service.should_use_hls(&file) {
+    if !state.file_service.should_use_hls(&file).await {
         return Err(AppError::NotFound);
     }
     let out_dir = state.file_service.hls_output_dir(file_id);

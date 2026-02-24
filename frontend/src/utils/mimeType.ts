@@ -13,7 +13,7 @@ export const isImageType = (mime: string): boolean => mime.startsWith('image/');
 
 /** 判断是否为 GIF 图片（部分场景下按“视频”处理以获得更好的预览体验） */
 export const isGifType = (mime: string): boolean =>
-  mime.toLowerCase() === 'image/gif';
+  mime.toLowerCase().startsWith('image/gif');
 
 /** 判断是否为视频类型 */
 export const isVideoType = (mime: string): boolean => mime.startsWith('video/');

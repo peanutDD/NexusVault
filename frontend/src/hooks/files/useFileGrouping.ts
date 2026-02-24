@@ -24,7 +24,7 @@ export const FILE_TYPE_LABELS_SIMPLE: Record<string, { label: string; order: num
  * 获取文件类型键
  */
 export function getTypeKey(mime: string): string {
-  if (mime === 'image/gif') return 'gif';
+  if (mime.toLowerCase().startsWith('image/gif')) return 'gif';
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
   if (mime.startsWith('audio/')) return 'audio';

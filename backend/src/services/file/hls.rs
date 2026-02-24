@@ -23,17 +23,29 @@ impl FileService {
             .join(file_id.to_string())
     }
 
-    /// 判断是否应对该文件使用 HLS（视频且大于阈值）
-    pub fn should_use_hls(&self, file: &File) -> bool {
-        file.mime_type.starts_with("video/")
-            && (file.file_size as u64) >= self.config.hls_threshold_bytes
+    pub async fn should_use_hls(&self, file: &File) -> bool {
+        let is_video = file.mime_type.starts_with("video/");
+        let is_gif = self.is_gif_file(file).await;
+        (is_video || is_gif) && (file.file_size as u64) >= self.config.hls_threshold_bytes
+    }
+
+    async fn hls_source_path(&self, file: &File) -> Result<PathBuf, AppError> {
+        if file.mime_type.starts_with("video/") {
+            return Ok(PathBuf::from(&file.file_path));
+        }
+        if self.is_gif_file(file).await {
+            return self.transcode_gif_to_mp4(file).await;
+        }
+        Err(AppError::Validation("仅视频或 GIF 支持 HLS".to_string()))
     }
 
     /// 确保 HLS 已生成；若未生成则调用 FFmpeg 转码（仅支持 local 存储）。
     /// 返回 HLS 输出目录（内含 playlist.m3u8 与 segment*.ts）。
     pub async fn ensure_hls_ready(&self, file: &File) -> Result<PathBuf, AppError> {
-        if !file.mime_type.starts_with("video/") {
-            return Err(AppError::Validation("仅视频支持 HLS".to_string()));
+        let is_video = file.mime_type.starts_with("video/");
+        let is_gif = self.is_gif_file(file).await;
+        if !is_video && !is_gif {
+            return Err(AppError::Validation("仅视频或 GIF 支持 HLS".to_string()));
         }
         if (file.file_size as u64) < self.config.hls_threshold_bytes {
             return Err(AppError::Validation(
@@ -59,8 +71,8 @@ impl FileService {
             return Ok(out_dir);
         }
 
-        let source_path = Path::new(&file.file_path);
-        if !tokio::fs::try_exists(source_path)
+        let source_path = self.hls_source_path(file).await?;
+        if !tokio::fs::try_exists(&source_path)
             .await
             .map_err(|e| AppError::File(e.to_string()))?
         {

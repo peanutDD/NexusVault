@@ -24,6 +24,7 @@ pub fn build_multipart_body(
     file: crate::models::file::File,
     total_size: u64,
     ranges: Vec<ByteRange>,
+    mime_type: String,
 ) -> (Body, String) {
     use async_stream::try_stream;
     use tokio::io::{AsyncReadExt, AsyncSeekExt};
@@ -34,7 +35,6 @@ pub fn build_multipart_body(
 
     // move into stream
     let boundary_stream = boundary.clone();
-    let mime_type = file.mime_type.clone();
     let stream = try_stream! {
         for (start, end) in ranges {
             let header_bytes = format!(
