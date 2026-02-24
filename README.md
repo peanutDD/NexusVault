@@ -503,11 +503,13 @@ frontend/
 - `DELETE /api/files/upload/chunked/:id/abort` - 取消分片上传
 - `GET /api/files/:id/download` - 下载文件（支持 `Range: bytes=...` 断点/分段下载，返回 206 + `Content-Range` + `Accept-Ranges`）
 - `GET /api/files/:id/preview` - 预览（流式/内联）
-- `GET /api/files/:id/preview/video` - GIF 视频预览：若派生 mp4 已存在，直接以流的形式返回，供 `<video>` 播放；若尚未生成则返回 404，由前端根据 `prepare/status` 决定 UI
-- `POST /api/files/:id/preview/video/prepare` - 触发或复用 GIF 视频预览转码后台任务：若已存在派生 mp4 则返回 `{ status: "ready" }`，否则写入 `background_tasks` 队列表并返回 `{ status: "processing" }`
-- `GET /api/files/:id/preview/video/status` - 查询 GIF 视频预览转码状态（前端轮询使用）：仅根据派生 mp4 是否存在返回 `{ status: "ready" }` 或 `{ status: "processing" }`
-- `GET /api/files/:id/hls` - 大视频 HLS 主列表（.m3u8）
+- `GET /api/files/:id/hls` - 视频/GIF HLS 主列表（.m3u8）；GIF 也会走此接口进行流式预览（边转边播）
 - `GET /api/files/:id/hls/:filename` - HLS 分片（.ts）
+- `POST /api/files/:id/hls/prepare` - 触发 HLS 转码（支持大视频与 GIF）
+- `GET /api/files/:id/hls/status` - 查询 HLS 转码状态
+- `GET /api/files/:id/preview/video` - [Legacy] GIF 视频预览（MP4 格式）：旧版接口，现主要作为后备方案
+- `POST /api/files/:id/preview/video/prepare` - [Legacy] 触发 MP4 转码
+- `GET /api/files/:id/preview/video/status` - [Legacy] 查询 MP4 转码状态
 - `GET /api/files/:id/thumbnail` - 缩略图
 - `PUT /api/files/:id` - 重命名文件（body: `{ name: "new-name" }`）
 - `DELETE /api/files/:id` - 删除文件

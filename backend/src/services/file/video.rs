@@ -1,9 +1,13 @@
-//! GIF → 视频预览转码：将 GIF 源文件按需转成 mp4，供前端 `<video>` 流式播放。
+//! [Legacy] GIF → 视频预览转码（MP4 格式）
 //!
-//! 设计原则：
-//! - **懒转码**：只有当用户请求 GIF 视频预览时才触发 ffmpeg，一次生成，多次复用
-//! - **仅本地存储**：与 HLS 一样，目前只支持 local backend，S3 后续再扩展
-//! - **不新增 DB 记录**：派生 mp4 存放在 `.derived_videos/{file_id}.mp4`，对用户透明
+//! 历史遗留说明：
+//! 本模块最初用于将 GIF 转码为单一 MP4 文件供前端预览。
+//! 2025-02 起，GIF 预览已迁移至 `services/file/hls.rs`，使用 HLS 流式转码以支持“边转边播”。
+//! 此模块保留作为后备方案或供不支持 HLS 的客户端使用。
+//!
+//! 核心逻辑：
+//! - **懒转码**：只有当用户请求 GIF 视频预览时才触发 ffmpeg
+//! - **仅本地存储**：目前只支持 local backend
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -113,15 +117,16 @@ impl FileService {
                     "-movflags",
                     "+faststart",
                     "-vf",
-                    "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                    "fps=20,scale='min(1280,iw)':-2",
+                    "-an",
                     "-c:v",
                     "libx264",
                     "-pix_fmt",
                     "yuv420p",
                     "-preset",
-                    "veryfast",
+                    "ultrafast",
                     "-crf",
-                    "23",
+                    "28",
                     &out,
                 ])
                 .status()

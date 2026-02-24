@@ -1011,7 +1011,13 @@ export function getCacheKey(query: Record<string, unknown>): string {
 }
 ```
 
-### 8.3 视频预览与流式播放（已实现）
+### 8.4 GIF 预览优化 (HLS)
+
+- **策略变更**：GIF 预览不再转为 MP4 整体文件，而是强制走 HLS (`.m3u8` + `.ts`) 流式转码。
+- **收益**：
+  - **边转边播**：只要生成第一个切片（约 6s 内容）即可播放，无需等待全量转码。
+  - **秒开**：对于 10MB+ 的 GIF，首屏时间从 30s+ 降低到 1-2s。
+  - **进度条**：移除了“正在生成视频...”的阻塞式进度条，用户体验无感。
 
 - **直连 URL**：预览页视频、音频使用 `getStreamUrl(file.id)`（即 `GET /api/files/:id/preview?token=...`），不先拉完整 Blob，避免大文件占满内存。
 - **后端 Range**：`preview` 与 `download` 共用同一 GET 逻辑，响应带 `Accept-Ranges: bytes`，支持 `Range: bytes=start-end`，浏览器可流式加载与拖拽进度。

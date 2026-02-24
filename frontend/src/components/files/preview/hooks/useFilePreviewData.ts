@@ -210,7 +210,7 @@ export function useFilePreviewData({
 
         const videoUrl = getGifVideoUrl(file.id);
         const hlsUrl = getHlsUrl(file.id);
-        const useHlsForGif = file.file_size >= HLS_THRESHOLD_BYTES;
+        const useHlsForGif = true;
 
         const runMp4Preview = async () => {
           try {
@@ -243,7 +243,8 @@ export function useFilePreviewData({
                 return;
               }
               attempt += 1;
-              const progress = Math.min(95, Math.round((attempt / 40) * 100));
+              // 模拟进度条：假设最长 90 秒（60 次尝试 * 1.5s），避免过快冲到 95% 卡住
+              const progress = Math.min(95, Math.round((attempt / 60) * 100));
               setGifTranscodeProgress(progress);
             }
           } catch {
@@ -285,7 +286,8 @@ export function useFilePreviewData({
                 return;
               }
               attempt += 1;
-              const progress = Math.min(95, Math.round((attempt / 40) * 100));
+              // 模拟进度条：HLS 生成包含转码+切片，耗时较长，同样设为 90s 上限
+              const progress = Math.min(95, Math.round((attempt / 60) * 100));
               setGifTranscodeProgress(progress);
             }
           } catch {

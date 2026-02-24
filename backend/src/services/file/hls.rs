@@ -26,15 +26,12 @@ impl FileService {
     pub async fn should_use_hls(&self, file: &File) -> bool {
         let is_video = file.mime_type.starts_with("video/");
         let is_gif = self.is_gif_file(file).await;
-        (is_video || is_gif) && (file.file_size as u64) >= self.config.hls_threshold_bytes
+        (is_video && (file.file_size as u64) >= self.config.hls_threshold_bytes) || is_gif
     }
 
     async fn hls_source_path(&self, file: &File) -> Result<PathBuf, AppError> {
-        if file.mime_type.starts_with("video/") {
+        if file.mime_type.starts_with("video/") || self.is_gif_file(file).await {
             return Ok(PathBuf::from(&file.file_path));
-        }
-        if self.is_gif_file(file).await {
-            return self.transcode_gif_to_mp4(file).await;
         }
         Err(AppError::Validation("仅视频或 GIF 支持 HLS".to_string()))
     }
@@ -47,7 +44,7 @@ impl FileService {
         if !is_video && !is_gif {
             return Err(AppError::Validation("仅视频或 GIF 支持 HLS".to_string()));
         }
-        if (file.file_size as u64) < self.config.hls_threshold_bytes {
+        if is_video && (file.file_size as u64) < self.config.hls_threshold_bytes {
             return Err(AppError::Validation(
                 "文件未超过 HLS 阈值，请使用普通预览".to_string(),
             ));
@@ -109,6 +106,7 @@ impl FileService {
         };
 
         let source = source_path.to_string_lossy().replace('\\', "/");
+        let is_gif_source = is_gif;
 
         if use_abr {
             for i in 0..abr_n {
@@ -120,6 +118,35 @@ impl FileService {
 
         let result = tokio::task::spawn_blocking(move || {
             if !use_abr {
+                if is_gif_source {
+                    return Command::new("ffmpeg")
+                        .args([
+                            "-y",
+                            "-i",
+                            &source,
+                            "-vf",
+                            "fps=20,scale='min(1280,iw)':-2",
+                            "-an",
+                            "-c:v",
+                            "libx264",
+                            "-preset",
+                            "ultrafast",
+                            "-crf",
+                            "28",
+                            "-pix_fmt",
+                            "yuv420p",
+                            "-hls_time",
+                            "6",
+                            "-hls_list_size",
+                            "0",
+                            "-hls_segment_filename",
+                            &segment_pattern,
+                            "-f",
+                            "hls",
+                            &playlist_out,
+                        ])
+                        .status();
+                }
                 return Command::new("ffmpeg")
                     .args([
                         "-y",
@@ -158,7 +185,11 @@ impl FileService {
                 .map(|o| !o.stdout.is_empty())
                 .unwrap_or(false);
 
-            let mut filter = format!("[0:v]split={}", abr_n);
+            let mut filter = if is_gif_source {
+                format!("[0:v]fps=20,split={}", abr_n)
+            } else {
+                format!("[0:v]split={}", abr_n)
+            };
             for (i, _) in abr_variants.iter().enumerate().take(abr_n) {
                 filter.push_str(&format!("[v{}]", i));
             }

@@ -13,7 +13,7 @@ import type * as THREE from 'three';
 import { fileService } from '../../../services/files';
 import { formatFileSize } from '../../../utils/format';
 import { cn } from '../../../utils/cn';
-import { getPreviewKind, getMimeTypeLabel, isGifType } from '../../../utils/mimeType';
+import { getPreviewKind, getMimeTypeLabel } from '../../../utils/mimeType';
 import type { FileMetadata } from '../../../types/files';
 
 import { useFilePreviewData } from './hooks/useFilePreviewData';
@@ -73,8 +73,6 @@ export default function FilePreview({
     textContent,
     error,
     loading,
-    gifTranscodeInProgress,
-    gifTranscodeProgress,
     useHls,
     imageLoaded,
     setImageLoaded,
@@ -964,23 +962,6 @@ export default function FilePreview({
       >
         <div className="flex items-center gap-3" />
         <div className="flex items-center gap-2" />
-        {isGifType(file.mime_type) && gifTranscodeInProgress && (
-          <div className="pointer-events-none absolute left-1/2 top-[3.1rem] -translate-x-1/2">
-            <div className="inline-flex flex-col items-center rounded-full bg-black/40 px-4 py-2 text-[11px] text-white/80 backdrop-blur-md shadow-lg border border-white/15">
-              <span className="mb-1">
-                正在为 GIF 生成视频预览，大文件可能需要几十秒…
-              </span>
-              {typeof gifTranscodeProgress === 'number' && (
-                <div className="relative h-1.5 w-40 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="preview-progress-fill absolute inset-y-0 left-0 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(Math.max(gifTranscodeProgress, 5), 100)}%` }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         {files.length > 1 && (
           <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2">
             <div
