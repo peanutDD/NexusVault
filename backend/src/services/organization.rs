@@ -120,7 +120,7 @@ impl OrganizationService {
         req: AddMemberRequest,
     ) -> Result<OrganizationMemberResponse, AppError> {
         // 校验角色参数
-        let role = OrganizationRole::from_str(req.role.as_str()).ok_or_else(|| {
+        let role = OrganizationRole::from_str_value(req.role.as_str()).ok_or_else(|| {
             AppError::Validation("角色必须是 owner/admin/member 之一".to_string())
         })?;
 

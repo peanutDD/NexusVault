@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { fileService } from '../../../../services/files';
 import { useAuthStore } from '../../../../store/authStore';
 import { getPreviewKind } from '../../../../utils/mimeType';
-import { HLS_THRESHOLD_BYTES } from '../constants';
+import { GIF_DIRECT_PREVIEW_BYTES, HLS_THRESHOLD_BYTES } from '../constants';
 
 function getStreamUrl(fileId: string): string {
   const base = fileService.getPreviewUrl(fileId);
@@ -179,6 +179,25 @@ export function useFilePreviewData({
     if (isGif) {
       if (!isValidRequest()) return;
       gifFallbackTriedRef.current = false;
+      const setGifFallbackUrl = (url: string | null) => {
+        setGifFirstFrameUrl((prev) => {
+          if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+          return url;
+        });
+        setImageLoaded(false);
+      };
+
+      if (file.file_size <= GIF_DIRECT_PREVIEW_BYTES) {
+        Promise.resolve().then(() => {
+          if (!isValidRequest()) return;
+          setError(null);
+          setUseHls(false);
+          setGifFallbackUrl(getStreamUrl(file.id));
+          finish();
+        });
+        return;
+      }
+
       Promise.resolve().then(() => {
         if (!isValidRequest()) return;
         setGifFirstFrameUrl(null);
@@ -186,7 +205,18 @@ export function useFilePreviewData({
         setUseHls(false);
         setGifTranscodeInProgress(true);
         setGifTranscodeProgress(0);
+        setImageLoaded(false);
       });
+
+      fileService
+        .fetchThumbnailBlob(file.id, { width: 800 })
+        .then((b) => {
+          if (!isValidRequest()) return;
+          if (!b) return;
+          const url = URL.createObjectURL(b);
+          setGifFallbackUrl(url);
+        })
+        .catch(() => {});
 
       const videoUrl = getGifVideoUrl(file.id);
 
@@ -196,6 +226,7 @@ export function useFilePreviewData({
           const initialStatus = await fileService.prepareVideoPreview(file.id);
           if (!isValidRequest()) return;
           if (initialStatus === 'ready') {
+            setGifFallbackUrl(null);
             setBlobUrl(videoUrl);
             finish();
             return;
@@ -207,11 +238,18 @@ export function useFilePreviewData({
           for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
             if (!isValidRequest()) return;
             await new Promise((resolve) => setTimeout(resolve, intervalMs));
-            const status = await fileService.getVideoPreviewStatus(file.id);
+            const result = await fileService.getVideoPreviewStatus(file.id);
             if (!isValidRequest()) return;
-            if (status === 'ready') {
+            if (result.status === 'ready') {
+              setGifFallbackUrl(null);
               setBlobUrl(videoUrl);
               setGifTranscodeProgress(100);
+              finish();
+              return;
+            }
+            if (result.status === 'failed') {
+              setError(null);
+              setGifFallbackUrl(getStreamUrl(file.id));
               finish();
               return;
             }
@@ -220,17 +258,17 @@ export function useFilePreviewData({
             setGifTranscodeProgress(progress);
           }
 
-          // 超时仍未 ready：视为「后台仍在慢速处理」，不弹失败大框，只结束本次等待
-          if (import.meta.env.DEV) {
-            console.warn(
-              '[gif-preview] 转码超过预期时间，后台可能仍在处理，稍后可重新打开预览重试'
-            );
-          }
+          // 超时仍未 ready：提示用户后台仍在处理
+          console.warn(
+            '[gif-preview] 转码超过预期时间，后台可能仍在处理，稍后可重新打开预览重试'
+          );
+          setError(null);
+          setGifFallbackUrl(getStreamUrl(file.id));
           finish();
-        } catch (e) {
+        } catch {
           if (!isValidRequest()) return;
-          const msg = e instanceof Error ? e.message : 'GIF 视频预览加载失败';
-          setError(msg);
+          setError(null);
+          setGifFallbackUrl(getStreamUrl(file.id));
           finish();
         }
       })();
@@ -330,6 +368,12 @@ export function useFilePreviewData({
       setGifTranscodeProgress(null);
     };
   }, [blobUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (gifFirstFrameUrl?.startsWith('blob:')) URL.revokeObjectURL(gifFirstFrameUrl);
+    };
+  }, [gifFirstFrameUrl]);
 
   return {
     blobUrl,

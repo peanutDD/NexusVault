@@ -21,7 +21,8 @@ use uuid::Uuid; // Uuid 用于文件 / 用户等资源标识
 
 use axum::body::Body; // Body::from_stream 用于从 Stream 构造响应体
 use axum::Json; // Json<T> 将结构体自动序列化为 JSON 响应
-use serde_json::json; // json! 宏方便构建 JSON 对象
+use serde_json::json;
+use sqlx::query_as; // json! 宏方便构建 JSON 对象
 
 use crate::extractors::AuthenticatedUserQuery; // 自定义认证提取器，从请求中解析出当前用户 ID
 use crate::utils::response::stream_file_response; // 统一的文件流响应构造函数，设置 Content-Type / disposition 等
@@ -103,6 +104,11 @@ pub async fn video_preview_prepare_handler(
         // 对非 GIF 文件返回验证错误，让前端降级为普通预览
         return Err(AppError::Validation("仅 GIF 支持视频预览".to_string()));
     }
+    if file.storage_backend != "local" {
+        return Err(AppError::Validation(
+            "GIF 视频预览当前仅支持本地存储".to_string(),
+        ));
+    }
 
     // 计算派生视频的目标路径
     let out_path = state.file_service.derived_video_output_path(file.id); // storage_path/.derived_videos/{file_id}.mp4
@@ -145,8 +151,29 @@ pub async fn video_preview_status_handler(
     let has_video = tokio::fs::try_exists(&out_path)
         .await
         .map_err(|e| AppError::File(e.to_string()))?;
+    if has_video {
+        return Ok(Json(json!({ "status": "ready", "error": null })));
+    }
 
-    // 仅依赖「是否已生成派生视频」来区分 ready/processing；队列内部状态由任务表维护。
-    let status = if has_video { "ready" } else { "processing" };
-    Ok(Json(json!({ "status": status })))
+    let latest: Option<(String, Option<String>)> = query_as(
+        "SELECT status, last_error
+         FROM background_tasks
+         WHERE task_type = $1
+           AND dedupe_key = $2
+         ORDER BY created_at DESC
+         LIMIT 1",
+    )
+    .bind("gif_preview")
+    .bind(file.id.to_string())
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(AppError::from)?;
+
+    if let Some((status, last_error)) = latest {
+        if status == "failed" {
+            return Ok(Json(json!({ "status": "failed", "error": last_error })));
+        }
+    }
+
+    Ok(Json(json!({ "status": "processing", "error": null })))
 }

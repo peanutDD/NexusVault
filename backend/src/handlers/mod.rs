@@ -19,9 +19,9 @@
 //! - `api_token`: API Token 管理相关
 //! - `health`: 健康检查与存活检查（/health、/livez、/readyz）
 
+pub mod admin;
 pub mod api_token;
 pub mod auth;
-pub mod admin;
 pub mod files;
 pub mod folders;
 pub mod health;

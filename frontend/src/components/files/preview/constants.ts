@@ -9,3 +9,6 @@
 
 /** 超过此大小（字节）使用 HLS 转码预览，与后端 HLS_THRESHOLD_BYTES 一致 */
 export const HLS_THRESHOLD_BYTES = 100 * 1024 * 1024;
+
+/** 小 GIF 直接使用图片预览，避免进入转码队列 */
+export const GIF_DIRECT_PREVIEW_BYTES = 5 * 1024 * 1024;

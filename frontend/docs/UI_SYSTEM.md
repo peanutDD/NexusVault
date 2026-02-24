@@ -114,6 +114,8 @@ import { FormField } from '../../common/form';
   - 打开 GIF 时，前端会调用：
     - `POST /api/files/:id/preview/video/prepare`
     - 周期性 `GET /api/files/:id/preview/video/status`
+  - 小 GIF 直连预览：
+    - 小于 `GIF_DIRECT_PREVIEW_BYTES`（当前 5MB）时直接走 `/api/files/:id/preview` 渲染为图片，跳过转码。
   - UI 表现：
     - 在预览顶部展示一句说明 + 进度条（`gifTranscodeInProgress` + `gifTranscodeProgress`）。
     - 转码完成后自动切换为 `<video>` 播放。
@@ -129,4 +131,3 @@ import { FormField } from '../../common/form';
 - Tailwind 使用：
   - 遵循项目中已有的玻璃风样式（渐变 + blur + border + shadow）。
   - 避免在业务组件中大量复制粘贴样式，优先抽到公共组件或封装到工具类。
-

@@ -353,7 +353,10 @@ impl FileService {
                 };
                 if let Err(e) = tokio::fs::rename(&tmp_path, &zip_path).await {
                     let _ = tokio::fs::remove_file(&tmp_path).await;
-                    return Err(AppError::File(format!("Failed to finalize zip cache: {}", e)));
+                    return Err(AppError::File(format!(
+                        "Failed to finalize zip cache: {}",
+                        e
+                    )));
                 }
 
                 return Ok(ZipArtifact {

@@ -73,7 +73,12 @@ pub trait StorageBackend: Send + Sync {
         response_content_type: Option<&str>,
         response_content_disposition: Option<&str>,
     ) -> Result<Option<String>, AppError> {
-        let _ = (file_path, expires_secs, response_content_type, response_content_disposition);
+        let _ = (
+            file_path,
+            expires_secs,
+            response_content_type,
+            response_content_disposition,
+        );
         Ok(None)
     }
 
@@ -467,11 +472,7 @@ impl StorageBackend for S3Storage {
         use aws_sdk_s3::presigning::PresigningConfig;
         use std::time::Duration;
 
-        let mut req = self
-            .client
-            .get_object()
-            .bucket(&self.bucket)
-            .key(file_path);
+        let mut req = self.client.get_object().bucket(&self.bucket).key(file_path);
 
         if let Some(v) = response_content_type {
             req = req.response_content_type(v);

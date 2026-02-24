@@ -17,8 +17,8 @@ use file_storage_backend::AppState;
 async fn main() -> anyhow::Result<()> {
     init_tracing();
 
-    let metrics_renderer =
-        init_metrics().map_err(|e| anyhow::anyhow!("Failed to install Prometheus recorder: {}", e))?;
+    let metrics_renderer = init_metrics()
+        .map_err(|e| anyhow::anyhow!("Failed to install Prometheus recorder: {}", e))?;
 
     dotenv::dotenv().ok();
     let config = Arc::new(Config::from_env()?);
@@ -84,7 +84,11 @@ async fn main() -> anyhow::Result<()> {
         let state_for_metrics = state.clone();
         tokio::spawn(async move {
             loop {
-                if let Ok(depth) = state_for_metrics.task_queue.get_queue_depth("gif_preview").await {
+                if let Ok(depth) = state_for_metrics
+                    .task_queue
+                    .get_queue_depth("gif_preview")
+                    .await
+                {
                     gauge!("background_tasks_pending_total", "task_type" => "gif_preview")
                         .set(depth.pending_total as f64);
                     gauge!("background_tasks_pending_ready", "task_type" => "gif_preview")

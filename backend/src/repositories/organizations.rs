@@ -95,7 +95,7 @@ impl OrganizationsRepo {
             .into_iter()
             .filter_map(
                 |(id, name, owner_user_id, created_at, updated_at, role_str)| {
-                    OrganizationRole::from_str(&role_str).map(|role| {
+                    OrganizationRole::from_str_value(&role_str).map(|role| {
                         (
                             Organization {
                                 id,
@@ -130,7 +130,7 @@ impl OrganizationsRepo {
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(row.and_then(|m| OrganizationRole::from_str(&m.role).map(|role| (m, role))))
+        Ok(row.and_then(|m| OrganizationRole::from_str_value(&m.role).map(|role| (m, role))))
     }
 
     /// 列出组织成员
@@ -150,7 +150,7 @@ impl OrganizationsRepo {
 
         Ok(rows
             .into_iter()
-            .filter_map(|m| OrganizationRole::from_str(&m.role).map(|role| (m, role)))
+            .filter_map(|m| OrganizationRole::from_str_value(&m.role).map(|role| (m, role)))
             .collect())
     }
 

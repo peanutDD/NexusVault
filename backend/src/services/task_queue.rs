@@ -82,7 +82,10 @@ pub trait TaskQueueProvider: Send + Sync {
         dedupe_key: Option<&str>,
     ) -> Result<BackgroundTask, AppError>;
 
-    async fn dequeue_pending_task(&self, task_type: &str) -> Result<Option<BackgroundTask>, AppError>;
+    async fn dequeue_pending_task(
+        &self,
+        task_type: &str,
+    ) -> Result<Option<BackgroundTask>, AppError>;
 
     async fn mark_succeeded(&self, task_id: Uuid) -> Result<(), AppError>;
 
@@ -126,6 +129,20 @@ fn retry_delay_secs(attempts: i32, task_id: Uuid) -> i64 {
 }
 
 const TASK_LEASE_SECS: i64 = 600;
+type AdminTaskRow = (
+    Uuid,
+    String,
+    String,
+    i32,
+    Option<String>,
+    Option<String>,
+    chrono::DateTime<chrono::Utc>,
+    chrono::DateTime<chrono::Utc>,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<chrono::DateTime<chrono::Utc>>,
+    chrono::DateTime<chrono::Utc>,
+    Option<chrono::DateTime<chrono::Utc>>,
+);
 
 impl TaskQueue {
     pub fn new(pool: Arc<PgPool>) -> Self {
@@ -335,11 +352,7 @@ impl TaskQueue {
         })
     }
 
-    pub async fn requeue_stuck_tasks(
-        &self,
-        task_type: &str,
-        limit: i64,
-    ) -> Result<i64, AppError> {
+    pub async fn requeue_stuck_tasks(&self, task_type: &str, limit: i64) -> Result<i64, AppError> {
         let res = query(
             "WITH picked AS (
                SELECT id
@@ -376,20 +389,7 @@ impl TaskQueue {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<AdminTask>, AppError> {
-        let rows: Vec<(
-            Uuid,
-            String,
-            String,
-            i32,
-            Option<String>,
-            Option<String>,
-            chrono::DateTime<chrono::Utc>,
-            chrono::DateTime<chrono::Utc>,
-            Option<chrono::DateTime<chrono::Utc>>,
-            Option<chrono::DateTime<chrono::Utc>>,
-            chrono::DateTime<chrono::Utc>,
-            Option<chrono::DateTime<chrono::Utc>>,
-        )> = query_as(
+        let rows: Vec<AdminTaskRow> = query_as(
             "SELECT id,
                     task_type,
                     status,
@@ -510,7 +510,10 @@ impl TaskQueueProvider for TaskQueue {
         TaskQueue::enqueue_task(self, task_type, payload, dedupe_key).await
     }
 
-    async fn dequeue_pending_task(&self, task_type: &str) -> Result<Option<BackgroundTask>, AppError> {
+    async fn dequeue_pending_task(
+        &self,
+        task_type: &str,
+    ) -> Result<Option<BackgroundTask>, AppError> {
         TaskQueue::dequeue_pending_task(self, task_type).await
     }
 
@@ -602,11 +605,7 @@ pub async fn run_gif_preview_worker(
         .await
         .map_err(|_| AppError::Internal)?;
     let _type_permit = if let Some(sema) = task_type_semaphore {
-        Some(
-            sema.acquire_owned()
-                .await
-                .map_err(|_| AppError::Internal)?,
-        )
+        Some(sema.acquire_owned().await.map_err(|_| AppError::Internal)?)
     } else {
         None
     };

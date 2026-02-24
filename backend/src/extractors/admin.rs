@@ -1,8 +1,4 @@
-use axum::{
-    async_trait,
-    extract::FromRequestParts,
-    http::request::Parts,
-};
+use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 use crate::{utils::AppError, AppState};
 

@@ -960,11 +960,14 @@ export const fileService = {
   /**
    * 查询 GIF/Ugoira 视频预览转码状态（前端轮询使用）
    */
-  async getVideoPreviewStatus(fileId: string): Promise<'processing' | 'ready'> {
-    const { data } = await api.get<{ status: 'processing' | 'ready' }>(
-      `/api/files/${fileId}/preview/video/status`
-    );
-    return data.status;
+  async getVideoPreviewStatus(
+    fileId: string
+  ): Promise<{ status: 'processing' | 'ready' | 'failed'; error?: string | null }> {
+    const { data } = await api.get<{
+      status: 'processing' | 'ready' | 'failed';
+      error?: string | null;
+    }>(`/api/files/${fileId}/preview/video/status`);
+    return data;
   },
 
   /** 超大视频 HLS 列表 URL（>100MB 时后端转码为 .m3u8 + ts，供 hls.js 播放） */

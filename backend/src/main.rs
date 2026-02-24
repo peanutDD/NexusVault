@@ -163,9 +163,12 @@ async fn async_main() -> anyhow::Result<()> {
     }
 
     if config.zip_cache_enabled && config.zip_cache_backend == "local" {
-        let base_dir = std::path::Path::new(&config.storage_path)
-            .join(".zip_cache");
-        spawn_zip_cache_cleanup(base_dir, Duration::from_secs(300), config.zip_cache_ttl_secs);
+        let base_dir = std::path::Path::new(&config.storage_path).join(".zip_cache");
+        spawn_zip_cache_cleanup(
+            base_dir,
+            Duration::from_secs(300),
+            config.zip_cache_ttl_secs,
+        );
     }
 
     // ---------- 构建 Axum 应用并启动 HTTP 服务 ----------

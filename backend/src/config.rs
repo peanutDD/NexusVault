@@ -252,7 +252,8 @@ impl Config {
                 .unwrap_or_else(|_| "postgres".to_string()),
 
             zip_cache_enabled: env_bool("ZIP_CACHE_ENABLED", false)?,
-            zip_cache_backend: env::var("ZIP_CACHE_BACKEND").unwrap_or_else(|_| "local".to_string()),
+            zip_cache_backend: env::var("ZIP_CACHE_BACKEND")
+                .unwrap_or_else(|_| "local".to_string()),
             zip_cache_ttl_secs: env_u64("ZIP_CACHE_TTL_SECS", 3600)?,
             zip_build_max_concurrent: env_usize("ZIP_BUILD_MAX_CONCURRENT", 2)?,
 
@@ -316,8 +317,7 @@ impl Config {
                 "ZIP_BUILD_MAX_CONCURRENT must be greater than 0".to_string(),
             ));
         }
-        if self.cache_enabled
-            && (self.cache_default_ttl_secs == 0 || self.list_cache_ttl_secs == 0)
+        if self.cache_enabled && (self.cache_default_ttl_secs == 0 || self.list_cache_ttl_secs == 0)
         {
             return Err(ConfigError::InvalidConfig(
                 "CACHE_DEFAULT_TTL_SECS and LIST_CACHE_TTL_SECS must be greater than 0 when CACHE_ENABLED=1"
@@ -412,7 +412,7 @@ fn parse_hls_abr_variants() -> Result<Vec<HlsAbrVariant>, ConfigError> {
         let video_bitrate_kbps: u32 = br.trim().parse().map_err(|_| {
             ConfigError::InvalidConfig("HLS_ABR_VARIANTS bitrate must be integer".to_string())
         })?;
-        if height < 144 || height > 2160 || video_bitrate_kbps == 0 {
+        if !(144..=2160).contains(&height) || video_bitrate_kbps == 0 {
             return Err(ConfigError::InvalidConfig(
                 "HLS_ABR_VARIANTS contains invalid height/bitrate".to_string(),
             ));
@@ -445,9 +445,9 @@ fn env_u64(key: &str, default: u64) -> Result<u64, ConfigError> {
 
 fn env_usize(key: &str, default: usize) -> Result<usize, ConfigError> {
     match env::var(key) {
-        Ok(v) => v.parse::<usize>().map_err(|_| {
-            ConfigError::InvalidConfig(format!("{} must be a valid integer", key))
-        }),
+        Ok(v) => v
+            .parse::<usize>()
+            .map_err(|_| ConfigError::InvalidConfig(format!("{} must be a valid integer", key))),
         Err(_) => Ok(default),
     }
 }
@@ -462,9 +462,9 @@ fn env_usize_map(prefix: &str) -> Result<HashMap<String, usize>, ConfigError> {
         if key.is_empty() {
             continue;
         }
-        let n = v.parse::<usize>().map_err(|_| {
-            ConfigError::InvalidConfig(format!("{} must be a valid integer", k))
-        })?;
+        let n = v
+            .parse::<usize>()
+            .map_err(|_| ConfigError::InvalidConfig(format!("{} must be a valid integer", k)))?;
         if n == 0 {
             return Err(ConfigError::InvalidConfig(format!(
                 "{} must be greater than 0",

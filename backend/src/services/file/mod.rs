@@ -104,8 +104,10 @@ impl FileService {
     ///
     /// 使用 SQLx 实现的 Repository。
     pub fn from_state(state: &crate::AppState) -> Self {
-        let files_repo: DynFilesRepo =
-            Arc::new(SqlxFilesRepo::new_with_replica(state.pool.clone(), state.read_pool.clone()));
+        let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new_with_replica(
+            state.pool.clone(),
+            state.read_pool.clone(),
+        ));
         let file_versions_repo: DynFileVersionsRepo =
             Arc::new(SqlxFileVersionsRepo::new(state.pool.clone()));
         let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(state.pool.clone()));

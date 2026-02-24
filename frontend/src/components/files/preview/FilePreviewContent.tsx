@@ -80,6 +80,10 @@ export function FilePreviewContent({
   // 仅用于 Markdown 的主题切换（不影响其他类型）
   // -----------------------------------------------------------------------
   const [markdownTheme, setMarkdownTheme] = useState<'dark' | 'light'>('dark');
+  const isGif = file.mime_type.toLowerCase() === 'image/gif';
+  const showImagePreview =
+    (isImage && (blobUrl || gifFirstFrameUrl)) || (isGif && !blobUrl && gifFirstFrameUrl);
+  const imagePreviewSrc = isGif && !blobUrl ? gifFirstFrameUrl : blobUrl ?? gifFirstFrameUrl;
   return (
     <div
       // 预览容器：统一处理视差透视与点击关闭
@@ -174,7 +178,7 @@ export function FilePreviewContent({
           {/* ----------------------------- */}
           {/* 图片 / GIF 首帧 */}
           {/* ----------------------------- */}
-          {isImage && (blobUrl || gifFirstFrameUrl) ? (
+          {showImagePreview ? (
             <div className="relative flex h-full w-full min-h-0 items-center justify-center">
               <div
                 ref={imageTransformRef}
@@ -185,7 +189,7 @@ export function FilePreviewContent({
                 )}
               >
                 <ResponsivePicture
-                  src={blobUrl ?? gifFirstFrameUrl ?? ''}
+                  src={imagePreviewSrc ?? ''}
                   alt={file.original_filename}
                   className="max-h-full max-w-full object-contain"
                   decoding="async"

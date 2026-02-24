@@ -19,7 +19,7 @@ pub enum OrganizationRole {
 
 impl OrganizationRole {
     /// 从字符串解析角色（用于从数据库或请求中读取）
-    pub fn from_str(role: &str) -> Option<Self> {
+    pub fn from_str_value(role: &str) -> Option<Self> {
         match role {
             "owner" => Some(Self::Owner),
             "admin" => Some(Self::Admin),

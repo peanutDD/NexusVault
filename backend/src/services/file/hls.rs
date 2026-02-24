@@ -147,29 +147,26 @@ impl FileService {
                 .unwrap_or(false);
 
             let mut filter = format!("[0:v]split={}", abr_n);
-            for i in 0..abr_n {
+            for (i, _) in abr_variants.iter().enumerate().take(abr_n) {
                 filter.push_str(&format!("[v{}]", i));
             }
             filter.push(';');
-            for i in 0..abr_n {
-                let h = abr_variants[i].0;
-                filter.push_str(&format!(
-                    "[v{0}]scale=-2:{1}:flags=lanczos[v{0}out];",
-                    i, h
-                ));
+            for (i, (h, _)) in abr_variants.iter().enumerate().take(abr_n) {
+                filter.push_str(&format!("[v{0}]scale=-2:{1}:flags=lanczos[v{0}out];", i, h));
             }
             if filter.ends_with(';') {
                 filter.pop();
             }
 
-            let mut args: Vec<String> = Vec::new();
-            args.push("-y".to_string());
-            args.push("-i".to_string());
-            args.push(source.clone());
-            args.push("-filter_complex".to_string());
-            args.push(filter);
+            let mut args: Vec<String> = vec![
+                "-y".to_string(),
+                "-i".to_string(),
+                source.clone(),
+                "-filter_complex".to_string(),
+                filter,
+            ];
 
-            for i in 0..abr_n {
+            for (i, _) in abr_variants.iter().enumerate().take(abr_n) {
                 args.push("-map".to_string());
                 args.push(format!("[v{}out]", i));
                 if has_audio {
@@ -196,10 +193,9 @@ impl FileService {
                 args.push("128k".to_string());
             }
 
-            for i in 0..abr_n {
-                let br = abr_variants[i].1;
-                let maxrate = (br as f64 * 1.07).round() as u32;
-                let buf = (br as f64 * 1.5).round() as u32;
+            for (i, (_, br)) in abr_variants.iter().enumerate().take(abr_n) {
+                let maxrate = (*br as f64 * 1.07).round() as u32;
+                let buf = (*br as f64 * 1.5).round() as u32;
                 args.push(format!("-b:v:{}", i));
                 args.push(format!("{}k", br));
                 args.push(format!("-maxrate:v:{}", i));
@@ -222,7 +218,7 @@ impl FileService {
             args.push(MASTER_PLAYLIST_NAME.to_string());
 
             let mut var_map = String::new();
-            for i in 0..abr_n {
+            for (i, _) in abr_variants.iter().enumerate().take(abr_n) {
                 if i > 0 {
                     var_map.push(' ');
                 }

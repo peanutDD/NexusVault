@@ -337,10 +337,8 @@ pub async fn batch_download_zip_post_handler(
             HeaderValue::from_str(&format!("bytes {}-{}/{}", start, end, total_size))
                 .map_err(|_| AppError::Internal)?,
         );
-        res.headers_mut().insert(
-            header::ACCEPT_RANGES,
-            HeaderValue::from_static("bytes"),
-        );
+        res.headers_mut()
+            .insert(header::ACCEPT_RANGES, HeaderValue::from_static("bytes"));
         return Ok(res);
     }
 

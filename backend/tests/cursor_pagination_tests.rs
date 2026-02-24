@@ -1,6 +1,8 @@
 mod common;
 
-use common::{cleanup_test_data, create_test_file, create_test_pool, create_test_user, init_test_env};
+use common::{
+    cleanup_test_data, create_test_file, create_test_pool, create_test_user, init_test_env,
+};
 use file_storage_backend::models::file::FileListQuery;
 use file_storage_backend::repositories::traits::FilesRepository;
 use file_storage_backend::repositories::SqlxFilesRepo;
@@ -64,4 +66,3 @@ async fn test_cursor_pagination_created_at_ties_no_duplicates() {
     assert_eq!(unique.len(), seen.len());
     assert_eq!(unique.len(), ids.len());
 }
-

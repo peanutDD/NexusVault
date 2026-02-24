@@ -554,10 +554,7 @@ impl FilesRepository for SqlxFilesRepo {
             id: Uuid,
         }
 
-        fn parse_cursor_value(
-            sort_column: &str,
-            cursor_str: &str,
-        ) -> Option<CursorValue> {
+        fn parse_cursor_value(sort_column: &str, cursor_str: &str) -> Option<CursorValue> {
             match sort_column {
                 "created_at" => DateTime::parse_from_rfc3339(cursor_str)
                     .ok()
@@ -591,8 +588,13 @@ impl FilesRepository for SqlxFilesRepo {
                         "file_size" => "file_size",
                         _ => "created_at",
                     };
-                    let expected_sort_order = if sort_direction == "ASC" { "asc" } else { "desc" };
-                    if token.sort_by != expected_sort_by || token.sort_order != expected_sort_order {
+                    let expected_sort_order = if sort_direction == "ASC" {
+                        "asc"
+                    } else {
+                        "desc"
+                    };
+                    if token.sort_by != expected_sort_by || token.sort_order != expected_sort_order
+                    {
                         return Err(AppError::Validation(
                             "cursor 与 sort_by/sort_order 不匹配".to_string(),
                         ));
@@ -777,8 +779,14 @@ impl FilesRepository for SqlxFilesRepo {
             let next_cursor = if has_more {
                 files.last().map(|file| {
                     let (sort_by, sort_order) = (
-                        query.sort_by.clone().unwrap_or_else(|| "created_at".to_string()),
-                        query.sort_order.clone().unwrap_or_else(|| "desc".to_string()),
+                        query
+                            .sort_by
+                            .clone()
+                            .unwrap_or_else(|| "created_at".to_string()),
+                        query
+                            .sort_order
+                            .clone()
+                            .unwrap_or_else(|| "desc".to_string()),
                     );
                     let value = match sort_column {
                         "created_at" => file.created_at.to_rfc3339(),
