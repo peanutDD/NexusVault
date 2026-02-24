@@ -12,7 +12,7 @@
 | `JWT_EXPIRY` | JWT 过期时间 | `24h` |
 | `PORT` | 服务监听端口 | `3000` |
 | `STORAGE_BACKEND` | 存储后端 | `local` |
-| `STORAGE_PATH` | 本地存储根目录 | `./uploads` |
+| `STORAGE_PATH` | 本地存储根目录（多实例/容器时 API 与 Worker 必须共享同一路径/卷） | `./uploads` |
 | `MAX_FILE_SIZE` | **单文件上传大小上限（字节）**，业务校验用 | `2147483648`（2GiB） |
 | `ALLOWED_MIME_TYPES` | 允许的 MIME 类型（逗号分隔） | `image/*,video/*,...` |
 | `CORS_ORIGIN` | CORS 允许的源 | `*` |

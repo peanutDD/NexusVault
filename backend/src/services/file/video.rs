@@ -24,6 +24,19 @@ impl FileService {
             .join(format!("{}.mp4", file_id))
     }
 
+    pub async fn delete_gif_preview_video(&self, file_id: Uuid) -> Result<(), AppError> {
+        let out_path = self.derived_video_output_path(file_id);
+        if tokio::fs::try_exists(&out_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?
+        {
+            tokio::fs::remove_file(&out_path)
+                .await
+                .map_err(|e| AppError::File(format!("删除 GIF 预览视频失败: {}", e)))?;
+        }
+        Ok(())
+    }
+
     /// 执行 GIF → MP4 转码（供后台任务 Worker 调用）。
     ///
     /// 若目标文件已存在，则直接返回；否则调用 ffmpeg 生成。

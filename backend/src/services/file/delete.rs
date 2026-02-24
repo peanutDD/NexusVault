@@ -14,6 +14,7 @@ impl FileService {
         let ref_count = self.files_repo.count_by_file_path(&file_path).await?;
         let _ = self.delete_thumbnail(file_id, user_id).await;
         let _ = self.delete_hls(file_id).await;
+        let _ = self.delete_gif_preview_video(file_id).await;
         self.files_repo.delete(file_id, user_id).await?;
         if ref_count <= 1 {
             let _ = self.storage.delete_file(&file_path).await;
@@ -30,6 +31,7 @@ impl FileService {
         for (id, _) in &rows {
             let _ = self.delete_thumbnail(*id, user_id).await;
             let _ = self.delete_hls(*id).await;
+            let _ = self.delete_gif_preview_video(*id).await;
             deleted_ids.push(*id);
         }
 
