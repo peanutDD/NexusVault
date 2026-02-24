@@ -10,6 +10,7 @@ use axum::extract::{Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::Response;
 use bytes::Bytes;
+use deadpool_redis::redis::cmd;
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::mpsc;
@@ -36,6 +37,80 @@ pub async fn batch_get_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchGetRequest>,
 ) -> Result<Response, AppError> {
+    if state.config.cache_enabled {
+        if let Some(pool) = &state.redis {
+            use crate::models::file::FileResponse;
+
+            let redis = crate::services::redis::RedisService::new(pool.clone());
+            let ver = redis.get_user_cache_version(user_id).await.unwrap_or(1);
+
+            let keys: Vec<String> = req
+                .ids
+                .iter()
+                .map(|id| format!("cache:files:meta:{}:{}:{}", user_id, ver, id))
+                .collect();
+
+            let mut cached_by_id: std::collections::HashMap<Uuid, FileResponse> =
+                std::collections::HashMap::new();
+
+            if let Ok(mut conn) = pool.get().await {
+                let cached: Result<Vec<Option<String>>, _> =
+                    cmd("MGET").arg(keys.clone()).query_async(&mut conn).await;
+                if let Ok(values) = cached {
+                    for (idx, v) in values.into_iter().enumerate() {
+                        let Some(s) = v else { continue };
+                        if let Ok(file) = serde_json::from_str::<FileResponse>(&s) {
+                            cached_by_id.insert(req.ids[idx], file);
+                        }
+                    }
+                }
+            }
+
+            let mut miss_ids: Vec<Uuid> = Vec::new();
+            for id in &req.ids {
+                if !cached_by_id.contains_key(id) {
+                    miss_ids.push(*id);
+                }
+            }
+
+            if !miss_ids.is_empty() {
+                let fetched = state
+                    .file_service
+                    .get_files_by_ids(user_id, &miss_ids)
+                    .await?;
+
+                if let Ok(mut conn) = pool.get().await {
+                    for (id, item) in miss_ids.iter().zip(fetched.iter()) {
+                        let Some(file) = item else { continue };
+                        if let Ok(body) = serde_json::to_string(file) {
+                            let cache_key = format!("cache:files:meta:{}:{}:{}", user_id, ver, id);
+                            let _: Result<(), _> = cmd("SETEX")
+                                .arg(cache_key)
+                                .arg(state.config.cache_default_ttl_secs)
+                                .arg(body)
+                                .query_async(&mut conn)
+                                .await;
+                        }
+                    }
+                }
+
+                for (id, item) in miss_ids.into_iter().zip(fetched.into_iter()) {
+                    if let Some(file) = item {
+                        cached_by_id.insert(id, file);
+                    }
+                }
+            }
+
+            let ordered: Vec<Option<FileResponse>> = req
+                .ids
+                .iter()
+                .map(|id| cached_by_id.get(id).cloned())
+                .collect();
+
+            return Ok(json_response(json!({ "files": ordered })));
+        }
+    }
+
     let files = state
         .file_service
         .get_files_by_ids(user_id, &req.ids)
@@ -85,6 +160,13 @@ pub async fn batch_download_zip_handler(
         .ok_or_else(|| AppError::Validation("Missing ids parameter".to_string()))?;
     let ids = parse_uuid_list(ids_str)?;
 
+    let _permit = state
+        .zip_build_semaphore
+        .clone()
+        .acquire_owned()
+        .await
+        .map_err(|_| AppError::Internal)?;
+
     // 生成 ZIP 文件
     let zip_data = state.file_service.batch_download_zip(&ids, user_id).await?;
 
@@ -111,10 +193,88 @@ pub async fn batch_download_zip_post_handler(
         .prepare_batch_zip_entries(&req.ids, user_id)
         .await?;
 
+    if state.config.zip_cache_enabled {
+        use tokio::io::{AsyncReadExt, AsyncSeekExt};
+        use tokio_util::io::ReaderStream;
+
+        let zip_build_permit = state
+            .zip_build_semaphore
+            .clone()
+            .acquire_owned()
+            .await
+            .map_err(|_| AppError::Internal)?;
+        let artifact = state
+            .file_service
+            .clone()
+            .get_or_create_cached_batch_zip(entries, user_id, Some(zip_build_permit))
+            .await?;
+
+        if let Some(range) = headers.get(header::RANGE).and_then(|v| v.to_str().ok()) {
+            let (start, end) = match parse_single_range(range, artifact.size) {
+                Ok(v) => v,
+                Err(_) => {
+                    let mut res = Response::builder()
+                        .status(StatusCode::RANGE_NOT_SATISFIABLE)
+                        .body(Body::empty())
+                        .map_err(|_| AppError::Internal)?;
+                    res.headers_mut().insert(
+                        header::CONTENT_RANGE,
+                        HeaderValue::from_str(&format!("bytes */{}", artifact.size))
+                            .map_err(|_| AppError::Internal)?,
+                    );
+                    return Ok(res);
+                }
+            };
+
+            let len = end - start + 1;
+            let mut f = tokio::fs::File::open(&artifact.path)
+                .await
+                .map_err(|e| AppError::File(format!("Failed to open zip file: {}", e)))?;
+
+            f.seek(std::io::SeekFrom::Start(start))
+                .await
+                .map_err(|e| AppError::File(format!("Failed to seek zip file: {}", e)))?;
+            let reader = f.take(len);
+            let body = Body::from_stream(ReaderStream::new(reader));
+
+            let mut res =
+                stream_file_response(body, "files.zip", "application/zip", false, Some(len))
+                    .map_err(|_| AppError::Internal)?;
+            *res.status_mut() = StatusCode::PARTIAL_CONTENT;
+            res.headers_mut().insert(
+                header::CONTENT_RANGE,
+                HeaderValue::from_str(&format!("bytes {}-{}/{}", start, end, artifact.size))
+                    .map_err(|_| AppError::Internal)?,
+            );
+            res.headers_mut()
+                .insert(header::ACCEPT_RANGES, HeaderValue::from_static("bytes"));
+            return Ok(res);
+        }
+
+        let f = tokio::fs::File::open(&artifact.path)
+            .await
+            .map_err(|e| AppError::File(format!("Failed to open zip file: {}", e)))?;
+        let body = Body::from_stream(ReaderStream::new(f));
+        return stream_file_response(
+            body,
+            "files.zip",
+            "application/zip",
+            false,
+            Some(artifact.size),
+        )
+        .map_err(|_| AppError::Internal);
+    }
+
     if let Some(range) = headers.get(header::RANGE).and_then(|v| v.to_str().ok()) {
         use tokio::io::{AsyncReadExt, AsyncSeekExt};
         use tokio_util::io::ReaderStream;
 
+        let zip_build_permit = state
+            .zip_build_semaphore
+            .clone()
+            .acquire_owned()
+            .await
+            .map_err(|_| AppError::Internal)?;
         let tmp_path = std::env::temp_dir().join(format!("files-{}.zip", Uuid::new_v4()));
 
         let (input_tx, input_rx) = mpsc::channel();
@@ -131,6 +291,7 @@ pub async fn batch_download_zip_post_handler(
 
         let tmp_path_for_write = tmp_path.clone();
         let total_size = tokio::task::spawn_blocking(move || -> Result<u64, AppError> {
+            let _permit = zip_build_permit;
             let f = std::fs::File::create(&tmp_path_for_write)
                 .map_err(|e| AppError::File(format!("Failed to create zip file: {}", e)))?;
             let size = write_zip_to_file(input_rx, f)
@@ -186,7 +347,16 @@ pub async fn batch_download_zip_post_handler(
     let (input_tx, input_rx) = mpsc::channel();
     let (output_tx, output_rx) = mpsc::sync_channel::<Vec<u8>>(32);
 
-    std::thread::spawn(move || run_zip_writer_thread(input_rx, output_tx));
+    let zip_build_permit = state
+        .zip_build_semaphore
+        .clone()
+        .acquire_owned()
+        .await
+        .map_err(|_| AppError::Internal)?;
+    std::thread::spawn(move || {
+        let _permit = zip_build_permit;
+        run_zip_writer_thread(input_rx, output_tx)
+    });
 
     let file_service = state.file_service.clone();
     tokio::spawn(async move {

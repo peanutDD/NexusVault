@@ -24,6 +24,65 @@ const SKIP_DIRS: &[&str] = &[".thumbnails", ".hls", ".chunked"];
 /// 孤儿扫描时每批用 `find_by_ids` 一次查库的 file_id 数量，减少 DB 往返
 const ORPHAN_DB_BATCH_SIZE: usize = 64;
 
+pub fn spawn_zip_cache_cleanup(base_dir: PathBuf, interval: Duration, ttl_secs: u64) {
+    tokio::spawn(async move {
+        let mut tick = tokio::time::interval(interval);
+        loop {
+            tick.tick().await;
+            let _ = cleanup_zip_cache_once(&base_dir, ttl_secs).await;
+        }
+    });
+}
+
+async fn cleanup_zip_cache_once(base_dir: &Path, ttl_secs: u64) -> anyhow::Result<u32> {
+    if !base_dir.exists() || !base_dir.is_dir() {
+        return Ok(0);
+    }
+
+    let mut deleted = 0u32;
+    let mut user_dirs = tokio::fs::read_dir(base_dir).await?;
+    while let Ok(Some(user_entry)) = user_dirs.next_entry().await {
+        let user_path = user_entry.path();
+        if !user_path.is_dir() {
+            continue;
+        }
+        let mut files = tokio::fs::read_dir(&user_path).await?;
+        while let Ok(Some(entry)) = files.next_entry().await {
+            let p = entry.path();
+            if !p.is_file() {
+                continue;
+            }
+            let meta = match entry.metadata().await {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            let modified = match meta.modified() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            let age_secs = match std::time::SystemTime::now().duration_since(modified) {
+                Ok(d) => d.as_secs(),
+                Err(_) => continue,
+            };
+
+            let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            let should_delete = if name.ends_with(".zip") {
+                age_secs > ttl_secs
+            } else if name.ends_with(".lock") || name.ends_with(".zip.tmp") {
+                age_secs > 300
+            } else {
+                false
+            };
+
+            if should_delete && tokio::fs::remove_file(&p).await.is_ok() {
+                deleted = deleted.saturating_add(1);
+            }
+        }
+    }
+
+    Ok(deleted)
+}
+
 // =============================================================================
 // 过期分块上传会话清理（释放临时目录与 DB）
 // =============================================================================

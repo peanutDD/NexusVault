@@ -40,13 +40,32 @@ use crate::utils::AppError; // 统一错误类型，SQLx 错误会转为 Databas
 /// 持有 `PgPool` 句柄，通过 `Arc<dyn FilesRepository>` 注入到 Service 层。
 /// 无内部可变状态，方法均为 `&self`，并发安全由连接池与数据库保证。
 pub struct SqlxFilesRepo {
-    pool: PgPool, // 连接池，每次操作从池中取连接，用毕归还
+    write_pool: PgPool,
+    read_pool: PgPool,
 }
 
 impl SqlxFilesRepo {
-    /// 从已有连接池构造仓库，不取得连接所有权，仅持有引用。
     pub fn new(pool: PgPool) -> Self {
-        Self { pool } // 不 clone pool，Arc 在调用方持有
+        let read_pool = pool.clone();
+        Self {
+            write_pool: pool,
+            read_pool,
+        }
+    }
+
+    pub fn new_with_replica(write_pool: PgPool, read_pool: PgPool) -> Self {
+        Self {
+            write_pool,
+            read_pool,
+        }
+    }
+
+    fn r(&self) -> &PgPool {
+        &self.read_pool
+    }
+
+    fn w(&self) -> &PgPool {
+        &self.write_pool
     }
 }
 
@@ -87,7 +106,7 @@ impl FilesRepository for SqlxFilesRepo {
         .bind(storage_backend) // "local" | "s3"
         .bind(content_sha256) // 可选，秒传与去重用
         .bind(folder_id) // 可选，NULL 表示根目录
-        .fetch_one(&self.pool) // 取 RETURNING 的一行
+        .fetch_one(self.w()) // 取 RETURNING 的一行
         .await
         .map_err(AppError::from) // sqlx::Error -> AppError::Database
     }
@@ -106,7 +125,7 @@ impl FilesRepository for SqlxFilesRepo {
         )
         .bind(content_sha256) // 十六进制字符串
         .bind(file_size as i64)
-        .fetch_optional(&self.pool) // 0 或 1 行
+        .fetch_optional(self.r()) // 0 或 1 行
         .await
         .map_err(AppError::from)
     }
@@ -119,7 +138,7 @@ impl FilesRepository for SqlxFilesRepo {
         let count: (i64,) =
             sqlx::query_as("SELECT COUNT(*)::BIGINT FROM files WHERE file_path = $1")
                 .bind(file_path)
-                .fetch_one(&self.pool)
+                .fetch_one(self.r())
                 .await?;
         Ok(count.0 as u64) // 单列元组取 .0，转为无符号
     }
@@ -139,7 +158,7 @@ impl FilesRepository for SqlxFilesRepo {
             "SELECT file_path, COUNT(*)::BIGINT FROM files WHERE file_path = ANY($1) GROUP BY file_path",
         )
         .bind(paths)
-        .fetch_all(&self.pool)
+        .fetch_all(self.r())
         .await?;
         Ok(rows.into_iter().map(|(p, c)| (p, c as u64)).collect())
     }
@@ -156,7 +175,7 @@ impl FilesRepository for SqlxFilesRepo {
         sqlx::query_as::<_, File>("SELECT * FROM files WHERE id = $1 AND user_id = $2")
             .bind(file_id)
             .bind(user_id) // 双重条件防止越权
-            .fetch_optional(&self.pool)
+            .fetch_optional(self.r())
             .await
             .map_err(AppError::from)
     }
@@ -170,7 +189,7 @@ impl FilesRepository for SqlxFilesRepo {
             sqlx::query_scalar("SELECT id FROM files WHERE id = $1 AND user_id = $2")
                 .bind(file_id)
                 .bind(user_id)
-                .fetch_optional(&self.pool)
+                .fetch_optional(self.r())
                 .await?;
         Ok(result.is_some()) // 有行即属于该用户
     }
@@ -188,7 +207,7 @@ impl FilesRepository for SqlxFilesRepo {
             .bind(user_id)
             .bind(original_filename)
             .bind(fid)
-            .fetch_optional(&self.pool)
+            .fetch_optional(self.r())
             .await?
         } else {
             sqlx::query_as::<_, File>(
@@ -196,7 +215,7 @@ impl FilesRepository for SqlxFilesRepo {
             )
             .bind(user_id)
             .bind(original_filename)
-            .fetch_optional(&self.pool)
+            .fetch_optional(self.r())
             .await?
         };
         Ok(file)
@@ -219,7 +238,7 @@ impl FilesRepository for SqlxFilesRepo {
         .bind(original_filename)
         .bind(file_id)
         .bind(user_id)
-        .fetch_one(&self.pool)
+        .fetch_one(self.w())
         .await
         .map_err(AppError::from)
     }
@@ -241,7 +260,7 @@ impl FilesRepository for SqlxFilesRepo {
         )
         .bind(user_id)
         .bind(folder_id)
-        .fetch_all(&self.pool)
+        .fetch_all(self.r())
         .await
         .map_err(AppError::from)
     }
@@ -254,7 +273,7 @@ impl FilesRepository for SqlxFilesRepo {
         let result = sqlx::query("DELETE FROM files WHERE id = $1 AND user_id = $2")
             .bind(file_id)
             .bind(user_id)
-            .execute(&self.pool)
+            .execute(self.w())
             .await?;
         Ok(result.rows_affected()) // 0 或 1
     }
@@ -266,7 +285,7 @@ impl FilesRepository for SqlxFilesRepo {
         let result = sqlx::query("DELETE FROM files WHERE user_id = $1 AND id = ANY($2)")
             .bind(user_id)
             .bind(ids) // PostgreSQL 数组，只删本用户的 id
-            .execute(&self.pool)
+            .execute(self.w())
             .await?;
         Ok(result.rows_affected())
     }
@@ -284,7 +303,7 @@ impl FilesRepository for SqlxFilesRepo {
             "SELECT COALESCE(SUM(file_size)::BIGINT, 0), COUNT(*)::BIGINT FROM files WHERE user_id = $1",
         )
         .bind(user_id)
-        .fetch_one(&self.pool) // 聚合始终一行
+        .fetch_one(self.r()) // 聚合始终一行
         .await?;
         Ok((total_size, file_count as u64))
     }
@@ -298,7 +317,7 @@ impl FilesRepository for SqlxFilesRepo {
             "SELECT DISTINCT category FROM files WHERE user_id = $1 AND category IS NOT NULL AND TRIM(category) != '' ORDER BY category",
         )
         .bind(user_id)
-        .fetch_all(&self.pool) // 返回单列多行，自动 Vec<String>
+        .fetch_all(self.r()) // 返回单列多行，自动 Vec<String>
         .await
         .map_err(AppError::from)
     }
@@ -324,7 +343,7 @@ impl FilesRepository for SqlxFilesRepo {
         .bind(updated_at)
         .bind(user_id)
         .bind(ids)
-        .execute(&self.pool)
+        .execute(self.w())
         .await?;
 
         Ok(result.rows_affected())
@@ -348,7 +367,7 @@ impl FilesRepository for SqlxFilesRepo {
         )
         .bind(user_id)
         .bind(ids)
-        .fetch_one(&self.pool) // 聚合结果始终一行
+        .fetch_one(self.r()) // 聚合结果始终一行
         .await?;
         Ok((found_count, total_size))
     }
@@ -363,7 +382,7 @@ impl FilesRepository for SqlxFilesRepo {
         sqlx::query_as::<_, File>("SELECT * FROM files WHERE user_id = $1 AND id = ANY($2)")
             .bind(user_id)
             .bind(ids)
-            .fetch_all(&self.pool) // 顺序与 ids 不一定一致
+            .fetch_all(self.r()) // 顺序与 ids 不一定一致
             .await
             .map_err(AppError::from)
     }
@@ -384,7 +403,7 @@ impl FilesRepository for SqlxFilesRepo {
         )
         .bind(user_id)
         .bind(ids)
-        .fetch_all(&self.pool) // 仅两列，供批量删存储用
+        .fetch_all(self.r()) // 仅两列，供批量删存储用
         .await
         .map_err(AppError::from)
     }
@@ -410,9 +429,11 @@ impl FilesRepository for SqlxFilesRepo {
     async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<FileListResult, AppError> {
         use chrono::{DateTime, NaiveDateTime, Utc};
         use sqlx::QueryBuilder;
+        use uuid::Uuid;
 
         let limit = query.limit.unwrap_or(20).min(100); // 单页最多 100 条
-        let use_cursor_pagination = query.cursor.is_some(); // 是否使用游标分页
+        let use_cursor_pagination =
+            query.cursor.is_some() || matches!(query.pagination.as_deref(), Some("cursor")); // 是否使用游标分页
 
         // ---- 筛选条件预解析（空字符串视为未传，不参与 WHERE） ----
         let search_pattern: Option<String> = query
@@ -518,38 +539,75 @@ impl FilesRepository for SqlxFilesRepo {
         };
 
         // ---- 游标解析（如果使用游标分页） ----
-        // 使用枚举表示不同类型的游标值
         enum CursorValue {
             DateTime(DateTime<Utc>),
             String(String),
             Int64(i64),
         }
 
-        let cursor_value: Option<CursorValue> = if use_cursor_pagination {
-            let cursor_str = query.cursor.as_deref().unwrap_or("");
+        #[derive(serde::Deserialize, serde::Serialize)]
+        struct CursorTokenV1 {
+            v: u8,
+            sort_by: String,
+            sort_order: String,
+            value: String,
+            id: Uuid,
+        }
+
+        fn parse_cursor_value(
+            sort_column: &str,
+            cursor_str: &str,
+        ) -> Option<CursorValue> {
             match sort_column {
-                "created_at" => {
-                    // 解析 ISO 8601 时间戳
-                    DateTime::parse_from_rfc3339(cursor_str)
-                        .ok()
-                        .map(|dt| CursorValue::DateTime(dt.with_timezone(&Utc)))
-                        .or_else(|| {
-                            NaiveDateTime::parse_from_str(cursor_str, "%Y-%m-%d %H:%M:%S%.f")
-                                .ok()
-                                .map(|dt| {
-                                    CursorValue::DateTime(
-                                        DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc),
-                                    )
-                                })
-                        })
-                }
+                "created_at" => DateTime::parse_from_rfc3339(cursor_str)
+                    .ok()
+                    .map(|dt| CursorValue::DateTime(dt.with_timezone(&Utc)))
+                    .or_else(|| {
+                        NaiveDateTime::parse_from_str(cursor_str, "%Y-%m-%d %H:%M:%S%.f")
+                            .ok()
+                            .map(|dt| {
+                                CursorValue::DateTime(DateTime::<Utc>::from_naive_utc_and_offset(
+                                    dt, Utc,
+                                ))
+                            })
+                    }),
                 "original_filename" => Some(CursorValue::String(cursor_str.to_string())),
                 "file_size" => cursor_str.parse::<i64>().ok().map(CursorValue::Int64),
                 _ => None,
             }
-        } else {
-            None
-        };
+        }
+
+        let (cursor_value, cursor_id, cursor_has_id): (Option<CursorValue>, Option<Uuid>, bool) =
+            if use_cursor_pagination {
+                let cursor_str = query.cursor.as_deref().unwrap_or("");
+                if let Ok(token) = serde_json::from_str::<CursorTokenV1>(cursor_str) {
+                    if token.v != 1 {
+                        return Err(AppError::Validation("无效的 cursor 版本".to_string()));
+                    }
+
+                    let expected_sort_by = match sort_column {
+                        "created_at" => "created_at",
+                        "original_filename" => "filename",
+                        "file_size" => "file_size",
+                        _ => "created_at",
+                    };
+                    let expected_sort_order = if sort_direction == "ASC" { "asc" } else { "desc" };
+                    if token.sort_by != expected_sort_by || token.sort_order != expected_sort_order {
+                        return Err(AppError::Validation(
+                            "cursor 与 sort_by/sort_order 不匹配".to_string(),
+                        ));
+                    }
+                    (
+                        parse_cursor_value(sort_column, &token.value),
+                        Some(token.id),
+                        true,
+                    )
+                } else {
+                    (parse_cursor_value(sort_column, cursor_str), None, false)
+                }
+            } else {
+                (None, None, false)
+            };
 
         // ---- 动态拼接 SELECT + WHERE + ORDER BY + LIMIT/OFFSET 或 LIMIT（游标分页） ----
         // 传统分页使用 COUNT(*) OVER() 获取总条数（除非 include_total=false），游标分页不需要
@@ -619,40 +677,41 @@ impl FilesRepository for SqlxFilesRepo {
             qb.push_bind(size_max);
         }
 
-        // ---- 游标分页：添加 WHERE sort_column > cursor（DESC）或 < cursor（ASC）条件 ----
+        // ---- 游标分页：添加 WHERE keyset 条件 ----
         if use_cursor_pagination {
             if let Some(cursor) = &cursor_value {
-                if sort_direction == "DESC" {
-                    // DESC 排序：WHERE sort_column < cursor（获取更早的记录）
-                    qb.push(" AND ");
-                    qb.push(sort_column);
-                    qb.push(" < ");
-                    match cursor {
-                        CursorValue::DateTime(dt) => {
-                            qb.push_bind(*dt);
-                        }
-                        CursorValue::String(s) => {
-                            qb.push_bind(s);
-                        }
-                        CursorValue::Int64(n) => {
-                            qb.push_bind(*n);
-                        }
+                if cursor_has_id {
+                    let Some(cid) = cursor_id else {
+                        return Err(AppError::Validation("无效的 cursor".to_string()));
                     };
+                    qb.push(" AND (");
+                    qb.push(sort_column);
+                    qb.push(", id) ");
+                    if sort_direction == "DESC" {
+                        qb.push(" < (");
+                    } else {
+                        qb.push(" > (");
+                    }
+                    match cursor {
+                        CursorValue::DateTime(dt) => qb.push_bind(*dt),
+                        CursorValue::String(s) => qb.push_bind(s),
+                        CursorValue::Int64(n) => qb.push_bind(*n),
+                    };
+                    qb.push(", ");
+                    qb.push_bind(cid);
+                    qb.push(")");
                 } else {
-                    // ASC 排序：WHERE sort_column > cursor（获取更晚的记录）
                     qb.push(" AND ");
                     qb.push(sort_column);
-                    qb.push(" > ");
+                    if sort_direction == "DESC" {
+                        qb.push(" < ");
+                    } else {
+                        qb.push(" > ");
+                    }
                     match cursor {
-                        CursorValue::DateTime(dt) => {
-                            qb.push_bind(*dt);
-                        }
-                        CursorValue::String(s) => {
-                            qb.push_bind(s);
-                        }
-                        CursorValue::Int64(n) => {
-                            qb.push_bind(*n);
-                        }
+                        CursorValue::DateTime(dt) => qb.push_bind(*dt),
+                        CursorValue::String(s) => qb.push_bind(s),
+                        CursorValue::Int64(n) => qb.push_bind(*n),
                     };
                 }
             }
@@ -668,7 +727,12 @@ impl FilesRepository for SqlxFilesRepo {
             qb.push(sort_direction);
         }
         qb.push(" LIMIT ");
-        qb.push_bind(limit as i64);
+        let limit_plus_one: i64 = if use_cursor_pagination {
+            (limit as i64) + 1
+        } else {
+            limit as i64
+        };
+        qb.push_bind(limit_plus_one);
 
         // 传统分页才使用 OFFSET
         if !use_cursor_pagination {
@@ -679,7 +743,7 @@ impl FilesRepository for SqlxFilesRepo {
         }
 
         // 在独立事务中执行列表查询，并设置 3s 超时，避免慢查询占用连接池影响其他请求
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.r().begin().await?;
         sqlx::query("SET LOCAL statement_timeout = '3s'")
             .execute(&mut *tx)
             .await?;
@@ -704,13 +768,36 @@ impl FilesRepository for SqlxFilesRepo {
 
         // 计算返回值：传统分页返回 total_count，游标分页返回 next_cursor
         if use_cursor_pagination {
-            // 游标分页：返回 next_cursor（最后一条记录的排序字段值）
-            let next_cursor = files.last().map(|file| match sort_column {
-                "created_at" => file.created_at.to_rfc3339(),
-                "original_filename" => file.original_filename.clone(),
-                "file_size" => file.file_size.to_string(),
-                _ => String::new(),
-            });
+            let has_more = files.len() > limit as usize;
+            let mut files = files;
+            if has_more {
+                files.truncate(limit as usize);
+            }
+
+            let next_cursor = if has_more {
+                files.last().map(|file| {
+                    let (sort_by, sort_order) = (
+                        query.sort_by.clone().unwrap_or_else(|| "created_at".to_string()),
+                        query.sort_order.clone().unwrap_or_else(|| "desc".to_string()),
+                    );
+                    let value = match sort_column {
+                        "created_at" => file.created_at.to_rfc3339(),
+                        "original_filename" => file.original_filename.clone(),
+                        "file_size" => file.file_size.to_string(),
+                        _ => String::new(),
+                    };
+                    serde_json::to_string(&CursorTokenV1 {
+                        v: 1,
+                        sort_by,
+                        sort_order,
+                        value,
+                        id: file.id,
+                    })
+                    .unwrap_or_default()
+                })
+            } else {
+                None
+            };
             Ok(FileListResult {
                 files,
                 total: None,

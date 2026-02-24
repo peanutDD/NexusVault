@@ -31,6 +31,7 @@ use file_storage_backend::services::maintenance::{
     spawn_files_consistency_checker,
     spawn_orphan_storage_files_cleanup,
     spawn_upload_session_cleanup,
+    spawn_zip_cache_cleanup,
 };
 use file_storage_backend::services::redis::create_pool as create_redis_pool;
 use file_storage_backend::AppState;
@@ -96,6 +97,10 @@ async fn async_main() -> anyhow::Result<()> {
     dotenv::dotenv().ok(); // 加载 .env，忽略缺失
     let config = Arc::new(Config::from_env()?); // 从环境变量构建配置并共享
     let pool = create_pool(&config.database_url).await?; // 创建 SQLx 连接池
+    let read_pool = match config.read_replica_database_url.as_deref() {
+        Some(url) => create_pool(url).await?,
+        None => pool.clone(),
+    };
 
     // 执行 migrations 目录下的 SQL 迁移
     sqlx::migrate!("./migrations")
@@ -126,7 +131,7 @@ async fn async_main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let app_state = AppState::new(config.clone(), pool, storage, redis);
+    let app_state = AppState::new(config.clone(), pool, read_pool, storage, redis);
 
     // ---------- 后台维护任务（常驻定时） ----------
     // 定期清理过期的分片上传会话与临时文件
@@ -155,6 +160,12 @@ async fn async_main() -> anyhow::Result<()> {
             config.orphan_cleanup_interval_secs,
             config.orphan_cleanup_batch_limit
         );
+    }
+
+    if config.zip_cache_enabled && config.zip_cache_backend == "local" {
+        let base_dir = std::path::Path::new(&config.storage_path)
+            .join(".zip_cache");
+        spawn_zip_cache_cleanup(base_dir, Duration::from_secs(300), config.zip_cache_ttl_secs);
     }
 
     // ---------- 构建 Axum 应用并启动 HTTP 服务 ----------

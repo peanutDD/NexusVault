@@ -66,6 +66,17 @@ pub trait StorageBackend: Send + Sync {
         end_inclusive: u64,
     ) -> Result<StorageReadStream, AppError>;
 
+    async fn presign_download_url(
+        &self,
+        file_path: &str,
+        expires_secs: u64,
+        response_content_type: Option<&str>,
+        response_content_disposition: Option<&str>,
+    ) -> Result<Option<String>, AppError> {
+        let _ = (file_path, expires_secs, response_content_type, response_content_disposition);
+        Ok(None)
+    }
+
     async fn delete_file(&self, file_path: &str) -> Result<(), AppError>;
 
     /// 读取已生成的缩略图（若存在）。按用户隔离：Local 为 {base}/{user_id}/.thumbnails/{file_id}.jpg，S3 为 {user_id}/.thumbnails/{file_id}.jpg。
@@ -444,6 +455,38 @@ impl StorageBackend for S3Storage {
             .map_err(|e| s3_to_app_error(&e, "get ranged file"))?;
 
         Ok(StorageReadStream::S3(response.body))
+    }
+
+    async fn presign_download_url(
+        &self,
+        file_path: &str,
+        expires_secs: u64,
+        response_content_type: Option<&str>,
+        response_content_disposition: Option<&str>,
+    ) -> Result<Option<String>, AppError> {
+        use aws_sdk_s3::presigning::PresigningConfig;
+        use std::time::Duration;
+
+        let mut req = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(file_path);
+
+        if let Some(v) = response_content_type {
+            req = req.response_content_type(v);
+        }
+        if let Some(v) = response_content_disposition {
+            req = req.response_content_disposition(v);
+        }
+
+        let cfg = PresigningConfig::expires_in(Duration::from_secs(expires_secs))
+            .map_err(|e| AppError::Storage(format!("Invalid presign ttl: {}", e)))?;
+        let presigned = req
+            .presigned(cfg)
+            .await
+            .map_err(|e| AppError::Storage(format!("Failed to presign S3 url: {}", e)))?;
+        Ok(Some(presigned.uri().to_string()))
     }
 
     async fn delete_file(&self, file_path: &str) -> Result<(), AppError> {

@@ -54,7 +54,7 @@ pub struct File {
 /// 文件响应
 ///
 /// 返回给客户端的文件信息（隐藏内部存储路径等敏感信息）。
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FileResponse {
     pub id: Uuid,
     pub filename: String,
@@ -93,11 +93,11 @@ pub struct FileListQuery {
     pub page: Option<u32>,
     /// 每页数量（默认 20，最大 100）
     pub limit: Option<u32>,
+    /// 分页模式：offset（默认）或 cursor
+    pub pagination: Option<String>,
     /// 游标值（用于 keyset/游标分页）
-    /// - 如果 `sort_by = created_at`：ISO 8601 时间戳字符串
-    /// - 如果 `sort_by = filename`：文件名字符串
-    /// - 如果 `sort_by = file_size`：文件大小数字（字符串形式）
-    ///   如果提供了 `cursor`，则使用游标分页（WHERE sort_column > cursor），否则使用传统分页（OFFSET）
+    /// - v1：JSON 字符串，包含 sort_by/sort_order/最后一条记录的排序值与 id
+    /// - 兼容旧值：仍可传排序字段的裸值（但无法保证同排序值时不重复/不漏）
     pub cursor: Option<String>,
     /// 搜索关键词（匹配文件名）
     pub search: Option<String>,

@@ -4,6 +4,7 @@ use std::time::Duration;
 use axum::routing::get;
 use axum::Router;
 use metrics::gauge;
+use tokio::sync::Semaphore;
 
 use file_storage_backend::config::Config;
 use file_storage_backend::database::pool::create_pool;
@@ -22,19 +23,38 @@ async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     let config = Arc::new(Config::from_env()?);
     let pool = create_pool(&config.database_url).await?;
+    let read_pool = match config.read_replica_database_url.as_deref() {
+        Some(url) => create_pool(url).await?,
+        None => pool.clone(),
+    };
     let storage = create_storage(config.clone()).await?;
-    let state = AppState::new(config.clone(), pool, storage, None);
+    let state = AppState::new(config.clone(), pool, read_pool, storage, None);
 
     let concurrency: usize = std::env::var("WORKER_CONCURRENCY")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(2);
 
+    let transcode_semaphore = Arc::new(Semaphore::new(config.transcode_max_concurrent));
+    let gif_preview_semaphore = config
+        .task_type_concurrency
+        .get("gif_preview")
+        .copied()
+        .map(|n| Arc::new(Semaphore::new(n)));
+
     for _ in 0..concurrency {
         let state_for_worker = state.clone();
+        let transcode_semaphore = transcode_semaphore.clone();
+        let gif_preview_semaphore = gif_preview_semaphore.clone();
         tokio::spawn(async move {
             loop {
-                if let Err(e) = run_gif_preview_worker(&state_for_worker).await {
+                if let Err(e) = run_gif_preview_worker(
+                    &state_for_worker,
+                    transcode_semaphore.clone(),
+                    gif_preview_semaphore.clone(),
+                )
+                .await
+                {
                     tracing::error!("gif_preview worker iteration failed: {}", e);
                 }
                 tokio::time::sleep(Duration::from_secs(2)).await;
@@ -109,4 +129,3 @@ fn init_tracing() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     fmt().with_env_filter(filter).init();
 }
-

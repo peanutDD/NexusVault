@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use deadpool_redis::Pool as RedisPool;
 use sqlx::PgPool;
+use tokio::sync::Semaphore;
 
 use crate::config::Config;
 use crate::repositories::{
@@ -19,7 +20,7 @@ use crate::services::cache::CacheService;
 use crate::services::embeddings::EmbeddingService;
 use crate::services::file::FileService;
 use crate::services::storage::StorageBackend;
-use crate::services::task_queue::TaskQueue;
+use crate::services::task_queue::{DynTaskQueue, TaskQueue};
 
 /// 应用共享状态
 ///
@@ -45,6 +46,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     /// 数据库连接池
     pub pool: PgPool,
+    pub read_pool: PgPool,
     pub redis: Option<RedisPool>,
     /// 存储后端（本地文件系统或 S3）
     pub storage: Arc<dyn StorageBackend>,
@@ -53,9 +55,10 @@ pub struct AppState {
     /// 文件服务（统一构造并注入，避免各 handler 内重复 from_state）
     pub file_service: Arc<FileService>,
     /// 后台任务队列（GIF 转码、缩略图重建等）
-    pub task_queue: Arc<TaskQueue>,
+    pub task_queue: DynTaskQueue,
     /// 嵌入服务（用于语义搜索）
     pub embedding_service: Option<Arc<EmbeddingService>>,
+    pub zip_build_semaphore: Arc<Semaphore>,
 }
 
 impl AppState {
@@ -68,10 +71,14 @@ impl AppState {
     pub fn new(
         config: Arc<Config>,
         pool: PgPool,
+        read_pool: PgPool,
         storage: Arc<dyn StorageBackend>,
         redis: Option<RedisPool>,
     ) -> Self {
-        let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(pool.clone()));
+        let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new_with_replica(
+            pool.clone(),
+            read_pool.clone(),
+        ));
         let file_versions_repo: DynFileVersionsRepo =
             Arc::new(SqlxFileVersionsRepo::new(pool.clone()));
         let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(pool.clone()));
@@ -93,17 +100,20 @@ impl AppState {
             embedding_service.clone(),
         ));
 
-        let task_queue = Arc::new(TaskQueue::new(Arc::new(pool.clone())));
+        let task_queue: DynTaskQueue = Arc::new(TaskQueue::new(Arc::new(pool.clone())));
+        let zip_build_semaphore = Arc::new(Semaphore::new(config.zip_build_max_concurrent));
 
         Self {
             config,
             pool,
+            read_pool,
             redis,
             storage,
             cache: CacheService::new(),
             file_service,
             task_queue,
             embedding_service,
+            zip_build_semaphore,
         }
     }
 }

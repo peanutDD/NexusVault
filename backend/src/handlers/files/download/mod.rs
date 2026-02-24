@@ -55,6 +55,29 @@ async fn file_get_or_head_response(
 
     let file = state.file_service.get_file(file_id, user_id).await?;
 
+    if state.config.download_mode != "proxy" {
+        let cd_type = if inline { "inline" } else { "attachment" };
+        let filename = file.original_filename.replace('"', "");
+        let content_disposition = format!("{}; filename=\"{}\"", cd_type, filename);
+        let url = state
+            .storage
+            .presign_download_url(
+                &file.file_path,
+                state.config.presign_ttl_secs,
+                Some(&file.mime_type),
+                Some(&content_disposition),
+            )
+            .await?
+            .ok_or(AppError::Internal)?;
+
+        let res = Response::builder()
+            .status(StatusCode::FOUND)
+            .header(header::LOCATION, url)
+            .body(axum::body::Body::empty())
+            .map_err(|_| AppError::Internal)?;
+        return Ok(res);
+    }
+
     let total_size = file.file_size.max(0) as u64;
     let etag_str = compute_etag(file.id, file.updated_at.timestamp(), total_size);
     let last_modified_str = {
@@ -412,9 +435,13 @@ pub async fn hls_prepare_handler(
     }
     let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
+    let master_path = out_dir.join("master.m3u8");
     if tokio::fs::try_exists(&playlist_path)
         .await
         .map_err(|e| AppError::File(e.to_string()))?
+        || tokio::fs::try_exists(&master_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?
     {
         return Ok(Json(json!({ "status": "ready" })));
     }
@@ -470,9 +497,13 @@ pub async fn hls_status_handler(
     }
     let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
+    let master_path = out_dir.join("master.m3u8");
     let status = if tokio::fs::try_exists(&playlist_path)
         .await
         .map_err(|e| AppError::File(e.to_string()))?
+        || tokio::fs::try_exists(&master_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?
     {
         "ready"
     } else {
@@ -499,6 +530,7 @@ pub async fn hls_playlist_handler(
     let file = state.file_service.get_file(file_id, user_id).await?;
     let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
+    let master_path = out_dir.join("master.m3u8");
     let lock_key = format!("lock:hls:{}", file_id);
     let mut acquired = false;
     if let Some(pool) = &state.redis {
@@ -515,10 +547,13 @@ pub async fn hls_playlist_handler(
         }
     }
     if acquired {
-        let exists = tokio::fs::try_exists(&playlist_path)
+        let exists_playlist = tokio::fs::try_exists(&playlist_path)
             .await
             .map_err(|e| AppError::File(e.to_string()))?;
-        if !exists {
+        let exists_master = tokio::fs::try_exists(&master_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?;
+        if !exists_playlist && !exists_master {
             let state_for_task = state.clone();
             let file_for_task = file.clone();
             let lock_key_for_task = lock_key.clone();
@@ -546,10 +581,13 @@ pub async fn hls_playlist_handler(
     } else {
         let mut ready = false;
         for _ in 0..60 {
-            if tokio::fs::try_exists(&playlist_path)
+            let exists_playlist = tokio::fs::try_exists(&playlist_path)
                 .await
-                .map_err(|e| AppError::File(e.to_string()))?
-            {
+                .map_err(|e| AppError::File(e.to_string()))?;
+            let exists_master = tokio::fs::try_exists(&master_path)
+                .await
+                .map_err(|e| AppError::File(e.to_string()))?;
+            if exists_playlist || exists_master {
                 ready = true;
                 break;
             }
@@ -559,10 +597,17 @@ pub async fn hls_playlist_handler(
             return Ok(hls_processing_response(2));
         }
     }
-    let data = tokio::fs::read(&playlist_path)
+    let pick = if tokio::fs::try_exists(&master_path)
+        .await
+        .map_err(|e| AppError::File(e.to_string()))?
+    {
+        master_path
+    } else {
+        playlist_path
+    };
+    let data = tokio::fs::read(&pick)
         .await
         .map_err(|e| AppError::File(format!("读取 HLS 列表失败: {}", e)))?;
-    // 重写 segment 引用：segment000.ts -> hls/segment000.ts，使相对 base .../hls 解析到 .../hls/segment000.ts
     let rewritten = rewrite_hls_segment_refs(&data);
     crate::utils::response::file_response(
         rewritten,
@@ -581,10 +626,12 @@ fn rewrite_hls_segment_refs(data: &[u8]) -> Vec<u8> {
         let trimmed = line.trim();
         if !trimmed.is_empty()
             && !trimmed.starts_with('#')
-            && trimmed.ends_with(".ts")
+            && (trimmed.ends_with(".ts") || trimmed.ends_with(".m3u8"))
             && trimmed
                 .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
+                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '/')
+            && !trimmed.contains("..")
+            && !trimmed.starts_with("hls/")
         {
             let _ = writeln!(out, "hls/{}", trimmed);
         } else {
@@ -598,7 +645,7 @@ fn rewrite_hls_segment_refs(data: &[u8]) -> Vec<u8> {
 pub async fn hls_asset_handler(
     State(state): State<AppState>,
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
-    Path((file_id, filename)): Path<(Uuid, String)>,
+    Path((file_id, path)): Path<(Uuid, String)>,
 ) -> Result<Response, AppError> {
     let file = state.file_service.get_file(file_id, user_id).await?;
     if !state.file_service.should_use_hls(&file) {
@@ -606,6 +653,7 @@ pub async fn hls_asset_handler(
     }
     let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
+    let master_path = out_dir.join("master.m3u8");
     let lock_key = format!("lock:hls:{}", file_id);
     let mut acquired = false;
     if let Some(pool) = &state.redis {
@@ -622,10 +670,13 @@ pub async fn hls_asset_handler(
         }
     }
     if acquired {
-        let exists = tokio::fs::try_exists(&playlist_path)
+        let exists_playlist = tokio::fs::try_exists(&playlist_path)
             .await
             .map_err(|e| AppError::File(e.to_string()))?;
-        if !exists {
+        let exists_master = tokio::fs::try_exists(&master_path)
+            .await
+            .map_err(|e| AppError::File(e.to_string()))?;
+        if !exists_playlist && !exists_master {
             let state_for_task = state.clone();
             let file_for_task = file.clone();
             let lock_key_for_task = lock_key.clone();
@@ -653,10 +704,13 @@ pub async fn hls_asset_handler(
     } else {
         let mut ready = false;
         for _ in 0..60 {
-            if tokio::fs::try_exists(&playlist_path)
+            let exists_playlist = tokio::fs::try_exists(&playlist_path)
                 .await
-                .map_err(|e| AppError::File(e.to_string()))?
-            {
+                .map_err(|e| AppError::File(e.to_string()))?;
+            let exists_master = tokio::fs::try_exists(&master_path)
+                .await
+                .map_err(|e| AppError::File(e.to_string()))?;
+            if exists_playlist || exists_master {
                 ready = true;
                 break;
             }
@@ -666,29 +720,34 @@ pub async fn hls_asset_handler(
             return Ok(hls_processing_response(2));
         }
     }
-    let safe_name = filename
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
-        && (filename.ends_with(".ts") || filename.ends_with(".m3u8"))
-        && !filename.contains("..");
-    if !safe_name {
+    use std::path::Component;
+    if path.is_empty() || path.contains("..") {
         return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
     }
-    let path = out_dir.join(&filename);
-    let parent = path
-        .parent()
-        .ok_or_else(|| AppError::Validation("无效的 HLS 资源名".to_string()))?;
-    if parent != out_dir.as_path() {
+    let ok_ext = path.ends_with(".ts") || path.ends_with(".m3u8");
+    if !ok_ext {
         return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
     }
-    let data = tokio::fs::read(&path)
+    let safe_components = std::path::Path::new(&path).components().all(|c| match c {
+        Component::Normal(s) => s
+            .to_string_lossy()
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '_'),
+        _ => false,
+    });
+    if !safe_components {
+        return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
+    }
+    let fs_path = out_dir.join(&path);
+    let data = tokio::fs::read(&fs_path)
         .await
         .map_err(|_| AppError::NotFound)?;
-    let mime = if filename.ends_with(".m3u8") {
+    let mime = if path.ends_with(".m3u8") {
         "application/vnd.apple.mpegurl"
     } else {
         "video/MP2T"
     };
-    crate::utils::response::file_response(data, &filename, mime, true)
+    let filename = path.rsplit('/').next().unwrap_or(&path);
+    crate::utils::response::file_response(data, filename, mime, true)
         .map_err(|_| AppError::Internal)
 }

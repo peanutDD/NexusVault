@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use async_trait::async_trait;
 use metrics::{counter, histogram};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, PgPool};
@@ -71,6 +72,45 @@ pub struct TaskQueueDepth {
 pub struct TaskQueue {
     pool: Arc<PgPool>,
 }
+
+#[async_trait]
+pub trait TaskQueueProvider: Send + Sync {
+    async fn enqueue_task(
+        &self,
+        task_type: &str,
+        payload: serde_json::Value,
+        dedupe_key: Option<&str>,
+    ) -> Result<BackgroundTask, AppError>;
+
+    async fn dequeue_pending_task(&self, task_type: &str) -> Result<Option<BackgroundTask>, AppError>;
+
+    async fn mark_succeeded(&self, task_id: Uuid) -> Result<(), AppError>;
+
+    async fn mark_failed(&self, task_id: Uuid, msg: &str) -> Result<(), AppError>;
+
+    async fn mark_pending_with_error(
+        &self,
+        task_id: Uuid,
+        attempts: i32,
+        msg: &str,
+    ) -> Result<(), AppError>;
+
+    async fn requeue_stuck_tasks(&self, task_type: &str, limit: i64) -> Result<i64, AppError>;
+
+    async fn get_queue_depth(&self, task_type: &str) -> Result<TaskQueueDepth, AppError>;
+
+    async fn list_tasks(
+        &self,
+        task_type: Option<&str>,
+        status: Option<&str>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<AdminTask>, AppError>;
+
+    async fn retry_task(&self, task_id: Uuid) -> Result<bool, AppError>;
+}
+
+pub type DynTaskQueue = Arc<dyn TaskQueueProvider>;
 
 fn retry_delay_secs(attempts: i32, task_id: Uuid) -> i64 {
     let exp = (attempts - 1).clamp(0, 10) as u32;
@@ -459,6 +499,61 @@ impl TaskQueue {
     }
 }
 
+#[async_trait]
+impl TaskQueueProvider for TaskQueue {
+    async fn enqueue_task(
+        &self,
+        task_type: &str,
+        payload: serde_json::Value,
+        dedupe_key: Option<&str>,
+    ) -> Result<BackgroundTask, AppError> {
+        TaskQueue::enqueue_task(self, task_type, payload, dedupe_key).await
+    }
+
+    async fn dequeue_pending_task(&self, task_type: &str) -> Result<Option<BackgroundTask>, AppError> {
+        TaskQueue::dequeue_pending_task(self, task_type).await
+    }
+
+    async fn mark_succeeded(&self, task_id: Uuid) -> Result<(), AppError> {
+        TaskQueue::mark_succeeded(self, task_id).await
+    }
+
+    async fn mark_failed(&self, task_id: Uuid, msg: &str) -> Result<(), AppError> {
+        TaskQueue::mark_failed(self, task_id, msg).await
+    }
+
+    async fn mark_pending_with_error(
+        &self,
+        task_id: Uuid,
+        attempts: i32,
+        msg: &str,
+    ) -> Result<(), AppError> {
+        TaskQueue::mark_pending_with_error(self, task_id, attempts, msg).await
+    }
+
+    async fn requeue_stuck_tasks(&self, task_type: &str, limit: i64) -> Result<i64, AppError> {
+        TaskQueue::requeue_stuck_tasks(self, task_type, limit).await
+    }
+
+    async fn get_queue_depth(&self, task_type: &str) -> Result<TaskQueueDepth, AppError> {
+        TaskQueue::get_queue_depth(self, task_type).await
+    }
+
+    async fn list_tasks(
+        &self,
+        task_type: Option<&str>,
+        status: Option<&str>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<AdminTask>, AppError> {
+        TaskQueue::list_tasks(self, task_type, status, limit, offset).await
+    }
+
+    async fn retry_task(&self, task_id: Uuid) -> Result<bool, AppError> {
+        TaskQueue::retry_task(self, task_id).await
+    }
+}
+
 /// GIF 预览转码任务的 payload 模式。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GifPreviewPayload {
@@ -469,7 +564,11 @@ pub struct GifPreviewPayload {
 }
 
 /// 简单的 GIF 预览 Worker：从队列中取出 `gif_preview` 任务并执行转码。
-pub async fn run_gif_preview_worker(state: &crate::AppState) -> Result<(), AppError> {
+pub async fn run_gif_preview_worker(
+    state: &crate::AppState,
+    transcode_semaphore: std::sync::Arc<tokio::sync::Semaphore>,
+    task_type_semaphore: Option<std::sync::Arc<tokio::sync::Semaphore>>,
+) -> Result<(), AppError> {
     let task = match state.task_queue.dequeue_pending_task("gif_preview").await? {
         Some(t) => t,
         None => return Ok(()),
@@ -497,6 +596,20 @@ pub async fn run_gif_preview_worker(state: &crate::AppState) -> Result<(), AppEr
         .file_service
         .get_file(payload.file_id, payload.user_id)
         .await?;
+
+    let _global_permit = transcode_semaphore
+        .acquire_owned()
+        .await
+        .map_err(|_| AppError::Internal)?;
+    let _type_permit = if let Some(sema) = task_type_semaphore {
+        Some(
+            sema.acquire_owned()
+                .await
+                .map_err(|_| AppError::Internal)?,
+        )
+    } else {
+        None
+    };
 
     match state.file_service.transcode_gif_to_mp4(&file).await {
         Ok(_path) => {

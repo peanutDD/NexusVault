@@ -205,6 +205,36 @@
 
 ---
 
+### 7.2) 后台任务队列：独立 Worker + 退避重试 + 卡死回收 + 最小管理 API
+
+目标：
+
+- API 服务只负责 **入队**（创建后台任务）与 **查询状态**，不在 API 进程内跑耗时任务
+- Worker 作为独立部署单元可水平扩展（多实例并发消费），并有“生产级”基础：退避重试、lease、卡死回收、可观测性与人工干预入口
+
+已落地能力：
+
+- **独立 Worker binary**：`src/bin/worker.rs`
+  - 默认 `WORKER_PORT=3001` 暴露 `/health` 与 `/metrics`
+  - `WORKER_CONCURRENCY` 控制同一进程内并发消费 loop 数（默认 2）
+- **任务调度字段**（DB）：`next_run_at` 与 `locked_until`
+  - `next_run_at`：失败后指数退避重试；dequeue 仅取 `next_run_at <= now()` 的任务
+  - `locked_until`：worker 认领任务时写入 lease，避免 worker 崩溃导致任务永久卡在 running
+- **卡死任务回收**：worker 周期性调用 `requeue_stuck_tasks(task_type, limit)`，把超时 running 的任务重置回 pending
+- **队列深度指标**：worker 定时查询 queue depth 并上报 gauge（pending_total/pending_ready/running/failed），可用于 HPA/KEDA 自动扩缩容
+- **最小管理 API（管理员专用）**：
+  - `ADMIN_TOKEN` 未配置时禁用 `/api/admin/*`
+  - `GET /api/admin/tasks`：分页列出任务（可按 task_type/status 过滤）
+  - `POST /api/admin/tasks/:id/retry`：将单个任务重置为 pending 以便重试
+
+相关位置：
+
+- 迁移：`migrations/021_add_background_tasks_scheduling.sql`
+- 队列实现：`src/services/task_queue.rs`
+- 管理接口：`src/api/admin.rs`、`src/handlers/admin.rs`、`src/extractors/admin.rs`
+
+---
+
 ### 8) 更健壮的限流：有容量上限 + TTL（防止内存膨胀）
 
 旧实现是 `HashMap<String, Vec<Instant>>` 的滑动窗口，特点是：

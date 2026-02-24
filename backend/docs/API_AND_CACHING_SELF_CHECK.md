@@ -29,7 +29,7 @@
 文件列表 `GET /files/` 同时支持两类分页：[FileListQuery](file:///Users/tyone/github/upload-download-util/backend/src/models/file.rs#L87-L140)
 
 - 传统分页：`page` + `limit`，响应 `{ files, total, page, limit }`：[list_files_handler](file:///Users/tyone/github/upload-download-util/backend/src/handlers/files/list.rs#L36-L63)
-- 游标分页（keyset）：传 `cursor` 即启用，响应 `{ files, next_cursor }`：[repositories/files.rs](file:///Users/tyone/github/upload-download-util/backend/src/repositories/files.rs#L369-L701)
+- 游标分页（keyset）：`cursor` 或 `pagination=cursor` 启用，响应 `{ files, next_cursor }`：[repositories/files.rs](file:///Users/tyone/github/upload-download-util/backend/src/repositories/files.rs#L369-L701)
 - 性能开关：`include_total=false` 可跳过 `COUNT(*) OVER()`（仅传统分页有效）：[FileListQuery#include_total](file:///Users/tyone/github/upload-download-util/backend/src/models/file.rs#L127-L133)
 
 ### 2.4 错误响应（统一与例外）

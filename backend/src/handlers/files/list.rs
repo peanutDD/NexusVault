@@ -56,13 +56,21 @@ pub async fn list_files_handler(
     // 提取分页参数（在移动 query 之前）
     let page = query.page.unwrap_or(1);
     let limit = query.limit.unwrap_or(20);
+    let is_cursor_pagination =
+        query.cursor.is_some() || matches!(query.pagination.as_deref(), Some("cursor"));
 
-    if let Some(pool) = &state.redis {
+    if state.config.cache_enabled
+        && page == 1
+        && !is_cursor_pagination
+        && query.include_total.unwrap_or(true)
+    {
+        if let Some(pool) = &state.redis {
         // fingerprint 必须覆盖所有会影响结果的查询字段，否则可能返回“错误的缓存命中”。
         let fingerprint = format!(
-            "page={:?}&limit={:?}&cursor={:?}&search={:?}&mime_type={:?}&category={:?}&folder_id={:?}&date_from={:?}&date_to={:?}&size_min={:?}&size_max={:?}&sort_by={:?}&sort_order={:?}&include_total={:?}",
+            "page={:?}&limit={:?}&pagination={:?}&cursor={:?}&search={:?}&mime_type={:?}&category={:?}&folder_id={:?}&date_from={:?}&date_to={:?}&size_min={:?}&size_max={:?}&sort_by={:?}&sort_order={:?}&include_total={:?}",
             query.page,
             query.limit,
+            query.pagination,
             query.cursor,
             query.search,
             query.mime_type,
@@ -93,7 +101,7 @@ pub async fn list_files_handler(
 
         let (files, total, next_cursor) = state.file_service.list_files(user_id, query).await?;
         let mut response = json!({ "files": files });
-        if next_cursor.is_some() {
+        if is_cursor_pagination {
             response["next_cursor"] = json!(next_cursor);
         } else {
             response["total"] = json!(total.unwrap_or(0));
@@ -106,7 +114,7 @@ pub async fn list_files_handler(
                 // 仅缓存成功的 JSON 响应体；错误不缓存，避免把瞬时故障固化成“稳定失败”。
                 let _: Result<(), _> = cmd("SETEX")
                     .arg(&cache_key)
-                    .arg(20)
+                    .arg(state.config.list_cache_ttl_secs)
                     .arg(body)
                     .query_async(&mut conn)
                     .await;
@@ -114,6 +122,7 @@ pub async fn list_files_handler(
         }
 
         return Ok(json_response(response));
+        }
     }
 
     let (files, total, next_cursor) = state.file_service.list_files(user_id, query).await?;
@@ -123,7 +132,7 @@ pub async fn list_files_handler(
         "files": files,
     });
 
-    if next_cursor.is_some() {
+    if is_cursor_pagination {
         // 游标分页响应
         response["next_cursor"] = json!(next_cursor);
     } else {

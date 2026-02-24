@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use thiserror::Error;
 
@@ -12,8 +13,16 @@ const PORT_MAX: u16 = 65535;
 /// 完整字段集合，因此整体标记为 `allow(dead_code)`。
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
+pub struct HlsAbrVariant {
+    pub height: u32,
+    pub video_bitrate_kbps: u32,
+}
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Config {
     pub database_url: String,
+    pub read_replica_database_url: Option<String>,
     pub redis_url: Option<String>,
     pub jwt_secret: String,
     pub jwt_expiry: String,
@@ -29,6 +38,8 @@ pub struct Config {
     pub cors_origin: String,
     /// 超过此大小的视频使用 HLS 转码预览（字节），默认 100MB
     pub hls_threshold_bytes: u64,
+    pub hls_abr_max_variants: usize,
+    pub hls_abr_variants: Vec<HlsAbrVariant>,
 
     // ---------- 后台维护任务（可经环境变量调参） ----------
     /// 过期分块上传会话清理间隔（秒），默认 300
@@ -90,6 +101,23 @@ pub struct Config {
 
     /// 管理接口专用 Token（可选；未配置则禁用 /api/admin/*）
     pub admin_token: Option<String>,
+
+    pub download_mode: String,
+    pub presign_ttl_secs: u64,
+
+    pub task_queue_backend: String,
+
+    pub zip_cache_enabled: bool,
+    pub zip_cache_backend: String,
+    pub zip_cache_ttl_secs: u64,
+    pub zip_build_max_concurrent: usize,
+
+    pub cache_enabled: bool,
+    pub cache_default_ttl_secs: u64,
+    pub list_cache_ttl_secs: u64,
+
+    pub transcode_max_concurrent: usize,
+    pub task_type_concurrency: HashMap<String, usize>,
 }
 
 #[derive(Error, Debug)]
@@ -104,10 +132,14 @@ impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
         let port = parse_port()?;
         let hls_threshold_bytes = parse_hls_threshold_bytes()?;
+        let hls_abr_variants = parse_hls_abr_variants()?;
 
         let config = Config {
             database_url: env::var("DATABASE_URL")
                 .map_err(|_| ConfigError::MissingEnvVar("DATABASE_URL".to_string()))?,
+            read_replica_database_url: env::var("READ_REPLICA_DATABASE_URL")
+                .ok()
+                .filter(|s| !s.is_empty()),
             redis_url: env::var("REDIS_URL").ok().filter(|s| !s.is_empty()),
             jwt_secret: env::var("JWT_SECRET")
                 .map_err(|_| ConfigError::MissingEnvVar("JWT_SECRET".to_string()))?,
@@ -160,6 +192,8 @@ impl Config {
             port,
             cors_origin: env::var("CORS_ORIGIN").unwrap_or_else(|_| "*".to_string()),
             hls_threshold_bytes,
+            hls_abr_max_variants: env_usize("HLS_ABR_MAX_VARIANTS", 1)?,
+            hls_abr_variants,
 
             upload_session_cleanup_interval_secs: env_u64(
                 "UPLOAD_SESSION_CLEANUP_INTERVAL_SECS",
@@ -210,6 +244,24 @@ impl Config {
                 .unwrap_or_else(|_| "https://api-inference.huggingface.co".to_string()),
 
             admin_token: env::var("ADMIN_TOKEN").ok().filter(|s| !s.is_empty()),
+
+            download_mode: env::var("DOWNLOAD_MODE").unwrap_or_else(|_| "proxy".to_string()),
+            presign_ttl_secs: env_u64("PRESIGN_TTL_SECS", 300)?,
+
+            task_queue_backend: env::var("TASK_QUEUE_BACKEND")
+                .unwrap_or_else(|_| "postgres".to_string()),
+
+            zip_cache_enabled: env_bool("ZIP_CACHE_ENABLED", false)?,
+            zip_cache_backend: env::var("ZIP_CACHE_BACKEND").unwrap_or_else(|_| "local".to_string()),
+            zip_cache_ttl_secs: env_u64("ZIP_CACHE_TTL_SECS", 3600)?,
+            zip_build_max_concurrent: env_usize("ZIP_BUILD_MAX_CONCURRENT", 2)?,
+
+            cache_enabled: env_bool("CACHE_ENABLED", true)?,
+            cache_default_ttl_secs: env_u64("CACHE_DEFAULT_TTL_SECS", 60)?,
+            list_cache_ttl_secs: env_u64("LIST_CACHE_TTL_SECS", 20)?,
+
+            transcode_max_concurrent: env_usize("TRANSCODE_MAX_CONCURRENT", 2)?,
+            task_type_concurrency: env_usize_map("TASK_TYPE_CONCURRENCY_")?,
         };
 
         config.validate()?;
@@ -254,6 +306,64 @@ impl Config {
                     .to_string(),
             ));
         }
+        if self.zip_cache_enabled && self.zip_cache_ttl_secs == 0 {
+            return Err(ConfigError::InvalidConfig(
+                "ZIP_CACHE_TTL_SECS must be greater than 0 when ZIP_CACHE_ENABLED=1".to_string(),
+            ));
+        }
+        if self.zip_build_max_concurrent == 0 {
+            return Err(ConfigError::InvalidConfig(
+                "ZIP_BUILD_MAX_CONCURRENT must be greater than 0".to_string(),
+            ));
+        }
+        if self.cache_enabled
+            && (self.cache_default_ttl_secs == 0 || self.list_cache_ttl_secs == 0)
+        {
+            return Err(ConfigError::InvalidConfig(
+                "CACHE_DEFAULT_TTL_SECS and LIST_CACHE_TTL_SECS must be greater than 0 when CACHE_ENABLED=1"
+                    .to_string(),
+            ));
+        }
+        if self.transcode_max_concurrent == 0 {
+            return Err(ConfigError::InvalidConfig(
+                "TRANSCODE_MAX_CONCURRENT must be greater than 0".to_string(),
+            ));
+        }
+        if self.hls_abr_max_variants == 0 {
+            return Err(ConfigError::InvalidConfig(
+                "HLS_ABR_MAX_VARIANTS must be greater than 0".to_string(),
+            ));
+        }
+        if self.hls_abr_max_variants > self.hls_abr_variants.len() {
+            return Err(ConfigError::InvalidConfig(
+                "HLS_ABR_MAX_VARIANTS exceeds HLS_ABR_VARIANTS count".to_string(),
+            ));
+        }
+        match self.download_mode.as_str() {
+            "proxy" => {}
+            "redirect" | "presigned" => {
+                if self.storage_backend != "s3" {
+                    return Err(ConfigError::InvalidConfig(
+                        "DOWNLOAD_MODE=redirect/presigned requires STORAGE_BACKEND=s3".to_string(),
+                    ));
+                }
+                if self.presign_ttl_secs == 0 {
+                    return Err(ConfigError::InvalidConfig(
+                        "PRESIGN_TTL_SECS must be greater than 0".to_string(),
+                    ));
+                }
+            }
+            _ => {
+                return Err(ConfigError::InvalidConfig(
+                    "DOWNLOAD_MODE must be one of: proxy, redirect, presigned".to_string(),
+                ))
+            }
+        }
+        if self.task_queue_backend != "postgres" {
+            return Err(ConfigError::InvalidConfig(
+                "TASK_QUEUE_BACKEND currently only supports postgres".to_string(),
+            ));
+        }
         Ok(())
     }
 }
@@ -282,11 +392,100 @@ fn parse_hls_threshold_bytes() -> Result<u64, ConfigError> {
     })
 }
 
+fn parse_hls_abr_variants() -> Result<Vec<HlsAbrVariant>, ConfigError> {
+    let raw = env::var("HLS_ABR_VARIANTS")
+        .unwrap_or_else(|_| "240:350,360:700,480:1200,720:2500".to_string());
+    let mut out: Vec<HlsAbrVariant> = Vec::new();
+    for part in raw.split(',') {
+        let t = part.trim();
+        if t.is_empty() {
+            continue;
+        }
+        let Some((h, br)) = t.split_once(':') else {
+            return Err(ConfigError::InvalidConfig(
+                "HLS_ABR_VARIANTS must be like: 240:350,360:700".to_string(),
+            ));
+        };
+        let height: u32 = h.trim().parse().map_err(|_| {
+            ConfigError::InvalidConfig("HLS_ABR_VARIANTS height must be integer".to_string())
+        })?;
+        let video_bitrate_kbps: u32 = br.trim().parse().map_err(|_| {
+            ConfigError::InvalidConfig("HLS_ABR_VARIANTS bitrate must be integer".to_string())
+        })?;
+        if height < 144 || height > 2160 || video_bitrate_kbps == 0 {
+            return Err(ConfigError::InvalidConfig(
+                "HLS_ABR_VARIANTS contains invalid height/bitrate".to_string(),
+            ));
+        }
+        if out.iter().any(|v| v.height == height) {
+            continue;
+        }
+        out.push(HlsAbrVariant {
+            height,
+            video_bitrate_kbps,
+        });
+    }
+    if out.is_empty() {
+        return Err(ConfigError::InvalidConfig(
+            "HLS_ABR_VARIANTS must not be empty".to_string(),
+        ));
+    }
+    out.sort_by_key(|v| v.height);
+    Ok(out)
+}
+
 fn env_u64(key: &str, default: u64) -> Result<u64, ConfigError> {
     match env::var(key) {
         Ok(s) => s.parse().map_err(|_| {
             ConfigError::InvalidConfig(format!("{} must be a non-negative integer", key))
         }),
+        Err(_) => Ok(default),
+    }
+}
+
+fn env_usize(key: &str, default: usize) -> Result<usize, ConfigError> {
+    match env::var(key) {
+        Ok(v) => v.parse::<usize>().map_err(|_| {
+            ConfigError::InvalidConfig(format!("{} must be a valid integer", key))
+        }),
+        Err(_) => Ok(default),
+    }
+}
+
+fn env_usize_map(prefix: &str) -> Result<HashMap<String, usize>, ConfigError> {
+    let mut map = HashMap::new();
+    for (k, v) in env::vars() {
+        if !k.starts_with(prefix) {
+            continue;
+        }
+        let key = k[prefix.len()..].to_string();
+        if key.is_empty() {
+            continue;
+        }
+        let n = v.parse::<usize>().map_err(|_| {
+            ConfigError::InvalidConfig(format!("{} must be a valid integer", k))
+        })?;
+        if n == 0 {
+            return Err(ConfigError::InvalidConfig(format!(
+                "{} must be greater than 0",
+                k
+            )));
+        }
+        map.insert(key.to_ascii_lowercase(), n);
+    }
+    Ok(map)
+}
+
+fn env_bool(key: &str, default: bool) -> Result<bool, ConfigError> {
+    match env::var(key) {
+        Ok(s) => match s.trim().to_ascii_lowercase().as_str() {
+            "1" | "true" | "yes" | "on" => Ok(true),
+            "0" | "false" | "no" | "off" => Ok(false),
+            _ => Err(ConfigError::InvalidConfig(format!(
+                "{} must be a boolean (1/0/true/false)",
+                key
+            ))),
+        },
         Err(_) => Ok(default),
     }
 }

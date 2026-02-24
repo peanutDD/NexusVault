@@ -17,8 +17,23 @@
 | `ALLOWED_MIME_TYPES` | 允许的 MIME 类型（逗号分隔） | `image/*,video/*,...` |
 | `CORS_ORIGIN` | CORS 允许的源 | `*` |
 | `HLS_THRESHOLD_BYTES` | 超过此大小的视频走 HLS 转码预览（字节） | `104857600`（100MiB） |
+| `HLS_ABR_MAX_VARIANTS` | HLS 多码率：启用的最大档位数（1=单档；>1 生成 master.m3u8 + variants） | `1` |
+| `HLS_ABR_VARIANTS` | HLS 多码率档位列表（`height:video_kbps`，逗号分隔） | `240:350,360:700,480:1200,720:2500` |
 | `UPLOAD_SESSION_CLEANUP_*` / `FILES_CONSISTENCY_CHECK_*` / `ORPHAN_CLEANUP_*` | 后台维护任务间隔与批次 | 见 config.rs 注释 |
-| （预留）`GIF_PREVIEW_WORKER_CONCURRENCY` | GIF 预览转码 Worker 并行度 | 若未设置则使用代码内默认值（当前为 2） |
+| `WORKER_CONCURRENCY` | worker 进程内并发轮询数（每个循环尝试取 1 个任务） | `2` |
+| `WORKER_PORT` | worker metrics/health 监听端口 | `3001` |
+| `TRANSCODE_MAX_CONCURRENT` | 转码全局并发配额（跨 task_type） | `2` |
+| `TASK_TYPE_CONCURRENCY_gif_preview` | gif_preview 专用并发上限（可选） | `2` |
+| `ZIP_CACHE_ENABLED` | ZIP 产物缓存开关 | `0` |
+| `ZIP_CACHE_TTL_SECS` | ZIP 产物缓存 TTL（秒） | `3600` |
+| `ZIP_BUILD_MAX_CONCURRENT` | 批量 ZIP 打包并发配额 | `2` |
+| `CACHE_ENABLED` | Redis cache-aside 总开关（未配置 `REDIS_URL` 会自动降级） | `1` |
+| `CACHE_DEFAULT_TTL_SECS` | 默认缓存 TTL（秒） | `60` |
+| `LIST_CACHE_TTL_SECS` | 文件列表第一页缓存 TTL（秒） | `20` |
+| `DOWNLOAD_MODE` | 下载模式：`proxy`（默认）/ `redirect`/ `presigned`（需 `STORAGE_BACKEND=s3`） | `proxy` |
+| `PRESIGN_TTL_SECS` | presigned URL 有效期（秒） | `300` |
+| `TASK_QUEUE_BACKEND` | 任务队列后端（当前仅 `postgres`） | `postgres` |
+| `READ_REPLICA_DATABASE_URL` | 读库连接串（不配则读写同库） | 可选 |
 | `SMTP_HOST` | SMTP 服务器地址（修改邮箱验证码发送） | 可选，不配置则验证码仅写入日志 |
 | `SMTP_PORT` | SMTP 端口 | 可选，如 587 |
 | `SMTP_USERNAME` | SMTP 认证用户名（一般为发件邮箱） | 可选 |

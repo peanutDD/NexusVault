@@ -18,6 +18,8 @@
   - `By Time`：按天分组（例如 `Jan 24, 2025`），支持分组级全选
 - ✅ 文件搜索（按名称模糊匹配）
 - ✅ 文件下载 / 批量下载（ZIP 打包）
+  - **下载断点续传**：`GET /api/files/:id/download` 支持 `Range: bytes=...`（206 + `Content-Range` + `Accept-Ranges`）
+  - **批量 ZIP 断点续传（单段）**：`POST /api/files/download-zip` 支持 `Range: bytes=...`（206 + `Content-Range` + `Accept-Ranges`）
 - ✅ 文件删除 / 批量删除（带确认弹窗）
 - ✅ 混合存储支持（本地文件系统 + AWS S3）
 - ✅ 文件预览
@@ -36,6 +38,13 @@
   - 不支持的类型提供霓虹玻璃风格提示 + 下载按钮
 - ✅ 文件夹与分类（新建文件夹、批量移动、分类筛选）
 - ✅ 文件分享（分享链接、访问控制）
+- ✅ 后台任务与 Worker（可独立部署/横向扩展）
+  - GIF 预览转码通过 `background_tasks` 队列异步执行
+  - Worker 暴露 `/health` 与 `/metrics`，并上报队列深度（pending/running/failed）
+  - 支持退避重试（`next_run_at`）与卡死回收（`locked_until`）
+- ✅ 管理员任务管理 API（可选）
+  - 通过 `ADMIN_TOKEN` 启用 `/api/admin/*`
+  - 提供任务列表与手动重试（最小实现）
 - ✅ 安全特性（文件类型验证、大小限制、路径清理）
 - ✅ 响应式 UI 设计（桌面 / 移动端统一样式，包含下拉筛选与分组栏优化）
 
@@ -109,6 +118,18 @@ cargo run
 ```
 
 后端将在 `http://localhost:3000` 启动。
+
+### 3.1 运行 Worker（推荐：启用 GIF 预览转码等后台任务）
+
+```bash
+cd backend
+cargo run --bin worker
+```
+
+Worker 默认监听 `http://localhost:3001`（可用 `WORKER_PORT` 修改），并暴露：
+
+- `GET /health`
+- `GET /metrics`
 
 ### 4. 配置前端
 
@@ -501,6 +522,16 @@ frontend/
   - 禁止访问 `localhost` / `127.0.0.1` / `::1`，防止 SSRF 攻击
   - 返回上游图片的原始 `Content-Type` 和字节流
 
+### 管理 API（管理员 token，可选）
+
+> 说明：仅用于运维排查/人工干预后台任务。未配置 `ADMIN_TOKEN` 时，`/api/admin/*` 会被禁用。
+
+- `GET /api/admin/tasks` - 列出后台任务（支持分页与按 task_type/status 过滤）
+- `POST /api/admin/tasks/:id/retry` - 手动重试任务（将任务重置为 pending）
+- 认证方式（二选一）：
+  - `Authorization: Bearer <ADMIN_TOKEN>`
+  - `X-Admin-Token: <ADMIN_TOKEN>`
+
 ## 环境变量
 
 ### 后端 (.env)
@@ -519,8 +550,32 @@ ALLOWED_MIME_TYPES=image/*,video/*,audio/*,application/pdf,text/*,application/ms
 PORT=3000
 CORS_ORIGIN=*
 
+# 可选：管理接口专用 token（启用 /api/admin/*）
+# ADMIN_TOKEN=your-admin-token
+
 # 可选：大视频超过此大小（字节）时生成 HLS 供前端流式预览，默认 104857600（100MB）
 # HLS_THRESHOLD_BYTES=104857600
+
+# 可选：HLS ABR 多码率（默认单档；逐步放开时提高 HLS_ABR_MAX_VARIANTS）
+# HLS_ABR_MAX_VARIANTS=1
+# HLS_ABR_VARIANTS=240:350,360:700,480:1200,720:2500
+
+# 可选：读写分离（不配则读写同库）
+# READ_REPLICA_DATABASE_URL=
+
+# 可选：下载模式（默认 proxy；云端接入 S3/CDN 后再启用 redirect/presigned）
+# DOWNLOAD_MODE=proxy
+# PRESIGN_TTL_SECS=300
+
+# 可选：ZIP 产物缓存与打包并发配额（批量下载峰值用）
+# ZIP_CACHE_ENABLED=0
+# ZIP_CACHE_TTL_SECS=3600
+# ZIP_BUILD_MAX_CONCURRENT=2
+
+# 可选：Redis cache-aside（未配置 REDIS_URL 时自动降级为不缓存）
+# CACHE_ENABLED=1
+# CACHE_DEFAULT_TTL_SECS=60
+# LIST_CACHE_TTL_SECS=20
 
 # 可选：SMTP（修改邮箱验证码；不配置则验证码仅写入日志）
 # SMTP_HOST=smtp.gmail.com

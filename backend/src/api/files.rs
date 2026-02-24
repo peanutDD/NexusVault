@@ -207,7 +207,7 @@ pub fn create_router() -> Router<AppState> {
         .route("/:id/hls/prepare", post(hls_prepare_handler))
         .route("/:id/hls/status", get(hls_status_handler))
         .route("/:id/hls", get(hls_playlist_handler))
-        .route("/:id/hls/:filename", get(hls_asset_handler))
+        .route("/:id/hls/*path", get(hls_asset_handler))
         // 文件版本管理
         .route("/:id/versions", get(list_file_versions_handler))
         .route("/versions/:version_id", get(get_file_version_handler))

@@ -5,11 +5,15 @@
 
 use std::collections::HashMap;
 use std::io::{self, Seek, SeekFrom, Write};
+use std::path::{Path, PathBuf};
 use std::sync::mpsc;
+use std::time::SystemTime;
+use tokio::sync::OwnedSemaphorePermit;
 use uuid::Uuid;
 
 use crate::constants::{MAX_BATCH_ZIP_FILES, MAX_BATCH_ZIP_TOTAL_BYTES, ZIP_BUFFER_SIZE};
 use crate::models::file::File;
+use crate::utils::crypto::sha256_hex;
 use crate::utils::AppError;
 
 use super::FileService;
@@ -88,6 +92,42 @@ fn unique_zip_entry_name(name: &str, name_count: &mut HashMap<String, u32>) -> S
     } else {
         format!("{} ({}).{}", base, count, ext)
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ZipArtifact {
+    pub path: PathBuf,
+    pub size: u64,
+}
+
+fn zip_cache_key(user_id: Uuid, entries: &[(File, String)]) -> String {
+    let mut s = String::new();
+    s.push_str("v1|");
+    s.push_str(user_id.to_string().as_str());
+    for (file, entry_name) in entries {
+        s.push('|');
+        s.push_str(file.id.to_string().as_str());
+        s.push('|');
+        s.push_str(file.updated_at.to_rfc3339().as_str());
+        s.push('|');
+        s.push_str(file.file_size.to_string().as_str());
+        s.push('|');
+        s.push_str(entry_name);
+    }
+    sha256_hex(s.as_bytes())
+}
+
+fn is_zip_cache_fresh(path: &Path, ttl_secs: u64) -> bool {
+    let Ok(meta) = std::fs::metadata(path) else {
+        return false;
+    };
+    let Ok(modified) = meta.modified() else {
+        return false;
+    };
+    let Ok(age) = SystemTime::now().duration_since(modified) else {
+        return false;
+    };
+    age.as_secs() <= ttl_secs
 }
 
 impl FileService {
@@ -236,6 +276,163 @@ impl FileService {
             entries.push((file.clone(), entry_name));
         }
         Ok(entries)
+    }
+
+    pub async fn get_or_create_cached_batch_zip(
+        self: std::sync::Arc<Self>,
+        entries: Vec<(File, String)>,
+        user_id: Uuid,
+        zip_build_permit: Option<OwnedSemaphorePermit>,
+    ) -> Result<ZipArtifact, AppError> {
+        if !self.config.zip_cache_enabled {
+            return Err(AppError::Validation("ZIP 缓存未启用".to_string()));
+        }
+
+        let mut zip_build_permit = zip_build_permit;
+        let key = zip_cache_key(user_id, &entries);
+        let base_dir = Path::new(&self.config.storage_path)
+            .join(".zip_cache")
+            .join(user_id.to_string());
+        tokio::fs::create_dir_all(&base_dir)
+            .await
+            .map_err(|e| AppError::File(format!("Failed to create zip cache dir: {}", e)))?;
+
+        let zip_path = base_dir.join(format!("{}.zip", key));
+
+        if tokio::fs::try_exists(&zip_path).await.unwrap_or(false)
+            && tokio::task::spawn_blocking({
+                let zip_path = zip_path.clone();
+                let ttl = self.config.zip_cache_ttl_secs;
+                move || is_zip_cache_fresh(&zip_path, ttl)
+            })
+            .await
+            .unwrap_or(false)
+        {
+            let size = tokio::fs::metadata(&zip_path)
+                .await
+                .map_err(|e| AppError::File(format!("Failed to stat zip cache: {}", e)))?
+                .len();
+            return Ok(ZipArtifact {
+                path: zip_path,
+                size,
+            });
+        }
+
+        let lock_path = base_dir.join(format!("{}.lock", key));
+        let tmp_path = zip_path.with_extension("zip.tmp");
+
+        for _ in 0..150 {
+            let acquired = tokio::task::spawn_blocking({
+                let lock_path = lock_path.clone();
+                move || {
+                    std::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&lock_path)
+                        .is_ok()
+                }
+            })
+            .await
+            .unwrap_or(false);
+
+            if acquired {
+                let _permit = zip_build_permit.take();
+                let generated = self
+                    .clone()
+                    .write_batch_zip_to_path(entries, tmp_path.clone())
+                    .await;
+
+                let _ = tokio::fs::remove_file(&lock_path).await;
+
+                let total_size = match generated {
+                    Ok(v) => v,
+                    Err(e) => {
+                        let _ = tokio::fs::remove_file(&tmp_path).await;
+                        return Err(e);
+                    }
+                };
+                if let Err(e) = tokio::fs::rename(&tmp_path, &zip_path).await {
+                    let _ = tokio::fs::remove_file(&tmp_path).await;
+                    return Err(AppError::File(format!("Failed to finalize zip cache: {}", e)));
+                }
+
+                return Ok(ZipArtifact {
+                    path: zip_path,
+                    size: total_size,
+                });
+            }
+
+            if tokio::fs::try_exists(&zip_path).await.unwrap_or(false)
+                && tokio::task::spawn_blocking({
+                    let zip_path = zip_path.clone();
+                    let ttl = self.config.zip_cache_ttl_secs;
+                    move || is_zip_cache_fresh(&zip_path, ttl)
+                })
+                .await
+                .unwrap_or(false)
+            {
+                let size = tokio::fs::metadata(&zip_path)
+                    .await
+                    .map_err(|e| AppError::File(format!("Failed to stat zip cache: {}", e)))?
+                    .len();
+                return Ok(ZipArtifact {
+                    path: zip_path,
+                    size,
+                });
+            }
+
+            let lock_is_stale = tokio::task::spawn_blocking({
+                let lock_path = lock_path.clone();
+                move || {
+                    let Ok(meta) = std::fs::metadata(&lock_path) else {
+                        return false;
+                    };
+                    let Ok(modified) = meta.modified() else {
+                        return false;
+                    };
+                    let Ok(age) = SystemTime::now().duration_since(modified) else {
+                        return false;
+                    };
+                    age.as_secs() > 120
+                }
+            })
+            .await
+            .unwrap_or(false);
+            if lock_is_stale {
+                let _ = tokio::fs::remove_file(&lock_path).await;
+            }
+
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+
+        Err(AppError::Internal)
+    }
+
+    pub async fn write_batch_zip_to_path(
+        self: std::sync::Arc<Self>,
+        entries: Vec<(File, String)>,
+        out_path: PathBuf,
+    ) -> Result<u64, AppError> {
+        let (input_tx, input_rx) = mpsc::channel();
+
+        let file_service = self.clone();
+        tokio::spawn(async move {
+            for (file, name) in entries {
+                if let Ok(data) = file_service.get_file_data(&file).await {
+                    let _ = input_tx.send((Some(name), data));
+                }
+            }
+            let _ = input_tx.send((None, vec![]));
+        });
+
+        tokio::task::spawn_blocking(move || -> Result<u64, AppError> {
+            let f = std::fs::File::create(&out_path)
+                .map_err(|e| AppError::File(format!("Failed to create zip file: {}", e)))?;
+            write_zip_to_file(input_rx, f)
+                .map_err(|e| AppError::File(format!("Failed to write zip file: {}", e)))
+        })
+        .await
+        .map_err(|_| AppError::Internal)?
     }
 }
 

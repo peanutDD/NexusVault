@@ -2,38 +2,20 @@
 
 这里集中放置项目的所有说明文档，避免仓库根目录被大量 Markdown 文件淹没。
 
-- **快速开始与启动相关**
-  - `QUICK_START_GUIDE.md`：完整的快速开始指南
-  - `QUICKSTART.md`：简版快速开始说明
-  - `QUICK_START.md`：一键启动/最小步骤说明
-  - `START_HERE.md`：从这里开始的导航页
-  - `EXECUTION_SUMMARY.md`：自动执行和启动脚本说明
-  - `STARTUP_STATUS.md`：启动过程中的状态记录
-  - `SYSTEM_RUNNING.md`：系统成功运行时的状态说明
+- **高并发与架构**
+  - `高并发.md`：高并发落地路线与关键策略
+  - `开关矩阵与接口边界.md`：功能开关表与 provider 接口边界（本地可跑、云端可开关）
+  - `前端降低后端并发压力方案.md`：前端策略（缓存、并发、滚动）降低后端压力
+  - `BILIBILI_TECH_UPGRADE.md`：对标式技术升级建议（偏架构/规划）
 
-- **系统状态与下一步**
-  - `CURRENT_STATUS.md`：当前系统状态
-  - `SYSTEM_STATUS.md`：系统状态报告
-  - `SETUP_STATUS.md`：系统设置状态
-  - `SETUP_COMPLETE.md`：系统设置完成总结
+- **代码审查**
+  - `CODE_REVIEW_GUIDE.md`：代码审查规范（企业级）
+  - `CODE_REVIEW_START.md`：代码审查开始使用清单
+  - `CODE_REVIEW_USAGE.md`：代码审查使用指南（作者/审查人/团队）
+  - `CODE_REVIEW_REPORT.md`：代码审查报告模板
+
+- **开发流程**
   - `NEXT_STEPS.md`：后续改进建议和 roadmap
+  - `GITHUB_PUSH.md`：推送/权限/分支说明
 
-- **数据库与环境配置**
-  - `SETUP_DATABASE.md`：数据库设置指南
-  - `DATABASE_SETUP.md`：PostgreSQL 安装与配置
-
-- **测试与质量**
-  - `TESTING.md`：测试指南
-  - `CODE_REVIEW_GUIDE.md`：代码审查方案（企业级），供 MR/PR 与日常审查使用
-  - `CODE_REVIEW_START.md`：代码审查方案开始使用检查清单，首次使用前请阅读
-  - `CODE_REVIEW_USAGE.md`：代码审查方案使用指南，包含作者/审查人/团队的实际操作步骤
-
-- **部署与运维**
-  - `DEPLOYMENT.md`：部署指南（Docker + 手动部署）
-
-- **Git 与仓库维护**
-  - `CLEAN_GIT.md`：清理 Git 仓库中的大文件
-  - `FIX_GIT.md`：修复 Git 仓库中大量文件问题
-
-> 提示：如果你不确定从哪里看起，推荐先阅读 `QUICK_START_GUIDE.md` 和 `NEXT_STEPS.md`。
-
+> 提示：从“性能/高并发落地”视角入门，先看 `高并发.md` 与 `开关矩阵与接口边界.md`。
