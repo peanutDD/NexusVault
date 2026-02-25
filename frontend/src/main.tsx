@@ -36,11 +36,12 @@ if (typeof document !== 'undefined' && API_BASE_URL.startsWith('http')) {
   }
 }
 
-if (import.meta.env.PROD) {
-  import('virtual:pwa-register').then(({ registerSW }) => {
-    registerSW({ immediate: true });
-  });
-}
+// PWA 已暂时禁用，待解决 EISDIR 问题后重新启用
+// if (import.meta.env.PROD) {
+//   import('virtual:pwa-register').then(({ registerSW }) => {
+//     registerSW({ immediate: true });
+//   });
+// }
 
 // 全局错误与未捕获 Promise 拒绝上报
 if (typeof window !== 'undefined') {

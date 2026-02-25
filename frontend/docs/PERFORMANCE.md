@@ -25,8 +25,7 @@
       - *收益*：移动端加载 200px 图片（比默认 400px 小 75%），高分屏加载高清图，同时提升 LCP 和视觉体验。
     - **缩略图缓存策略**：将缓存 TTL 从 1 天延长至 **30 天**，并添加 `immutable` 指令。
       - *收益*：浏览器将其视为“永不过期”，二次访问时直接从磁盘缓存读取，完全消除网络请求（Efficient Cache Lifetimes）。
-    - **Resource Hints**：在 `index.html` 中添加了 API 域名的 `preconnect` 和 `dns-prefetch`。
-      - *收益*：提前建立 TCP 连接和 TLS 握手，减少关键请求链（Critical Request Chains）的等待时间。
+    - **Resource Hints**：在 `index.html` 中移除可能导致构建错误的根目录 `preconnect`。
     - **BFCache 兼容性**：
       - 排查了“WebSocket 阻止 BFCache”的警告，确认是开发环境 Vite HMR 的假阳性。
       - 生产环境无 WebSocket 业务代码，天然支持 Back/Forward Cache，无需额外代码变更。
