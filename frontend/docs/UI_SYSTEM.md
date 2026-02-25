@@ -110,20 +110,57 @@ import { FormField } from '../../common/form';
 
 ## 7. 文件预览体验（补充说明）
 
-- GIF→MP4 预览：
-  - 打开 GIF 时，前端会调用：
-    - `POST /api/files/:id/preview/video/prepare`
-    - 周期性 `GET /api/files/:id/preview/video/status`
-  - 小 GIF 直连预览：
-    - 小于 `GIF_DIRECT_PREVIEW_BYTES`（当前 5MB）时直接走 `/api/files/:id/preview` 渲染为图片，跳过转码。
-  - UI 表现：
-    - 在预览顶部展示一句说明 + 进度条（`gifTranscodeInProgress` + `gifTranscodeProgress`）。
-    - 转码完成后自动切换为 `<video>` 播放。
-    - 失败时不再立即弹「视频加载或播放失败」，而是优先保证转码流程可见。
-- 视频循环播放：
-  - 右侧工具栏新增「循环播放」按钮，点击后会切换 `<video loop>` 属性。
+### 7.1 GIF / 视频预览（HLS 优先，MP4 兜底）
 
-## 8. 后续规范建议
+- GIF 预览默认走 HLS：
+  - 前端优先请求 `GET /api/files/:id/hls`（`.m3u8`）
+  - 未生成时可触发 `POST /api/files/:id/hls/prepare` 并查询 `GET /api/files/:id/hls/status`
+  - 目的：支持“边转边播”，避免大 GIF 等待整段转码完成
+- MP4 预览为后备方案（仅在需要时使用）：
+  - `GET /api/files/:id/preview/video`（Legacy）
+  - `POST /api/files/:id/preview/video/prepare` + `GET /api/files/:id/preview/video/status`
+- 视频循环播放：
+  - 工具栏「循环播放」按钮会切换播放器循环状态
+
+### 7.2 移动端下载兜底（URL Token）
+
+- 部分浏览器不支持文件系统写入能力时，下载采用浏览器原生下载：
+  - `GET /api/files/:id/download?token=...`
+  - 仅 GET 场景支持 query token；优先使用 `Authorization: Bearer <token>`
+  - 注意避免在不可信页面暴露 token（Referer/日志风险）
+
+## 8. 文件列表交互规范（排序 / 分组 / 滚动位置）
+
+### 8.1 排序与分组策略
+
+- 普通排序（按名称/时间/大小）：
+  - 文件与文件夹会合并为同一列表统一排序并混排展示
+- `By Type` 分组：
+  - 以类型分组文件；文件夹单独展示为一个文件夹区域
+- `By Time` 分组：
+  - 按天分组，文件夹与文件都会进入对应日期分组
+  - 分组“全选”会同时选择该日期分组内的文件与文件夹
+
+### 8.2 进入/返回文件夹时的滚动位置
+
+- 进入子文件夹或返回上级目录时，会按当前条件（folder/sort/mime/search）记忆并恢复滚动位置
+- 目的：回到上级目录时继续从离开位置浏览，而不是回到顶部
+
+### 8.3 列表卡片排版与数字格式
+
+- 文件大小在卡片中使用紧凑格式：
+  - 不显示小数
+  - `MB` 显示为 `M`；超出位数上限自动进位到 `G/T/...`
+- FileCard/FolderCard 文字使用 `clamp()` 响应式字号，并保证长文本不会撑破布局（`min-w-0 + truncate`）
+
+### 8.4 预览页 3D 玻璃拟态背景（说明）
+
+- 预览弹窗使用 3D 分层玻璃拟态背景，优先保证内容可读与可点击：
+  - 工具栏/导航按钮始终在最上层（避免被 3D 场景遮挡）
+  - 背板/网格等装饰保持透明或半透明，避免遮住文件内容
+  - 移动端优先兼容（性能与可用性优先于装饰效果）
+
+## 9. 后续规范建议
 
 - 新增页面或组件时：
   - 优先从 `components/common` 挑选现有组件（Button、EmptyState、ErrorMessage、Skeleton、Tag 等）。
