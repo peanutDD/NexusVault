@@ -273,14 +273,22 @@ export default function LazyThumbnail({
           ...base,
           imageUrl: thumbnailUrl,
           loading: true,
+          // 立即重置 showLoadingUi 为 false，由 setTimeout 稍后决定是否显示
           showLoadingUi: false,
           error: false,
         };
       });
+      
+      // 清除旧的定时器（如果有）
       if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
+      
+      // 设置新的定时器：只有当加载时间超过阈值时才显示 loading UI
       loadingDelayRef.current = setTimeout(() => {
         loadingDelayRef.current = null;
-        if (mountedRef.current) updateState({ showLoadingUi: true });
+        if (mountedRef.current) {
+          // 只有当图片仍在加载中（loading 为 true）时才显示 loading UI
+          setState(s => s.loading ? { ...s, showLoadingUi: true } : s);
+        }
       }, SHOW_LOADING_DELAY_MS);
     };
 

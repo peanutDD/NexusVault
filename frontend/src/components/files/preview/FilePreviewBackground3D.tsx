@@ -158,8 +158,13 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     const clock = new THREE.Clock();
     let frameId = 0;
     let motionTime = 0;
+    let previewContentEl: HTMLElement | null = null;
+    const tmpWorld = new THREE.Vector3();
+    const tmpNdc = new THREE.Vector3();
+    let orbitBlend = 0;
 
     const animate = () => {
+      // 无论是否暂停，clock.getDelta() 都必须每帧调用以更新内部时间
       const delta = clock.getDelta();
       
       // Update motion time only if not paused
@@ -184,6 +189,41 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       pulseLight.intensity = 1 + Math.sin(elapsed * 1.4) * 0.35;
       group.position.y = Math.sin(elapsed * 0.7) * 0.15;
 
+      if (!previewContentEl) {
+        previewContentEl = document.querySelector('[data-preview-content]') as HTMLElement | null;
+      }
+      if (previewContentEl) {
+        const w = container.clientWidth || 0;
+        const h = container.clientHeight || 0;
+        const base = Math.min(w, h);
+
+        const targetBlend = isRotationPausedRef.current ? 0 : 1;
+        const k = 1 - Math.exp(-delta * 6);
+        orbitBlend += (targetBlend - orbitBlend) * k;
+
+        core.getWorldPosition(tmpWorld);
+        tmpNdc.copy(tmpWorld).project(camera);
+        const cx = (tmpNdc.x * 0.5) * w;
+        const cy = (-tmpNdc.y * 0.5) * h;
+
+        const radiusX = Math.min(380, Math.max(80, base * 0.35));
+        const radiusY = Math.min(240, Math.max(50, base * 0.2));
+        const t = elapsed * 0.15;
+        const ox = Math.cos(t) * radiusX;
+        const oy = Math.sin(t) * radiusY;
+
+        const x = (cx + ox) * orbitBlend;
+        const y = (cy + oy) * orbitBlend;
+        const z = (Math.sin(t * 0.9) * Math.min(120, Math.max(30, base * 0.15))) * orbitBlend;
+        const rx = (Math.sin(t * 1.1) * 12) * orbitBlend;
+        const ry = elapsed * 12; // 降低自转速度，让厚度展示更清晰且不晕
+        previewContentEl.style.setProperty('--preview-orbit-x', `${x.toFixed(2)}px`);
+        previewContentEl.style.setProperty('--preview-orbit-y', `${y.toFixed(2)}px`);
+        previewContentEl.style.setProperty('--preview-orbit-z', `${z.toFixed(2)}px`);
+        previewContentEl.style.setProperty('--preview-orbit-rx', `${rx.toFixed(2)}deg`);
+        previewContentEl.style.setProperty('--preview-orbit-ry', `${ry.toFixed(2)}deg`);
+      }
+
       renderer.render(scene, camera);
       frameId = window.requestAnimationFrame(animate);
     };
@@ -200,6 +240,14 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       }
       
       renderer.dispose();
+
+      if (previewContentEl) {
+        previewContentEl.style.removeProperty('--preview-orbit-x');
+        previewContentEl.style.removeProperty('--preview-orbit-y');
+        previewContentEl.style.removeProperty('--preview-orbit-z');
+        previewContentEl.style.removeProperty('--preview-orbit-rx');
+        previewContentEl.style.removeProperty('--preview-orbit-ry');
+      }
       
       // Dispose geometries and materials
       coreGeometry.dispose();
