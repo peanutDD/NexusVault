@@ -36,10 +36,12 @@
  * @param props.handleDropOnFolder 拖放到文件夹上的回调函数
  * @param props.batchDownloading 是否正在批量下载
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import FileGrid from '../grid/FileGrid';
 import VirtualizedFileGrid from '../grid/VirtualizedFileGrid';
 import FolderGrid from '../grid/FolderGrid';
+import MixedGrid from '../grid/MixedGrid';
+import VirtualizedMixedGrid from '../grid/VirtualizedMixedGrid';
 import FileListBatchActions from './FileListBatchActions';
 import FileListPagination from './FileListPagination';
 import ErrorMessage from '../../common/feedback/ErrorMessage';
@@ -49,6 +51,7 @@ import InfiniteScrollSentinel from '../InfiniteScrollSentinel';
 import { EmptyState } from '../../common/EmptyState';
 import type { FileMetadata } from '../../../types/files';
 import type { Folder } from '../../../types/folders';
+import type { SortOption } from '../../../hooks/files/useFileFilters';
 
 /** 移动端宽度阈值：小于此宽度禁用虚拟列表 */
 const MOBILE_WIDTH_THRESHOLD = 768;
@@ -63,15 +66,17 @@ interface FileListContentProps {
   selectedFiles: Set<string>;
   selectedFolders: Set<string>;
   currentFolderId: string | null;
+  sortBy: SortOption;
   error: string | null;
   onClearError?: () => void;
   isLoading: boolean;
   isRevalidating: boolean;
-  totalItems: number;
   isGroupByType: boolean;
   isGroupByTime: boolean;
   groupedFiles: { key: string; files: FileMetadata[]; icon: React.ReactNode; label: string }[] | null;
-  timeGroupedFiles: { key: string; label: string; sortKey: number; files: FileMetadata[] }[] | null;
+  timeGroupedItems:
+    | { key: string; label: string; sortKey: number; files: FileMetadata[]; folders: Folder[]; items: Array<{ type: 'file'; file: FileMetadata } | { type: 'folder'; folder: Folder }> }[]
+    | null;
   displayFolders: Folder[];
   totalPages: number;
   page: number;
@@ -103,15 +108,15 @@ const FileListContent: React.FC<FileListContentProps> = ({
   selectedFiles,
   selectedFolders,
   currentFolderId,
+  sortBy,
   error,
   onClearError,
   isLoading,
   isRevalidating,
-  totalItems,
   isGroupByType,
   isGroupByTime,
   groupedFiles,
-  timeGroupedFiles,
+  timeGroupedItems,
   displayFolders,
   totalPages,
   page,
@@ -140,7 +145,55 @@ const FileListContent: React.FC<FileListContentProps> = ({
   const [isMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < MOBILE_WIDTH_THRESHOLD
   );
-  const shouldUseVirtualList = !isMobile && files.length > FILE_LIST.VIRTUAL_THRESHOLD;
+  const isPlainSort = sortBy !== 'type_group' && sortBy !== 'time_group';
+  const mixedItems = useMemo(() => {
+    if (!isPlainSort) return [];
+
+    const folderItems = displayFolders.map((folder) => ({ type: 'folder' as const, folder }));
+    const fileItems = files.map((file) => ({ type: 'file' as const, file }));
+    const items = [...folderItems, ...fileItems];
+
+    const compareName = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+    const getCreatedAt = (item: (typeof items)[number]) =>
+      item.type === 'folder' ? item.folder.created_at : item.file.created_at;
+    const getName = (item: (typeof items)[number]) =>
+      item.type === 'folder' ? item.folder.name : item.file.original_filename;
+    const getSize = (item: (typeof items)[number]) =>
+      item.type === 'folder' ? 0 : item.file.file_size;
+
+    const getTime = (v: string) => {
+      const t = Date.parse(v);
+      return Number.isFinite(t) ? t : 0;
+    };
+
+    const cmp = (a: (typeof items)[number], b: (typeof items)[number]) => {
+      if (sortBy.startsWith('filename_')) {
+        const dir = sortBy.endsWith('_asc') ? 1 : -1;
+        const r = compareName(getName(a), getName(b));
+        if (r !== 0) return r * dir;
+      } else if (sortBy.startsWith('created_at_')) {
+        const dir = sortBy.endsWith('_asc') ? 1 : -1;
+        const r = getTime(getCreatedAt(a)) - getTime(getCreatedAt(b));
+        if (r !== 0) return r * dir;
+      } else if (sortBy.startsWith('file_size_')) {
+        const dir = sortBy.endsWith('_asc') ? 1 : -1;
+        const r = getSize(a) - getSize(b);
+        if (r !== 0) return r * dir;
+      }
+
+      const tie = compareName(getName(a), getName(b));
+      if (tie !== 0) return tie;
+      if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+      return 0;
+    };
+
+    return items.sort(cmp);
+  }, [displayFolders, files, sortBy, isPlainSort]);
+
+  const itemCountForVirtual = isPlainSort ? mixedItems.length : files.length;
+  const shouldUseVirtualList = !isMobile && itemCountForVirtual > FILE_LIST.VIRTUAL_THRESHOLD;
   const [openMenu, setOpenMenu] = useState<MenuState | null>(null);
   const openFileMenuId = openMenu?.type === 'file' ? openMenu.id : null;
   const openFolderMenuId = openMenu?.type === 'folder' ? openMenu.id : null;
@@ -187,7 +240,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           <FileCardSkeleton count={12} />
         </div>
-      ) : totalItems === 0 ? (
+      ) : files.length + displayFolders.length === 0 ? (
         <EmptyState
           title={currentFolderId ? '文件夹为空' : '暂无文件'}
           description={
@@ -393,30 +446,111 @@ const FileListContent: React.FC<FileListContentProps> = ({
                 </div>
               ))}
             </div>
-          ) : isGroupByTime && timeGroupedFiles ? (
+          ) : isGroupByTime && timeGroupedItems ? (
             // 按时间分组视图：文件夹单独一组 + 各月份文件分组
             <div className="space-y-6">
-              {/* 文件夹分组 */}
-              {displayFolders.length > 0 && (
-                <div>
+              {(timeGroupedItems ?? []).map((group) => (
+                <div key={`time-group-${group.key}`}>
                   <div className="mb-3 flex items-center gap-3">
-                    {/* 分组全选复选框 */}
-                    <GroupSelectCheckbox
-                      itemIds={displayFolders.map(f => f.id)}
-                      selectedIds={selectedFolders}
-                      onToggle={(ids, selected) => {
-                        ids.forEach(id => handleSelectFolder(id, selected));
+                    <GroupSelectCheckboxMixed
+                      fileIds={group.files.map((f) => f.id)}
+                      folderIds={group.folders.map((f) => f.id)}
+                      selectedFileIds={selectedFiles}
+                      selectedFolderIds={selectedFolders}
+                      onToggle={(fileIds: string[], folderIds: string[], selected: boolean) => {
+                        fileIds.forEach((id) => handleSelectFile(id, selected));
+                        folderIds.forEach((id) => handleSelectFolder(id, selected));
                       }}
                     />
                     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
-                      <i className="bi bi-folder2" aria-hidden />
+                      <i className="bi bi-calendar3" aria-hidden />
                     </span>
                     <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
-                      FOLDERS
-                      <span className="ml-2 text-[0.7em] text-white/60">({displayFolders.length})</span>
+                      {group.label}
+                      <span className="ml-2 text-[0.7em] text-white/60">
+                        ({group.files.length + group.folders.length})
+                      </span>
                     </span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
+                  <MixedGrid
+                    key={`time-group-mixed-${group.key}`}
+                    items={group.items}
+                    selectedFiles={selectedFiles}
+                    selectedFolders={selectedFolders}
+                    onSelectFile={handleSelectFile}
+                    onSelectFolder={handleSelectFolder}
+                    onOpenFolder={handleOpenFolder}
+                    onPreviewFile={setPreviewFile}
+                    onShareFile={setShareFile}
+                    onDownloadFile={handleDownload}
+                    onRenameFolder={handleRenameFolder}
+                    onRenameFile={handleRenameFile}
+                    onDelete={handleDelete}
+                    onFileDragStart={handleFileDragStart}
+                    onDropOnFolder={handleDropOnFolder}
+                    openFileMenuId={openFileMenuId}
+                    openFolderMenuId={openFolderMenuId}
+                    onToggleFileMenu={toggleFileMenu}
+                    onToggleFolderMenu={toggleFolderMenu}
+                    onCloseMenu={closeMenu}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            // 普通列表视图：文件夹和文件顺序展示；文件过多时用虚拟列表（基于窗口滚动，视口即浏览器窗口）
+            <div className="space-y-4">
+              {isPlainSort ? (
+                shouldUseVirtualList ? (
+                  <VirtualizedMixedGrid
+                    key={`mixed-virtual-${listKey}`}
+                    items={mixedItems}
+                    selectedFiles={selectedFiles}
+                    selectedFolders={selectedFolders}
+                    onSelectFile={handleSelectFile}
+                    onSelectFolder={handleSelectFolder}
+                    onOpenFolder={handleOpenFolder}
+                    onPreviewFile={setPreviewFile}
+                    onShareFile={setShareFile}
+                    onDownloadFile={handleDownload}
+                    onRenameFolder={handleRenameFolder}
+                    onRenameFile={handleRenameFile}
+                    onDelete={handleDelete}
+                    onFileDragStart={handleFileDragStart}
+                    onDropOnFolder={handleDropOnFolder}
+                    openFileMenuId={openFileMenuId}
+                    openFolderMenuId={openFolderMenuId}
+                    onToggleFileMenu={toggleFileMenu}
+                    onToggleFolderMenu={toggleFolderMenu}
+                    onCloseMenu={closeMenu}
+                  />
+                ) : (
+                  <MixedGrid
+                    key={`mixed-grid-${listKey}`}
+                    items={mixedItems}
+                    selectedFiles={selectedFiles}
+                    selectedFolders={selectedFolders}
+                    onSelectFile={handleSelectFile}
+                    onSelectFolder={handleSelectFolder}
+                    onOpenFolder={handleOpenFolder}
+                    onPreviewFile={setPreviewFile}
+                    onShareFile={setShareFile}
+                    onDownloadFile={handleDownload}
+                    onRenameFolder={handleRenameFolder}
+                    onRenameFile={handleRenameFile}
+                    onDelete={handleDelete}
+                    onFileDragStart={handleFileDragStart}
+                    onDropOnFolder={handleDropOnFolder}
+                    openFileMenuId={openFileMenuId}
+                    openFolderMenuId={openFolderMenuId}
+                    onToggleFileMenu={toggleFileMenu}
+                    onToggleFolderMenu={toggleFolderMenu}
+                    onCloseMenu={closeMenu}
+                  />
+                )
+              ) : (
+                <>
                   <FolderGrid
                     folders={displayFolders}
                     selectedFolders={selectedFolders}
@@ -432,97 +566,40 @@ const FileListContent: React.FC<FileListContentProps> = ({
                     onToggleMenu={toggleFolderMenu}
                     onCloseMenu={closeMenu}
                   />
-                </div>
-              )}
-              {/* 各月份文件分组 */}
-              {timeGroupedFiles.map((group) => (
-                <div key={`time-group-${group.key}`}>
-                  <div className="mb-3 flex items-center gap-3">
-                    {/* 分组全选复选框 */}
-                    <GroupSelectCheckbox
-                      itemIds={group.files.map(f => f.id)}
-                      selectedIds={selectedFiles}
-                      onToggle={(ids, selected) => {
-                        ids.forEach(id => handleSelectFile(id, selected));
-                      }}
+                  {shouldUseVirtualList ? (
+                    <VirtualizedFileGrid
+                      key={`virtual-${listKey}`}
+                      files={files}
+                      selectedFiles={selectedFiles}
+                      onSelect={handleSelectFile}
+                      onPreview={setPreviewFile}
+                      onShare={setShareFile}
+                      onDownload={handleDownload}
+                      onRename={handleRenameFile}
+                      onDelete={handleDelete}
+                      onDragStart={handleFileDragStart}
+                      openFileMenuId={openFileMenuId}
+                      onToggleMenu={toggleFileMenu}
+                      onCloseMenu={closeMenu}
                     />
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
-                      <i className="bi bi-calendar3" aria-hidden />
-                    </span>
-                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
-                      {group.label}
-                      <span className="ml-2 text-[0.7em] text-white/60">({group.files.length})</span>
-                    </span>
-                    <div className="flex-1 h-px bg-white/10" />
-                  </div>
-                  <FileGrid
-                    key={`time-group-grid-${group.key}`}
-                    files={group.files}
-                    selectedFiles={selectedFiles}
-                    onSelect={handleSelectFile}
-                    onPreview={setPreviewFile}
-                    onShare={setShareFile}
-                    onDownload={handleDownload}
-                    onRename={handleRenameFile}
-                    onDelete={handleDelete}
-                    onDragStart={handleFileDragStart}
-                    openFileMenuId={openFileMenuId}
-                    onToggleMenu={toggleFileMenu}
-                    onCloseMenu={closeMenu}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            // 普通列表视图：文件夹和文件顺序展示；文件过多时用虚拟列表（基于窗口滚动，视口即浏览器窗口）
-            <div className="space-y-4">
-              <FolderGrid
-                folders={displayFolders}
-                selectedFolders={selectedFolders}
-                onSelect={handleSelectFolder}
-                onOpen={handleOpenFolder}
-                onRename={handleRenameFolder}
-                onDelete={(folderId) => {
-                  const folder = displayFolders.find(f => f.id === folderId);
-                  if (folder) handleDelete(folder, 'folder');
-                }}
-                onDrop={handleDropOnFolder}
-                openFolderMenuId={openFolderMenuId}
-                onToggleMenu={toggleFolderMenu}
-                onCloseMenu={closeMenu}
-              />
-              {shouldUseVirtualList ? (
-                <VirtualizedFileGrid
-                  key={`virtual-${listKey}`}
-                  files={files}
-                  selectedFiles={selectedFiles}
-                  onSelect={handleSelectFile}
-                  onPreview={setPreviewFile}
-                  onShare={setShareFile}
-                  onDownload={handleDownload}
-                  onRename={handleRenameFile}
-                  onDelete={handleDelete}
-                  onDragStart={handleFileDragStart}
-                  openFileMenuId={openFileMenuId}
-                  onToggleMenu={toggleFileMenu}
-                  onCloseMenu={closeMenu}
-                />
-              ) : (
-                <FileGrid
-                  key={`grid-${listKey}`}
-                  files={files}
-                  selectedFiles={selectedFiles}
-                  onSelect={handleSelectFile}
-                  onPreview={setPreviewFile}
-                  onShare={setShareFile}
-                  onDownload={handleDownload}
-                  onRename={handleRenameFile}
-                  onDelete={handleDelete}
-                  onDragStart={handleFileDragStart}
-                  openFileMenuId={openFileMenuId}
-                  onToggleMenu={toggleFileMenu}
-                  onCloseMenu={closeMenu}
-                />
+                  ) : (
+                    <FileGrid
+                      key={`grid-${listKey}`}
+                      files={files}
+                      selectedFiles={selectedFiles}
+                      onSelect={handleSelectFile}
+                      onPreview={setPreviewFile}
+                      onShare={setShareFile}
+                      onDownload={handleDownload}
+                      onRename={handleRenameFile}
+                      onDelete={handleDelete}
+                      onDragStart={handleFileDragStart}
+                      openFileMenuId={openFileMenuId}
+                      onToggleMenu={toggleFileMenu}
+                      onCloseMenu={closeMenu}
+                    />
+                  )}
+                </>
               )}
             </div>
           )}
@@ -585,6 +662,55 @@ function GroupSelectCheckbox({ itemIds, selectedIds, onToggle }: GroupSelectChec
       ) : someSelected ? (
         <i className="bi bi-dash text-[0.625rem] font-bold leading-none" aria-hidden />
       ) : null}
+    </button>
+  );
+}
+
+interface GroupSelectCheckboxMixedProps {
+  fileIds: string[];
+  folderIds: string[];
+  selectedFileIds: Set<string>;
+  selectedFolderIds: Set<string>;
+  onToggle: (fileIds: string[], folderIds: string[], selected: boolean) => void;
+}
+
+function GroupSelectCheckboxMixed({
+  fileIds,
+  folderIds,
+  selectedFileIds,
+  selectedFolderIds,
+  onToggle,
+}: GroupSelectCheckboxMixedProps) {
+  const selectedCount =
+    fileIds.filter((id) => selectedFileIds.has(id)).length +
+    folderIds.filter((id) => selectedFolderIds.has(id)).length;
+  const total = fileIds.length + folderIds.length;
+  const allSelected = total > 0 && selectedCount === total;
+  const someSelected = selectedCount > 0 && selectedCount < total;
+
+  const handleClick = () => {
+    onToggle(fileIds, folderIds, !allSelected);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`
+        flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-150
+        ${allSelected
+          ? 'border-white/30 bg-white/15 text-white'
+          : someSelected
+            ? 'border-white/30 bg-white/10 text-white'
+            : 'border-white/15 bg-white/5 text-transparent hover:border-white/25 hover:bg-white/10'
+        }
+      `}
+      aria-label="Select group"
+    >
+      <i
+        className={`bi bi-check-lg block text-[0.625rem] font-bold leading-none ${selectedCount > 0 ? '' : 'invisible'}`}
+        aria-hidden
+      />
     </button>
   );
 }

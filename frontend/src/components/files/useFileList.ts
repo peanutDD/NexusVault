@@ -177,6 +177,67 @@ function useTimeGrouping(files: FileMetadata[], isGroupByTime: boolean) {
   };
 }
 
+function useTimeGroupingMixed(
+  files: FileMetadata[],
+  folders: Folder[],
+  isGroupByTime: boolean
+) {
+  const timeGroupedItems = useMemo(() => {
+    if (!isGroupByTime) return null;
+    const groups = new Map<
+      string,
+      { label: string; sortKey: number; files: FileMetadata[]; folders: Folder[] }
+    >();
+
+    for (const folder of folders) {
+      const { key, label, sortKey } = getTimeGroupInfo(folder.created_at);
+      const existing = groups.get(key);
+      if (existing) {
+        existing.folders.push(folder);
+      } else {
+        groups.set(key, { label, sortKey, files: [], folders: [folder] });
+      }
+    }
+
+    for (const file of files) {
+      const { key, label, sortKey } = getTimeGroupInfo(file.created_at);
+      const existing = groups.get(key);
+      if (existing) {
+        existing.files.push(file);
+      } else {
+        groups.set(key, { label, sortKey, files: [file], folders: [] });
+      }
+    }
+
+    const compareName = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    const getTime = (v: string) => {
+      const t = Date.parse(v);
+      return Number.isFinite(t) ? t : 0;
+    };
+
+    return Array.from(groups.entries())
+      .map(([key, { label, sortKey, files: gFiles, folders: gFolders }]) => {
+        const items = [
+          ...gFolders.map((folder) => ({ type: 'folder' as const, folder })),
+          ...gFiles.map((file) => ({ type: 'file' as const, file })),
+        ].sort((a, b) => {
+          const at = a.type === 'folder' ? getTime(a.folder.created_at) : getTime(a.file.created_at);
+          const bt = b.type === 'folder' ? getTime(b.folder.created_at) : getTime(b.file.created_at);
+          const r = bt - at;
+          if (r !== 0) return r;
+          const an = a.type === 'folder' ? a.folder.name : a.file.original_filename;
+          const bn = b.type === 'folder' ? b.folder.name : b.file.original_filename;
+          return compareName(an, bn);
+        });
+        return { key, label, sortKey, files: gFiles, folders: gFolders, items };
+      })
+      .sort((a, b) => b.sortKey - a.sortKey);
+  }, [files, folders, isGroupByTime]);
+
+  return { timeGroupedItems };
+}
+
 export function useFileList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentFolderId = searchParams.get('folder') || null;
@@ -296,7 +357,25 @@ export function useFileList() {
   const [error, setError] = useState<string | null>(null);
   const clearError = useCallback(() => setError(null), []);
 
+  const getScrollStorageKey = useCallback(
+    (folderId: string | null) => {
+      const folderKey = folderId ?? 'root';
+      const q = (debouncedSearch ?? '').trim();
+      const mimeKey = mimeType || 'all';
+      return `fileListScroll:${folderKey}:${sortBy}:${mimeKey}:${q}`;
+    },
+    [debouncedSearch, mimeType, sortBy]
+  );
+
+  const lastRestoredKeyRef = useRef<string | null>(null);
+
   const navigateToFolder = useCallback((folderId: string | null) => {
+    try {
+      const key = getScrollStorageKey(currentFolderId);
+      sessionStorage.setItem(key, String(window.scrollY || 0));
+    } catch {
+      /* ignore */
+    }
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -311,14 +390,68 @@ export function useFileList() {
     );
     setSelectedFiles(new Set());
     setSelectedFolders(new Set());
-  }, [setSearchParams, setSelectedFiles, setSelectedFolders]);
+  }, [
+    setSearchParams,
+    setSelectedFiles,
+    setSelectedFolders,
+    currentFolderId,
+    getScrollStorageKey,
+  ]);
+
+  useEffect(() => {
+    if (loadingFiles || loadingFolders) return;
+    const key = getScrollStorageKey(currentFolderId);
+    if (lastRestoredKeyRef.current === key) return;
+    lastRestoredKeyRef.current = key;
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem(key);
+    } catch {
+      raw = null;
+    }
+    if (!raw) return;
+    const y = Number.parseInt(raw, 10);
+    if (!Number.isFinite(y) || y < 0) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+      });
+    });
+  }, [currentFolderId, getScrollStorageKey, loadingFiles, loadingFolders]);
 
   const displayFolders = useMemo(() => {
     if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
     const q = debouncedSearch?.trim().toLowerCase();
-    if (!q) return folders;
-    return folders.filter((f) => f.name.toLowerCase().includes(q));
-  }, [mimeType, folders, debouncedSearch]);
+    const filtered = q ? folders.filter((f) => f.name.toLowerCase().includes(q)) : folders;
+    if (filtered.length <= 1) return filtered;
+
+    const compareName = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    const getTime = (v: string) => {
+      const t = Date.parse(v);
+      return Number.isFinite(t) ? t : 0;
+    };
+
+    const list = [...filtered];
+    if (sortBy === 'time_group' || sortBy.startsWith('created_at_')) {
+      const dir = sortBy.endsWith('_asc') ? 1 : -1;
+      list.sort((a, b) => {
+        const r = getTime(a.created_at) - getTime(b.created_at);
+        if (r !== 0) return r * dir;
+        return compareName(a.name, b.name);
+      });
+      return list;
+    }
+    if (sortBy.startsWith('filename_')) {
+      const dir = sortBy.endsWith('_asc') ? 1 : -1;
+      list.sort((a, b) => compareName(a.name, b.name) * dir);
+      return list;
+    }
+    list.sort((a, b) => compareName(a.name, b.name));
+    return list;
+  }, [mimeType, folders, debouncedSearch, sortBy]);
+
+  const { timeGroupedItems } = useTimeGroupingMixed(files, displayFolders, isGroupByTime);
 
   const handleSelectFile = useCallback((fileId: string, selected: boolean) => {
     setSelectedFiles((prev) => {
@@ -496,6 +629,7 @@ export function useFileList() {
     isGroupByTime,
     groupedFiles,
     timeGroupedFiles,
+    timeGroupedItems,
     displayFolders,
     displayFiles: isGroupByTime ? displayFilesForTime : displayFiles,
     displayFileIndexById,

@@ -50,11 +50,10 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     clearError,
     isLoading,
     isRevalidating,
-    totalItems,
     isGroupByType,
     isGroupByTime,
     groupedFiles,
-    timeGroupedFiles,
+    timeGroupedItems,
     displayFolders,
     displayFiles,
     displayFileIndexById,
@@ -182,15 +181,15 @@ export default function FileList({ onOpenUpload }: FileListProps) {
           selectedFiles={selectedFiles}
           selectedFolders={selectedFolders}
           currentFolderId={currentFolderId}
+          sortBy={sortBy}
           error={error}
           onClearError={clearError}
           isLoading={isLoading}
           isRevalidating={isRevalidating}
-          totalItems={totalItems}
           isGroupByType={isGroupByType}
           isGroupByTime={isGroupByTime}
           groupedFiles={groupedFiles}
-          timeGroupedFiles={timeGroupedFiles}
+          timeGroupedItems={timeGroupedItems}
           displayFolders={displayFolders}
           totalPages={totalPages}
           page={page}

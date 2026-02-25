@@ -117,7 +117,7 @@ impl FileService {
                     "-movflags",
                     "+faststart",
                     "-vf",
-                    "fps=20,scale='min(1280,iw)':-2",
+                    "fps=20,scale='min(1280,iw)':-2,pad=ceil(iw/2)*2:ceil(ih/2)*2",
                     "-an",
                     "-c:v",
                     "libx264",

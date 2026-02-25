@@ -502,6 +502,8 @@ frontend/
 - `POST /api/files/upload/chunked/:id/complete` - 完成分片上传
 - `DELETE /api/files/upload/chunked/:id/abort` - 取消分片上传
 - `GET /api/files/:id/download` - 下载文件（支持 `Range: bytes=...` 断点/分段下载，返回 206 + `Content-Range` + `Accept-Ranges`）
+  - 认证：优先 `Authorization: Bearer <token>`；GET 场景也支持 `?token=...`（用于浏览器原生下载/移动端不支持流式写盘时的兜底）
+  - 注意：URL token 可能出现在 Referer/日志中，避免在不可信页面或第三方站点使用
 - `GET /api/files/:id/preview` - 预览（流式/内联）
 - `GET /api/files/:id/hls` - 视频/GIF HLS 主列表（.m3u8）；GIF 也会走此接口进行流式预览（边转边播）
 - `GET /api/files/:id/hls/:filename` - HLS 分片（.ts）

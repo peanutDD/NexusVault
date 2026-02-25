@@ -125,7 +125,7 @@ impl FileService {
                             "-i",
                             &source,
                             "-vf",
-                            "fps=20,scale='min(1280,iw)':-2",
+                            "fps=20,scale='min(1280,iw)':-2,pad=ceil(iw/2)*2:ceil(ih/2)*2",
                             "-an",
                             "-c:v",
                             "libx264",
@@ -195,7 +195,10 @@ impl FileService {
             }
             filter.push(';');
             for (i, (h, _)) in abr_variants.iter().enumerate().take(abr_n) {
-                filter.push_str(&format!("[v{0}]scale=-2:{1}:flags=lanczos[v{0}out];", i, h));
+                filter.push_str(&format!(
+                    "[v{0}]scale=-2:{1}:flags=lanczos,pad=ceil(iw/2)*2:ceil(ih/2)*2[v{0}out];",
+                    i, h
+                ));
             }
             if filter.ends_with(';') {
                 filter.pop();

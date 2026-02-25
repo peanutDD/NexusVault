@@ -24,5 +24,5 @@
 
 **FFmpeg 参数关键点**：
 - `-preset ultrafast`：牺牲极少压缩率换取最大转码速度。
-- `-vf "fps=20,scale='min(1280,iw)':-2"`：降低帧率和分辨率上限，减少计算量。
+- `-vf "fps=20,scale='min(1280,iw)':-2,pad=ceil(iw/2)*2:ceil(ih/2)*2"`：降低帧率和分辨率上限，且兜底保证输出宽高为偶数（libx264 要求 divisible by 2）。
 - `-an`：去除音轨（GIF 无声）。
