@@ -24,7 +24,7 @@ use deadpool_redis::redis::cmd;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
+use crate::extractors::AuthenticatedUserQuery;
 use crate::utils::hls_processing_response;
 use crate::utils::response::file_response;
 use crate::utils::AppError;
@@ -237,7 +237,7 @@ async fn file_get_or_head_response(
 /// 返回文件内容，设置 `Content-Disposition: attachment` 触发下载。
 pub async fn download_file_handler(
     State(state): State<AppState>,
-    AuthenticatedUser(user_id): AuthenticatedUser,
+    AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
     method: Method,
     headers: HeaderMap,
     Path(file_id): Path<Uuid>,

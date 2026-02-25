@@ -661,8 +661,23 @@ export const fileService = {
         }
       }
 
-      const response = await api.get<Blob>(`/api/files/${fileId}/download`, { responseType: 'blob' });
-      downloadBlob(response.data, filename);
+      if (token) {
+        const joiner = url.includes('?') ? '&' : '?';
+        const href = `${url}${joiner}token=${encodeURIComponent(token)}`;
+        const a = document.createElement('a');
+        a.href = href;
+        a.download = filename;
+        a.rel = 'noopener';
+        a.referrerPolicy = 'no-referrer';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        const response = await api.get<Blob>(`/api/files/${fileId}/download`, {
+          responseType: 'blob',
+        });
+        downloadBlob(response.data, filename);
+      }
 
       trackEvent({
         eventType: 'download',

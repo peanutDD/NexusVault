@@ -120,7 +120,7 @@ const FolderCard = memo(function FolderCard({
         {/* 文件夹名称 + 设置按钮 */}
         <div className="flex w-full items-center justify-between gap-2">
           <p
-            className="min-w-0 flex-1 truncate whitespace-nowrap text-center text-[clamp(8px,2.2vw,10px)] font-medium text-white"
+            className="min-w-0 flex-1 truncate whitespace-nowrap text-center text-[clamp(0.65rem,2.4vw,0.9rem)] font-medium text-white"
             title={folder.name}
           >
             {folder.name}

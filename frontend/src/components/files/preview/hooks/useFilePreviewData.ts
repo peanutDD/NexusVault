@@ -312,7 +312,8 @@ export function useFilePreviewData({
     if (kind.isVideo || kind.isAudio) {
       if (!isValidRequest()) return;
       videoFallbackTriedRef.current = false;
-      Promise.resolve().then(() => {
+      // 延迟加载视频，确保 UI 线程优先渲染弹窗框架（特别是移动端）
+      setTimeout(() => {
         if (!isValidRequest()) return;
         if (kind.isVideo && file.file_size >= HLS_THRESHOLD_BYTES) {
           setUseHls(false);
@@ -361,8 +362,8 @@ export function useFilePreviewData({
           setBlobUrl(getStreamUrl(file.id));
           setUseHls(false);
         }
-      });
-      finish();
+        finish();
+      }, 50);
       return;
     }
 

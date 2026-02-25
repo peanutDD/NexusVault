@@ -13,6 +13,23 @@ export function formatFileSize(bytes: number): string {
   return `${v} ${SIZES[Math.min(i, SIZES.length - 1)]}`;
 }
 
+export function formatFileSizeCompact(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0B';
+  const base = 1000;
+  const units = ['B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'] as const;
+  let unitIndex = 0;
+  while (unitIndex < units.length - 1) {
+    const factor = Math.pow(base, unitIndex);
+    const value = Math.floor(bytes / factor);
+    const threshold = unitIndex <= 2 ? 1000 : 10000;
+    if (value < threshold) break;
+    unitIndex += 1;
+  }
+  const factor = Math.pow(base, unitIndex);
+  const value = Math.floor(bytes / factor);
+  return `${value}${units[unitIndex]}`;
+}
+
 /** Alias for storage display (same logic, explicit name). */
 export const formatBytes = formatFileSize;
 

@@ -179,6 +179,15 @@ export default function FilePreview({
   };
 
   // -------------------------------------------------------------------------
+  // 延迟加载 3D 背景，优先保证弹窗快速弹出
+  // -------------------------------------------------------------------------
+  const [mount3D, setMount3D] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMount3D(true), 150);
+    return () => clearTimeout(t);
+  }, []);
+
+  // -------------------------------------------------------------------------
   // 无文件时返回 null
   // -------------------------------------------------------------------------
   if (!file) return null;
@@ -202,9 +211,11 @@ export default function FilePreview({
         aria-hidden
       />
 
-      <Suspense fallback={null}>
-        <FilePreviewBackground3D isRotationPaused={isRotationPaused} />
-      </Suspense>
+      {mount3D && (
+        <Suspense fallback={null}>
+          <FilePreviewBackground3D isRotationPaused={isRotationPaused} />
+        </Suspense>
+      )}
 
       <div className="pointer-events-none absolute inset-0 z-[2]">
         <div
@@ -306,6 +317,33 @@ export default function FilePreview({
         )}
       </div>
 
+      {/* ---- 主内容区 ---- */}
+      <FilePreviewContent
+        file={file}
+        loading={loading}
+        error={error}
+        supported={supported}
+        isImage={isImage}
+        isPDF={isPDF}
+        isVideo={isVideo}
+        isAudio={isAudio}
+        isText={isText}
+        isMarkdown={isMarkdown}
+        blobUrl={blobUrl}
+        gifFirstFrameUrl={gifFirstFrameUrl}
+        textContent={textContent}
+        useHls={useHls}
+        imageLoaded={imageLoaded}
+        imageTransformRef={imageTransformRef}
+        videoRef={videoRef}
+        loop={isLooping}
+        setImageLoaded={setImageLoaded}
+        tryVideoAudioFallback={tryVideoAudioFallback}
+        onImageError={onImageError}
+        onClose={onClose}
+        formatDate={formatPreviewDate}
+      />
+
       <FilePreviewToolbar
         section="upper"
         isImage={isImage}
@@ -320,7 +358,7 @@ export default function FilePreview({
         isLooping={isLooping}
         onToggleRotation={handleToggleRotation}
         isRotationPaused={isRotationPaused}
-        className="absolute z-[100] right-[clamp(0.5rem,2vw,1rem)] bottom-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
+        className="absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] bottom-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
       />
 
       {files.length > 1 && (
@@ -332,7 +370,7 @@ export default function FilePreview({
           }}
           disabled={!canGoNext}
           className={cn(
-            'absolute z-[100] right-[clamp(0.5rem,2vw,1rem)] top-1/2 -translate-y-1/2',
+            'absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-1/2 -translate-y-1/2',
             'flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]',
             'border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]',
             'shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]',
@@ -361,34 +399,7 @@ export default function FilePreview({
         isLooping={isLooping}
         onToggleRotation={handleToggleRotation}
         isRotationPaused={isRotationPaused}
-        className="absolute z-[100] right-[clamp(0.5rem,2vw,1rem)] top-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
-      />
-
-      {/* ---- 主内容区 ---- */}
-      <FilePreviewContent
-        file={file}
-        loading={loading}
-        error={error}
-        supported={supported}
-        isImage={isImage}
-        isPDF={isPDF}
-        isVideo={isVideo}
-        isAudio={isAudio}
-        isText={isText}
-        isMarkdown={isMarkdown}
-        blobUrl={blobUrl}
-        gifFirstFrameUrl={gifFirstFrameUrl}
-        textContent={textContent}
-        useHls={useHls}
-        imageLoaded={imageLoaded}
-        imageTransformRef={imageTransformRef}
-        videoRef={videoRef}
-        loop={isLooping}
-        setImageLoaded={setImageLoaded}
-        tryVideoAudioFallback={tryVideoAudioFallback}
-        onImageError={onImageError}
-        onClose={onClose}
-        formatDate={formatPreviewDate}
+        className="absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
       />
 
       {/* ---- 底部文件信息 ---- */}

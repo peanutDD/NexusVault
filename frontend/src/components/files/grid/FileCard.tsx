@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Download, Send, Trash2, Eye, MoreVertical, PencilLine } from 'lucide-react';
-import { formatFileSize } from '../../../utils/format';
+import { formatFileSizeCompact } from '../../../utils/format';
 import type { FileMetadata } from '../../../types/files';
 import LazyThumbnail from '../preview/LazyThumbnail';
 import { cn } from '../../../utils/cn';
@@ -115,15 +115,20 @@ const FileCard = memo(
           {/* 文件信息 + 设置按钮 */}
           <div className="flex w-full items-center justify-between gap-2">
             <div className="min-w-0 flex-1 space-y-0.5">
-              <p className="truncate whitespace-nowrap text-[clamp(8px,2.2vw,10px)] font-medium text-white" title={file.original_filename}>
+              <p
+                className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-white"
+                title={file.original_filename}
+              >
                 {file.original_filename}
               </p>
-              <p className="flex items-center gap-1 whitespace-nowrap text-[clamp(7px,1.8vw,8px)] text-gray-400">
-                <span>{formatFileSize(file.file_size)}</span>
-                <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden />
-                <span>{mimeTypeLabel}</span>
+              <p className="flex min-w-0 items-center gap-1 whitespace-nowrap overflow-hidden text-[clamp(0.38rem,1.25vw,0.55rem)] text-gray-400">
+                <span className="shrink-0">{formatFileSizeCompact(file.file_size)}</span>
+                <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden="true"></span>
+                <span className="min-w-0 flex-1 truncate">{mimeTypeLabel}</span>
               </p>
-              <p className="whitespace-nowrap text-[clamp(7px,1.8vw,8px)] text-gray-500">{formattedDate}</p>
+              <p className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.25vw,0.55rem)] text-gray-500">
+                {formattedDate}
+              </p>
             </div>
 
             {/* 设置按钮（与文字平行） */}
