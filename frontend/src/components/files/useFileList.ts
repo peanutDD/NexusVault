@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import { fileService } from '../../services/files';
 import type { FileMetadata } from '../../types/files';
 import type { Folder } from '../../types/folders';
@@ -367,7 +367,9 @@ export function useFileList() {
     [debouncedSearch, mimeType, sortBy]
   );
 
-  const lastRestoredKeyRef = useRef<string | null>(null);
+  const navType = useNavigationType();
+  const location = useLocation();
+  const lastScrollAppliedLocationKeyRef = useRef<string | null>(null);
 
   const navigateToFolder = useCallback((folderId: string | null) => {
     try {
@@ -390,6 +392,11 @@ export function useFileList() {
     );
     setSelectedFiles(new Set());
     setSelectedFolders(new Set());
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      });
+    });
   }, [
     setSearchParams,
     setSelectedFiles,
@@ -401,8 +408,18 @@ export function useFileList() {
   useEffect(() => {
     if (loadingFiles || loadingFolders) return;
     const key = getScrollStorageKey(currentFolderId);
-    if (lastRestoredKeyRef.current === key) return;
-    lastRestoredKeyRef.current = key;
+    if (lastScrollAppliedLocationKeyRef.current === location.key) return;
+    lastScrollAppliedLocationKeyRef.current = location.key;
+
+    if (navType !== 'POP') {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        });
+      });
+      return;
+    }
+
     let raw: string | null = null;
     try {
       raw = sessionStorage.getItem(key);
@@ -417,7 +434,7 @@ export function useFileList() {
         window.scrollTo({ top: y, left: 0, behavior: 'auto' });
       });
     });
-  }, [currentFolderId, getScrollStorageKey, loadingFiles, loadingFolders]);
+  }, [currentFolderId, getScrollStorageKey, loadingFiles, loadingFolders, navType, location.key]);
 
   const displayFolders = useMemo(() => {
     if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
