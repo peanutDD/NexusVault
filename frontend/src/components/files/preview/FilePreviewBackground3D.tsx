@@ -35,7 +35,8 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       0.1,
       100
     );
-    camera.position.set(0, 0, 8);
+    // 增加相机距离，从 8 改为 14，确保在移动端小屏幕上也能看到完整场景
+    camera.position.set(0, 0, 14);
 
     // Lighting
     const ambient = new THREE.AmbientLight(0xe2fffb, 0.75);

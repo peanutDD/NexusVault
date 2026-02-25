@@ -127,12 +127,12 @@ export function FilePreviewContent({
             {/* Neck Component */}
             <div className="relative mx-auto h-[clamp(1.2rem,3.2vw,2.1rem)] w-[clamp(1.6rem,3.8vw,2.5rem)] [transform-style:preserve-3d]">
               {/* Thickness layers for neck */}
-              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-[#0f172a] border border-slate-700/50 [transform:translateZ(-4px)]" />
-              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-[#0f172a] border border-slate-700/50 [transform:translateZ(-8px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-transparent border border-slate-700/50 [transform:translateZ(-4px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-transparent border border-slate-700/50 [transform:translateZ(-8px)]" />
               
               {/* Front Neck */}
-              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] border border-emerald-300/45 bg-gradient-to-b from-emerald-200/70 via-emerald-300/55 to-emerald-500/75 shadow-[0_12px_24px_rgba(10,255,160,0.38)] [transform:translateZ(0px)]">
-                <div className="absolute inset-[clamp(0.18rem,0.45vw,0.3rem)] rounded-[clamp(0.24rem,0.6vw,0.38rem)] border border-emerald-100/30 bg-gradient-to-br from-white/35 via-emerald-100/15 to-transparent" />
+              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] border border-emerald-300/45 bg-gradient-to-b from-emerald-200/40 via-emerald-300/20 to-emerald-500/40 shadow-[0_12px_24px_rgba(10,255,160,0.38)] [transform:translateZ(0px)]">
+                <div className="absolute inset-[clamp(0.18rem,0.45vw,0.3rem)] rounded-[clamp(0.24rem,0.6vw,0.38rem)] border border-emerald-100/30 bg-gradient-to-br from-white/20 via-emerald-100/10 to-transparent" />
                 <div className="absolute inset-x-[clamp(0.2rem,0.55vw,0.34rem)] bottom-[clamp(0.12rem,0.3vw,0.22rem)] h-[clamp(0.18rem,0.45vw,0.28rem)] rounded-full bg-emerald-900/40" />
               </div>
             </div>
@@ -140,12 +140,12 @@ export function FilePreviewContent({
             {/* Wide Base Component */}
             <div className="relative mx-auto -mt-[clamp(0.18rem,0.38vw,0.32rem)] h-[clamp(0.55rem,1.3vw,0.9rem)] w-[clamp(5.2rem,12.5vw,7rem)] [transform-style:preserve-3d]">
               {/* Thickness layers for wide base */}
-              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-[#0f172a] border border-slate-700/50 [transform:translateZ(-4px)]" />
-              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-[#0f172a] border border-slate-700/50 [transform:translateZ(-8px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-transparent border border-slate-700/50 [transform:translateZ(-4px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-transparent border border-slate-700/50 [transform:translateZ(-8px)]" />
 
               {/* Front Wide Base */}
-              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] border border-emerald-200/35 bg-gradient-to-r from-emerald-400/65 via-emerald-200/75 to-emerald-400/65 shadow-[0_14px_28px_rgba(10,255,160,0.45)] [transform:translateZ(0px)]">
-                <div className="absolute inset-[clamp(0.12rem,0.3vw,0.2rem)] rounded-[clamp(0.6rem,1.4vw,0.95rem)] border border-white/20 bg-gradient-to-r from-white/15 via-transparent to-white/10" />
+              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] border border-emerald-200/35 bg-gradient-to-r from-emerald-400/40 via-emerald-200/40 to-emerald-400/40 shadow-[0_14px_28px_rgba(10,255,160,0.45)] [transform:translateZ(0px)]">
+                <div className="absolute inset-[clamp(0.12rem,0.3vw,0.2rem)] rounded-[clamp(0.6rem,1.4vw,0.95rem)] border border-white/20 bg-gradient-to-r from-white/10 via-transparent to-white/5" />
                 <div className="absolute left-1/2 top-0 h-[clamp(0.2rem,0.5vw,0.32rem)] w-[clamp(3.2rem,7.5vw,4.4rem)] -translate-x-1/2 rounded-b-full bg-emerald-600/40 blur-[clamp(4px,1vw,8px)]" />
               </div>
             </div>
@@ -167,9 +167,8 @@ export function FilePreviewContent({
             <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-8))] border border-white/10" />
             <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-9))] border border-white/10" />
             
-            {/* 背板 - 最底层 - 全透明，仅保留边框和纹理 */}
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent backdrop-blur-sm shadow-[0_30px_90px_rgba(0,0,0,0.5)] [transform:translateZ(calc(var(--t-unit)*-10))]">
-               <div className="absolute inset-4 rounded-xl border border-white/5 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_25%,rgba(255,255,255,0.05)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.05)_75%,rgba(255,255,255,0.05)_100%)] bg-[length:10px_10px] opacity-20" />
+            {/* 背板 - 最底层 - 全透明，仅保留边框 */}
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent shadow-[0_30px_90px_rgba(0,0,0,0.5)] [transform:translateZ(calc(var(--t-unit)*-10))]">
                <div className="absolute inset-0 rounded-[26px] ring-1 ring-white/10" />
             </div>
 
@@ -330,11 +329,11 @@ export function FilePreviewContent({
           {isText && textContent !== null ? (
             <div className="flex h-full w-full items-center justify-center pointer-events-none">
               <div
-                className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,60rem)] overflow-hidden rounded-xl bg-gray-900/80 shadow-2xl"
+                className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,60rem)] overflow-hidden rounded-xl bg-transparent shadow-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* 顶部信息栏：类型、主题与行数 */}
-                <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+                <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 bg-slate-900/50 backdrop-blur-sm">
                   <span className="text-xs text-white/40">
                     {isMarkdown ? 'md' : file.mime_type}
                   </span>
