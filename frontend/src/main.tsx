@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, startTransition } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
@@ -58,11 +58,15 @@ if (typeof window !== 'undefined') {
   });
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+const root = createRoot(document.getElementById('root')!);
+
+startTransition(() => {
+  root.render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});
 
 // 可选：通过 `?vitals=1` 输出 Web Vitals（默认关闭，零侵入）
 try {

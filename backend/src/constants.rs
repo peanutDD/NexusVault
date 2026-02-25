@@ -80,8 +80,8 @@ pub const CACHE_CONTROL_PRIVATE_REVALIDATE: &str = "private, max-age=0, must-rev
 /// 预览文件缓存控制头（允许浏览器缓存1小时，配合ETag/Last-Modified做条件请求）
 pub const CACHE_CONTROL_PREVIEW: &str = "private, max-age=3600";
 
-/// 缩略图缓存控制头（允许浏览器和CDN缓存1天）
-pub const CACHE_CONTROL_THUMBNAIL: &str = "public, max-age=86400";
+/// 缩略图缓存控制头（允许浏览器和CDN缓存30天，immutable 表示内容不会变）
+pub const CACHE_CONTROL_THUMBNAIL: &str = "public, max-age=2592000, immutable";
 
 // ============================================================================
 // 随机字符集

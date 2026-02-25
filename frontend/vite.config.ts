@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import compression from 'vite-plugin-compression';
-import { VitePWA } from 'vite-plugin-pwa';
+// import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vite.dev/config/
@@ -12,63 +12,66 @@ export default defineConfig({
         plugins: [['babel-plugin-react-compiler', { target: '19' }]],
       },
     }),
-    VitePWA({
-      registerType: 'autoUpdate',
-      workbox: {
-        // 静态资源预缓存（排除频繁变化的 HTML）
-        globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
-        // 不预缓存 HTML，让其走 NetworkFirst
-        navigateFallback: null,
-        runtimeCaching: [
-          // HTML 页面：NetworkFirst，短缓存
-          {
-            urlPattern: /^https?:\/\/[^/]+\/?$/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'html-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 5 }, // 5 分钟
-              cacheableResponse: { statuses: [200] }, // 仅缓存成功响应
-              networkTimeoutSeconds: 3,
-            },
-          },
-          // 文件列表 API：NetworkFirst，短缓存（数据频繁变化）
-          {
-            urlPattern: /\/api\/files\?/,
-            handler: 'NetworkFirst',
-            method: 'GET',
-            options: {
-              cacheName: 'file-list-cache',
-              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 5 }, // 5 分钟
-              cacheableResponse: { statuses: [200] }, // 仅缓存成功响应，不缓存 status 0
-              networkTimeoutSeconds: 10,
-            },
-          },
-          // 文件夹 API：NetworkFirst，短缓存
-          {
-            urlPattern: /\/api\/folders(\/contents)?(\?|$)/,
-            handler: 'NetworkFirst',
-            method: 'GET',
-            options: {
-              cacheName: 'folders-cache',
-              expiration: { maxEntries: 32, maxAgeSeconds: 60 * 5 }, // 5 分钟
-              cacheableResponse: { statuses: [200] }, // 仅缓存成功响应
-              networkTimeoutSeconds: 10,
-            },
-          },
-          // 文件预览 API：CacheFirst，长缓存（文件内容不变）
-          {
-            urlPattern: /\/api\/files\/[^/]+\/preview/,
-            handler: 'CacheFirst',
-            method: 'GET',
-            options: {
-              cacheName: 'preview-cache',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 }, // 7 天
-              cacheableResponse: { statuses: [200] },
-            },
-          },
-        ],
-      },
-    }),
+    // VitePWA({
+    //   registerType: 'autoUpdate',
+    //   injectRegister: 'auto', // 自动注入 registration script
+    //   manifest: false, // 不自动生成 manifest，假设已存在或不需要
+    //   workbox: {
+    //     // 彻底禁用 globPatterns，避免扫描目录导致 EISDIR
+    //     // 我们只依赖 runtimeCaching 进行动态缓存
+    //     globPatterns: [],
+    //     // 不预缓存 HTML，让其走 NetworkFirst
+    //     navigateFallback: null,
+    //     runtimeCaching: [
+    //       // HTML 页面：NetworkFirst，短缓存
+    //       {
+    //         urlPattern: /^https?:\/\/[^/]+\/?$/,
+    //         handler: 'NetworkFirst',
+    //         options: {
+    //           cacheName: 'html-cache',
+    //           expiration: { maxEntries: 10, maxAgeSeconds: 60 * 5 }, // 5 分钟
+    //           cacheableResponse: { statuses: [200] }, // 仅缓存成功响应
+    //           networkTimeoutSeconds: 3,
+    //         },
+    //       },
+    //       // 文件列表 API：NetworkFirst，短缓存（数据频繁变化）
+    //       {
+    //         urlPattern: /\/api\/files\?/,
+    //         handler: 'NetworkFirst',
+    //         method: 'GET',
+    //         options: {
+    //           cacheName: 'file-list-cache',
+    //           expiration: { maxEntries: 64, maxAgeSeconds: 60 * 5 }, // 5 分钟
+    //           cacheableResponse: { statuses: [200] }, // 仅缓存成功响应，不缓存 status 0
+    //           networkTimeoutSeconds: 10,
+    //         },
+    //       },
+    //       // 文件夹 API：NetworkFirst，短缓存
+    //       {
+    //         urlPattern: /\/api\/folders(\/contents)?(\?|$)/,
+    //         handler: 'NetworkFirst',
+    //         method: 'GET',
+    //         options: {
+    //           cacheName: 'folders-cache',
+    //           expiration: { maxEntries: 32, maxAgeSeconds: 60 * 5 }, // 5 分钟
+    //           cacheableResponse: { statuses: [200] }, // 仅缓存成功响应
+    //           networkTimeoutSeconds: 10,
+    //         },
+    //       },
+    //       // 文件预览 API：CacheFirst，长缓存（文件内容不变）
+    //       {
+    //         urlPattern: /\/api\/files\/[^/]+\/preview/,
+    //         handler: 'CacheFirst',
+    //         method: 'GET',
+    //         options: {
+    //           cacheName: 'preview-cache',
+    //           expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 }, // 7 天
+    //           cacheableResponse: { statuses: [200] },
+    //         },
+    //       },
+    //     ],
+    //   },
+    // }),
     // Gzip 压缩
     compression({
       algorithm: 'gzip',
@@ -117,24 +120,16 @@ export default defineConfig({
           // node_modules 中的依赖
           if (id.includes('node_modules')) {
             // React 核心库
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'vendor-react';
-            }
-            // 表单处理库
-            if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
-              return 'vendor-form';
-            }
-            // 状态管理
-            if (id.includes('zustand')) {
-              return 'vendor-state';
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('zustand')) {
+              return 'react-vendor';
             }
             // UI 组件库和图标
-            if (id.includes('lucide-react') || id.includes('bootstrap-icons')) {
-              return 'vendor-ui';
+            if (id.includes('lucide-react') || id.includes('three') || id.includes('framer-motion')) {
+              return 'ui-vendor';
             }
             // 工具库
-            if (id.includes('axios') || id.includes('clsx') || id.includes('tailwind-merge')) {
-              return 'vendor-utils';
+            if (id.includes('axios') || id.includes('date-fns') || id.includes('clsx') || id.includes('tailwind-merge')) {
+              return 'utils-vendor';
             }
             // 其他大型依赖单独拆分
             if (id.includes('@tanstack/react-virtual')) {

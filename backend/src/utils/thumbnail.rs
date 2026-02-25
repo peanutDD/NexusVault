@@ -2,15 +2,13 @@
 
 use std::io::Cursor;
 
-use tracing::debug;
-
 use image::DynamicImage;
 
 use crate::utils::AppError;
 
-/// 在阻塞线程中执行：解码 → 缩略图 → 编码 JPEG。
+/// 在阻塞线程中执行：解码 → 缩略图 → 编码 WebP。
 /// 供 handler 用 `spawn_blocking` 调用，避免长时间占用 async 工作线程导致超时或无法正确返回响应。
-pub fn generate_thumbnail_jpeg(
+pub fn generate_thumbnail_webp(
     data: Vec<u8>,
     mime_type: String,
     w: u32,
@@ -20,7 +18,7 @@ pub fn generate_thumbnail_jpeg(
     let mut b = Vec::new();
     let mut cursor = std::io::Cursor::new(&mut b);
     thumb
-        .write_to(&mut cursor, image::ImageFormat::Jpeg)
+        .write_to(&mut cursor, image::ImageFormat::WebP)
         .map_err(|e| AppError::File(format!("缩略图编码失败: {}", e)))?;
     Ok(b)
 }
@@ -42,7 +40,7 @@ pub fn decode_image_for_thumbnail(data: &[u8], mime_type: &str) -> Result<Dynami
                 .map(|b| format!("{:02x}", b))
                 .collect::<Vec<_>>()
                 .join(" ");
-            debug!(magic = %magic, len = data.len(), "图片解码失败");
+            tracing::debug!(magic = %magic, len = data.len(), "图片解码失败");
             Err(AppError::File(format!("无法解码图片: {}", e)))
         }
     }
@@ -59,7 +57,7 @@ fn decode_gif_first_frame(data: &[u8]) -> Result<DynamicImage, AppError> {
     let frame = decoder
         .read_next_frame()
         .map_err(|e| AppError::File(format!("GIF 读取第一帧失败: {}", e)))?
-        .ok_or_else(|| AppError::File("GIF 无有效帧".to_string()))?;
+        .ok_or(AppError::File("GIF 无有效帧".to_string()))?;
 
     let w = frame.width;
     let h = frame.height;
@@ -74,6 +72,6 @@ fn decode_gif_first_frame(data: &[u8]) -> Result<DynamicImage, AppError> {
     }
 
     let img = image::ImageBuffer::from_raw(w as u32, h as u32, buf)
-        .ok_or_else(|| AppError::File("GIF 第一帧转 ImageBuffer 失败".to_string()))?;
+        .ok_or(AppError::File("GIF 第一帧转 ImageBuffer 失败".to_string()))?;
     Ok(DynamicImage::ImageRgba8(img))
 }

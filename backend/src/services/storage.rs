@@ -124,7 +124,7 @@ impl LocalStorage {
         Path::new(&self.base_path)
             .join(user_id.to_string())
             .join(THUMBNAIL_DIR)
-            .join(format!("{}.{}", file_id, THUMBNAIL_EXT))
+            .join(format!("{}.{}", file_id, "webp"))
     }
 
     /// 旧版缩略图路径（迁移前：根目录下 .thumbnails/{file_id}.jpg）
@@ -348,10 +348,7 @@ impl S3Storage {
     }
 
     fn get_thumbnail_key(&self, file_id: Uuid, user_id: Uuid) -> String {
-        format!(
-            "{}/{}/{}.{}",
-            user_id, THUMBNAIL_DIR, file_id, THUMBNAIL_EXT
-        )
+        format!("{}/{}/{}.webp", user_id, THUMBNAIL_DIR, file_id)
     }
 
     fn get_thumbnail_key_legacy(&self, file_id: Uuid) -> String {
@@ -572,7 +569,7 @@ impl StorageBackend for S3Storage {
             .put_object()
             .bucket(&self.bucket)
             .key(&key)
-            .content_type("image/jpeg")
+            .content_type("image/webp")
             .body(aws_sdk_s3::primitives::ByteStream::from(data.to_vec()))
             .send()
             .await

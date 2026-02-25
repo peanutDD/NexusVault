@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { fileService } from '../../../services/files';
-import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { cn } from '../../../utils/cn';
 import { isImageType, isVideoType, isPdfType, isAudioType } from '../../../utils/mimeType';
 import { useAuthStore } from '../../../store/authStore';
@@ -142,36 +141,6 @@ function AudioIcon({ className }: { className?: string }) {
   );
 }
 
-/** 获取文件类型对应的图标和背景色 */
-function getFileTypeDisplay(mimeType: string) {
-  if (isVideoType(mimeType)) {
-    return {
-      icon: <VideoIcon className="h-10 w-10" />,
-      bgClass: 'bg-purple-900/30',
-      label: 'VIDEO',
-    };
-  }
-  if (isPdfType(mimeType)) {
-    return {
-      icon: <PdfIcon className="h-10 w-10" />,
-      bgClass: 'bg-red-900/30',
-      label: 'PDF',
-    };
-  }
-  if (isAudioType(mimeType)) {
-    return {
-      icon: <AudioIcon className="h-10 w-10" />,
-      bgClass: 'bg-green-900/30',
-      label: 'AUDIO',
-    };
-  }
-  return {
-    icon: <FileIcon className="h-8 w-8" />,
-    // 其他类型占位图：与视频卡片统一使用紫色背景
-    bgClass: 'bg-purple-900/30',
-    label: null,
-  };
-}
 
 const SHOW_LOADING_DELAY_MS = 100; // 延迟显示加载骨架，缓存命中或快速响应时不再闪一下
 
@@ -201,8 +170,9 @@ export default function LazyThumbnail({
     [fileId, eagerLoad, thumbnailUrl]
   );
   const [state, setState] = useState<ThumbnailState>(() => createInitialState());
+  // 在 render 阶段修正 state，确保渲染内容与 fileId 一致，避免旧图片闪烁
   const effectiveState = state.fileId === fileId ? state : createInitialState();
-  const { imageUrl, showLoadingUi, error } = effectiveState;
+  
   const updateState = useCallback(
     (partial: Partial<ThumbnailState>) => {
       setState((prev) => {
@@ -340,76 +310,72 @@ export default function LazyThumbnail({
     };
   }, [fileId, showThumbnail, updateState, eagerLoad, thumbnailUrl, createInitialState]);
 
-  const placeholder = (
+  const getSrcSet = () => {
+    if (!thumbnailUrl) return undefined;
+    if (thumbnailUrl.startsWith('blob:')) return undefined; // Blob URL 不支持 srcset
+    const url = new URL(thumbnailUrl);
+    // 生成不同尺寸的缩略图 URL
+    // w=200: 小屏幕/移动端
+    // w=400: 默认尺寸 (FileGrid 默认列宽)
+    // w=800: 高分屏/大屏幕
+    const getUrl = (w: number) => {
+      const u = new URL(url);
+      u.searchParams.set('w', w.toString());
+      return `${u.toString()} ${w}w`;
+    };
+    return `${getUrl(200)}, ${getUrl(400)}, ${getUrl(800)}`;
+  };
+
+  const renderContent = () => {
+    if (effectiveState.error || !showThumbnail) {
+      if (isImageType(mimeType)) return <ImageIcon className="h-8 w-8" />;
+      if (isVideoType(mimeType)) return <VideoIcon className="h-8 w-8" />;
+      if (isPdfType(mimeType)) return <PdfIcon className="h-8 w-8" />;
+      if (isAudioType(mimeType)) return <AudioIcon className="h-8 w-8" />;
+      return <FileIcon className="h-8 w-8" />;
+    }
+
+    if (effectiveState.imageUrl) {
+      return (
+        <>
+          {effectiveState.showLoadingUi && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+            </div>
+          )}
+          <img
+            src={effectiveState.imageUrl}
+            srcSet={getSrcSet()}
+            sizes="(max-width: 640px) 100px, (max-width: 1024px) 200px, 400px"
+            alt={filename}
+            className={cn(
+              'h-full w-full object-cover transition-opacity duration-300',
+              effectiveState.loading ? 'opacity-0' : 'opacity-100'
+            )}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            decoding="async"
+            loading={eagerLoad ? 'eager' : 'lazy'}
+            fetchPriority={eagerLoad ? 'high' : 'auto'}
+          />
+        </>
+      );
+    }
+
+    return (
+      <div className="w-full h-full animate-pulse bg-gray-600 dark:bg-gray-500" />
+    );
+  };
+
+  return (
     <div
       ref={containerRef}
       className={cn(
-        'flex items-center justify-center bg-purple-900/30 dark:bg-purple-900/40 rounded overflow-hidden shrink-0',
+        'relative flex items-center justify-center bg-purple-900/30 dark:bg-purple-900/40 rounded overflow-hidden shrink-0',
         className
       )}
     >
-      {showLoadingUi ? (
-        <div className="w-full h-full animate-pulse bg-gray-600 dark:bg-gray-500" />
-      ) : showThumbnail ? (
-        <ImageIcon className="w-8 h-8" />
-      ) : (
-        <FileIcon className="w-8 h-8" />
-      )}
+      {renderContent()}
     </div>
   );
-
-  // 非缩略图类型（视频/PDF/音频等）：显示专门图标
-  if (!showThumbnail) {
-    const { icon, bgClass, label } = getFileTypeDisplay(mimeType);
-    return (
-      <div
-        ref={containerRef}
-        className={cn(
-          'flex flex-col items-center justify-center rounded overflow-hidden shrink-0',
-          bgClass,
-          className
-        )}
-      >
-        {icon}
-        {label && (
-          <span className="mt-1 text-xs font-medium text-white/60">{label}</span>
-        )}
-      </div>
-    );
-  }
-
-  // 图片加载错误
-  if (error) {
-    return (
-      <div
-        ref={containerRef}
-        className={cn(
-          // 错误占位也统一使用与视频卡片相同的紫色背景
-          'flex items-center justify-center bg-purple-900/30 dark:bg-purple-900/40 rounded overflow-hidden shrink-0',
-          className
-        )}
-      >
-        <ImageIcon className="h-8 w-8" />
-      </div>
-    );
-  }
-
-  if (imageUrl) {
-    return (
-      <div ref={containerRef} className={cn('rounded overflow-hidden shrink-0', className)}>
-        <ResponsivePicture
-          src={imageUrl}
-          alt={filename}
-          className="w-full h-full object-cover"
-          loading={eagerLoad ? 'eager' : 'lazy'}
-          decoding="async"
-          fetchPriority={eagerLoad ? 'high' : 'low'}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-        />
-      </div>
-    );
-  }
-
-  return placeholder;
 }

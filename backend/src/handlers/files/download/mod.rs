@@ -27,8 +27,8 @@ use uuid::Uuid;
 use crate::extractors::{AuthenticatedUser, AuthenticatedUserQuery};
 use crate::utils::hls_processing_response;
 use crate::utils::response::file_response;
-use crate::utils::thumbnail::generate_thumbnail_jpeg;
 use crate::utils::AppError;
+use crate::utils::thumbnail::generate_thumbnail_webp;
 use crate::AppState;
 
 use headers::EntityHeaders;
@@ -344,7 +344,7 @@ pub async fn thumbnail_file_handler(
             size_bytes = cached.len(),
             "thumbnail served from disk cache (200 OK)"
         );
-        let mut res = file_response(cached, "thumb.jpg", "image/jpeg", true)
+        let mut res = file_response(cached, "thumb.webp", "image/webp", true)
             .map_err(|_| AppError::Internal)?;
         res.headers_mut().insert(header::ETAG, etag_header);
         res.headers_mut().insert(
@@ -374,7 +374,7 @@ pub async fn thumbnail_file_handler(
                 for _ in 0..10 {
                     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                     if let Ok(cached) = state.file_service.get_thumbnail(file_id, user_id).await {
-                        let mut res = file_response(cached, "thumb.jpg", "image/jpeg", true)
+                        let mut res = file_response(cached, "thumb.webp", "image/webp", true)
                             .map_err(|_| AppError::Internal)?;
                         res.headers_mut().insert(header::ETAG, etag_header);
                         res.headers_mut().insert(
@@ -409,7 +409,7 @@ pub async fn thumbnail_file_handler(
     );
     let data = state.file_service.get_file_data(&file).await?;
     let mime_type = file.mime_type.clone();
-    let buf = tokio::task::spawn_blocking(move || generate_thumbnail_jpeg(data, mime_type, w))
+    let buf = tokio::task::spawn_blocking(move || generate_thumbnail_webp(data, mime_type, w))
         .await
         .map_err(|_| AppError::Internal)?;
     let buf = match buf {
@@ -444,7 +444,7 @@ pub async fn thumbnail_file_handler(
         "thumbnail generated and saved (200 OK)"
     );
     let mut res =
-        file_response(buf, "thumb.jpg", "image/jpeg", true).map_err(|_| AppError::Internal)?;
+        file_response(buf, "thumb.webp", "image/webp", true).map_err(|_| AppError::Internal)?;
     res.headers_mut().insert(header::ETAG, etag_header);
     res.headers_mut().insert(
         header::CACHE_CONTROL,

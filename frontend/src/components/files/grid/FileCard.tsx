@@ -207,8 +207,11 @@ const FileCard = memo(
     prev.file.id === next.file.id &&
     prev.file.original_filename === next.file.original_filename &&
     prev.file.file_size === next.file.file_size &&
+    prev.file.created_at === next.file.created_at &&
+    prev.file.mime_type === next.file.mime_type &&
     prev.isSelected === next.isSelected &&
-    prev.isMenuOpen === next.isMenuOpen
+    prev.isMenuOpen === next.isMenuOpen &&
+    prev.thumbnailPriority === next.thumbnailPriority
 );
 
 export default FileCard;

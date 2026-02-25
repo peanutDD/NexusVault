@@ -138,7 +138,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
   setShareFile,
 }) => {
   const [isMobile] = useState(
-    typeof window !== 'undefined' && window.innerWidth < MOBILE_WIDTH_THRESHOLD
+    () => typeof window !== 'undefined' && window.innerWidth < MOBILE_WIDTH_THRESHOLD
   );
   const shouldUseVirtualList = !isMobile && files.length > FILE_LIST.VIRTUAL_THRESHOLD;
   const [openMenu, setOpenMenu] = useState<MenuState | null>(null);
@@ -169,6 +169,8 @@ const FileListContent: React.FC<FileListContentProps> = ({
     }
   }, [openMenu, files, displayFolders]);
 
+  const showBatchActions = selectedFiles.size + selectedFolders.size > 0;
+
   return (
     <div>
       {error && (
@@ -198,7 +200,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
       ) : (
         <>
           {/* 全选栏 + 批量工具栏：有选择时整合为一块玻璃拟态，无选择时独立 */}
-          {selectedFiles.size + selectedFolders.size > 0 ? (
+          {showBatchActions ? (
             <div className="sticky top-20 sm:top-24 z-40 mb-[var(--bar-gap)]">
               <div className="glass-panel-soft bars-integrated flex flex-col">
                 <div className="all-files-row flex items-center justify-between gap-4">

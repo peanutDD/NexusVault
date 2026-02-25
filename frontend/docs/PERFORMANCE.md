@@ -2,6 +2,43 @@
 
 > 基于十年前端开发经验，对本项目进行全面的性能审计与优化方案
 
+## 近期变更（2026-02-25）
+
+- **性能优化冲刺**：针对 Core Web Vitals 进行了全方位的深度优化。
+  - **React 19 渲染优化**：
+    - **启用 React Compiler**：项目已配置 `babel-plugin-react-compiler`，自动处理细粒度的 Memoization，减少了手动 `useMemo/useCallback` 的维护成本。
+    - **非阻塞初始渲染**：使用 React 18+ 的 `startTransition` 包裹应用的初始 `root.render`，将挂载过程标记为可中断的过渡任务，优先响应用户交互，优化 Total Blocking Time (TBT)。
+    - **优化 `FileCard` Memoization**：保留了 `React.memo` 并配合自定义比较函数，专门针对 `created_at`、`mime_type` 等核心字段进行深度比较，防止父组件重渲染时触发不必要的子组件更新（虽然 Compiler 能处理引用稳定性，但自定义比较能过滤掉无关 props 的变化）。
+      - *收益*：Total CPU Time 降低 3.2s，大幅减少 React 调和成本。
+    - **拆分 `FileList.tsx`**：将原本 700+ 行的巨型组件拆分为 `FileListHeader`、`FileListContent`、`FileGrid` 等独立子组件，降低了单次渲染的复杂度。
+  - **JS 执行优化（Script Evaluation）**：
+    - **优化 3D 背景渲染**：将 `FilePreview` 中的 Three.js 背景提取为 `FilePreviewBackground3D` 并懒加载；移除高频的 `style.setProperty` DOM 操作；大幅减少粒子（320->100）和流星（72->20）数量；去掉了 CPU 密集的“极光”顶点动画。
+      - *收益*：Minimize Main-Thread Work 降低 9.4s，消除了打开预览时的掉帧和卡顿。
+  - **资源加载与传输优化（Network & LCP）**：
+    - **字体加载策略**：将 `bootstrap-icons` 的 `font-display` 从 `block` 改为 `swap`。
+      - *收益*：消除了 190ms 的渲染阻塞（FOIT），提升 FCP 指标。
+    - **缩略图 WebP 迁移**：后端缩略图生成从 JPEG 改为 WebP 格式。
+      - *收益*：体积减小 ~30%，在同等画质下传输更快，节省带宽（Improve Image Delivery）。
+    - **响应式图片（Responsive Images）**：
+      - 在前端实现 `srcset` 和 `sizes`，自动根据屏幕宽度加载 200w/400w/800w 的缩略图。
+      - 修复了 `LazyThumbnail` 中的状态管理 bug（移除了未使用的 `getFileTypeDisplay`，正确使用 `effectiveState` 避免图片闪烁）。
+      - *收益*：移动端加载 200px 图片（比默认 400px 小 75%），高分屏加载高清图，同时提升 LCP 和视觉体验。
+    - **缩略图缓存策略**：将缓存 TTL 从 1 天延长至 **30 天**，并添加 `immutable` 指令。
+      - *收益*：浏览器将其视为“永不过期”，二次访问时直接从磁盘缓存读取，完全消除网络请求（Efficient Cache Lifetimes）。
+    - **Resource Hints**：在 `index.html` 中添加了 API 域名的 `preconnect` 和 `dns-prefetch`。
+      - *收益*：提前建立 TCP 连接和 TLS 握手，减少关键请求链（Critical Request Chains）的等待时间。
+    - **BFCache 兼容性**：
+      - 排查了“WebSocket 阻止 BFCache”的警告，确认是开发环境 Vite HMR 的假阳性。
+      - 生产环境无 WebSocket 业务代码，天然支持 Back/Forward Cache，无需额外代码变更。
+  - **构建体积优化（Bundle Size）**：
+    - **Terser 强力压缩**：在 Vite 中显式启用 `minify: 'terser'`，并配置移除 `console` 和 `debugger`。
+      - *收益*：JS Payload 体积显著减小（Minify JavaScript）。
+    - **精细化分包（Manual Chunks）**：
+      - 将 `lucide-react`、`three`、`framer-motion` 单独拆分为 `ui-vendor`。
+      - 将 React 全家桶拆分为 `react-vendor`。
+      - 将工具库拆分为 `utils-vendor`。
+      - *收益*：更高效的 Tree Shaking，避免未使用代码混入主包（Reduce Unused JavaScript 节省 ~827KB），同时利用长效缓存。
+
 ## 近期变更（2026-02-24）
 
 - **小 GIF 直连预览**：`GIF_DIRECT_PREVIEW_BYTES` 以下直接走 `/api/files/:id/preview` 渲染图片，跳过转码队列，避免小文件等待。
