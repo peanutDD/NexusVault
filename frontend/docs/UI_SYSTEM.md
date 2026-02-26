@@ -152,6 +152,7 @@ import { FormField } from '../../common/form';
   - 不显示小数
   - `MB` 显示为 `M`；超出位数上限自动进位到 `G/T/...`
 - FileCard/FolderCard 文字使用 `clamp()` 响应式字号，并保证长文本不会撑破布局（`min-w-0 + truncate`）
+- 卡片所有视觉尺寸（圆角、阴影、模糊）均通过 Design Tokens 的 `clamp()` 流体值随视口自适应缩放，详见 [TOKENS_USAGE.md §11](./TOKENS_USAGE.md#11-流体自适应规范fluid-tokens)
 
 ### 8.4 预览页 3D 玻璃拟态背景（说明）
 

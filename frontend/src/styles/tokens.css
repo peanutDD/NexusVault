@@ -43,7 +43,7 @@
     --color-border-medium: rgba(var(--rgb-white), 0.2);
     --color-border-strong: rgba(var(--rgb-white), 0.28);
 
-    /* Focus */
+    /* Focus — 极小值，1px 级别保持固定 */
     --color-focus-ring: rgba(var(--rgb-purple-500), 0.9);
     --focus-outline-width: 0.125rem;
     --focus-outline-offset: 0.125rem;
@@ -62,31 +62,36 @@
         rgb(var(--rgb-slate-950))
     );
 
-    /* Glass primitives */
+    /* Glass primitives — blur 随视口缩放 */
     --glass-bg-strong: rgba(var(--rgb-white), 0.09);
     --glass-bg-soft: rgba(var(--rgb-white), 0.035);
     --glass-highlight-strong: rgba(var(--rgb-white), 0.16);
     --glass-highlight-soft: rgba(var(--rgb-white), 0.1);
-    --glass-blur-strong: 24px;
-    --glass-blur-medium: 18px;
-    --glass-blur-soft: 14px;
+    --glass-blur-strong: clamp(16px, 2vw, 24px);
+    --glass-blur-medium: clamp(12px, 1.5vw, 18px);
+    --glass-blur-soft: clamp(10px, 1.2vw, 14px);
     --glass-saturate-strong: 150%;
     --glass-saturate-soft: 125%;
 
-    /* Radius */
-    --radius-sm: 0.75rem;
-    --radius-md: 0.9rem;
-    --radius-lg: 1.125rem;
-    --radius-xl: 1.5rem;
+    /* Radius — 全部流体化 */
+    --radius-sm: clamp(0.5rem, 0.8vw, 0.75rem);
+    --radius-md: clamp(0.6rem, 1vw, 0.9rem);
+    --radius-lg: clamp(0.75rem, 1.2vw, 1.125rem);
+    --radius-xl: clamp(1rem, 1.6vw, 1.5rem);
     --radius-pill: 999px;
     --radius-control-fluid: clamp(0.9rem, 1.4vw, 1.15rem);
 
-    /* Shadows */
-    --shadow-glass-lg: 0 22px 78px rgba(var(--rgb-black), 0.48);
-    --shadow-glass-md: 0 14px 48px rgba(var(--rgb-black), 0.34);
-    --shadow-glass-card: 0 12px 32px rgba(var(--rgb-black), 0.34);
-    --shadow-neon-purple-soft: 0 0 20px rgba(var(--rgb-purple-500), 0.18);
-    --shadow-neon-cyan-soft: 0 0 20px rgba(var(--rgb-cyan-400), 0.15);
+    /* Shadows — 偏移 & 扩散随视口缩放 */
+    --shadow-glass-lg:
+        0 clamp(14px, 1.8vw, 22px) clamp(48px, 6vw, 78px) rgba(var(--rgb-black), 0.48);
+    --shadow-glass-md:
+        0 clamp(8px, 1.2vw, 14px) clamp(28px, 4vw, 48px) rgba(var(--rgb-black), 0.34);
+    --shadow-glass-card:
+        0 clamp(6px, 1vw, 12px) clamp(18px, 2.6vw, 32px) rgba(var(--rgb-black), 0.34);
+    --shadow-neon-purple-soft:
+        0 0 clamp(12px, 1.6vw, 20px) rgba(var(--rgb-purple-500), 0.18);
+    --shadow-neon-cyan-soft:
+        0 0 clamp(12px, 1.6vw, 20px) rgba(var(--rgb-cyan-400), 0.15);
 
     /* Spacing + control sizes */
     --space-bar-gap: clamp(0.75rem, 2vw, 1rem);
@@ -122,7 +127,7 @@
     );
     --cta-primary-shadow:
         0 0 0 1px rgba(var(--rgb-emerald-500), 0.12),
-        0 14px 40px rgba(var(--rgb-emerald-500), 0.14);
+        0 clamp(8px, 1.2vw, 14px) clamp(24px, 3.2vw, 40px) rgba(var(--rgb-emerald-500), 0.14);
     --cta-secondary-border: rgba(var(--rgb-emerald-300), 0.28);
     --cta-secondary-bg: rgba(var(--rgb-slate-950), 0.32);
 
@@ -133,7 +138,7 @@
     --auth-card-border: rgba(var(--rgb-emerald-300), 0.15);
     --auth-card-shadow:
         0 0 0 1px rgba(var(--rgb-white), 0.04),
-        0 22px 80px rgba(var(--rgb-black), 0.75);
+        0 clamp(14px, 1.8vw, 22px) clamp(48px, 6.5vw, 80px) rgba(var(--rgb-black), 0.75);
     --auth-card-backdrop: blur(var(--glass-blur-strong));
 
     --auth-input-bg: rgba(var(--rgb-white), 0.1);
@@ -182,8 +187,8 @@
     --filelist-shadow-panel-soft: var(--shadow-glass-md);
     --filelist-shadow-card: var(--shadow-glass-card);
 
-    --filelist-radius-main: 18px;
-    --filelist-radius-sub: 14px;
+    --filelist-radius-main: clamp(14px, 1.7vw, 20px);
+    --filelist-radius-sub: clamp(10px, 1.3vw, 16px);
     --filelist-radius-bar: var(--radius-control-fluid);
 
     --filelist-bar-gap: var(--space-bar-gap);
@@ -204,7 +209,7 @@
     --filters-surface-bg-top: rgba(var(--rgb-white), 0.16);
     --filters-surface-bg-bottom: rgba(var(--rgb-white), 0.08);
     --filters-surface-shadow:
-        0 14px 40px rgba(var(--rgb-black), 0.35),
+        0 clamp(8px, 1.2vw, 14px) clamp(24px, 3.2vw, 40px) rgba(var(--rgb-black), 0.35),
         inset 0 1px 0 rgba(var(--rgb-white), 0.26);
 
     --filters-text: rgba(var(--rgb-white), 0.92);

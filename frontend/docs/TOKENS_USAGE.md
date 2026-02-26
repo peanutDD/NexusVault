@@ -231,15 +231,81 @@ PR 中必须包含：
 
 ---
 
-## 11. 维护建议
+## 11. 流体自适应规范（Fluid Tokens）
 
-- 每月做一次 token 去重巡检
-- 组件新增样式优先提炼到 component token
-- 文档与 `tokens.css` 同步更新，避免“有实现无规范”
+### 11.1 原则
+
+所有"用户可感知尺寸"的 token **必须使用 `clamp()` 流体值**，使其随视口宽度平滑缩放。
+仅以下类型允许保持固定值：
+
+| 允许固定值的场景 | 原因 |
+|---|---|
+| 颜色 / 透明度（rgba 值） | 与视口大小无关 |
+| `--radius-pill: 999px` | 胶囊形始终全圆，无需缩放 |
+| `--focus-outline-width/offset`（1–2px） | 无障碍焦点环，缩放无意义 |
+| `--filters-dropdown-z`（z-index） | 层级值，非视觉尺寸 |
+| RGB 通道原语（`--rgb-*`） | 纯数值通道，非尺寸 |
+
+### 11.2 `clamp()` 书写格式
+
+```
+clamp(<小屏下限>, <视口比例>, <大屏上限>)
+```
+
+- **下限**：移动端（≈375px 视口）时的最小可用值
+- **比例**：以 `vw` 为单位的线性插值斜率
+- **上限**：桌面端（≈1440px 视口）时的设计稿原始值
+
+示例：
+
+```css
+/* 圆角：小屏 12px → 大屏 18px */
+--filelist-radius-main: clamp(12px, 1.4vw, 18px);
+
+/* 模糊：小屏 16px → 大屏 24px */
+--glass-blur-strong: clamp(16px, 2vw, 24px);
+
+/* 阴影偏移：小屏 14px → 大屏 22px */
+--shadow-glass-lg: 0 clamp(14px, 1.8vw, 22px) clamp(48px, 6vw, 78px) rgba(...);
+```
+
+### 11.3 已流体化的 token 清单
+
+以下类别的所有 token 已完成 `clamp()` 流体化：
+
+| 类别 | 涉及 token | 说明 |
+|---|---|---|
+| **Glass Blur** | `--glass-blur-strong/medium/soft` | 模糊半径随视口缩放，小屏减轻性能压力 |
+| **Radius** | `--radius-sm/md/lg/xl` | 全局圆角流体化 |
+| **File List Radius** | `--filelist-radius-main/sub` | 卡片 & 缩略图圆角流体化 |
+| **Shadows** | `--shadow-glass-lg/md/card`、`--shadow-neon-*` | 阴影偏移与扩散随视口缩放 |
+| **CTA Shadow** | `--cta-primary-shadow` | CTA 按钮阴影流体化 |
+| **Auth Shadow** | `--auth-card-shadow` | 认证卡片阴影流体化 |
+| **Filters Shadow** | `--filters-surface-shadow` | 筛选栏阴影流体化 |
+| **Spacing / Heights** | `--space-bar-*`、`--control-height-*` | 已有 clamp()，无需改动 |
+| **Typography** | `--font-size-ui-*`、`--nav-*-font-size` | 已有 clamp()，无需改动 |
+| **Navigation** | `--nav-panel-*`、`--nav-control-*`、`--nav-chip-*` 等 | 已有 clamp()，无需改动 |
+
+### 11.4 新增 token 时的流体化检查
+
+新增任何尺寸类 token 时，PR 必须回答：
+
+1. 该值是否为用户可感知的视觉尺寸（圆角、阴影、模糊、间距等）？
+2. 如果是 → 必须使用 `clamp()`，并给出下限、比例、上限三个值的依据。
+3. 如果不是（颜色、z-index、比例百分比等）→ 在 PR 中说明原因。
 
 ---
 
-## 12. 结论
+## 12. 维护建议
 
-Design Tokens 不是“换个地方写颜色”，而是样式治理体系。  
+- 每月做一次 token 去重巡检
+- 组件新增样式优先提炼到 component token
+- 文档与 `tokens.css` 同步更新，避免"有实现无规范"
+- 定期检查是否有新增的固定尺寸 token 遗漏了 `clamp()` 流体化
+
+---
+
+## 13. 结论
+
+Design Tokens 不是"换个地方写颜色"，而是样式治理体系。  
 请严格遵循：**先复用、再新增；先语义、后取值；先组件一致、后局部特例。**
