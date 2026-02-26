@@ -30,7 +30,7 @@ export default function PageLayout({
         extra={navExtra}
         showSettings={showSettings}
       />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pt-24 sm:pt-32 animate-fade-in">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-[clamp(1rem,2.4vw,2rem)] pt-[clamp(5.5rem,10vw,8rem)] animate-fade-in">
         {children}
       </main>
       <BottomBar />

@@ -41,14 +41,14 @@ export default function NavBar({
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-fuchsia-500/10" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20 sm:h-24">
+        <div className="flex justify-between items-center h-[clamp(4.75rem,7.6vw,6.25rem)]">
           <div className="flex items-center gap-4 min-w-0">
             {backTo && (
               <button
                 type="button"
                 onClick={() => navigate(backTo.path)}
                 className={cn(
-                  'nav-btn inline-flex items-center justify-center rounded-md whitespace-nowrap',
+                  'nav-btn inline-flex items-center justify-center whitespace-nowrap',
                   'nav-ui-fluid font-semibold tracking-wide text-slate-200',
                   'bg-slate-900/40 border border-emerald-300/15',
                   'hover:bg-slate-900/55 hover:border-emerald-300/30',
@@ -67,7 +67,7 @@ export default function NavBar({
 
             <div className="flex items-center gap-4 min-w-0">
               <div className="shrink-0 select-none">
-                <CyberPrismLogo className="h-12 w-12 sm:h-14 sm:w-14" />
+                <CyberPrismLogo className="h-[clamp(2.6rem,4vw,3.3rem)] w-[clamp(2.6rem,4vw,3.3rem)]" />
               </div>
               <h1 className="nav-title-fluid font-brand truncate font-normal tracking-widest text-slate-300 drop-shadow-sm select-none">
                 {title}
@@ -81,24 +81,24 @@ export default function NavBar({
             {/* 右侧“控制面板” */}
             <div
               className={cn(
-                'nav-panel relative flex items-center rounded-lg shrink-0',
+                'nav-panel relative flex items-center shrink-0',
                 'bg-slate-950/30 border border-emerald-300/15',
                 'shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_10px_40px_rgba(0,0,0,0.35)]'
               )}
             >
               {/* 细微霓虹描边 */}
-              <div className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-400/10 via-transparent to-emerald-400/10" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-400/10 via-transparent to-emerald-400/10" />
 
               {username != null && (
                 <div
                   className={cn(
-                    'nav-chip hidden sm:flex items-center rounded-md',
+                    'nav-chip hidden sm:flex items-center',
                     'bg-slate-900/40 border border-emerald-300/15',
                     'text-slate-300'
                   )}
                   title={username}
                 >
-                  <span className="nav-dot rounded-full bg-emerald-300/80 shadow-[0_0_10px_rgba(110,231,183,0.45)]" />
+                  <span className="nav-dot bg-emerald-300/80 shadow-[0_0_10px_rgba(110,231,183,0.45)]" />
                   <span className="nav-ui-fluid font-brand font-semibold tracking-wider">
                     {username}
                   </span>
@@ -107,7 +107,7 @@ export default function NavBar({
 
               <ThemeToggle
                 className={cn(
-                  'nav-iconbtn p-0 rounded-md',
+                  'nav-iconbtn p-0',
                   'bg-slate-900/40 border border-emerald-300/15',
                   'hover:border-emerald-300/30 hover:bg-slate-900/55',
                   'focus:ring-emerald-300/40 focus:ring-offset-slate-950'
@@ -120,7 +120,7 @@ export default function NavBar({
                   onClick={() => navigate('/settings')}
                   aria-label="Settings"
                   className={cn(
-                    'nav-btn inline-flex items-center justify-center rounded-md whitespace-nowrap',
+                    'nav-btn inline-flex items-center justify-center whitespace-nowrap',
                     'nav-ui-fluid font-semibold tracking-wide text-slate-200',
                     'bg-slate-900/40 border border-emerald-300/15',
                     'hover:bg-slate-900/55 hover:border-emerald-300/30',
@@ -137,7 +137,7 @@ export default function NavBar({
                 onClick={onLogout}
                 aria-label="Logout"
                 className={cn(
-                  'nav-btn inline-flex items-center justify-center rounded-md whitespace-nowrap',
+                  'nav-btn inline-flex items-center justify-center whitespace-nowrap',
                   'nav-ui-fluid font-brand font-semibold tracking-wide text-slate-100',
                   'bg-slate-900/40 border border-emerald-300/15',
                   'hover:bg-slate-900/55 hover:border-rose-300/35',
