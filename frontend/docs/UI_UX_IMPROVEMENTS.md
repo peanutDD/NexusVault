@@ -6,29 +6,28 @@
 6→
 7→## ✅ 已实现的改进
 8→
-9→### 1. 深色模式支持 ✅
+9→### 1. 深色主题（固定）✅
 10→
 11→**实现内容**：
-12→- 创建了 `store/themeStore.ts`，使用 Zustand 管理主题状态
-13→- 支持三种模式：`light`、`dark`、`system`（自动跟随系统）
-14→- 主题持久化到 localStorage
-15→- 自动监听系统主题变化（`prefers-color-scheme`）
+12→- 当前仅保留深色主题（`dark`），不提供浅色/系统主题切换
+13→- `store/themeStore.ts` 作为兼容层保留，但会强制回写 `dark`
+14→- 入口处固定给 `document.documentElement` 添加 `dark` class，避免旧缓存导致主题错乱
 16→
 17→**新增组件**：
-18→- `components/common/ThemeToggle.tsx` - 主题切换按钮
-19→- 集成到 `NavBar` 组件，可在导航栏切换主题
+18→- 无（主题切换按钮已移除）
 20→
 21→**更新的组件**：
-22→- `NavBar` - 添加主题切换按钮，支持深色模式样式
-23→- `PageLayout` - 背景渐变支持深色模式
-24→- `FileList` - 列表项、筛选器支持深色模式
-25→- `FileRow` - 文件行支持深色模式
-26→- `FileUpload` - 上传区域支持深色模式
-27→- `FileListFilters` - 所有输入框支持深色模式
-28→- `Modal` - 对话框支持深色模式
-29→- `Button` - 按钮组件支持深色模式
-30→- `ErrorMessage` - 错误消息支持深色模式
-31→- `Login` / `Register` - 登录注册页面支持深色模式
+22→- `NavBar` - 移除主题切换按钮
+23→- `App` - 固定启用深色主题
+24→- `PageLayout` - 背景渐变保持深色风格
+25→- `FileList` - 列表项、筛选器保持深色风格
+26→- `FileRow` - 文件行保持深色风格
+27→- `FileUpload` - 上传区域保持深色风格
+28→- `FileListFilters` - 所有输入框保持深色风格
+29→- `Modal` - 对话框保持深色风格
+30→- `Button` - 按钮组件保持深色风格
+31→- `ErrorMessage` - 错误消息保持深色风格
+32→- `Login` / `Register` - 登录注册页面保持深色风格
 32→
 33→**CSS 更新**：
 34→- `index.css` 添加深色模式动画和过渡效果
@@ -184,7 +183,7 @@
 184→
 185→### 代码质量
 186→- ✅ 模块化设计（主题 store、快捷键 hook）
-187→- ✅ 可复用组件（Skeleton、ThemeToggle）
+187→- ✅ 可复用组件（Skeleton）
 188→- ✅ 类型安全（TypeScript）
 189→- ✅ 详细注释
 190→
@@ -192,9 +191,9 @@
 192→
 193→## 🚀 使用指南
 194→
-195→### 切换主题
+195→### 主题
 196→
-197→点击导航栏右侧的主题切换按钮，可在深色和浅色模式之间切换。
+197→当前仅保留深色主题（无切换入口）。
 198→
 199→### 键盘快捷键
 200→
@@ -239,7 +238,6 @@
 239→## 📦 新增文件
 240→
 241→- `frontend/src/store/themeStore.ts` - 主题状态管理
-242→- `frontend/src/components/common/ThemeToggle.tsx` - 主题切换按钮
 243→- `frontend/src/components/common/Skeleton.tsx` - 骨架屏组件
 244→- `frontend/src/hooks/useKeyboardShortcuts.ts` - 键盘快捷键 Hook
 245→- `frontend/docs/UI_UX_IMPROVEMENTS.md` - 本文档

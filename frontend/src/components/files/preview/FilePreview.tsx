@@ -63,7 +63,30 @@ export default function FilePreview({
     [file]
   );
 
-  const { isImage, isPDF, isText, isMarkdown, isVideo, isAudio, supported } = kind;
+  const [isMobileLike, setIsMobileLike] = useState(false);
+  useEffect(() => {
+    const update = () => {
+      const mql =
+        window.matchMedia?.('(hover: none) and (pointer: coarse)') ??
+        window.matchMedia?.('(pointer: coarse)');
+      setIsMobileLike(Boolean(mql?.matches));
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const previewKind = useMemo(() => {
+    const disablePdfOnMobile = isMobileLike && kind.isPDF;
+    if (!disablePdfOnMobile) return kind;
+    return {
+      ...kind,
+      supported: false,
+      isPDF: false,
+    };
+  }, [kind, isMobileLike]);
+
+  const { isImage, isPDF, isText, isMarkdown, isVideo, isAudio, supported } = previewKind;
 
   // -------------------------------------------------------------------------
   // 数据加载（Blob/文本/GIF 流式首帧等）
@@ -85,7 +108,7 @@ export default function FilePreview({
     tryVideoAudioFallback,
     tryVideoAudioFallbackRef,
     onImageError,
-  } = useFilePreviewData({ file, kind });
+  } = useFilePreviewData({ file, kind: previewKind });
 
   // -------------------------------------------------------------------------
   // 导航（上一页/下一页）
@@ -110,7 +133,7 @@ export default function FilePreview({
   // Side Effects：HLS、键盘、滚动锁定、预加载
   // -------------------------------------------------------------------------
   useFilePreviewEffects({
-    kind,
+    kind: previewKind,
     useHls,
     blobUrl,
     loading,
