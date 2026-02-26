@@ -1,12 +1,19 @@
-import { memo } from 'react';
-import { Download, Send, Trash2, Eye, MoreVertical, PencilLine } from 'lucide-react';
-import { formatFileSizeCompact } from '../../../utils/format';
-import type { FileMetadata } from '../../../types/files';
-import LazyThumbnail from '../preview/LazyThumbnail';
-import { cn } from '../../../utils/cn';
-import { getMimeTypeLabel } from '../../../utils/mimeType';
-import { schedulePreload } from '../../../utils/preloadPreview';
-import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
+import { memo } from "react";
+import {
+  Download,
+  Send,
+  Trash2,
+  Eye,
+  MoreVertical,
+  PencilLine,
+} from "lucide-react";
+import { formatFileSizeCompact } from "../../../utils/format";
+import type { FileMetadata } from "../../../types/files";
+import LazyThumbnail from "../preview/LazyThumbnail";
+import { cn } from "../../../utils/cn";
+import { getMimeTypeLabel } from "../../../utils/mimeType";
+import { schedulePreload } from "../../../utils/preloadPreview";
+import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 
 interface FileCardProps {
   file: FileMetadata;
@@ -21,7 +28,7 @@ interface FileCardProps {
   isMenuOpen: boolean;
   onToggleMenu: (id: string) => void;
   onCloseMenu: () => void;
-  thumbnailPriority?: 'high' | 'low';
+  thumbnailPriority?: "high" | "low";
 }
 
 /**
@@ -48,14 +55,17 @@ const FileCard = memo(
       onToggleMenu(file.id);
     };
 
-    const formattedDate = new Date(file.created_at).toLocaleString('zh-CN', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    const formattedDate = new Date(file.created_at).toLocaleString("zh-CN", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
-    const mimeTypeLabel = getMimeTypeLabel(file.mime_type, file.original_filename);
+    const mimeTypeLabel = getMimeTypeLabel(
+      file.mime_type,
+      file.original_filename,
+    );
 
     const handleMouseEnter = () => {
       schedulePreload(file.id);
@@ -64,15 +74,16 @@ const FileCard = memo(
     return (
       <article
         className={cn(
-          'group relative rounded-xl transition-colors',
-          'bg-white/5 backdrop-blur-sm',
-          'hover:bg-white/10 active:bg-white/15',
-          isSelected && 'bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25'
+          "group relative rounded-md transition-colors",
+          "bg-white/5 backdrop-blur-sm",
+          "hover:bg-white/10 active:bg-white/15",
+          isSelected &&
+            "bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25",
         )}
         draggable
         onDragStart={(e) => {
-          e.dataTransfer.setData('application/file-id', file.id);
-          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData("application/file-id", file.id);
+          e.dataTransfer.effectAllowed = "move";
           onDragStart?.(e, file);
         }}
         onMouseEnter={handleMouseEnter}
@@ -80,7 +91,7 @@ const FileCard = memo(
         <div className="p-3">
           {/* 缩略图区域 */}
           <div
-            className="relative mb-3 aspect-square cursor-pointer overflow-hidden rounded-lg bg-black/20"
+            className="relative mb-3 aspect-square cursor-pointer overflow-hidden rounded-sm bg-black/20"
             onClick={() => onPreview(file)}
           >
             <SelectionCheckbox
@@ -122,8 +133,13 @@ const FileCard = memo(
                 {file.original_filename}
               </p>
               <p className="flex min-w-0 items-center gap-1 whitespace-nowrap overflow-hidden text-[clamp(0.38rem,1.25vw,0.55rem)] text-gray-400">
-                <span className="shrink-0">{formatFileSizeCompact(file.file_size)}</span>
-                <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden="true"></span>
+                <span className="shrink-0">
+                  {formatFileSizeCompact(file.file_size)}
+                </span>
+                <span
+                  className="h-0.5 w-0.5 rounded-full bg-gray-600"
+                  aria-hidden="true"
+                ></span>
                 <span className="min-w-0 flex-1 truncate">{mimeTypeLabel}</span>
               </p>
               <p className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.25vw,0.55rem)] text-gray-500">
@@ -145,10 +161,7 @@ const FileCard = memo(
               {/* 玻璃拟态下拉菜单 */}
               {isMenuOpen && (
                 <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={onCloseMenu}
-                  />
+                  <div className="fixed inset-0 z-40" onClick={onCloseMenu} />
                   <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-violet-950 bg-violet-950 py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
                     <button
                       type="button"
@@ -216,7 +229,7 @@ const FileCard = memo(
     prev.file.mime_type === next.file.mime_type &&
     prev.isSelected === next.isSelected &&
     prev.isMenuOpen === next.isMenuOpen &&
-    prev.thumbnailPriority === next.thumbnailPriority
+    prev.thumbnailPriority === next.thumbnailPriority,
 );
 
 export default FileCard;

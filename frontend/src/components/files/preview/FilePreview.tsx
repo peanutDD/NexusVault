@@ -8,21 +8,21 @@
 // 依赖
 // =============================================================================
 
-import { useMemo, useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { fileService } from '../../../services/files';
-import { formatFileSize } from '../../../utils/format';
-import { cn } from '../../../utils/cn';
-import { getPreviewKind, getMimeTypeLabel } from '../../../utils/mimeType';
-import type { FileMetadata } from '../../../types/files';
+import { useMemo, useState, useEffect, useRef, lazy, Suspense } from "react";
+import { fileService } from "../../../services/files";
+import { formatFileSize } from "../../../utils/format";
+import { cn } from "../../../utils/cn";
+import { getPreviewKind, getMimeTypeLabel } from "../../../utils/mimeType";
+import type { FileMetadata } from "../../../types/files";
 
-import { useFilePreviewData } from './hooks/useFilePreviewData';
-import { useFilePreviewNavigation } from './hooks/useFilePreviewNavigation';
-import { useFilePreviewEffects } from './hooks/useFilePreviewEffects';
-import { FilePreviewContent } from './FilePreviewContent.tsx';
-import { FilePreviewToolbar } from './FilePreviewToolbar.tsx';
-import { truncateFilename, formatPreviewDate } from './utils';
+import { useFilePreviewData } from "./hooks/useFilePreviewData";
+import { useFilePreviewNavigation } from "./hooks/useFilePreviewNavigation";
+import { useFilePreviewEffects } from "./hooks/useFilePreviewEffects";
+import { FilePreviewContent } from "./FilePreviewContent.tsx";
+import { FilePreviewToolbar } from "./FilePreviewToolbar.tsx";
+import { truncateFilename, formatPreviewDate } from "./utils";
 
-const FilePreviewBackground3D = lazy(() => import('./FilePreviewBackground3D'));
+const FilePreviewBackground3D = lazy(() => import("./FilePreviewBackground3D"));
 
 // =============================================================================
 // 类型
@@ -59,34 +59,15 @@ export default function FilePreview({
     () =>
       file
         ? getPreviewKind(file.mime_type, file.original_filename)
-        : getPreviewKind(''),
-    [file]
+        : getPreviewKind(""),
+    [file],
   );
 
-  const [isMobileLike, setIsMobileLike] = useState(false);
-  useEffect(() => {
-    const update = () => {
-      const mql =
-        window.matchMedia?.('(hover: none) and (pointer: coarse)') ??
-        window.matchMedia?.('(pointer: coarse)');
-      setIsMobileLike(Boolean(mql?.matches));
-    };
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
+  // 移动端 PDF 由 PdfPreview 内部使用 PDF.js Canvas 渲染，此处不再禁用
+  const previewKind = kind;
 
-  const previewKind = useMemo(() => {
-    const disablePdfOnMobile = isMobileLike && kind.isPDF;
-    if (!disablePdfOnMobile) return kind;
-    return {
-      ...kind,
-      supported: false,
-      isPDF: false,
-    };
-  }, [kind, isMobileLike]);
-
-  const { isImage, isPDF, isText, isMarkdown, isVideo, isAudio, supported } = previewKind;
+  const { isImage, isPDF, isText, isMarkdown, isVideo, isAudio, supported } =
+    previewKind;
 
   // -------------------------------------------------------------------------
   // 数据加载（Blob/文本/GIF 流式首帧等）
@@ -113,11 +94,13 @@ export default function FilePreview({
   // -------------------------------------------------------------------------
   // 导航（上一页/下一页）
   // -------------------------------------------------------------------------
-  const { canGoPrev, canGoNext, goToPrev, goToNext } = useFilePreviewNavigation({
-    files,
-    currentIndex,
-    onNavigate,
-  });
+  const { canGoPrev, canGoNext, goToPrev, goToNext } = useFilePreviewNavigation(
+    {
+      files,
+      currentIndex,
+      onNavigate,
+    },
+  );
 
   // -------------------------------------------------------------------------
   // 图片视图状态（缩放、旋转）
@@ -170,8 +153,9 @@ export default function FilePreview({
   // 文件名展示（中间省略）
   // -------------------------------------------------------------------------
   const displayFilename = useMemo(
-    () => (file?.original_filename ? truncateFilename(file.original_filename) : ''),
-    [file]
+    () =>
+      file?.original_filename ? truncateFilename(file.original_filename) : "",
+    [file],
   );
 
   // -------------------------------------------------------------------------
@@ -229,7 +213,7 @@ export default function FilePreview({
       {/* ---- 背景层（点击关闭） ---- */}
       <div
         className="absolute inset-0 z-0 backdrop-blur-xl"
-        style={{ backgroundColor: 'rgba(var(--preview-ink), 0.92)' }}
+        style={{ backgroundColor: "rgba(var(--preview-ink), 0.92)" }}
         onClick={onClose}
         aria-hidden
       />
@@ -245,15 +229,15 @@ export default function FilePreview({
           className="absolute inset-0 opacity-45 mix-blend-screen"
           style={{
             backgroundImage:
-              'linear-gradient(180deg, rgba(var(--preview-green), 0.26), rgba(var(--preview-purple), 0.18) 45%, rgba(var(--preview-ink), 0.55)), radial-gradient(circle at 50% 30%, rgba(var(--preview-green), 0.3), transparent 55%)',
+              "linear-gradient(180deg, rgba(var(--preview-green), 0.26), rgba(var(--preview-purple), 0.18) 45%, rgba(var(--preview-ink), 0.55)), radial-gradient(circle at 50% 30%, rgba(var(--preview-green), 0.3), transparent 55%)",
           }}
         />
         <div
           className="absolute inset-0 opacity-30"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(var(--preview-green), 0.25) 1px, transparent 1px)',
-            backgroundSize: '100% 4px',
+              "linear-gradient(rgba(var(--preview-green), 0.25) 1px, transparent 1px)",
+            backgroundSize: "100% 4px",
           }}
         />
         <div className="preview-neon-frame absolute left-[8%] top-[12%] h-10 w-24 rounded-sm" />
@@ -269,21 +253,21 @@ export default function FilePreview({
           className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full blur-3xl"
           style={{
             background:
-              'radial-gradient(circle, rgba(var(--preview-green), 0.22), transparent 65%)',
+              "radial-gradient(circle, rgba(var(--preview-green), 0.22), transparent 65%)",
           }}
         />
         <div
           className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full blur-3xl"
           style={{
             background:
-              'radial-gradient(circle, rgba(var(--preview-purple), 0.2), transparent 65%)',
+              "radial-gradient(circle, rgba(var(--preview-purple), 0.2), transparent 65%)",
           }}
         />
         <div
           className="absolute left-1/2 top-1/2 h-1/3 w-1/3 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
           style={{
             background:
-              'radial-gradient(circle, rgba(var(--preview-magenta), 0.16), transparent 65%)',
+              "radial-gradient(circle, rgba(var(--preview-magenta), 0.16), transparent 65%)",
           }}
         />
       </div>
@@ -301,17 +285,29 @@ export default function FilePreview({
           }}
           disabled={!canGoPrev}
           className={cn(
-            'absolute z-20 top-1/2 -translate-y-1/2 left-[clamp(0.5rem,2vw,1rem)]',
-            'flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]',
-            'border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]',
-            'shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]',
-            'bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-white/80 transition-all duration-200',
-            canGoPrev ? 'hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer' : 'opacity-30 cursor-not-allowed'
+            "absolute z-20 top-1/2 -translate-y-1/2 left-[clamp(0.5rem,2vw,1rem)]",
+            "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
+            "border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]",
+            "shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]",
+            "bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-white/80 transition-all duration-200",
+            canGoPrev
+              ? "hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer"
+              : "opacity-30 cursor-not-allowed",
           )}
           aria-label="上一个文件"
         >
-          <svg className="shrink-0 w-[clamp(1rem,2.5vw,1.5rem)] h-[clamp(1rem,2.5vw,1.5rem)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="clamp(1.5, 0.4vw, 2.5)">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          <svg
+            className="shrink-0 w-[clamp(1rem,2.5vw,1.5rem)] h-[clamp(1rem,2.5vw,1.5rem)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth="clamp(1.5, 0.4vw, 2.5)"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
       )}
@@ -327,14 +323,16 @@ export default function FilePreview({
           <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2">
             <div
               className={cn(
-                'inline-flex items-center rounded-full bg-white/10 backdrop-blur-xl border-solid',
-                'gap-[clamp(0.25rem,0.8vw,0.5rem)] pl-[clamp(0.5rem,1.2vw,0.75rem)] pr-[clamp(0.5rem,1.2vw,0.75rem)]',
-                'pt-[clamp(0.2rem,0.5vw,0.25rem)] pb-[clamp(0.2rem,0.5vw,0.25rem)]',
-                'border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.2)] text-[clamp(0.6rem,1.2vw,0.7rem)]',
-                'shadow-[0_clamp(0.25rem,0.8vw,0.6rem)_clamp(0.5rem,1.5vw,1rem)_rgba(15,23,42,0.85)]'
+                "inline-flex items-center rounded-full bg-white/10 backdrop-blur-xl border-solid",
+                "gap-[clamp(0.25rem,0.8vw,0.5rem)] pl-[clamp(0.5rem,1.2vw,0.75rem)] pr-[clamp(0.5rem,1.2vw,0.75rem)]",
+                "pt-[clamp(0.2rem,0.5vw,0.25rem)] pb-[clamp(0.2rem,0.5vw,0.25rem)]",
+                "border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.2)] text-[clamp(0.6rem,1.2vw,0.7rem)]",
+                "shadow-[0_clamp(0.25rem,0.8vw,0.6rem)_clamp(0.5rem,1.5vw,1rem)_rgba(15,23,42,0.85)]",
               )}
             >
-              <span className="text-white/80">{currentIndex + 1} / {files.length}</span>
+              <span className="text-white/80">
+                {currentIndex + 1} / {files.length}
+              </span>
             </div>
           </div>
         )}
@@ -393,17 +391,29 @@ export default function FilePreview({
           }}
           disabled={!canGoNext}
           className={cn(
-            'absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-1/2 -translate-y-1/2',
-            'flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]',
-            'border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]',
-            'shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]',
-            'bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-white/80 transition-all duration-200',
-            canGoNext ? 'hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer' : 'opacity-30 cursor-not-allowed'
+            "absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-1/2 -translate-y-1/2",
+            "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
+            "border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]",
+            "shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]",
+            "bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-white/80 transition-all duration-200",
+            canGoNext
+              ? "hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer"
+              : "opacity-30 cursor-not-allowed",
           )}
           aria-label="下一个文件"
         >
-          <svg className="shrink-0 w-[clamp(1rem,2.5vw,1.5rem)] h-[clamp(1rem,2.5vw,1.5rem)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="clamp(1.5, 0.4vw, 2.5)">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          <svg
+            className="shrink-0 w-[clamp(1rem,2.5vw,1.5rem)] h-[clamp(1rem,2.5vw,1.5rem)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth="clamp(1.5, 0.4vw, 2.5)"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       )}
@@ -433,17 +443,23 @@ export default function FilePreview({
         <div className="mx-auto max-w-3xl">
           <div
             className={cn(
-              'mx-auto max-w-2xl rounded-xl bg-white/5 text-center backdrop-blur-sm border-solid',
-              'p-[clamp(0.5rem,1.2vw,0.75rem)]',
-              'border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.1)]',
-              'shadow-[0_clamp(0.2rem,0.6vw,0.4rem)_clamp(0.4rem,1.2vw,0.8rem)_rgba(0,0,0,0.2)]'
+              "mx-auto max-w-2xl rounded-xl bg-white/5 text-center backdrop-blur-sm border-solid",
+              "p-[clamp(0.5rem,1.2vw,0.75rem)]",
+              "border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.1)]",
+              "shadow-[0_clamp(0.2rem,0.6vw,0.4rem)_clamp(0.4rem,1.2vw,0.8rem)_rgba(0,0,0,0.2)]",
             )}
           >
-            <h2 id="preview-title" className="truncate font-medium text-white text-[clamp(0.8rem,1.8vw,1rem)]" title={file.original_filename}>
+            <h2
+              id="preview-title"
+              className="truncate font-medium text-white text-[clamp(0.8rem,1.8vw,1rem)]"
+              title={file.original_filename}
+            >
               {displayFilename}
             </h2>
             <p className="text-white/55 mt-[clamp(0.2rem,0.5vw,0.25rem)] text-[clamp(0.65rem,1.4vw,0.75rem)]">
-              {formatFileSize(file.file_size)} · {getMimeTypeLabel(file.mime_type, file.original_filename)} · {formatPreviewDate(file.created_at)}
+              {formatFileSize(file.file_size)} ·{" "}
+              {getMimeTypeLabel(file.mime_type, file.original_filename)} ·{" "}
+              {formatPreviewDate(file.created_at)}
             </p>
           </div>
         </div>

@@ -243,6 +243,10 @@ pub async fn rate_limit_middleware(
         if let Ok(window_val) = HeaderValue::from_str(&state.window_seconds.to_string()) {
             headers.insert("X-RateLimit-Window", window_val);
         }
+        // RFC 7231 §7.1.3：429 应携带 Retry-After，告知客户端最短等待秒数
+        if let Ok(retry_val) = HeaderValue::from_str(&state.window_seconds.to_string()) {
+            headers.insert("Retry-After", retry_val);
+        }
 
         return response;
     }
@@ -270,6 +274,10 @@ pub async fn rate_limit_middleware(
                 }
                 if let Ok(window_val) = HeaderValue::from_str(&state.window_seconds.to_string()) {
                     headers.insert("X-RateLimit-Window", window_val);
+                }
+                // RFC 7231 §7.1.3：429 应携带 Retry-After，告知客户端最短等待秒数
+                if let Ok(retry_val) = HeaderValue::from_str(&state.window_seconds.to_string()) {
+                    headers.insert("Retry-After", retry_val);
                 }
 
                 return response;

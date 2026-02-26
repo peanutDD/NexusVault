@@ -734,3 +734,136 @@ pub async fn run_gif_preview_worker(
 
     Ok(())
 }
+
+// =============================================================================
+// Worker：HLS 视频预览转码
+// =============================================================================
+
+/// HLS 预览转码任务的 payload 模式。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HlsPreviewPayload {
+    pub file_id: Uuid,
+    pub user_id: Uuid,
+    pub storage_backend: String,
+}
+
+/// HLS 预览 Worker：从队列取出 `hls_preview` 任务并调用 `ensure_hls_ready`。
+///
+/// 设计与 `run_gif_preview_worker` 完全对齐：
+/// - 全局转码并发配额（`transcode_semaphore`）
+/// - 任务类型级并发配额（`task_type_semaphore`，对应 `TASK_TYPE_CONCURRENCY_hls_preview`）
+/// - 指数退避重试（`mark_pending_with_error`）直至 `MAX_ATTEMPTS` 后死信
+/// - Prometheus 指标（`transcode_jobs_total` / `transcode_duration_seconds`）
+pub async fn run_hls_worker(
+    state: &crate::AppState,
+    transcode_semaphore: std::sync::Arc<tokio::sync::Semaphore>,
+    task_type_semaphore: Option<std::sync::Arc<tokio::sync::Semaphore>>,
+) -> Result<(), AppError> {
+    // 从队列抢占一条待处理任务
+    let task = match state.task_queue.dequeue_pending_task("hls_preview").await? {
+        Some(t) => t,
+        None => return Ok(()),
+    };
+
+    // 解析 payload
+    let payload: HlsPreviewPayload = serde_json::from_value(task.payload.clone())
+        .map_err(|e| AppError::File(format!("解析 hls_preview payload 失败: {}", e)))?;
+
+    let started_at = Instant::now();
+
+    // 仅支持本地存储；S3 等后端后续扩展
+    if payload.storage_backend != "local" {
+        state
+            .task_queue
+            .mark_failed(
+                task.id,
+                "hls_preview only supports local storage backend for now",
+            )
+            .await?;
+        return Ok(());
+    }
+
+    // 查询最新文件记录，避免任务创建后文件被删除或移动
+    let file: File = state
+        .file_service
+        .get_file(payload.file_id, payload.user_id)
+        .await?;
+
+    // 获取全局并发配额与任务类型配额
+    let _global_permit = transcode_semaphore
+        .acquire_owned()
+        .await
+        .map_err(|_| AppError::Internal)?;
+    let _type_permit = if let Some(sema) = task_type_semaphore {
+        Some(sema.acquire_owned().await.map_err(|_| AppError::Internal)?)
+    } else {
+        None
+    };
+
+    // 执行 HLS 转码
+    match state.file_service.ensure_hls_ready(&file).await {
+        Ok(_) => {
+            let elapsed = started_at.elapsed();
+            // 成功指标
+            counter!(
+                "transcode_jobs_total",
+                "task_type" => "hls_preview",
+                "status" => "succeeded"
+            )
+            .increment(1);
+            histogram!(
+                "transcode_duration_seconds",
+                "task_type" => "hls_preview"
+            )
+            .record(elapsed.as_secs_f64());
+
+            tracing::info!(
+                task_id = %task.id,
+                user_id = %payload.user_id,
+                file_id = %payload.file_id,
+                duration_ms = elapsed.as_millis() as u64,
+                "hls_preview transcode succeeded"
+            );
+
+            state.task_queue.mark_succeeded(task.id).await?;
+        }
+        Err(e) => {
+            let elapsed = started_at.elapsed();
+            let msg = format!("hls_preview transcode failed: {}", e);
+
+            // 失败指标
+            counter!(
+                "transcode_jobs_total",
+                "task_type" => "hls_preview",
+                "status" => "failed"
+            )
+            .increment(1);
+            histogram!(
+                "transcode_duration_seconds",
+                "task_type" => "hls_preview"
+            )
+            .record(elapsed.as_secs_f64());
+
+            tracing::error!(
+                task_id = %task.id,
+                user_id = %payload.user_id,
+                file_id = %payload.file_id,
+                duration_ms = elapsed.as_millis() as u64,
+                error = %e,
+                "hls_preview transcode failed"
+            );
+
+            // 若尚未达到最大重试次数，则重新排回 pending 队列；否则标记为最终失败（死信）。
+            if task.attempts < MAX_ATTEMPTS {
+                state
+                    .task_queue
+                    .mark_pending_with_error(task.id, task.attempts, &msg)
+                    .await?;
+            } else {
+                state.task_queue.mark_failed(task.id, &msg).await?;
+            }
+        }
+    }
+
+    Ok(())
+}

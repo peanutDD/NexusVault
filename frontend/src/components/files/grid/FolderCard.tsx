@@ -1,8 +1,8 @@
-import { memo, useCallback, useState } from 'react';
-import { FolderOpen, PencilLine, Trash2, MoreVertical } from 'lucide-react';
-import type { Folder } from '../../../types/folders';
-import { cn } from '../../../utils/cn';
-import { SelectionCheckbox } from '../../common/form/SelectionCheckbox';
+import { memo, useCallback, useState } from "react";
+import { FolderOpen, PencilLine, Trash2, MoreVertical } from "lucide-react";
+import type { Folder } from "../../../types/folders";
+import { cn } from "../../../utils/cn";
+import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 
 interface FolderCardProps {
   folder: Folder;
@@ -50,18 +50,18 @@ const FolderCard = memo(function FolderCard({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('application/folder-id', folder.id);
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData("application/folder-id", folder.id);
+    e.dataTransfer.effectAllowed = "move";
     onDragStart?.(e, folder);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const hasFolderId = e.dataTransfer.types.includes('application/folder-id');
-    const hasFileId = e.dataTransfer.types.includes('application/file-id');
+    const hasFolderId = e.dataTransfer.types.includes("application/folder-id");
+    const hasFileId = e.dataTransfer.types.includes("application/file-id");
     if (hasFolderId || hasFileId) {
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
       setIsDragOver(true);
       onDragOver?.(e);
     }
@@ -87,34 +87,36 @@ const FolderCard = memo(function FolderCard({
   return (
     <div
       className={cn(
-        'group relative cursor-pointer rounded-xl transition-colors',
-        'bg-white/5 backdrop-blur-sm',
-        'hover:bg-white/10 active:bg-white/15',
-        isSelected && 'bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25',
-        isDragOver && 'bg-blue-500/20 hover:bg-blue-500/25 active:bg-blue-500/30'
+        "group relative cursor-pointer rounded-md transition-colors",
+        "bg-white/5 backdrop-blur-sm",
+        "hover:bg-white/10 active:bg-white/15",
+        isSelected &&
+          "bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25",
+        isDragOver &&
+          "bg-blue-500/20 hover:bg-blue-500/25 active:bg-blue-500/30",
       )}
       onDoubleClick={handleDoubleClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') onOpen(folder);
+        if (e.key === "Enter") onOpen(folder);
       }}
     >
       <div className="p-3">
         {/* 文件夹图标：使用和视频文件相同的主色（text-purple-400），但缩小尺寸避免过于抢眼 */}
         <div
-          className="relative mb-3 flex aspect-square items-center justify-center rounded-lg bg-black/20"
+          className="relative mb-3 flex aspect-square items-center justify-center rounded-sm bg-black/20"
           draggable
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <SelectionCheckbox
-            isSelected={isSelected}
-            onClick={handleSelect}
+          <SelectionCheckbox isSelected={isSelected} onClick={handleSelect} />
+          <i
+            className="bi bi-folder-fill text-[clamp(1.5rem,3.2vw,2.25rem)] text-purple-400"
+            aria-hidden
           />
-          <i className="bi bi-folder-fill text-[clamp(1.5rem,3.2vw,2.25rem)] text-purple-400" aria-hidden />
         </div>
 
         {/* 文件夹名称 + 设置按钮 */}
@@ -140,10 +142,7 @@ const FolderCard = memo(function FolderCard({
             {/* 玻璃拟态菜单 */}
             {isMenuOpen && (
               <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={onCloseMenu}
-                />
+                <div className="fixed inset-0 z-40" onClick={onCloseMenu} />
                 <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-violet-950 bg-violet-950 py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
                   <button
                     type="button"

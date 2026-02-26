@@ -2,14 +2,14 @@
 //!
 //! 骨架屏组件，用于加载状态的占位显示。
 
-import { cn } from '../../../utils/cn';
+import { cn } from "../../../utils/cn";
 
 interface SkeletonProps {
   className?: string;
-  variant?: 'text' | 'circular' | 'rectangular';
+  variant?: "text" | "circular" | "rectangular";
   width?: string | number;
   height?: string | number;
-  animation?: 'pulse' | 'wave' | 'none';
+  animation?: "pulse" | "wave" | "none";
 }
 
 /**
@@ -26,32 +26,32 @@ interface SkeletonProps {
  */
 export default function Skeleton({
   className,
-  variant = 'rectangular',
+  variant = "rectangular",
   width,
   height,
-  animation = 'pulse',
+  animation = "pulse",
 }: SkeletonProps) {
-  const baseClasses = 'bg-gray-700/50 dark:bg-gray-600/50';
-  
+  const baseClasses = "bg-gray-700/50 dark:bg-gray-600/50";
+
   const variantClasses = {
-    text: 'rounded',
-    circular: 'rounded-full',
-    rectangular: 'rounded-lg',
+    text: "rounded",
+    circular: "rounded-full",
+    rectangular: "rounded-lg",
   };
 
   const animationClasses = {
-    pulse: 'animate-pulse',
-    wave: 'animate-[shimmer_2s_infinite]',
-    none: '',
+    pulse: "animate-pulse",
+    wave: "animate-[shimmer_2s_infinite]",
+    none: "",
   };
 
   // 使用 Tailwind 任意值类替代内联样式
   const widthClass = width
-    ? `w-[${typeof width === 'number' ? `${width}px` : width}]`
-    : '';
+    ? `w-[${typeof width === "number" ? `${width}px` : width}]`
+    : "";
   const heightClass = height
-    ? `h-[${typeof height === 'number' ? `${height}px` : height}]`
-    : '';
+    ? `h-[${typeof height === "number" ? `${height}px` : height}]`
+    : "";
 
   return (
     <div
@@ -61,7 +61,7 @@ export default function Skeleton({
         animationClasses[animation],
         widthClass,
         heightClass,
-        className
+        className,
       )}
       aria-hidden="true"
     />
@@ -74,14 +74,35 @@ export default function Skeleton({
 function FileRowSkeleton() {
   return (
     <tr className="border-b border-gray-700/50">
-      <td className="px-3 py-2"><Skeleton variant="circular" width={18} height={18} /></td>
-      <td className="px-2 py-2"><Skeleton variant="rectangular" width={56} height={56} className="rounded" /></td>
-      <td className="px-3 py-2"><Skeleton variant="text" width="70%" height={16} /></td>
-      <td className="px-3 py-2"><Skeleton variant="text" width={48} height={14} /></td>
-      <td className="px-3 py-2"><Skeleton variant="text" width={64} height={14} /></td>
-      <td className="px-3 py-2"><Skeleton variant="text" width={40} height={14} /></td>
-      <td className="px-3 py-2"><Skeleton variant="text" width={72} height={14} /></td>
-      <td className="px-3 py-2"><Skeleton variant="text" width={120} height={14} /></td>
+      <td className="px-3 py-2">
+        <Skeleton variant="circular" width={18} height={18} />
+      </td>
+      <td className="px-2 py-2">
+        <Skeleton
+          variant="rectangular"
+          width={56}
+          height={56}
+          className="rounded"
+        />
+      </td>
+      <td className="px-3 py-2">
+        <Skeleton variant="text" width="70%" height={16} />
+      </td>
+      <td className="px-3 py-2">
+        <Skeleton variant="text" width={48} height={14} />
+      </td>
+      <td className="px-3 py-2">
+        <Skeleton variant="text" width={64} height={14} />
+      </td>
+      <td className="px-3 py-2">
+        <Skeleton variant="text" width={40} height={14} />
+      </td>
+      <td className="px-3 py-2">
+        <Skeleton variant="text" width={72} height={14} />
+      </td>
+      <td className="px-3 py-2">
+        <Skeleton variant="text" width={120} height={14} />
+      </td>
     </tr>
   );
 }
@@ -95,10 +116,14 @@ export function FileListSkeleton({ count = 5 }: { count?: number }) {
       <table className="w-full table-fixed border-collapse">
         <thead>
           <tr className="border-b border-gray-700 bg-gray-700/80 dark:bg-gray-800/80">
-            <th className="w-12 px-3 py-3" /><th className="w-[72px] px-2 py-3" />
-            <th className="min-w-[180px] px-3 py-3" /><th className="w-20 px-3 py-3" />
-            <th className="w-28 px-3 py-3" /><th className="w-24 px-3 py-3" />
-            <th className="w-28 px-3 py-3" /><th className="w-48 px-3 py-3" />
+            <th className="w-12 px-3 py-3" />
+            <th className="w-[72px] px-2 py-3" />
+            <th className="min-w-[180px] px-3 py-3" />
+            <th className="w-20 px-3 py-3" />
+            <th className="w-28 px-3 py-3" />
+            <th className="w-24 px-3 py-3" />
+            <th className="w-28 px-3 py-3" />
+            <th className="w-48 px-3 py-3" />
           </tr>
         </thead>
         <tbody>
@@ -116,9 +141,12 @@ export function FileListSkeleton({ count = 5 }: { count?: number }) {
  */
 function FileCardSkeletonItem() {
   return (
-    <div className="rounded-xl bg-gray-800/80 p-3">
+    <div className="rounded-md bg-gray-800/80 p-3">
       {/* 缩略图占位 */}
-      <Skeleton variant="rectangular" className="mb-3 aspect-square w-full rounded-lg" />
+      <Skeleton
+        variant="rectangular"
+        className="mb-3 aspect-square w-full rounded-sm"
+      />
       {/* 文件名 */}
       <Skeleton variant="text" width="80%" height={16} className="mb-2" />
       {/* 文件大小和类型 */}
@@ -128,10 +156,25 @@ function FileCardSkeletonItem() {
       {/* 操作按钮区域 */}
       <div className="flex items-center justify-between border-t border-gray-700/50 pt-3">
         <div className="flex gap-1">
-          <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
-          <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
+          <Skeleton
+            variant="rectangular"
+            width={32}
+            height={32}
+            className="rounded-sm"
+          />
+          <Skeleton
+            variant="rectangular"
+            width={32}
+            height={32}
+            className="rounded-sm"
+          />
         </div>
-        <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
+        <Skeleton
+          variant="rectangular"
+          width={32}
+          height={32}
+          className="rounded-sm"
+        />
       </div>
     </div>
   );

@@ -1,0 +1,217 @@
+:root {
+    /* Typography */
+    --font-sans:
+        ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+        "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+    --font-display: var(--font-sans);
+    --font-brand: var(--font-sans);
+    --font-footer: var(--font-sans);
+
+    /* Primitive RGB channels */
+    --rgb-white: 255, 255, 255;
+    --rgb-black: 0, 0, 0;
+    --rgb-slate-950: 2, 6, 23;
+    --rgb-slate-900: 15, 23, 42;
+    --rgb-slate-800: 30, 41, 59;
+    --rgb-slate-700: 51, 65, 85;
+    --rgb-slate-600: 71, 85, 105;
+    --rgb-slate-500: 100, 116, 139;
+    --rgb-slate-400: 148, 163, 184;
+    --rgb-slate-300: 203, 213, 225;
+    --rgb-purple-950: 59, 7, 100;
+    --rgb-purple-900: 88, 28, 135;
+    --rgb-purple-500: 168, 85, 247;
+    --rgb-fuchsia-500: 217, 70, 239;
+    --rgb-cyan-400: 34, 211, 238;
+    --rgb-sky-400: 56, 189, 248;
+    --rgb-emerald-300: 110, 231, 183;
+    --rgb-emerald-400: 52, 211, 153;
+    --rgb-emerald-500: 16, 185, 129;
+    --rgb-rose-400: 251, 113, 133;
+    --rgb-red-500: 239, 68, 68;
+    --rgb-red-200: 254, 202, 202;
+
+    /* Semantic text */
+    --color-text-primary: rgba(var(--rgb-white), 0.92);
+    --color-text-secondary: rgba(var(--rgb-slate-300), 0.9);
+    --color-text-muted: rgba(var(--rgb-white), 0.65);
+    --color-text-disabled: rgba(var(--rgb-slate-400), 0.65);
+
+    /* Semantic border */
+    --color-border-soft: rgba(var(--rgb-white), 0.12);
+    --color-border-medium: rgba(var(--rgb-white), 0.2);
+    --color-border-strong: rgba(var(--rgb-white), 0.28);
+
+    /* Focus */
+    --color-focus-ring: rgba(var(--rgb-purple-500), 0.9);
+    --focus-outline-width: 0.125rem;
+    --focus-outline-offset: 0.125rem;
+
+    /* Page surfaces */
+    --surface-page-gradient: linear-gradient(
+        135deg,
+        rgb(var(--rgb-slate-900)),
+        rgb(var(--rgb-purple-900)),
+        rgb(var(--rgb-slate-900))
+    );
+    --surface-page-gradient-dark: linear-gradient(
+        135deg,
+        rgb(var(--rgb-slate-950)),
+        rgb(var(--rgb-purple-950)),
+        rgb(var(--rgb-slate-950))
+    );
+
+    /* Glass primitives */
+    --glass-bg-strong: rgba(var(--rgb-white), 0.09);
+    --glass-bg-soft: rgba(var(--rgb-white), 0.035);
+    --glass-highlight-strong: rgba(var(--rgb-white), 0.16);
+    --glass-highlight-soft: rgba(var(--rgb-white), 0.1);
+    --glass-blur-strong: 24px;
+    --glass-blur-medium: 18px;
+    --glass-blur-soft: 14px;
+    --glass-saturate-strong: 150%;
+    --glass-saturate-soft: 125%;
+
+    /* Radius */
+    --radius-sm: 0.75rem;
+    --radius-md: 0.9rem;
+    --radius-lg: 1.125rem;
+    --radius-xl: 1.5rem;
+    --radius-pill: 999px;
+    --radius-control-fluid: clamp(0.9rem, 1.4vw, 1.15rem);
+
+    /* Shadows */
+    --shadow-glass-lg: 0 22px 78px rgba(var(--rgb-black), 0.48);
+    --shadow-glass-md: 0 14px 48px rgba(var(--rgb-black), 0.34);
+    --shadow-glass-card: 0 12px 32px rgba(var(--rgb-black), 0.34);
+    --shadow-neon-purple-soft: 0 0 20px rgba(var(--rgb-purple-500), 0.18);
+    --shadow-neon-cyan-soft: 0 0 20px rgba(var(--rgb-cyan-400), 0.15);
+
+    /* Spacing + control sizes */
+    --space-bar-gap: clamp(0.75rem, 2vw, 1rem);
+    --space-bar-x: clamp(0.75rem, 2vw, 1rem);
+    --space-bar-y: clamp(0.5rem, 1.2vw, 0.75rem);
+    --control-height-md: clamp(2.05rem, 2.2vw, 2.25rem);
+    --control-height-lg: clamp(2.25rem, 5vw, 2.75rem);
+
+    /* Type scale */
+    --font-size-ui-xs: clamp(0.72rem, 0.22vw + 0.66rem, 0.82rem);
+    --font-size-ui-2xs: clamp(0.68rem, 0.18vw + 0.62rem, 0.75rem);
+    --font-size-ui-3xs: clamp(0.62rem, 0.14vw + 0.58rem, 0.69rem);
+
+    /* Navigation tokens */
+    --nav-title-font-size: clamp(1.625rem, 2.2vw + 0.625rem, 2.875rem);
+    --nav-ui-font-size: clamp(0.5625rem, 0.525vw + 0.3375rem, 0.75rem);
+    --nav-panel-padding: clamp(0.3rem, 0.45vw, 0.525rem);
+    --nav-panel-gap: clamp(0.2625rem, 0.375vw, 0.4875rem);
+    --nav-control-h: clamp(1.6875rem, 2.4vw, 2.0625rem);
+    --nav-control-px: clamp(0.675rem, 1.05vw, 0.9rem);
+    --nav-control-gap: clamp(0.3rem, 0.45vw, 0.4875rem);
+    --nav-chip-px: clamp(0.6rem, 0.9vw, 0.75rem);
+    --nav-icon-size: clamp(0.7125rem, 0.675vw, 0.825rem);
+    --nav-dot-size: clamp(0.375rem, 0.375vw, 0.5625rem);
+
+    /* CTA tokens */
+    --cta-primary-border: rgba(var(--rgb-emerald-300), 0.45);
+    --cta-primary-bg: linear-gradient(
+        90deg,
+        rgba(var(--rgb-emerald-500), 0.5),
+        rgba(var(--rgb-emerald-500), 0.28),
+        rgba(var(--rgb-fuchsia-500), 0.22)
+    );
+    --cta-primary-shadow:
+        0 0 0 1px rgba(var(--rgb-emerald-500), 0.12),
+        0 14px 40px rgba(var(--rgb-emerald-500), 0.14);
+    --cta-secondary-border: rgba(var(--rgb-emerald-300), 0.28);
+    --cta-secondary-bg: rgba(var(--rgb-slate-950), 0.32);
+
+    /* Auth semantic tokens */
+    --auth-page-bg: var(--surface-page-gradient);
+    --auth-page-bg-dark: var(--surface-page-gradient-dark);
+    --auth-card-bg: rgba(var(--rgb-slate-950), 0.4);
+    --auth-card-border: rgba(var(--rgb-emerald-300), 0.15);
+    --auth-card-shadow:
+        0 0 0 1px rgba(var(--rgb-white), 0.04),
+        0 22px 80px rgba(var(--rgb-black), 0.75);
+    --auth-card-backdrop: blur(var(--glass-blur-strong));
+
+    --auth-input-bg: rgba(var(--rgb-white), 0.1);
+    --auth-input-bg-dark: rgba(var(--rgb-slate-800), 0.5);
+    --auth-input-border: rgba(var(--rgb-white), 0.2);
+    --auth-input-border-dark: rgba(var(--rgb-slate-600), 1);
+    --auth-input-text: rgba(var(--rgb-white), 0.95);
+    --auth-input-placeholder: rgba(var(--rgb-slate-400), 1);
+
+    --auth-label-text: rgba(var(--rgb-slate-300), 0.95);
+    --auth-title-text: rgba(var(--rgb-white), 0.98);
+    --auth-subtitle-text: rgba(var(--rgb-slate-300), 0.95);
+
+    --auth-error-bg: rgba(var(--rgb-red-500), 0.2);
+    --auth-error-border: rgba(var(--rgb-red-500), 0.5);
+    --auth-error-text: rgba(var(--rgb-red-200), 0.95);
+
+    --auth-button-text: rgb(var(--rgb-slate-950));
+    --auth-button-gradient: linear-gradient(
+        to right,
+        rgba(var(--rgb-emerald-500), 0.85),
+        rgba(var(--rgb-cyan-400), 0.85),
+        rgba(var(--rgb-sky-400), 0.85)
+    );
+    --auth-button-gradient-hover: linear-gradient(
+        to right,
+        rgba(var(--rgb-emerald-500), 1),
+        rgba(var(--rgb-cyan-400), 1),
+        rgba(var(--rgb-sky-400), 1)
+    );
+    --auth-button-ring: rgba(var(--rgb-emerald-300), 0.6);
+    --auth-button-ring-offset: rgba(var(--rgb-slate-950), 1);
+
+    /* File list semantic tokens */
+    --filelist-glass-bg-strong: var(--glass-bg-strong);
+    --filelist-glass-bg-soft: var(--glass-bg-soft);
+    --filelist-glass-highlight-strong: var(--glass-highlight-strong);
+    --filelist-glass-highlight-soft: var(--glass-highlight-soft);
+
+    --filelist-glass-border: rgba(var(--rgb-white), 0.14);
+    --filelist-glass-border-strong: rgba(var(--rgb-white), 0.2);
+    --filelist-text: rgba(var(--rgb-white), 0.92);
+    --filelist-text-muted: rgba(var(--rgb-white), 0.65);
+
+    --filelist-shadow-panel: var(--shadow-glass-lg);
+    --filelist-shadow-panel-soft: var(--shadow-glass-md);
+    --filelist-shadow-card: var(--shadow-glass-card);
+
+    --filelist-radius-main: 18px;
+    --filelist-radius-sub: 14px;
+    --filelist-radius-bar: var(--radius-control-fluid);
+
+    --filelist-bar-gap: var(--space-bar-gap);
+    --filelist-bar-min-h: var(--control-height-lg);
+    --filelist-bar-px: var(--space-bar-x);
+    --filelist-bar-py: var(--space-bar-y);
+
+    --filelist-tech-glow-purple: rgba(var(--rgb-purple-500), 0.4);
+    --filelist-tech-glow-cyan: rgba(var(--rgb-cyan-400), 0.4);
+    --filelist-tech-glow-green: rgba(var(--rgb-emerald-500), 0.4);
+
+    /* Filter semantic tokens */
+    --filters-bar-gap: clamp(0.5rem, 0.75vw, 0.65rem);
+    --filters-control-h: var(--control-height-md);
+    --filters-control-radius: var(--radius-control-fluid);
+
+    --filters-surface-border: rgba(var(--rgb-white), 0.22);
+    --filters-surface-bg-top: rgba(var(--rgb-white), 0.16);
+    --filters-surface-bg-bottom: rgba(var(--rgb-white), 0.08);
+    --filters-surface-shadow:
+        0 14px 40px rgba(var(--rgb-black), 0.35),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.26);
+
+    --filters-text: rgba(var(--rgb-white), 0.92);
+    --filters-placeholder: rgba(var(--rgb-white), 0.68);
+    --filters-icon: rgba(var(--rgb-white), 0.82);
+
+    --filters-dropdown-z: 45;
+    --filters-dropdown-max-h: min(50vh, 16rem);
+    --filters-dropdown-font-size: var(--font-size-ui-3xs);
+}

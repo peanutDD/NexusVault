@@ -1,34 +1,37 @@
 .fileListGlassScope {
-  /* 基础色板（暗色玻璃拟态） */
-  /* 更“玻璃”：更强 blur、更亮边、更明显高光 */
-  /* 性能优化：降低透明/高光强度，减少合成压力 */
-  --glass-bg-a: rgba(255, 255, 255, 0.09);
-  --glass-bg-b: rgba(255, 255, 255, 0.035);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-border-strong: rgba(255, 255, 255, 0.20);
-  --glass-text: rgba(255, 255, 255, 0.92);
-  --glass-text-muted: rgba(255, 255, 255, 0.65);
-  --glass-shadow: 0 22px 78px rgba(0, 0, 0, 0.48);
-  --glass-shadow-soft: 0 14px 48px rgba(0, 0, 0, 0.34);
-  --glass-radius: 18px;
-  --glass-radius-sm: 14px;
+  /* 基于全局 Design Tokens 的文件列表语义映射 */
+  --glass-bg-a: var(--filelist-glass-bg-strong);
+  --glass-bg-b: var(--filelist-glass-bg-soft);
+  --glass-border: var(--filelist-glass-border);
+  --glass-border-strong: var(--filelist-glass-border-strong);
+  --glass-text: var(--filelist-text);
+  --glass-text-muted: var(--filelist-text-muted);
+  --glass-shadow: var(--filelist-shadow-panel);
+  --glass-shadow-soft: var(--filelist-shadow-panel-soft);
+  --glass-radius: var(--filelist-radius-main);
+  --glass-radius-sm: var(--filelist-radius-sub);
+
   /* 搜索栏、ALL FILES、批量栏三者统一的可缩放圆角 */
-  --bar-radius: clamp(0.9rem, 1.4vw, 1.15rem);
+  --bar-radius: var(--filelist-radius-bar);
+
   /* 搜索栏↔ALL FILES、ALL FILES↔批量栏 统一间距 */
-  --bar-gap: clamp(0.75rem, 2vw, 1rem);
+  --bar-gap: var(--filelist-bar-gap);
+
   /* ALL FILES、批量栏 统一容器高度 */
-  --bar-min-h: clamp(2.25rem, 5vw, 2.75rem);
-  --bar-px: clamp(0.75rem, 2vw, 1rem);
-  --bar-py: clamp(0.5rem, 1.2vw, 0.75rem);
+  --bar-min-h: var(--filelist-bar-min-h);
+  --bar-px: var(--filelist-bar-px);
+  --bar-py: var(--filelist-bar-py);
+
   /* 过大的 blur 是列表卡顿的主要原因之一 */
-  --glass-blur: 14px;
-  --glass-sat: 125%;
-  --glass-hi: rgba(255, 255, 255, 0.16);
-  --glass-hi-soft: rgba(255, 255, 255, 0.10);
+  --glass-blur: var(--glass-blur-soft);
+  --glass-sat: var(--glass-saturate-soft);
+  --glass-hi: var(--filelist-glass-highlight-strong);
+  --glass-hi-soft: var(--filelist-glass-highlight-soft);
+
   /* 科技感增强：霓虹色 */
-  --tech-glow-purple: rgba(168, 85, 247, 0.4);
-  --tech-glow-cyan: rgba(34, 211, 238, 0.4);
-  --tech-glow-green: rgba(16, 185, 129, 0.4);
+  --tech-glow-purple: var(--filelist-tech-glow-purple);
+  --tech-glow-cyan: var(--filelist-tech-glow-cyan);
+  --tech-glow-green: var(--filelist-tech-glow-green);
 }
 
 /* 公用：保证高光层不影响交互 */

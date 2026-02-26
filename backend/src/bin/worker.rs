@@ -10,7 +10,7 @@ use file_storage_backend::config::Config;
 use file_storage_backend::database::pool::create_pool;
 use file_storage_backend::middleware::metrics::init_metrics;
 use file_storage_backend::services::file::create_storage;
-use file_storage_backend::services::task_queue::run_gif_preview_worker;
+use file_storage_backend::services::task_queue::{run_gif_preview_worker, run_hls_worker};
 use file_storage_backend::AppState;
 
 #[tokio::main]
@@ -36,6 +36,8 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or(2);
 
     let transcode_semaphore = Arc::new(Semaphore::new(config.transcode_max_concurrent));
+
+    // ---------- GIF preview worker ----------
     let gif_preview_semaphore = config
         .task_type_concurrency
         .get("gif_preview")
@@ -62,17 +64,48 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
+    // ---------- HLS preview worker ----------
+    // 与 gif_preview 完全对称：并发配额 + 指数退避重试 + Prometheus 指标
+    let hls_preview_semaphore = config
+        .task_type_concurrency
+        .get("hls_preview")
+        .copied()
+        .map(|n| Arc::new(Semaphore::new(n)));
+
+    for _ in 0..concurrency {
+        let state_for_hls = state.clone();
+        let transcode_semaphore = transcode_semaphore.clone();
+        let hls_preview_semaphore = hls_preview_semaphore.clone();
+        tokio::spawn(async move {
+            loop {
+                if let Err(e) = run_hls_worker(
+                    &state_for_hls,
+                    transcode_semaphore.clone(),
+                    hls_preview_semaphore.clone(),
+                )
+                .await
+                {
+                    tracing::error!("hls_preview worker iteration failed: {}", e);
+                }
+                tokio::time::sleep(Duration::from_secs(2)).await;
+            }
+        });
+    }
+
+    // ---------- Maintenance：requeue stuck tasks ----------
     {
         let state_for_maintenance = state.clone();
         tokio::spawn(async move {
             loop {
-                if let Ok(n) = state_for_maintenance
-                    .task_queue
-                    .requeue_stuck_tasks("gif_preview", 200)
-                    .await
-                {
-                    if n > 0 {
-                        tracing::warn!(requeued = n, "requeued stuck gif_preview tasks");
+                for task_type in ["gif_preview", "hls_preview"] {
+                    if let Ok(n) = state_for_maintenance
+                        .task_queue
+                        .requeue_stuck_tasks(task_type, 200)
+                        .await
+                    {
+                        if n > 0 {
+                            tracing::warn!(requeued = n, task_type, "requeued stuck tasks");
+                        }
                     }
                 }
                 tokio::time::sleep(Duration::from_secs(30)).await;
@@ -80,23 +113,26 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
+    // ---------- Metrics：queue depth ----------
     {
         let state_for_metrics = state.clone();
         tokio::spawn(async move {
             loop {
-                if let Ok(depth) = state_for_metrics
-                    .task_queue
-                    .get_queue_depth("gif_preview")
-                    .await
-                {
-                    gauge!("background_tasks_pending_total", "task_type" => "gif_preview")
-                        .set(depth.pending_total as f64);
-                    gauge!("background_tasks_pending_ready", "task_type" => "gif_preview")
-                        .set(depth.pending_ready as f64);
-                    gauge!("background_tasks_running", "task_type" => "gif_preview")
-                        .set(depth.running as f64);
-                    gauge!("background_tasks_failed", "task_type" => "gif_preview")
-                        .set(depth.failed as f64);
+                for task_type in ["gif_preview", "hls_preview"] {
+                    if let Ok(depth) = state_for_metrics
+                        .task_queue
+                        .get_queue_depth(task_type)
+                        .await
+                    {
+                        gauge!("background_tasks_pending_total", "task_type" => task_type)
+                            .set(depth.pending_total as f64);
+                        gauge!("background_tasks_pending_ready", "task_type" => task_type)
+                            .set(depth.pending_ready as f64);
+                        gauge!("background_tasks_running", "task_type" => task_type)
+                            .set(depth.running as f64);
+                        gauge!("background_tasks_failed", "task_type" => task_type)
+                            .set(depth.failed as f64);
+                    }
                 }
                 tokio::time::sleep(Duration::from_secs(5)).await;
             }

@@ -1,15 +1,15 @@
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import compression from 'vite-plugin-compression';
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import compression from "vite-plugin-compression";
 // import { VitePWA } from 'vite-plugin-pwa';
-import { visualizer } from 'rollup-plugin-visualizer';
+import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react({
       babel: {
-        plugins: [['babel-plugin-react-compiler', { target: '19' }]],
+        plugins: [["babel-plugin-react-compiler", { target: "19" }]],
       },
     }),
     // VitePWA({
@@ -74,116 +74,134 @@ export default defineConfig({
     // }),
     // Gzip 压缩
     compression({
-      algorithm: 'gzip',
-      ext: '.gz',
+      algorithm: "gzip",
+      ext: ".gz",
       threshold: 1024, // 只压缩大于 1KB 的文件
     }),
     // Brotli 压缩 (更高压缩率)
     compression({
-      algorithm: 'brotliCompress',
-      ext: '.br',
+      algorithm: "brotliCompress",
+      ext: ".br",
       threshold: 1024,
     }),
     // Bundle 分析 (仅在 analyze 模式下启用)
-    process.env.ANALYZE === 'true' &&
+    process.env.ANALYZE === "true" &&
       visualizer({
         open: true,
-        filename: 'dist/stats.html',
+        filename: "dist/stats.html",
         gzipSize: true,
         brotliSize: true,
       }),
   ].filter(Boolean),
   server: {
     // 允许通过局域网 IP / 自定义域名（如 files.local）访问开发服务器
-    host: '0.0.0.0',
+    host: "0.0.0.0",
     // 允许任意 Host（本地开发环境，方便同时用 IP 和 files.local 访问）
     allowedHosts: true,
     // 开发环境下将 /api/* 请求代理到后端
     proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
+      "/api": {
+        target: "http://localhost:3000",
         changeOrigin: true,
         secure: false,
       },
     },
   },
   preview: {
-    host: '0.0.0.0',
+    host: "0.0.0.0",
     allowedHosts: true,
   },
   build: {
-    target: 'es2015',
+    target: "es2015",
     rollupOptions: {
       output: {
         // 使用函数形式的 manualChunks 实现更细粒度的代码拆分
         manualChunks(id) {
           // node_modules 中的依赖
-          if (id.includes('node_modules')) {
+          if (id.includes("node_modules")) {
             // React 核心库
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('zustand')) {
-              return 'react-vendor';
+            if (
+              id.includes("react") ||
+              id.includes("react-dom") ||
+              id.includes("react-router-dom") ||
+              id.includes("zustand")
+            ) {
+              return "react-vendor";
             }
             // UI 组件库和图标
-            if (id.includes('lucide-react') || id.includes('three') || id.includes('framer-motion')) {
-              return 'ui-vendor';
+            if (
+              id.includes("lucide-react") ||
+              id.includes("three") ||
+              id.includes("framer-motion")
+            ) {
+              return "ui-vendor";
             }
             // 工具库
-            if (id.includes('axios') || id.includes('date-fns') || id.includes('clsx') || id.includes('tailwind-merge')) {
-              return 'utils-vendor';
+            if (
+              id.includes("axios") ||
+              id.includes("date-fns") ||
+              id.includes("clsx") ||
+              id.includes("tailwind-merge")
+            ) {
+              return "utils-vendor";
             }
             // 其他大型依赖单独拆分
-            if (id.includes('@tanstack/react-virtual')) {
-              return 'vendor-virtual';
+            if (id.includes("@tanstack/react-virtual")) {
+              return "vendor-virtual";
             }
-            if (id.includes('hls.js')) {
-              return 'vendor-hls';
+            if (id.includes("hls.js")) {
+              return "vendor-hls";
             }
-            if (id.includes('three')) {
-              return 'vendor-three';
+            if (id.includes("three")) {
+              return "vendor-three";
             }
-            if (id.includes('zip.js') || id.includes('jszip')) {
-              return 'vendor-zip';
+            if (id.includes("zip.js") || id.includes("jszip")) {
+              return "vendor-zip";
             }
-            if (id.includes('@sentry')) {
-              return 'vendor-sentry';
+            if (id.includes("@sentry")) {
+              return "vendor-sentry";
+            }
+            // PDF.js 单独分包（~1MB），仅在预览 PDF 时懒加载
+            if (id.includes("pdfjs-dist")) {
+              return "vendor-pdfjs";
             }
             // 其他 node_modules 依赖
-            return 'vendor-other';
+            return "vendor-other";
           }
-          
+
           // 按路由拆分页面代码
-          if (id.includes('/src/pages/')) {
-            if (id.includes('/pages/Files')) {
-              return 'chunk-Files';
+          if (id.includes("/src/pages/")) {
+            if (id.includes("/pages/Files")) {
+              return "chunk-Files";
             }
-            if (id.includes('/pages/Settings')) {
-              return 'chunk-Settings';
+            if (id.includes("/pages/Settings")) {
+              return "chunk-Settings";
             }
-            if (id.includes('/pages/Share')) {
-              return 'chunk-Share';
+            if (id.includes("/pages/Share")) {
+              return "chunk-Share";
             }
           }
-          
+
           // 按功能模块拆分组件
-          if (id.includes('/src/components/auth/')) {
-            return 'chunk-auth';
+          if (id.includes("/src/components/auth/")) {
+            return "chunk-auth";
           }
-          
+
           // 文件预览（重型：three.js / hls.js）
-          if (id.includes('/src/components/files/preview/')) {
-            return 'chunk-files-preview';
+          if (id.includes("/src/components/files/preview/")) {
+            return "chunk-files-preview";
           }
           // 文件上传（重型对话框）
-          if (id.includes('/src/components/files/upload/')) {
-            return 'chunk-files-upload';
+          if (id.includes("/src/components/files/upload/")) {
+            return "chunk-files-upload";
           }
           // 文件相关对话框（懒加载）
-          if (id.includes('/src/components/files/dialogs/')) {
-            return 'chunk-files-dialogs';
+          if (id.includes("/src/components/files/dialogs/")) {
+            return "chunk-files-dialogs";
           }
           // 文件相关组件（列表等核心组件）
-          if (id.includes('/src/components/files/')) {
-            return 'chunk-files-components';
+          if (id.includes("/src/components/files/")) {
+            return "chunk-files-components";
           }
         },
       },
@@ -191,7 +209,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 500,
     cssCodeSplit: true,
     sourcemap: false,
-    minify: 'terser',
+    minify: "terser",
     terserOptions: {
       compress: {
         drop_console: true,
@@ -200,11 +218,11 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'zustand', 'axios'],
+    include: ["react", "react-dom", "react-router-dom", "zustand", "axios"],
   },
   test: {
-    environment: 'jsdom',
+    environment: "jsdom",
     globals: true,
-    setupFiles: ['./src/test/setupTests.ts'],
+    setupFiles: ["./src/test/setupTests.ts"],
   },
 });

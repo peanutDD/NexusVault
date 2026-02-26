@@ -10,11 +10,9 @@
   display: flex;
   align-items: center;
   /* 搜索框 / Type / Sort 三块间距统一 */
-  --filters-bar-gap: clamp(0.5rem, 0.75vw, 0.65rem);
   gap: var(--filters-bar-gap);
 
   /* 对齐优化：统一三块控件的高度基准 */
-  --filters-control-h: clamp(2.05rem, 2.2vw, 2.25rem);
 }
 
 /* 截图复刻布局：上排 Search + Actions；下排居中 Type/Sort */
@@ -94,13 +92,13 @@
 }
 
 .filtersGlassScreenshot .filtersCardHeader {
-  font-size: 0.625rem;
+  font-size: var(--font-size-ui-2xs);
   font-weight: 400;
 }
 
 .filtersGlassScreenshot .filtersCardSelected {
   max-width: 5.5rem;
-  font-size: 0.625rem;
+  font-size: var(--font-size-ui-2xs);
   font-weight: 400;
 }
 
@@ -134,14 +132,12 @@
   padding-inline: clamp(0.6rem, 0.9vw, 0.85rem);
   padding-block: clamp(0.4rem, 0.6vw, 0.5rem);
 
-  border-radius: clamp(0.9rem, 1.4vw, 1.15rem);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--filters-control-radius);
+  border: 1px solid var(--filters-surface-border);
   background:
     radial-gradient(120% 90% at 15% 0%, rgba(255, 255, 255, 0.22), transparent 62%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
-  box-shadow:
-    0 14px 40px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  box-shadow: var(--filters-surface-shadow);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
   position: relative;
@@ -162,7 +158,7 @@
 .filtersSearchIcon {
   width: clamp(0.95rem, 0.95vw, 1.05rem);
   height: clamp(0.95rem, 0.95vw, 1.05rem);
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--filters-icon);
 }
 
 .filtersSearchInput {
@@ -171,16 +167,16 @@
   background: transparent;
   border: 0;
   outline: none;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--filters-text);
   font-family: var(--font-brand);
-  font-size: 0.625rem;
+  font-size: var(--font-size-ui-2xs);
   font-weight: 400;
   letter-spacing: 0.1em;
   line-height: 1;
 }
 
 .filtersSearchInput::placeholder {
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--filters-placeholder);
   font-weight: 400;
 }
 
@@ -237,7 +233,7 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  border-radius: clamp(0.9rem, 1.4vw, 1.15rem);
+  border-radius: var(--filters-control-radius);
   border: 1px solid rgba(255, 255, 255, 0.20);
   background:
     radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.14), transparent 62%),
@@ -284,9 +280,9 @@
   padding: 0;
   cursor: pointer;
 
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--filters-text);
   font-family: var(--font-brand);
-  font-size: 0.625rem;
+  font-size: var(--font-size-ui-2xs);
   font-weight: 400;
   letter-spacing: 0.1em;
   line-height: 1;
@@ -409,13 +405,13 @@
 /* Portal dropdown: compact and aligned with trigger */
 .filtersDropdownPortal {
   font-family: var(--font-brand);
-  font-size: 0.4375rem;
+  font-size: var(--filters-dropdown-font-size);
   font-weight: 300;
   letter-spacing: 0.04em;
   line-height: 1.2;
   position: fixed;
-  z-index: 45;
-  max-height: min(50vh, 16rem);
+  z-index: var(--filters-dropdown-z);
+  max-height: var(--filters-dropdown-max-h);
   overflow-y: auto;
   overscroll-behavior: contain;
 
@@ -483,7 +479,7 @@
   border-radius: 0.2rem;
   color: rgba(255, 255, 255, 0.8);
   font-family: var(--font-brand);
-  font-size: 0.4375rem;
+  font-size: var(--filters-dropdown-font-size);
   font-weight: 300;
   letter-spacing: 0.04em;
   line-height: 1.2;
@@ -507,7 +503,7 @@
   justify-content: center;
   width: 0.4375rem;
   height: 0.4375rem;
-  font-size: 0.4375rem;
+  font-size: var(--filters-dropdown-font-size);
   opacity: 0.8;
 }
 

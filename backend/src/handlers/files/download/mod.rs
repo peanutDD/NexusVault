@@ -27,8 +27,8 @@ use uuid::Uuid;
 use crate::extractors::AuthenticatedUserQuery;
 use crate::utils::hls_processing_response;
 use crate::utils::response::file_response;
-use crate::utils::AppError;
 use crate::utils::thumbnail::generate_thumbnail_webp;
+use crate::utils::AppError;
 use crate::AppState;
 
 use headers::EntityHeaders;
@@ -475,42 +475,21 @@ pub async fn hls_prepare_handler(
         return Ok(Json(json!({ "status": "ready" })));
     }
 
-    let mut acquired = false;
-    if let Some(pool) = &state.redis {
-        if let Ok(mut conn) = pool.get().await {
-            let r: Result<Option<String>, _> = cmd("SET")
-                .arg(format!("lock:hls:{}", file_id))
-                .arg("1")
-                .arg("NX")
-                .arg("PX")
-                .arg(600000)
-                .query_async(&mut conn)
-                .await;
-            acquired = r.ok().flatten().is_some();
-        }
-    } else {
-        acquired = true;
-    }
-
-    if acquired {
-        let state_for_task = state.clone();
-        let file_for_task = file.clone();
-        let lock_key_for_task = format!("lock:hls:{}", file_id);
-        tokio::spawn(async move {
-            let _ = state_for_task
-                .file_service
-                .ensure_hls_ready(&file_for_task)
-                .await;
-            if let Some(pool) = &state_for_task.redis {
-                if let Ok(mut conn) = pool.get().await {
-                    let _: Result<i32, _> = cmd("DEL")
-                        .arg(lock_key_for_task)
-                        .query_async(&mut conn)
-                        .await;
-                }
-            }
-        });
-    }
+    // 使用任务队列排队（幂等：同 file_id 的 pending/running 任务自动复用）
+    // 相比 tokio::spawn 的优势：
+    //   - 进程重启后任务可恢复（持久化到 Postgres）
+    //   - 有指数退避重试 + backoff（最多 MAX_ATTEMPTS 次）
+    //   - 有 Prometheus 指标（transcode_jobs_total / transcode_duration_seconds）
+    //   - 并发受全局 transcode_semaphore + task_type_semaphore 保护
+    let payload = serde_json::json!({
+        "file_id": file.id,
+        "user_id": user_id,
+        "storage_backend": file.storage_backend,
+    });
+    let _task = state
+        .task_queue
+        .enqueue_task("hls_preview", payload, Some(&file.id.to_string()))
+        .await?;
 
     Ok(Json(json!({ "status": "processing" })))
 }
@@ -527,109 +506,79 @@ pub async fn hls_status_handler(
     let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
     let master_path = out_dir.join("master.m3u8");
-    let status = if tokio::fs::try_exists(&playlist_path)
+
+    // 文件已存在：直接 ready（无需查队列）
+    if tokio::fs::try_exists(&playlist_path)
         .await
         .map_err(|e| AppError::File(e.to_string()))?
         || tokio::fs::try_exists(&master_path)
             .await
             .map_err(|e| AppError::File(e.to_string()))?
     {
-        "ready"
-    } else {
-        "processing"
-    };
-    Ok(Json(json!({ "status": status })))
+        return Ok(Json(json!({ "status": "ready" })));
+    }
+
+    // 查询任务队列，感知 FFmpeg 转码失败。
+    // 原实现只检查文件存在性，FFmpeg 失败后会永远返回 "processing"，客户端无法感知。
+    // 与 gif 的 video_preview_status_handler 保持一致。
+    let latest: Option<(String, Option<String>)> = sqlx::query_as(
+        "SELECT status, last_error
+         FROM background_tasks
+         WHERE task_type = 'hls_preview'
+           AND dedupe_key = $1
+         ORDER BY created_at DESC
+         LIMIT 1",
+    )
+    .bind(file.id.to_string())
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(AppError::from)?;
+
+    if let Some((status, last_error)) = latest {
+        if status == "failed" {
+            return Ok(Json(json!({ "status": "failed", "error": last_error })));
+        }
+    }
+
+    Ok(Json(json!({ "status": "processing" })))
 }
 
 /// 返回 HLS 主列表（playlist.m3u8），供前端 hls.js 加载。仅对超过阈值的视频生效。
 /// 将 m3u8 内的 segment*.ts 引用重写为 hls/segment*.ts，使相对 URL 解析到 /api/files/:id/hls/segment*.ts。
+///
+/// 职责边界：仅服务已就绪的 HLS 产物，不触发转码。
+/// 转码由 `hls_prepare_handler` 排队 + worker 异步执行。
+///
+/// 为什么转码不在这里触发：
+/// - playlist 接口会被 hls.js 频繁轮询，每次都可能 spawn 任务会造成重复转码
+/// - 原实现中最长 30s（60×500ms）的 blocking 等待会耗尽 tokio 工作线程
+/// - 关注点分离：prepare = 触发，status = 查询，playlist/asset = 纯服务
 pub async fn hls_playlist_handler(
     State(state): State<AppState>,
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
     Path(file_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    // -------------------------------------------------------------------------
-    // HLS：分布式锁 + “可重试 503”占位响应
-    // -------------------------------------------------------------------------
-    //
-    // 为什么返回 m3u8 占位：
-    // - hls.js 将 m3u8/ts 拉取视为媒体流水线的一部分
-    // - 若 503 返回 JSON，通常会触发 fatal 错误，导致过早降级
-    // - 返回最小 m3u8 + Retry-After，前端可实现温和重试与更好的体验
-    let file = state.file_service.get_file(file_id, user_id).await?;
+    // 为什么返回 m3u8 占位而非 503 JSON：
+    // hls.js 将 m3u8/ts 拉取视为媒体流水线的一部分，收到 503 JSON 会触发 fatal 错误；
+    // 返回最小 m3u8 + Retry-After 可实现温和重试与更好的播放体验。
+    let _file = state.file_service.get_file(file_id, user_id).await?;
     let out_dir = state.file_service.hls_output_dir(file_id);
     let playlist_path = out_dir.join("playlist.m3u8");
     let master_path = out_dir.join("master.m3u8");
-    let lock_key = format!("lock:hls:{}", file_id);
-    let mut acquired = false;
-    if let Some(pool) = &state.redis {
-        if let Ok(mut conn) = pool.get().await {
-            let r: Result<Option<String>, _> = cmd("SET")
-                .arg(&lock_key)
-                .arg("1")
-                .arg("NX")
-                .arg("PX")
-                .arg(600000)
-                .query_async(&mut conn)
-                .await;
-            acquired = r.ok().flatten().is_some();
-        }
-    }
-    if acquired {
-        let exists_playlist = tokio::fs::try_exists(&playlist_path)
-            .await
-            .map_err(|e| AppError::File(e.to_string()))?;
-        let exists_master = tokio::fs::try_exists(&master_path)
-            .await
-            .map_err(|e| AppError::File(e.to_string()))?;
-        if !exists_playlist && !exists_master {
-            let state_for_task = state.clone();
-            let file_for_task = file.clone();
-            let lock_key_for_task = lock_key.clone();
-            tokio::spawn(async move {
-                let _ = state_for_task
-                    .file_service
-                    .ensure_hls_ready(&file_for_task)
-                    .await;
-                if let Some(pool) = &state_for_task.redis {
-                    if let Ok(mut conn) = pool.get().await {
-                        let _: Result<i32, _> = cmd("DEL")
-                            .arg(&lock_key_for_task)
-                            .query_async(&mut conn)
-                            .await;
-                    }
-                }
-            });
-            return Ok(hls_processing_response(2));
-        }
-        if let Some(pool) = &state.redis {
-            if let Ok(mut conn) = pool.get().await {
-                let _: Result<i32, _> = cmd("DEL").arg(&lock_key).query_async(&mut conn).await;
-            }
-        }
-    } else {
-        let mut ready = false;
-        for _ in 0..60 {
-            let exists_playlist = tokio::fs::try_exists(&playlist_path)
-                .await
-                .map_err(|e| AppError::File(e.to_string()))?;
-            let exists_master = tokio::fs::try_exists(&master_path)
-                .await
-                .map_err(|e| AppError::File(e.to_string()))?;
-            if exists_playlist || exists_master {
-                ready = true;
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        }
-        if !ready {
-            return Ok(hls_processing_response(2));
-        }
-    }
-    let pick = if tokio::fs::try_exists(&master_path)
+
+    let exists_master = tokio::fs::try_exists(&master_path)
         .await
-        .map_err(|e| AppError::File(e.to_string()))?
-    {
+        .map_err(|e| AppError::File(e.to_string()))?;
+    let exists_playlist = tokio::fs::try_exists(&playlist_path)
+        .await
+        .map_err(|e| AppError::File(e.to_string()))?;
+
+    if !exists_master && !exists_playlist {
+        // HLS 尚未就绪，返回占位响应；前端 hls.js 会按 Retry-After 重试
+        return Ok(hls_processing_response(2));
+    }
+
+    let pick = if exists_master {
         master_path
     } else {
         playlist_path
@@ -670,7 +619,9 @@ fn rewrite_hls_segment_refs(data: &[u8]) -> Vec<u8> {
     out
 }
 
-/// 返回 HLS 分片（segment*.ts）或 playlist.m3u8。仅允许安全文件名，防止路径穿越。
+/// 返回 HLS 分片（segment*.ts）或子 playlist.m3u8。仅允许安全文件名，防止路径穿越。
+///
+/// 职责边界：纯服务端，不触发转码。转码由 worker 异步完成后产物落盘，这里只读盘返回。
 pub async fn hls_asset_handler(
     State(state): State<AppState>,
     AuthenticatedUserQuery(user_id): AuthenticatedUserQuery,
@@ -681,74 +632,8 @@ pub async fn hls_asset_handler(
         return Err(AppError::NotFound);
     }
     let out_dir = state.file_service.hls_output_dir(file_id);
-    let playlist_path = out_dir.join("playlist.m3u8");
-    let master_path = out_dir.join("master.m3u8");
-    let lock_key = format!("lock:hls:{}", file_id);
-    let mut acquired = false;
-    if let Some(pool) = &state.redis {
-        if let Ok(mut conn) = pool.get().await {
-            let r: Result<Option<String>, _> = cmd("SET")
-                .arg(&lock_key)
-                .arg("1")
-                .arg("NX")
-                .arg("PX")
-                .arg(600000)
-                .query_async(&mut conn)
-                .await;
-            acquired = r.ok().flatten().is_some();
-        }
-    }
-    if acquired {
-        let exists_playlist = tokio::fs::try_exists(&playlist_path)
-            .await
-            .map_err(|e| AppError::File(e.to_string()))?;
-        let exists_master = tokio::fs::try_exists(&master_path)
-            .await
-            .map_err(|e| AppError::File(e.to_string()))?;
-        if !exists_playlist && !exists_master {
-            let state_for_task = state.clone();
-            let file_for_task = file.clone();
-            let lock_key_for_task = lock_key.clone();
-            tokio::spawn(async move {
-                let _ = state_for_task
-                    .file_service
-                    .ensure_hls_ready(&file_for_task)
-                    .await;
-                if let Some(pool) = &state_for_task.redis {
-                    if let Ok(mut conn) = pool.get().await {
-                        let _: Result<i32, _> = cmd("DEL")
-                            .arg(&lock_key_for_task)
-                            .query_async(&mut conn)
-                            .await;
-                    }
-                }
-            });
-            return Ok(hls_processing_response(2));
-        }
-        if let Some(pool) = &state.redis {
-            if let Ok(mut conn) = pool.get().await {
-                let _: Result<i32, _> = cmd("DEL").arg(&lock_key).query_async(&mut conn).await;
-            }
-        }
-    } else {
-        let mut ready = false;
-        for _ in 0..60 {
-            let exists_playlist = tokio::fs::try_exists(&playlist_path)
-                .await
-                .map_err(|e| AppError::File(e.to_string()))?;
-            let exists_master = tokio::fs::try_exists(&master_path)
-                .await
-                .map_err(|e| AppError::File(e.to_string()))?;
-            if exists_playlist || exists_master {
-                ready = true;
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        }
-        if !ready {
-            return Ok(hls_processing_response(2));
-        }
-    }
+
+    // 路径安全校验（防止目录穿越）
     use std::path::Component;
     if path.is_empty() || path.contains("..") {
         return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
@@ -767,6 +652,7 @@ pub async fn hls_asset_handler(
     if !safe_components {
         return Err(AppError::Validation("无效的 HLS 资源名".to_string()));
     }
+
     let fs_path = out_dir.join(&path);
     let data = tokio::fs::read(&fs_path)
         .await
