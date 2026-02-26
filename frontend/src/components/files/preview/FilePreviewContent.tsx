@@ -3,8 +3,7 @@
  * 预览主内容区：加载态、错误态、图片/视频/音频/PDF/文本/Ugoira/不支持
  */
 
-import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from 'react';
-import { createPortal } from 'react-dom';
+import { lazy, Suspense } from 'react';
 import { ResponsivePicture } from '../../common/ResponsivePicture';
 import { formatFileSize } from '../../../utils/format';
 import { getMimeTypeLabel, isGifType } from '../../../utils/mimeType';
@@ -77,69 +76,6 @@ export function FilePreviewContent({
   onClose,
   formatDate,
 }: FilePreviewContentProps) {
-  // -----------------------------------------------------------------------
-  // 仅用于 Markdown 的主题切换（不影响其他类型）
-  // -----------------------------------------------------------------------
-  const [markdownTheme, setMarkdownTheme] = useState<'dark' | 'light'>('dark');
-  const [isMarkdownThemeMenuOpen, setIsMarkdownThemeMenuOpen] = useState(false);
-  const markdownThemeMenuRef = useRef<HTMLDivElement | null>(null);
-  const markdownThemeTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const markdownThemeMenuPortalRef = useRef<HTMLDivElement | null>(null);
-  const [markdownThemeMenuPosition, setMarkdownThemeMenuPosition] = useState<{
-    left: number;
-    top: number;
-    width: number;
-  } | null>(null);
-  const isMarkdownLight = markdownTheme === 'light';
-
-  const computeMarkdownThemeMenuPosition = (el: HTMLElement) => {
-    const rect = el.getBoundingClientRect();
-    const width = rect.width;
-    const left = Math.max(
-      8,
-      Math.min(rect.right - width, window.innerWidth - width - 8)
-    );
-    const top = Math.min(rect.bottom + 6, window.innerHeight - 8);
-    return { left, top, width };
-  };
-
-  useLayoutEffect(() => {
-    if (!isMarkdownThemeMenuOpen || !markdownThemeTriggerRef.current) return;
-    setMarkdownThemeMenuPosition(
-      computeMarkdownThemeMenuPosition(markdownThemeTriggerRef.current)
-    );
-  }, [isMarkdownThemeMenuOpen]);
-
-  useEffect(() => {
-    if (!isMarkdownThemeMenuOpen) return;
-    const onResize = () => {
-      if (!markdownThemeTriggerRef.current) return;
-      setMarkdownThemeMenuPosition(
-        computeMarkdownThemeMenuPosition(markdownThemeTriggerRef.current)
-      );
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [isMarkdownThemeMenuOpen]);
-
-  useEffect(() => {
-    const onMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      const inTrigger = markdownThemeMenuRef.current?.contains(target) ?? false;
-      const inMenu = markdownThemeMenuPortalRef.current?.contains(target) ?? false;
-      if (!inTrigger && !inMenu) setIsMarkdownThemeMenuOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsMarkdownThemeMenuOpen(false);
-    };
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, []);
-
   const isGif = isGifType(file.mime_type);
   const showImagePreview =
     (isImage && (blobUrl || gifFirstFrameUrl)) || (isGif && !blobUrl && gifFirstFrameUrl);
@@ -393,80 +329,29 @@ export function FilePreviewContent({
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="border-b border-white/10">
-                  <div
-                    className={cn(
-                      'relative overflow-hidden backdrop-blur-md',
-                      isMarkdownLight ? 'bg-slate-950' : 'bg-slate-950/90'
-                    )}
-                  >
+                  <div className="relative overflow-hidden bg-slate-950/90 backdrop-blur-md">
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent" />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-emerald-300/80" />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-fuchsia-500/10" />
                     <div className="pointer-events-none absolute inset-0 opacity-90 [background:radial-gradient(closest-side_at_25%_40%,rgba(110,231,183,0.20),transparent_55%),radial-gradient(closest-side_at_80%_35%,rgba(232,121,249,0.16),transparent_60%)]" />
-                    <div className="relative flex items-center justify-end gap-[clamp(0.25rem,0.6vw,0.5rem)] px-[clamp(0.6rem,1.2vw,1rem)] py-[clamp(0.35rem,0.85vw,0.6rem)]">
+                    <div className="relative flex h-14 items-center justify-end px-[clamp(0.6rem,1.2vw,1rem)]">
                       <span
-                        className={cn(
-                          'nav-chip inline-flex items-center border px-[clamp(0.55rem,0.9vw,0.8rem)] nav-ui-fluid font-brand font-semibold tracking-wider',
-                          'border-emerald-300/15 bg-slate-900/40 text-slate-300',
-                          'shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_0_18px_rgba(110,231,183,0.16)]'
-                        )}
+                        className="text-[clamp(0.5rem,0.45vw,0.65rem)] font-brand font-normal tracking-wider text-emerald-200/60 drop-shadow-[0_0_10px_rgba(110,231,183,0.35)]"
                       >
                         {textContent.split('\n').length} 行
                       </span>
-
-                      {isMarkdown ? (
-                        <div ref={markdownThemeMenuRef} className="relative">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!isMarkdownThemeMenuOpen && markdownThemeTriggerRef.current) {
-                                setMarkdownThemeMenuPosition(
-                                  computeMarkdownThemeMenuPosition(markdownThemeTriggerRef.current)
-                                );
-                              }
-                              setIsMarkdownThemeMenuOpen((v) => !v);
-                            }}
-                            aria-haspopup="menu"
-                            aria-expanded={isMarkdownThemeMenuOpen}
-                            ref={markdownThemeTriggerRef}
-                            className={cn(
-                              'nav-btn nav-ui-fluid font-semibold tracking-wide',
-                              'inline-flex items-center justify-center border whitespace-nowrap transition-all duration-200',
-                              'bg-slate-900/40 border border-emerald-300/15 text-slate-200',
-                              'hover:bg-slate-900/55 hover:border-emerald-300/30',
-                              'shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_0_22px_rgba(232,121,249,0.12)]',
-                              'active:translate-y-px'
-                            )}
-                          >
-                            <i className="bi bi-brush-fill nav-icon shrink-0 text-emerald-200/80" aria-hidden />
-                            主题
-                            <i
-                              className={cn(
-                                'bi bi-chevron-down nav-icon transition-transform duration-200',
-                                isMarkdownThemeMenuOpen ? 'rotate-180' : 'rotate-0'
-                              )}
-                              aria-hidden
-                            />
-                          </button>
-
-                        </div>
-                      ) : null}
                     </div>
                   </div>
                 </div>
 
                 <div
                   className={cn(
-                    'h-[calc(100%-40px)] overflow-auto p-4 text-sm leading-relaxed',
-                    isMarkdown
-                      ? markdownTheme === 'dark'
-                        ? 'bg-transparent text-gray-100'
-                        : 'bg-gradient-to-br from-slate-100 via-emerald-50 to-cyan-100 text-slate-900'
-                      : 'text-gray-100'
+                    'h-[calc(100%-56px)] overflow-auto p-4 text-sm leading-relaxed',
+                    isMarkdown ? 'bg-transparent text-gray-100' : 'text-gray-100'
                   )}
                 >
                   {isMarkdown ? (
-                    <MarkdownPreview content={textContent} theme={markdownTheme} />
+                    <MarkdownPreview content={textContent} theme="dark" />
                   ) : (
                     <pre className="h-full overflow-auto text-sm leading-relaxed text-gray-200 whitespace-pre-wrap font-mono">
                       {textContent}
@@ -478,72 +363,6 @@ export function FilePreviewContent({
           ) : null}
         </div>
       ) : null}
-
-      {isMarkdown && isMarkdownThemeMenuOpen && markdownThemeMenuPosition
-        ? createPortal(
-            <div
-              ref={markdownThemeMenuPortalRef}
-              role="menu"
-              className={cn(
-                'fixed z-[10000] overflow-hidden border border-emerald-300/15 backdrop-blur-md shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_10px_40px_rgba(0,0,0,0.35)]',
-                isMarkdownLight ? 'bg-slate-950' : 'bg-slate-950/90'
-              )}
-              style={{
-                left: `${markdownThemeMenuPosition.left}px`,
-                top: `${markdownThemeMenuPosition.top}px`,
-                width: `${markdownThemeMenuPosition.width}px`,
-              }}
-            >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMarkdownTheme('dark');
-                  setIsMarkdownThemeMenuOpen(false);
-                }}
-                className={cn(
-                  'nav-ui-fluid flex w-full items-center justify-between gap-3 px-3 py-[clamp(0.4rem,0.6vw,0.55rem)] text-left font-semibold whitespace-nowrap transition-all duration-200',
-                  markdownTheme === 'dark'
-                    ? 'bg-slate-900/55 text-slate-100'
-                    : 'bg-slate-900/30 text-slate-200 hover:bg-slate-900/45',
-                  'hover:translate-x-[2px]'
-                )}
-              >
-                <span className="flex items-center gap-2 whitespace-nowrap">
-                  <span className="nav-dot bg-emerald-300/80 shadow-[0_0_10px_rgba(110,231,183,0.45)]" />
-                  赛博暗色
-                </span>
-                {markdownTheme === 'dark' ? (
-                  <i className="bi bi-check2 text-emerald-200/90" aria-hidden />
-                ) : null}
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMarkdownTheme('light');
-                  setIsMarkdownThemeMenuOpen(false);
-                }}
-                className={cn(
-                  'nav-ui-fluid flex w-full items-center justify-between gap-3 px-3 py-[clamp(0.4rem,0.6vw,0.55rem)] text-left font-semibold whitespace-nowrap transition-all duration-200',
-                  markdownTheme === 'light'
-                    ? 'bg-slate-900/55 text-slate-100'
-                    : 'bg-slate-900/30 text-slate-200 hover:bg-slate-900/45',
-                  'hover:translate-x-[2px]'
-                )}
-              >
-                <span className="flex items-center gap-2 whitespace-nowrap">
-                  <span className="nav-dot bg-fuchsia-400/70 shadow-[0_0_10px_rgba(232,121,249,0.35)]" />
-                  赛博亮色
-                </span>
-                {markdownTheme === 'light' ? (
-                  <i className="bi bi-check2 text-emerald-200/90" aria-hidden />
-                ) : null}
-              </button>
-            </div>,
-            document.body
-          )
-        : null}
 
       {/* ============================= */}
       {/* 不支持预览 */}

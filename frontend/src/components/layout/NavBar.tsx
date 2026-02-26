@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../../config/env';
-import ThemeToggle from '../common/ThemeToggle';
 import { cn } from '../../utils/cn';
 import { ArrowLeft, LogOut, Settings } from 'lucide-react';
 
@@ -104,15 +103,6 @@ export default function NavBar({
                   </span>
                 </div>
               )}
-
-              <ThemeToggle
-                className={cn(
-                  'nav-iconbtn p-0',
-                  'bg-slate-900/40 border border-emerald-300/15',
-                  'hover:border-emerald-300/30 hover:bg-slate-900/55',
-                  'focus:ring-emerald-300/40 focus:ring-offset-slate-950'
-                )}
-              />
 
               {showSettings && (
                 <button

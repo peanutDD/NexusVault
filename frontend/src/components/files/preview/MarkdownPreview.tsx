@@ -11,7 +11,7 @@ import { useClipboard } from '../../../hooks/useClipboard';
 
 interface MarkdownPreviewProps {
   content: string;
-  theme: 'dark' | 'light';
+  theme: 'dark';
 }
 
 function toPlainText(node: ReactNode): string {

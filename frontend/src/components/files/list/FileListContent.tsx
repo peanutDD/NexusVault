@@ -313,7 +313,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
               </div>
             </div>
           ) : (
-            <div className="sticky top-20 sm:top-24 z-40 flex flex-col mb-[var(--bar-gap)]" style={{ gap: 'var(--bar-gap)' }}>
+            <div
+              className="sticky top-[clamp(4.75rem,7.6vw,6.25rem)] z-40 flex flex-col mb-[var(--bar-gap)]"
+              style={{ gap: 'var(--bar-gap)' }}
+            >
               <div className="all-files-bar glass-panel-soft mb-0 flex items-center justify-between gap-4">
                 <div className="flex shrink-0 items-center gap-3">
                   {isRevalidating && (

@@ -4,7 +4,6 @@ import axios from 'axios';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './store/authStore';
 import { useHydrationStore } from './store/hydrationStore';
-import { useThemeStore } from './store/themeStore';
 import ErrorBoundary from './components/ErrorBoundary';
 import Spinner from './components/common/feedback/Spinner';
 import BrowserCompatibilityWarning from './components/common/BrowserCompatibilityWarning';
@@ -118,7 +117,6 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { effectiveTheme } = useThemeStore();
   const [devtoolsOpen, setDevtoolsOpen] = useState(false);
   const [devtoolsPos, setDevtoolsPos] = useState<DevtoolsPos>(() => getInitialDevtoolsPos());
   const [devtoolsBounce, setDevtoolsBounce] = useState(false);
@@ -145,15 +143,9 @@ function App() {
     threshold: 6,
   });
 
-  // 初始化主题应用到 DOM
   useEffect(() => {
-    const root = document.documentElement;
-    if (effectiveTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [effectiveTheme]);
+    document.documentElement.classList.add('dark');
+  }, []);
 
   useEffect(() => {
     posRef.current = devtoolsPos;
