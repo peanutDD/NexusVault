@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { cn } from '../../../utils/cn';
 
 interface FileListPaginationProps {
@@ -24,6 +24,27 @@ const FileListPagination = memo(function FileListPagination({
   onLoadMore,
 }: FileListPaginationProps) {
   const isInfinite = typeof onLoadMore === 'function';
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isInfinite) return;
+    if (!hasMore) return;
+    if (loadingMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        onLoadMore?.();
+      },
+      { root: null, rootMargin: '600px 0px 600px 0px', threshold: 0 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, isInfinite, loadingMore, onLoadMore]);
 
   // 传统分页：页码 + 上一页 / 下一页（Hooks 必须在 early return 之前）
   const pageNumbers = useMemo(() => {
@@ -48,29 +69,31 @@ const FileListPagination = memo(function FileListPagination({
 
     return (
       <div className="mt-8 flex items-center justify-center">
-        <button
-          type="button"
-          onClick={onLoadMore}
-          disabled={!hasMore || loadingMore}
-          className={cn(
-            'glass-btn toolbarActionBtn font-brand px-6 py-2 text-sm font-normal tracking-widest disabled:opacity-50',
-            // 整体缩放到原来的 80%
-            'scale-[0.8]',
-            'flex items-center justify-center gap-2'
-          )}
-        >
-          {loadingMore ? (
-            <>
-              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Loading...
-            </>
-          ) : (
-            <>
-              Load more
-              <ChevronRightIcon />
-            </>
-          )}
-        </button>
+        <div className="flex flex-col items-center justify-center">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={!hasMore || loadingMore}
+            className={cn(
+              'glass-btn toolbarActionBtn font-brand px-6 py-2 text-sm font-normal tracking-widest disabled:opacity-50',
+              'scale-[0.8]',
+              'flex items-center justify-center gap-2'
+            )}
+          >
+            {loadingMore ? (
+              <>
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Loading...
+              </>
+            ) : (
+              <>
+                Load more
+                <ChevronRightIcon />
+              </>
+            )}
+          </button>
+          <div ref={sentinelRef} className="h-px w-px" aria-hidden />
+        </div>
       </div>
     );
   }
