@@ -74,3 +74,15 @@
 
 1.  **定期 VACUUM**：确保生产环境数据库开启自动 VACUUM，以维持索引性能并回收空间。
 2.  **慢查询监控**：结合新启用的 `pg_stat_statements`，建议在 Grafana 或类似工具中建立数据库性能仪表盘。
+
+## 5. 2026-03-01 迁移安全与并发一致性补强（补充）
+
+本次补强聚焦“迁移可用性 + 在线索引维护 + 并发一致性”，详细设计与落地清单见：
+
+- [`DB_MIGRATION_SAFETY.md`](./DB_MIGRATION_SAFETY.md)
+
+落地要点概览：
+
+- **扩展依赖**：补齐 `pgcrypto`，避免 `gen_random_uuid()` 在新环境迁移失败：[`024_enable_pgcrypto.sql`](file:///Users/tyone/github/upload-download-util/backend/migrations/024_enable_pgcrypto.sql)
+- **并发一致性（后台任务 dedupe）**：唯一部分索引 + `INSERT ... ON CONFLICT ... DO NOTHING RETURNING ...`，根治并发重复入队：[`025_background_tasks_active_dedupe_unique.sql`](file:///Users/tyone/github/upload-download-util/backend/migrations/025_background_tasks_active_dedupe_unique.sql)、[`task_queue.rs`](file:///Users/tyone/github/upload-download-util/backend/src/services/task_queue.rs#L182-L255)
+- **CONCURRENTLY 路线**：将 `CREATE/DROP INDEX CONCURRENTLY` 拆为 `-- no-transaction` 且单语句迁移，降低大表维护锁风险（任务队列表索引与 embedding 向量索引）：[`backend/migrations`](file:///Users/tyone/github/upload-download-util/backend/migrations)
