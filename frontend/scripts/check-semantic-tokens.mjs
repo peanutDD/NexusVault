@@ -3,11 +3,21 @@ import path from 'node:path';
 
 const projectRoot = path.resolve(process.cwd());
 
-const targetDirs = [
-  path.join(projectRoot, 'src/pages'),
-  path.join(projectRoot, 'src/components/layout'),
-  path.join(projectRoot, 'src/components/common'),
-];
+const scopeArg = process.argv.find((a) => a.startsWith('--scope='));
+const scope = scopeArg ? scopeArg.slice('--scope='.length) : 'all';
+
+const scopes = {
+  pages: [path.join(projectRoot, 'src/pages')],
+  layout: [path.join(projectRoot, 'src/components/layout')],
+  common: [path.join(projectRoot, 'src/components/common')],
+  all: [
+    path.join(projectRoot, 'src/pages'),
+    path.join(projectRoot, 'src/components/layout'),
+    path.join(projectRoot, 'src/components/common'),
+  ],
+};
+
+const targetDirs = scopes[scope] ?? scopes.all;
 
 const exts = new Set(['.ts', '.tsx']);
 

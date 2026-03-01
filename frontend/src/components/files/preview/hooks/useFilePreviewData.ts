@@ -161,135 +161,117 @@ export function useFilePreviewData({
       setGifFirstFrameUrl(null);
       setUseHls(false);
       setImageLoaded(false);
-    });
-    const finish = () => {
-      if (isValidRequest()) setLoading(false);
-      if (isValidRequest()) {
-        setGifTranscodeInProgress(false);
-        setGifTranscodeProgress(null);
-      }
-    };
-    const isGif = isGifType(file.mime_type);
 
-    if (kind.isText) {
-      fileService
-        .fetchPreviewBlob(file.id)
-        .then((b) => b.text())
-        .then((text) => {
-          if (!isValidRequest()) return;
-          setTextContent(text);
-        })
-        .catch((e) => {
-          if (!isValidRequest()) return;
-          setError(e instanceof Error ? e.message : '加载失败');
-        })
-        .finally(finish);
-      return;
-    }
-
-    // 先处理 GIF：虽然 MIME 是 image/gif，但预览时按“视频”走 GIF → mp4 管线
-    if (isGif) {
-      if (!isValidRequest()) return;
-      gifFallbackTriedRef.current = false;
-      const setGifFallbackUrl = (url: string | null) => {
-        setGifFirstFrameUrl((prev) => {
-          if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
-          return url;
-        });
-        setImageLoaded(false);
+      const finish = () => {
+        if (isValidRequest()) setLoading(false);
+        if (isValidRequest()) {
+          setGifTranscodeInProgress(false);
+          setGifTranscodeProgress(null);
+        }
       };
 
-      const startGifVideoPreview = () => {
-        Promise.resolve().then(() => {
-          if (!isValidRequest()) return;
-          setGifFirstFrameUrl(null);
-          setError(null);
-          setUseHls(false);
-          setGifTranscodeInProgress(true);
-          setGifTranscodeProgress(0);
-          setImageLoaded(false);
-        });
+      const isGif = isGifType(file.mime_type);
 
+      if (kind.isText) {
         fileService
-          .fetchThumbnailBlob(file.id, { width: 800 })
-          .then((b) => {
+          .fetchPreviewBlob(file.id)
+          .then((b) => b.text())
+          .then((text) => {
             if (!isValidRequest()) return;
-            if (!b) return;
-            const url = URL.createObjectURL(b);
-            setGifFallbackUrl(url);
+            setTextContent(text);
           })
-          .catch(() => {});
-
-        const videoUrl = getGifVideoUrl(file.id);
-        const hlsUrl = getHlsUrl(file.id);
-        const useHlsForGif = true;
-
-        const runMp4Preview = async () => {
-          try {
-            const initialStatus = await fileService.prepareVideoPreview(file.id);
+          .catch((e) => {
             if (!isValidRequest()) return;
-            if (initialStatus === 'ready') {
-              setGifFallbackUrl(null);
-              setBlobUrl(videoUrl);
-              finish();
-              return;
-            }
+            setError(e instanceof Error ? e.message : '加载失败');
+          })
+          .finally(finish);
+        return;
+      }
 
-            const intervalMs = 1500;
-            let attempt = 0;
-            while (isValidRequest()) {
-              if (!isValidRequest()) return;
-              await new Promise((resolve) => setTimeout(resolve, intervalMs));
-              const result = await fileService.getVideoPreviewStatus(file.id);
-              if (!isValidRequest()) return;
-              if (result.status === 'ready') {
-                setGifFallbackUrl(null);
-                setBlobUrl(videoUrl);
-                setGifTranscodeProgress(100);
-                finish();
-                return;
-              }
-              if (result.status === 'failed') {
-                setError(result.error || 'GIF 视频预览生成失败，请稍后重试');
-                finish();
-                return;
-              }
-              attempt += 1;
-              // 模拟进度条：假设最长 90 秒（60 次尝试 * 1.5s），避免过快冲到 95% 卡住
-              const progress = Math.min(95, Math.round((attempt / 60) * 100));
-              setGifTranscodeProgress(progress);
-            }
-          } catch {
-            if (!isValidRequest()) return;
-            setError('GIF 视频预览生成失败，请稍后重试');
-            finish();
-          }
+      // 先处理 GIF：虽然 MIME 是 image/gif，但预览时按“视频”走 GIF → mp4 管线
+      if (isGif) {
+        if (!isValidRequest()) return;
+        gifFallbackTriedRef.current = false;
+        const setGifFallbackUrl = (url: string | null) => {
+          setGifFirstFrameUrl((prev) => {
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return url;
+          });
+          setImageLoaded(false);
         };
 
-        const runHlsPreview = async () => {
-          try {
-            const initial = await fileService.prepareHlsPreview(file.id);
+        const startGifVideoPreview = () => {
+          Promise.resolve().then(() => {
             if (!isValidRequest()) return;
-            if (initial === 'ready') {
-              setGifFallbackUrl(null);
-              setUseHls(true);
-              setBlobUrl(hlsUrl);
-              setGifTranscodeProgress(100);
+            setGifFirstFrameUrl(null);
+            setError(null);
+            setUseHls(false);
+            setGifTranscodeInProgress(true);
+            setGifTranscodeProgress(0);
+            setImageLoaded(false);
+          });
+
+          fileService
+            .fetchThumbnailBlob(file.id, { width: 800 })
+            .then((b) => {
+              if (!isValidRequest()) return;
+              if (!b) return;
+              const url = URL.createObjectURL(b);
+              setGifFallbackUrl(url);
+            })
+            .catch(() => {});
+
+          const videoUrl = getGifVideoUrl(file.id);
+          const hlsUrl = getHlsUrl(file.id);
+          const useHlsForGif = true;
+
+          const runMp4Preview = async () => {
+            try {
+              const initialStatus = await fileService.prepareVideoPreview(file.id);
+              if (!isValidRequest()) return;
+              if (initialStatus === 'ready') {
+                setGifFallbackUrl(null);
+                setBlobUrl(videoUrl);
+                finish();
+                return;
+              }
+
+              const intervalMs = 1500;
+              let attempt = 0;
+              while (isValidRequest()) {
+                if (!isValidRequest()) return;
+                await new Promise((resolve) => setTimeout(resolve, intervalMs));
+                const result = await fileService.getVideoPreviewStatus(file.id);
+                if (!isValidRequest()) return;
+                if (result.status === 'ready') {
+                  setGifFallbackUrl(null);
+                  setBlobUrl(videoUrl);
+                  setGifTranscodeProgress(100);
+                  finish();
+                  return;
+                }
+                if (result.status === 'failed') {
+                  setError(result.error || 'GIF 视频预览生成失败，请稍后重试');
+                  finish();
+                  return;
+                }
+                attempt += 1;
+                // 模拟进度条：假设最长 90 秒（60 次尝试 * 1.5s），避免过快冲到 95% 卡住
+                const progress = Math.min(95, Math.round((attempt / 60) * 100));
+                setGifTranscodeProgress(progress);
+              }
+            } catch {
+              if (!isValidRequest()) return;
+              setError('GIF 视频预览生成失败，请稍后重试');
               finish();
-              return;
             }
-            if (initial === 'unsupported') {
-              await runMp4Preview();
-              return;
-            }
-            const intervalMs = 1500;
-            let attempt = 0;
-            while (isValidRequest()) {
+          };
+
+          const runHlsPreview = async () => {
+            try {
+              const initial = await fileService.prepareHlsPreview(file.id);
               if (!isValidRequest()) return;
-              await new Promise((resolve) => setTimeout(resolve, intervalMs));
-              const status = await fileService.getHlsPreviewStatus(file.id);
-              if (!isValidRequest()) return;
-              if (status === 'ready') {
+              if (initial === 'ready') {
                 setGifFallbackUrl(null);
                 setUseHls(true);
                 setBlobUrl(hlsUrl);
@@ -297,114 +279,132 @@ export function useFilePreviewData({
                 finish();
                 return;
               }
-              attempt += 1;
-              // 模拟进度条：HLS 生成包含转码+切片，耗时较长，同样设为 90s 上限
-              const progress = Math.min(95, Math.round((attempt / 60) * 100));
-              setGifTranscodeProgress(progress);
-            }
-          } catch {
-            if (!isValidRequest()) return;
-            setError('GIF 视频预览生成失败，请稍后重试');
-            finish();
-          }
-        };
-
-        if (useHlsForGif) {
-          runHlsPreview();
-        } else {
-          runMp4Preview();
-        }
-      };
-
-      startGifVideoPreview();
-
-      return;
-    }
-
-    if (kind.isVideo || kind.isAudio) {
-      if (!isValidRequest()) return;
-      videoFallbackTriedRef.current = false;
-      // 延迟加载视频，确保 UI 线程优先渲染弹窗框架（特别是移动端）
-      setTimeout(() => {
-        if (!isValidRequest()) return;
-        if (kind.isVideo && file.file_size >= HLS_THRESHOLD_BYTES) {
-          setUseHls(false);
-          setBlobUrl(getStreamUrl(file.id));
-          (async () => {
-            try {
-              const initial = await fileService.prepareHlsPreview(file.id);
-              if (!isValidRequest()) return;
-              if (initial === 'ready') {
-                setUseHls(true);
-                setBlobUrl(getHlsUrl(file.id));
+              if (initial === 'unsupported') {
+                await runMp4Preview();
                 return;
               }
-              if (initial === 'unsupported') return;
-              const maxAttempts = 20;
               const intervalMs = 1500;
-              for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+              let attempt = 0;
+              while (isValidRequest()) {
+                if (!isValidRequest()) return;
                 await new Promise((resolve) => setTimeout(resolve, intervalMs));
                 const status = await fileService.getHlsPreviewStatus(file.id);
                 if (!isValidRequest()) return;
                 if (status === 'ready') {
-                const canSwap = !videoRef.current || videoRef.current.currentTime < 2;
-                const currentVideo = videoRef.current;
-                const currentTime = currentVideo?.currentTime ?? 0;
-                const isPaused = currentVideo ? currentVideo.paused : null;
-                const volume =
-                  typeof currentVideo?.volume === 'number' ? currentVideo.volume : null;
-                const muted = typeof currentVideo?.muted === 'boolean' ? currentVideo.muted : null;
-                if (canSwap || currentTime > 0) {
-                  hlsStartTimeRef.current = currentTime > 0 ? currentTime : null;
-                  hlsStartPausedRef.current = isPaused;
-                  hlsStartVolumeRef.current = volume;
-                  hlsStartMutedRef.current = muted;
+                  setGifFallbackUrl(null);
                   setUseHls(true);
-                  setBlobUrl(getHlsUrl(file.id));
-                }
+                  setBlobUrl(hlsUrl);
+                  setGifTranscodeProgress(100);
+                  finish();
                   return;
                 }
-                if (status === 'unsupported') return;
+                attempt += 1;
+                // 模拟进度条：HLS 生成包含转码+切片，耗时较长，同样设为 90s 上限
+                const progress = Math.min(95, Math.round((attempt / 60) * 100));
+                setGifTranscodeProgress(progress);
               }
             } catch {
-              return;
+              if (!isValidRequest()) return;
+              setError('GIF 视频预览生成失败，请稍后重试');
+              finish();
             }
-          })();
-        } else {
-          setBlobUrl(getStreamUrl(file.id));
-          setUseHls(false);
-        }
-        finish();
-      }, 50);
-      return;
-    }
+          };
 
-    if (kind.isImage) {
-      if (!isValidRequest()) return;
-      Promise.resolve().then(() => {
+          if (useHlsForGif) {
+            runHlsPreview();
+          } else {
+            runMp4Preview();
+          }
+        };
+
+        startGifVideoPreview();
+
+        return;
+      }
+
+      if (kind.isVideo || kind.isAudio) {
+        if (!isValidRequest()) return;
+        videoFallbackTriedRef.current = false;
+        // 延迟加载视频，确保 UI 线程优先渲染弹窗框架（特别是移动端）
+        setTimeout(() => {
+          if (!isValidRequest()) return;
+          if (kind.isVideo && file.file_size >= HLS_THRESHOLD_BYTES) {
+            setUseHls(false);
+            setBlobUrl(getStreamUrl(file.id));
+            (async () => {
+              try {
+                const initial = await fileService.prepareHlsPreview(file.id);
+                if (!isValidRequest()) return;
+                if (initial === 'ready') {
+                  setUseHls(true);
+                  setBlobUrl(getHlsUrl(file.id));
+                  return;
+                }
+                if (initial === 'unsupported') return;
+                const maxAttempts = 20;
+                const intervalMs = 1500;
+                for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                  await new Promise((resolve) => setTimeout(resolve, intervalMs));
+                  const status = await fileService.getHlsPreviewStatus(file.id);
+                  if (!isValidRequest()) return;
+                  if (status === 'ready') {
+                    const canSwap = !videoRef.current || videoRef.current.currentTime < 2;
+                    const currentVideo = videoRef.current;
+                    const currentTime = currentVideo?.currentTime ?? 0;
+                    const isPaused = currentVideo ? currentVideo.paused : null;
+                    const volume =
+                      typeof currentVideo?.volume === 'number' ? currentVideo.volume : null;
+                    const muted = typeof currentVideo?.muted === 'boolean' ? currentVideo.muted : null;
+                    if (canSwap || currentTime > 0) {
+                      hlsStartTimeRef.current = currentTime > 0 ? currentTime : null;
+                      hlsStartPausedRef.current = isPaused;
+                      hlsStartVolumeRef.current = volume;
+                      hlsStartMutedRef.current = muted;
+                      setUseHls(true);
+                      setBlobUrl(getHlsUrl(file.id));
+                    }
+                    return;
+                  }
+                  if (status === 'unsupported') return;
+                }
+              } catch {
+                return;
+              }
+            })();
+          } else {
+            setBlobUrl(getStreamUrl(file.id));
+            setUseHls(false);
+          }
+          finish();
+        }, 50);
+        return;
+      }
+
+      if (kind.isImage) {
         if (!isValidRequest()) return;
         const cached = fileService.takeCachedPreviewBlobUrl(file.id);
         if (cached) {
           setBlobUrl(cached);
+          finish();
           return;
         }
         setBlobUrl(getStreamUrl(file.id));
-      });
-      finish();
-      return;
-    }
+        finish();
+        return;
+      }
 
-    fileService
-      .fetchPreviewBlob(file.id)
-      .then((b) => {
-        if (!isValidRequest()) return;
-        setBlobUrl(URL.createObjectURL(b));
-      })
-      .catch((e) => {
-        if (!isValidRequest()) return;
-        setError(e instanceof Error ? e.message : '加载失败');
-      })
-      .finally(finish);
+      fileService
+        .fetchPreviewBlob(file.id)
+        .then((b) => {
+          if (!isValidRequest()) return;
+          setBlobUrl(URL.createObjectURL(b));
+        })
+        .catch((e) => {
+          if (!isValidRequest()) return;
+          setError(e instanceof Error ? e.message : '加载失败');
+        })
+        .finally(finish);
+    });
   }, [file, kind.supported, kind.isText, kind.isVideo, kind.isAudio, kind.isImage]);
 
   useEffect(() => {

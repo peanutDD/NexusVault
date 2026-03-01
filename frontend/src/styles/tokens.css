@@ -117,6 +117,79 @@
     --nav-icon-size: clamp(0.7125rem, 0.675vw, 0.825rem);
     --nav-dot-size: clamp(0.375rem, 0.375vw, 0.5625rem);
 
+    --nav-surface-bg: rgba(var(--rgb-slate-950), 0.9);
+    --nav-surface-blur: var(--glass-blur-medium);
+    --nav-top-glow: linear-gradient(90deg, transparent, rgba(var(--rgb-purple-500), 0.5), transparent);
+    --nav-bottom-line: rgba(var(--rgb-emerald-300), 0.8);
+    --nav-side-ambience: linear-gradient(
+        90deg,
+        rgba(var(--rgb-fuchsia-500), 0.1),
+        transparent,
+        rgba(var(--rgb-fuchsia-500), 0.1)
+    );
+
+    --nav-btn-text: rgba(var(--rgb-slate-200), 1);
+    --nav-btn-bg: rgba(var(--rgb-slate-900), 0.4);
+    --nav-btn-bg-hover: rgba(var(--rgb-slate-900), 0.55);
+    --nav-btn-border: rgba(var(--rgb-emerald-300), 0.15);
+    --nav-btn-border-hover: rgba(var(--rgb-emerald-300), 0.3);
+    --nav-btn-icon: rgba(var(--rgb-emerald-300), 0.8);
+    --nav-btn-border-danger-hover: rgba(var(--rgb-rose-400), 0.35);
+    --nav-btn-icon-danger: rgba(var(--rgb-white), 0.9);
+
+    --nav-title-text: rgba(var(--rgb-slate-300), 0.95);
+
+    --nav-panel-bg: rgba(var(--rgb-slate-950), 0.3);
+    --nav-panel-border: rgba(var(--rgb-emerald-300), 0.15);
+    --nav-panel-shadow: 0 0 0 1px rgba(var(--rgb-white), 0.04),
+        0 10px 40px rgba(var(--rgb-black), 0.35);
+    --nav-panel-edge-glow: linear-gradient(
+        90deg,
+        rgba(var(--rgb-emerald-400), 0.1),
+        transparent,
+        rgba(var(--rgb-emerald-400), 0.1)
+    );
+
+    --nav-chip-bg: rgba(var(--rgb-slate-900), 0.4);
+    --nav-chip-border: rgba(var(--rgb-emerald-300), 0.15);
+    --nav-chip-text: rgba(var(--rgb-slate-300), 1);
+    --nav-user-dot-bg: rgba(var(--rgb-emerald-300), 0.8);
+    --nav-user-dot-shadow: 0 0 10px rgba(var(--rgb-emerald-300), 0.45);
+
+    --footer-border: rgba(var(--rgb-white), 0.05);
+    --footer-grid-bg-image: linear-gradient(rgba(var(--rgb-purple-500), 0.5) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-purple-500), 0.5) 1px, transparent 1px);
+    --footer-grid-bg-size: 24px 24px;
+    --footer-bg-gradient: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(var(--rgb-fuchsia-500), 0.05),
+        rgba(var(--rgb-cyan-400), 0.1)
+    );
+    --footer-top-line: linear-gradient(
+        90deg,
+        transparent,
+        rgba(var(--rgb-purple-500), 0.6),
+        rgba(var(--rgb-cyan-400), 0.6),
+        transparent
+    );
+    --footer-bottom-line: linear-gradient(90deg, transparent, rgba(var(--rgb-emerald-400), 0.4), transparent);
+    --footer-shimmer-bg: linear-gradient(
+        90deg,
+        transparent,
+        rgba(var(--rgb-purple-500), 0.8),
+        rgba(var(--rgb-cyan-400), 0.8),
+        rgba(var(--rgb-emerald-500), 0.6),
+        transparent
+    );
+    --footer-shimmer-bg-size: 200% 100%;
+    --footer-title-text: rgba(var(--rgb-slate-400), 0.95);
+    --footer-copy-text: rgba(var(--rgb-slate-500), 1);
+    --footer-divider-left: linear-gradient(90deg, transparent, rgba(var(--rgb-fuchsia-500), 0.3));
+    --footer-divider-right: linear-gradient(90deg, transparent, rgba(var(--rgb-cyan-400), 0.3));
+    --footer-dot-bg: rgba(var(--rgb-cyan-400), 0.6);
+    --footer-dot-shadow: 0 0 12px rgba(var(--rgb-cyan-400), 0.5);
+
     /* CTA tokens */
     --cta-primary-border: rgba(var(--rgb-emerald-300), 0.45);
     --cta-primary-bg: linear-gradient(

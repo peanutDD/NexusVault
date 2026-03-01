@@ -21,7 +21,7 @@ export default function PageLayout({
   showSettings,
 }: PageLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 dark:from-gray-950 dark:via-purple-950 dark:to-gray-950 transition-colors duration-300">
+    <div className="flex min-h-screen flex-col bg-[image:var(--surface-page-gradient)] dark:bg-[image:var(--surface-page-gradient-dark)] transition-colors duration-300">
       <NavBar
         title={title}
         backTo={backTo}

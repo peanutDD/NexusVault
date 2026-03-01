@@ -29,15 +29,15 @@ export default function NavBar({
 
   return (
     <nav
-      className="fixed inset-x-0 top-0 z-50 overflow-hidden bg-slate-950/90 backdrop-blur-md"
+      className="fixed inset-x-0 top-0 z-50 overflow-hidden bg-[var(--nav-surface-bg)] backdrop-blur-[var(--nav-surface-blur)]"
       onDoubleClick={handleDoubleClick}
     >
       {/* 顶部紫色微光线条（对齐参考图） */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[image:var(--nav-top-glow)]" />
       {/* 底部青绿色分隔线（对齐参考图） */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-emerald-300/80" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-[var(--nav-bottom-line)]" />
       {/* 两侧淡紫氛围光 */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-fuchsia-500/10" />
+      <div className="pointer-events-none absolute inset-0 bg-[image:var(--nav-side-ambience)]" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-[clamp(4.75rem,7.6vw,6.25rem)]">
@@ -48,16 +48,16 @@ export default function NavBar({
                 onClick={() => navigate(backTo.path)}
                 className={cn(
                   'nav-btn inline-flex items-center justify-center whitespace-nowrap',
-                  'nav-ui-fluid font-semibold tracking-wide text-slate-200',
-                  'bg-slate-900/40 border border-emerald-300/15',
-                  'hover:bg-slate-900/55 hover:border-emerald-300/30',
+                  'nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]',
+                  'bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]',
+                  'hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]',
                   'active:translate-y-px transition-all duration-200'
                 )}
                 aria-label={backTo.label}
                 title={backTo.label}
               >
                 <ArrowLeft
-                  className="nav-icon shrink-0 text-emerald-200/80"
+                  className="nav-icon shrink-0 text-[var(--nav-btn-icon)]"
                   aria-hidden="true"
                 />
                 <span className="hidden sm:inline whitespace-nowrap">{backTo.label}</span>
@@ -68,7 +68,7 @@ export default function NavBar({
               <div className="shrink-0 select-none">
                 <CyberPrismLogo className="h-[clamp(2.6rem,4vw,3.3rem)] w-[clamp(2.6rem,4vw,3.3rem)]" />
               </div>
-              <h1 className="nav-title-fluid font-brand truncate font-normal tracking-widest text-slate-300 drop-shadow-sm select-none">
+              <h1 className="nav-title-fluid font-brand truncate font-normal tracking-widest text-[var(--nav-title-text)] drop-shadow-sm select-none">
                 {title}
               </h1>
             </div>
@@ -81,23 +81,23 @@ export default function NavBar({
             <div
               className={cn(
                 'nav-panel relative flex items-center shrink-0',
-                'bg-slate-950/30 border border-emerald-300/15',
-                'shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_10px_40px_rgba(0,0,0,0.35)]'
+                'bg-[var(--nav-panel-bg)] border border-[var(--nav-panel-border)]',
+                'shadow-[var(--nav-panel-shadow)]'
               )}
             >
               {/* 细微霓虹描边 */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-400/10 via-transparent to-emerald-400/10" />
+              <div className="pointer-events-none absolute inset-0 bg-[image:var(--nav-panel-edge-glow)]" />
 
               {username != null && (
                 <div
                   className={cn(
                     'nav-chip hidden sm:flex items-center',
-                    'bg-slate-900/40 border border-emerald-300/15',
-                    'text-slate-300'
+                    'bg-[var(--nav-chip-bg)] border border-[var(--nav-chip-border)]',
+                    'text-[var(--nav-chip-text)]'
                   )}
                   title={username}
                 >
-                  <span className="nav-dot bg-emerald-300/80 shadow-[0_0_10px_rgba(110,231,183,0.45)]" />
+                  <span className="nav-dot bg-[var(--nav-user-dot-bg)] shadow-[var(--nav-user-dot-shadow)]" />
                   <span className="nav-ui-fluid font-brand font-semibold tracking-wider">
                     {username}
                   </span>
@@ -111,13 +111,13 @@ export default function NavBar({
                   aria-label="Settings"
                   className={cn(
                     'nav-btn inline-flex items-center justify-center whitespace-nowrap',
-                    'nav-ui-fluid font-semibold tracking-wide text-slate-200',
-                    'bg-slate-900/40 border border-emerald-300/15',
-                    'hover:bg-slate-900/55 hover:border-emerald-300/30',
+                    'nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]',
+                    'bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]',
+                    'hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]',
                     'active:translate-y-px transition-all duration-200'
                   )}
                 >
-                  <Settings className="nav-icon shrink-0 text-emerald-200/80" aria-hidden="true" />
+                  <Settings className="nav-icon shrink-0 text-[var(--nav-btn-icon)]" aria-hidden="true" />
                   <span className="hidden sm:inline whitespace-nowrap">Settings</span>
                 </button>
               )}
@@ -128,13 +128,13 @@ export default function NavBar({
                 aria-label="Logout"
                 className={cn(
                   'nav-btn inline-flex items-center justify-center whitespace-nowrap',
-                  'nav-ui-fluid font-brand font-semibold tracking-wide text-slate-100',
-                  'bg-slate-900/40 border border-emerald-300/15',
-                  'hover:bg-slate-900/55 hover:border-rose-300/35',
+                  'nav-ui-fluid font-brand font-semibold tracking-wide text-[var(--nav-btn-text)]',
+                  'bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]',
+                  'hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-danger-hover)]',
                   'active:translate-y-px transition-all duration-200'
                 )}
               >
-                <LogOut className="nav-icon shrink-0 text-white/90" aria-hidden="true" />
+                <LogOut className="nav-icon shrink-0 text-[var(--nav-btn-icon-danger)]" aria-hidden="true" />
                 <span className="hidden sm:inline whitespace-nowrap">Logout</span>
               </button>
             </div>

@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "check:tokens": "node scripts/check-semantic-tokens.mjs",
     "check:tokens:strict": "node scripts/check-semantic-tokens.mjs --strict",
+    "check:tokens:layout": "node scripts/check-semantic-tokens.mjs --scope=layout",
+    "check:tokens:strict:layout": "node scripts/check-semantic-tokens.mjs --scope=layout --strict",
     "preview": "vite preview",
     "test": "vitest run"
   },
