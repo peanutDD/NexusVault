@@ -169,6 +169,16 @@ Token 按层次分为 4 层：
 - 旧代码允许暂存，但只要在上述目录中修改了某个文件（哪怕只是改文案/交互），该文件中的颜色硬编码应一并迁移到 token
 - 如果当前语义缺少 token：优先新增 **Semantic / Component Token**，禁止在页面里临时“就写一个颜色”
 
+### 5.5 辅助工具：扫描调色板硬编码
+
+为避免新代码继续引入 `bg-slate-* / text-emerald-* / from-purple-*` 等 Tailwind 调色板硬编码，提供了扫描脚本用于巡检/CI：
+
+- 报告模式（默认，不阻断）：`npm run check:tokens`
+- 严格模式（阻断）：`npm run check:tokens:strict`
+- 仅检查 layout（便于先在核心布局落地）：`npm run check:tokens:layout` / `npm run check:tokens:strict:layout`
+
+脚本支持 scope 参数：`node scripts/check-semantic-tokens.mjs --scope=layout|pages|common|all [--strict]`
+
 ---
 
 ## 6. 新增 Token 流程（PR 必做）

@@ -30,6 +30,7 @@ export default function SettingsCard({
         'border border-emerald-300/15 bg-slate-950/30',
         'shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_70px_rgba(0,0,0,0.45)]',
         'backdrop-blur-md',
+        'text-[length:var(--settings-text-md)]',
         'p-5 sm:p-6',
         className
       )}
@@ -45,11 +46,11 @@ export default function SettingsCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h2 className="font-brand text-base font-semibold tracking-wide text-slate-100 sm:text-lg">
+          <h2 className="font-brand text-[length:var(--settings-text-lg)] font-semibold tracking-wide text-slate-100">
             {title}
           </h2>
           {description && (
-            <p className="font-brand mt-1 text-sm font-normal leading-relaxed tracking-wide text-slate-400">
+            <p className="font-brand mt-1 text-[length:var(--settings-text-sm)] font-normal leading-relaxed tracking-wide text-slate-400">
               {description}
             </p>
           )}
@@ -61,4 +62,3 @@ export default function SettingsCard({
     </section>
   );
 }
-

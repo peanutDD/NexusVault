@@ -11,6 +11,15 @@
 4→- 筛选下拉：Type 增加 Markdown（MD）选项；图标使用项目内置的 bootstrap-icons 子集映射，缺失字形会在全局映射中补齐
 4→- 移动端：PDF 预览增加更稳妥的兜底策略，避免部分机型 `blob:` + `iframe` 失败
 4→
+4→## 🔧 近期改动补充（设计系统治理与 Settings 体验）
+4→
+4→- Design Tokens 治理规则：对 `pages/layout/common` 目录强制使用 semantic/component token，禁止 Tailwind 调色板硬编码色；新增扫描脚本支持 report/strict 与 scope（layout 优先落地）
+4→- Layout token 化：核心布局（NavBar/PageLayout/BottomBar）颜色从 Tailwind 调色板迁移到 tokens（nav/footer component tokens），支持 `check:tokens:strict:layout` 先卡核心布局
+4→- 全局字号可访问性：取消 `html { font-size: clamp(...) }`，改为 `100%`；流体字号收敛到局部 token（如 nav 与 settings）
+4→- 预览稳定性：修复 `useFilePreviewData` 异步重置状态导致的预览“卡 loading”回归
+4→- 3D 背景省电：支持 `prefers-reduced-motion` 时停止 RAF 常驻渲染并渲染静态帧，恢复动效则重新启动
+4→- Settings 移动端：修复两列布局未设默认列导致的宽度/间距错乱；API Token 区块标题行不换行且随视口缩小；全页引入 Settings 专用流体字号 token；提示区块空容器仅在有提示时渲染，并提供 `?debugAlerts=1` 强制展示提示用于布局检查
+4→
 5→---
 6→
 7→## ✅ 已实现的改进

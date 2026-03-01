@@ -49,11 +49,11 @@ const ApiTokenSection = memo(function ApiTokenSection({
     >
 
       <div className="mb-6">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="font-brand text-sm font-semibold tracking-wide text-slate-200">
+        <div className="mb-3 flex flex-nowrap items-center justify-between gap-3">
+          <h3 className="min-w-0 font-brand text-[clamp(0.8rem,2.4vw,0.95rem)] font-semibold tracking-wide text-slate-200 whitespace-nowrap">
             Create new token
           </h3>
-          <span className="font-brand text-xs font-normal tracking-wide text-slate-500">
+          <span className="min-w-0 font-brand text-[clamp(0.65rem,2.1vw,0.75rem)] font-normal tracking-wide text-slate-500 whitespace-nowrap truncate">
             Use separate tokens for different purposes
           </span>
         </div>
@@ -61,7 +61,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
           <div>
             <label
               htmlFor="new-token-name"
-              className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
+              className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
             >
               Token name
             </label>
@@ -83,7 +83,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
           <div>
             <label
               htmlFor="new-token-expires"
-              className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
+              className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
             >
               Expires in (days, optional)
             </label>
@@ -121,10 +121,10 @@ const ApiTokenSection = memo(function ApiTokenSection({
           <div className="mt-4 rounded-xl border border-amber-300/25 bg-amber-500/10 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-brand text-sm font-semibold tracking-wide text-amber-200">
+                <p className="font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-amber-200">
                   Important: Copy and save now — this token will only be shown once
                 </p>
-                <p className="font-brand mt-1 text-xs font-normal tracking-wide text-amber-200/80">
+                <p className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-amber-200/80">
                   Save to a password manager or CI secret
                 </p>
               </div>
@@ -138,14 +138,14 @@ const ApiTokenSection = memo(function ApiTokenSection({
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <code className="flex-1 rounded-xl border border-amber-300/20 bg-slate-950/50 px-3 py-2 text-xs text-amber-100 break-all">
+              <code className="flex-1 rounded-xl border border-amber-300/20 bg-slate-950/50 px-3 py-2 text-[length:var(--settings-text-xs)] text-amber-100 break-all">
                 {tokenForm.value}
               </code>
               <button
                 type="button"
                 onClick={handleCopyClick}
                 className={cn(
-                  'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold',
+                  'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[length:var(--settings-text-sm)] font-semibold',
                   'bg-amber-400/90 text-slate-950 hover:bg-amber-400'
                 )}
               >
@@ -159,11 +159,11 @@ const ApiTokenSection = memo(function ApiTokenSection({
 
       {/* Token 列表 */}
       <div>
-        <h3 className="font-brand text-sm font-semibold tracking-wide text-slate-200 mb-3">
+        <h3 className="font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-slate-200 mb-3">
           Existing tokens
         </h3>
         {apiTokens.length === 0 ? (
-          <p className="font-brand text-sm font-normal tracking-wide text-slate-400">No API tokens yet</p>
+          <p className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-slate-400">No API tokens yet</p>
         ) : (
           <div className="space-y-3">
             {apiTokens.map((token) => (
@@ -177,16 +177,16 @@ const ApiTokenSection = memo(function ApiTokenSection({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="truncate text-sm font-semibold text-slate-100">
+                      <h4 className="truncate text-[length:var(--settings-text-sm)] font-semibold text-slate-100">
                         {token.name}
                       </h4>
                       {token.expires_at && new Date(token.expires_at) < new Date() && (
-                        <span className="font-brand rounded-full border border-rose-300/25 bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-rose-200">
+                        <span className="font-brand rounded-full border border-rose-300/25 bg-rose-500/10 px-2 py-0.5 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-rose-200">
                           Expired
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
+                    <div className="mt-2 grid gap-1 text-[length:var(--settings-text-xs)] text-slate-400 sm:grid-cols-2">
                       <p className="font-brand font-normal tracking-wide">
                         Created: {new Date(token.created_at).toLocaleString()}
                       </p>
@@ -212,7 +212,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
                     onClick={() => onDeleteToken(token.id)}
                     disabled={loading}
                     className={cn(
-                      'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold',
+                      'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[length:var(--settings-text-sm)] font-semibold',
                       'border border-rose-300/20 bg-rose-500/10 text-rose-200',
                       'hover:bg-rose-500/15 hover:border-rose-300/30',
                       'disabled:opacity-50 disabled:cursor-not-allowed'

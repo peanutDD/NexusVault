@@ -67,6 +67,7 @@
 - React Hook Form + Zod
 - react-markdown + remark-gfm (Markdown 渲染)
 - rehype-raw + rehype-highlight (HTML 支持与代码高亮)
+- Design Tokens 治理：页面级容器/通用组件强制使用 semantic tokens，并提供扫描脚本用于巡检与 CI 卡口（详见 `frontend/docs/TOKENS_USAGE.md` 与 `frontend/README.md`）
 - GitHub OAuth 登录（登录页「Sign in with GitHub」+ `/auth/callback/github` 回调，已接入）
 - Google OAuth 登录（后端已实现 `/api/auth/oauth/google/*` 路由；前端登录页按钮已预留但默认禁用，待绑定公网域名后再开启）
 

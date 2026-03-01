@@ -33,11 +33,11 @@ const StorageUsageSection = memo(function StorageUsageSection({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="font-brand text-xs font-normal tracking-wide text-slate-400">Used</p>
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-400">Used</p>
                 {storageUsage.usage_percent !== null && (
                   <span
                     className={cn(
-                      'text-xs font-semibold tabular-nums',
+                      'text-[length:var(--settings-text-xs)] font-semibold tabular-nums',
                       storageUsage.usage_percent >= 90 && 'text-rose-300',
                       storageUsage.usage_percent >= 75 &&
                         storageUsage.usage_percent < 90 &&
@@ -49,29 +49,29 @@ const StorageUsageSection = memo(function StorageUsageSection({
                   </span>
                 )}
               </div>
-              <p className="font-brand mt-2 text-2xl font-semibold tracking-wide text-slate-100">
+              <p className="font-brand mt-2 text-[length:var(--settings-text-xl)] font-semibold tracking-wide text-slate-100">
                 {formatBytes(storageUsage.total_size)}
               </p>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-[length:var(--settings-text-xs)] text-slate-400">
                 {storageUsage.total_size_mb} MB
                 {storageUsage.quota_mb !== null ? ` / ${storageUsage.quota_mb} MB` : ''}
               </p>
             </div>
 
             <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
-              <p className="font-brand text-xs font-normal tracking-wide text-slate-400">Files</p>
-              <p className="font-brand mt-2 text-2xl font-semibold tracking-wide text-slate-100 tabular-nums">
+              <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-400">Files</p>
+              <p className="font-brand mt-2 text-[length:var(--settings-text-xl)] font-semibold tracking-wide text-slate-100 tabular-nums">
                 {storageUsage.file_count}
               </p>
-              <p className="mt-1 text-xs text-slate-400">items</p>
+              <p className="mt-1 text-[length:var(--settings-text-xs)] text-slate-400">items</p>
             </div>
           </div>
 
           {storageUsage.quota !== null && storageUsage.usage_percent !== null && (
             <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="font-brand text-sm font-medium tracking-wide text-slate-200">Quota progress</p>
-                <p className="font-brand text-xs font-normal tracking-wide text-slate-400">
+                <p className="font-brand text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200">Quota progress</p>
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-400">
                   {storageUsage.is_unlimited ? 'Unlimited' : 'Limited'}
                 </p>
               </div>
@@ -91,12 +91,12 @@ const StorageUsageSection = memo(function StorageUsageSection({
               </div>
 
               {storageUsage.usage_percent >= 90 && (
-                <p className="font-brand mt-3 text-sm font-normal tracking-wide text-rose-200">
+                <p className="font-brand mt-3 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-rose-200">
                   Storage quota almost full. Consider cleaning up or increasing quota.
                 </p>
               )}
               {storageUsage.usage_percent >= 75 && storageUsage.usage_percent < 90 && (
-                <p className="font-brand mt-3 text-sm font-normal tracking-wide text-amber-200">
+                <p className="font-brand mt-3 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-amber-200">
                   Storage usage is high. Consider regular cleanup or archival.
                 </p>
               )}
@@ -104,11 +104,11 @@ const StorageUsageSection = memo(function StorageUsageSection({
           )}
 
           {storageUsage.is_unlimited && (
-            <p className="font-brand text-sm font-normal tracking-wide text-slate-400">Quota: unlimited</p>
+            <p className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-slate-400">Quota: unlimited</p>
           )}
         </div>
       ) : (
-        <p className="font-brand text-sm font-normal tracking-wide text-slate-400">Loading…</p>
+        <p className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-slate-400">Loading…</p>
       )}
     </SettingsCard>
   );

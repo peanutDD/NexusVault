@@ -15,3 +15,6 @@
 
 > 提示：日常开发可以优先看 `UI_SYSTEM.md` 和根目录 `docs/CODE_REVIEW_GUIDE.md`；做性能排查时结合 `PERFORMANCE.md`、`PERFORMANCE_ISSUES.md` 与前端 `README.md` 中的工程约定一起使用。
 
+### 治理与检查
+
+- Token 扫描脚本：用于检测 `pages/layout/common` 范围内是否引入 Tailwind 调色板硬编码色（支持 report/strict 与 scope）。规则与用法见 `TOKENS_USAGE.md`。

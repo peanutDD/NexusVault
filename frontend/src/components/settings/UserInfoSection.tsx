@@ -53,7 +53,7 @@ const UserInfoSection = memo(function UserInfoSection({
         <div>
           <label
             htmlFor="profile-username"
-            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
           >
             Username
           </label>
@@ -76,7 +76,7 @@ const UserInfoSection = memo(function UserInfoSection({
         <div>
           <label
             htmlFor="profile-email"
-            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
           >
             Email
           </label>
@@ -98,7 +98,7 @@ const UserInfoSection = memo(function UserInfoSection({
               onClick={onSendVerificationCode}
               disabled={!canSendCode || sendingCode || sendCodeCooldown > 0 || loading}
               className={cn(
-                'font-brand shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold tracking-wide whitespace-nowrap',
+                'font-brand shrink-0 rounded-xl px-4 py-2.5 text-[length:var(--settings-text-sm)] font-semibold tracking-wide whitespace-nowrap',
                 'border border-emerald-300/15 bg-emerald-500/20 text-emerald-200',
                 'hover:bg-emerald-500/30 hover:border-emerald-300/25',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
@@ -115,7 +115,7 @@ const UserInfoSection = memo(function UserInfoSection({
             <div className="mt-2">
               <label
                 htmlFor="profile-email-code"
-                className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
+                className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
               >
                 Verification code
               </label>
@@ -139,8 +139,8 @@ const UserInfoSection = memo(function UserInfoSection({
           )}
         </div>
         <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
-          <p className="font-brand text-xs font-normal tracking-wide text-slate-400">Registered</p>
-          <p className="mt-1 text-sm font-semibold text-slate-100">
+          <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-400">Registered</p>
+          <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100">
             {user?.created_at
               ? new Date(user.created_at).toLocaleString()
               : '-'}

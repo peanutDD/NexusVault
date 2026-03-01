@@ -37,7 +37,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
         <div>
           <label
             htmlFor="current-password"
-            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
           >
             Current password
           </label>
@@ -58,7 +58,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
         <div>
           <label
             htmlFor="new-password"
-            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
           >
             New password
           </label>
@@ -76,12 +76,12 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
               'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
             )}
           />
-          <p className="font-brand text-slate-400 text-xs font-normal tracking-wide mt-1">At least 8 characters</p>
+          <p className="font-brand text-slate-400 text-[length:var(--settings-text-xs)] font-normal tracking-wide mt-1">At least 8 characters</p>
         </div>
         <div>
           <label
             htmlFor="confirm-password"
-            className="font-brand block text-sm font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
           >
             Confirm new password
           </label>

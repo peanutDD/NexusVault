@@ -8,6 +8,7 @@ interface FilePreviewBackground3DProps {
 export default function FilePreviewBackground3D({ isRotationPaused }: FilePreviewBackground3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isRotationPausedRef = useRef(isRotationPaused);
+  const prefersReducedMotionRef = useRef(false);
 
   useEffect(() => {
     isRotationPausedRef.current = isRotationPaused;
@@ -17,9 +18,12 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     const container = containerRef.current;
     if (!container) return;
 
+    const mql = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    prefersReducedMotionRef.current = Boolean(mql?.matches);
+
     // Initialize Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, prefersReducedMotionRef.current ? 1 : 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -149,6 +153,9 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       renderer.setSize(width, height);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
+      if (prefersReducedMotionRef.current) {
+        renderer.render(scene, camera);
+      }
     };
 
     const resizeObserver = new ResizeObserver(resize);
@@ -163,24 +170,23 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     const tmpWorld = new THREE.Vector3();
     const tmpNdc = new THREE.Vector3();
     let orbitBlend = 0;
+    let isRunning = false;
 
-    const animate = () => {
-      // 无论是否暂停，clock.getDelta() 都必须每帧调用以更新内部时间
-      const delta = clock.getDelta();
-      
-      // Update motion time only if not paused
-      if (!isRotationPausedRef.current) {
+    const renderFrame = (delta: number) => {
+      if (prefersReducedMotionRef.current) {
+        motionTime = 0;
+        orbitBlend = 0;
+      } else if (!isRotationPausedRef.current) {
         motionTime += delta;
       }
-      
+
       const elapsed = motionTime;
 
-      // Simple rotations
       core.rotation.y = elapsed * 0.25;
       core.rotation.x = elapsed * 0.1;
       atmosphere.rotation.y = -elapsed * 0.18;
       ring.rotation.z = elapsed * 0.35;
-      
+
       const orbitAngle = elapsed * 0.45;
       orbitGroup.rotation.y = orbitAngle;
 
@@ -198,7 +204,7 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
         const h = container.clientHeight || 0;
         const base = Math.min(w, h);
 
-        const targetBlend = isRotationPausedRef.current ? 0 : 1;
+        const targetBlend = prefersReducedMotionRef.current ? 0 : isRotationPausedRef.current ? 0 : 1;
         const k = 1 - Math.exp(-delta * 6);
         orbitBlend += (targetBlend - orbitBlend) * k;
 
@@ -217,7 +223,7 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
         const y = (cy + oy) * orbitBlend;
         const z = (Math.sin(t * 0.9) * Math.min(120, Math.max(30, base * 0.15))) * orbitBlend;
         const rx = (Math.sin(t * 1.1) * 12) * orbitBlend;
-        const ry = elapsed * 12; // 降低自转速度，让厚度展示更清晰且不晕
+        const ry = elapsed * 12;
         previewContentEl.style.setProperty('--preview-orbit-x', `${x.toFixed(2)}px`);
         previewContentEl.style.setProperty('--preview-orbit-y', `${y.toFixed(2)}px`);
         previewContentEl.style.setProperty('--preview-orbit-z', `${z.toFixed(2)}px`);
@@ -226,14 +232,55 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       }
 
       renderer.render(scene, camera);
+    };
+
+    const animate = () => {
+      // 无论是否暂停，clock.getDelta() 都必须每帧调用以更新内部时间
+      const delta = clock.getDelta();
+      renderFrame(delta);
+      if (!prefersReducedMotionRef.current) {
+        frameId = window.requestAnimationFrame(animate);
+      } else {
+        isRunning = false;
+      }
+    };
+
+    const start = () => {
+      if (isRunning) return;
+      isRunning = true;
       frameId = window.requestAnimationFrame(animate);
     };
 
-    frameId = window.requestAnimationFrame(animate);
+    const stop = () => {
+      if (!isRunning) return;
+      isRunning = false;
+      window.cancelAnimationFrame(frameId);
+      frameId = 0;
+    };
+
+    const onReducedMotionChange = () => {
+      prefersReducedMotionRef.current = Boolean(mql?.matches);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, prefersReducedMotionRef.current ? 1 : 2));
+      if (prefersReducedMotionRef.current) {
+        stop();
+        renderFrame(0);
+        return;
+      }
+      start();
+    };
+
+    if (mql) {
+      mql.addEventListener('change', onReducedMotionChange);
+    }
+
+    start();
 
     // Cleanup
     return () => {
-      window.cancelAnimationFrame(frameId);
+      if (mql) {
+        mql.removeEventListener('change', onReducedMotionChange);
+      }
+      stop();
       resizeObserver.disconnect();
       
       if (container && renderer.domElement && container.contains(renderer.domElement)) {

@@ -14,7 +14,7 @@ import UserInfoSection from '../components/settings/UserInfoSection';
 import StorageUsageSection from '../components/settings/StorageUsageSection';
 import PasswordChangeSection from '../components/settings/PasswordChangeSection';
 import ApiTokenSection from '../components/settings/ApiTokenSection';
-import { Settings2 } from 'lucide-react';
+import { Settings2, ArrowLeft } from 'lucide-react';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -25,6 +25,10 @@ export default function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
+  const debugAlerts =
+    typeof window !== 'undefined' &&
+    Boolean(import.meta.env.DEV) &&
+    new URLSearchParams(window.location.search).has('debugAlerts');
 
   const [profileForm, setProfileForm] = useState({
     username: '',
@@ -377,7 +381,7 @@ export default function Settings() {
       showSettings={false}
     >
       {/* Match NavBar width so the logo aligns with page content */}
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl text-[length:var(--settings-text-md)]">
         {/* Page header (match Home neon/glass style) */}
         <div className="relative mb-6 overflow-hidden rounded-2xl border border-emerald-300/15 bg-slate-950/30 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-6">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-emerald-400/10" />
@@ -388,39 +392,40 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={() => navigate('/files')}
-                className="font-brand mb-4 inline-flex items-center rounded-xl border border-emerald-300/15 bg-slate-900/35 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:bg-slate-900/50 hover:border-emerald-300/30"
+                className="font-brand mb-4 inline-flex items-center rounded-xl border border-emerald-300/15 bg-slate-900/35 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:bg-slate-900/50 hover:border-emerald-300/30"
               >
+                <ArrowLeft className="mr-2 h-4 w-4 shrink-0 text-emerald-200/80" aria-hidden="true" />
                 Back to Home
               </button>
               <div className="flex items-center gap-3">
                 <div className="rounded-xl border border-emerald-300/15 bg-slate-900/40 p-2 text-emerald-200/80">
                   <Settings2 className="h-5 w-5" aria-hidden="true" />
                 </div>
-                <h1 className="font-brand truncate text-base font-normal tracking-widest text-slate-100 sm:text-lg">
+                <h1 className="font-brand truncate text-[length:var(--settings-text-xl)] font-normal tracking-widest text-slate-100">
                   Settings Center
                 </h1>
               </div>
-              <p className="font-brand mt-2 text-sm font-normal tracking-wide text-slate-400">
+              <p className="font-brand mt-2 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-slate-400">
                 Account info, storage quota, security & token management.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="font-brand text-[11px] font-normal tracking-wide text-slate-500">Files</p>
-                <p className="mt-1 text-sm font-semibold text-slate-100 tabular-nums">
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Files</p>
+                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100 tabular-nums">
                   {storageUsage ? storageUsage.file_count : '-'}
                 </p>
               </div>
               <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="font-brand text-[11px] font-normal tracking-wide text-slate-500">Usage</p>
-                <p className="mt-1 text-sm font-semibold text-slate-100 tabular-nums">
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Usage</p>
+                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100 tabular-nums">
                   {storageUsage ? `${storageUsage.total_size_mb} MB` : '-'}
                 </p>
               </div>
               <div className="hidden sm:block rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="font-brand text-[11px] font-normal tracking-wide text-slate-500">Tokens</p>
-                <p className="mt-1 text-sm font-semibold text-slate-100 tabular-nums">
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Tokens</p>
+                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100 tabular-nums">
                   {apiTokens.length}
                 </p>
               </div>
@@ -429,33 +434,33 @@ export default function Settings() {
         </div>
 
         {/* Two-column layout: quick nav on the left, content on the right */}
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <aside className="lg:col-span-4">
             <div className="lg:sticky lg:top-28 space-y-4">
-              <div className="rounded-2xl border border-emerald-300/15 bg-slate-950/25 p-4 text-sm text-slate-300 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_12px_50px_rgba(0,0,0,0.35)] backdrop-blur-md">
-                <p className="font-brand text-xs font-normal tracking-wide text-slate-500">Quick nav</p>
+              <div className="rounded-2xl border border-emerald-300/15 bg-slate-950/25 p-4 text-[length:var(--settings-text-sm)] text-slate-300 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_12px_50px_rgba(0,0,0,0.35)] backdrop-blur-md">
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Quick nav</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <a
                     href="#profile"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
                     Account
                   </a>
                   <a
                     href="#storage"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
                     Storage
                   </a>
                   <a
                     href="#security"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
                     Security
                   </a>
                   <a
                     href="#api-tokens"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-xs font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
                     Tokens
                   </a>
@@ -465,24 +470,34 @@ export default function Settings() {
           </aside>
 
           <div className="lg:col-span-8 space-y-6">
-            <div ref={errorRef}>
-              {error && (
-                <ErrorMessage
-                  message={error}
-                  onClose={handleCloseError}
-                  type="error"
-                  autoDismissMs={5000}
-                />
-              )}
-              {success && (
-                <ErrorMessage
-                  message={success}
-                  onClose={handleCloseSuccess}
-                  type="info"
-                  autoDismissMs={5000}
-                />
-              )}
-            </div>
+            {(debugAlerts || error || success) && (
+              <div ref={errorRef}>
+                {debugAlerts && !error && !success && (
+                  <ErrorMessage
+                    message="(Debug) Something went wrong. This is a temporary layout check alert."
+                    onClose={() => {}}
+                    type="error"
+                    autoDismissMs={0}
+                  />
+                )}
+                {error && (
+                  <ErrorMessage
+                    message={error}
+                    onClose={handleCloseError}
+                    type="error"
+                    autoDismissMs={5000}
+                  />
+                )}
+                {success && (
+                  <ErrorMessage
+                    message={success}
+                    onClose={handleCloseSuccess}
+                    type="info"
+                    autoDismissMs={5000}
+                  />
+                )}
+              </div>
+            )}
             <UserInfoSection
               user={user}
               profileForm={profileForm}

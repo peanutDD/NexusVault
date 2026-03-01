@@ -190,6 +190,12 @@
     --footer-dot-bg: rgba(var(--rgb-cyan-400), 0.6);
     --footer-dot-shadow: 0 0 12px rgba(var(--rgb-cyan-400), 0.5);
 
+    --settings-text-xs: clamp(0.65rem, 1.7vw, 0.75rem);
+    --settings-text-sm: clamp(0.75rem, 2.0vw, 0.875rem);
+    --settings-text-md: clamp(0.825rem, 2.2vw, 0.95rem);
+    --settings-text-lg: clamp(0.95rem, 2.6vw, 1.125rem);
+    --settings-text-xl: clamp(1.05rem, 3.0vw, 1.3rem);
+
     /* CTA tokens */
     --cta-primary-border: rgba(var(--rgb-emerald-300), 0.45);
     --cta-primary-bg: linear-gradient(
