@@ -25,12 +25,13 @@ export const authService = {
   async changePassword(data: {
     current_password: string;
     new_password: string;
-  }): Promise<{ message: string }> {
-    const response = await api.put<{ message: string }>(
-      '/api/auth/change-password',
-      data
-    );
-    return response.data;
+  }): Promise<{ success: boolean; message: string }> {
+    const response = await api.put<unknown>('/api/auth/change-password', data);
+    const payload = response.data as { success?: unknown; message?: unknown } | null;
+    if (!payload || payload.success !== true || typeof payload.message !== 'string') {
+      throw new Error('Password change failed');
+    }
+    return { success: true, message: payload.message };
   },
 
   async sendEmailVerification(email: string): Promise<{ message: string }> {

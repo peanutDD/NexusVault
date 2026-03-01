@@ -8,6 +8,7 @@ import type { ApiToken } from '../services/apiTokens';
 import type { StorageUsage } from '../types/files';
 import { getErrorMessage } from '../utils/error';
 import { validateEmail } from '../utils/emailValidation';
+import { formatBytes } from '../utils/format';
 import { useClipboard } from '../hooks/useClipboard';
 import PageLayout from '../components/layout/PageLayout';
 import UserInfoSection from '../components/settings/UserInfoSection';
@@ -48,6 +49,11 @@ export default function Settings() {
     new_password: '',
     confirm_password: '',
   });
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState<{
+    current_password?: string;
+    new_password?: string;
+    confirm_password?: string;
+  }>({});
 
   const [apiTokens, setApiTokens] = useState<ApiToken[]>([]);
   const [tokenForm, setTokenForm] = useState({
@@ -152,10 +158,6 @@ export default function Settings() {
   );
 
   const handleDeleteToken = useCallback(async (tokenId: string) => {
-    if (!confirm('Delete this API Token? This action cannot be undone.')) {
-      return;
-    }
-
     setLoading(true);
     try {
       await apiTokenService.deleteToken(tokenId);
@@ -289,14 +291,34 @@ export default function Settings() {
     e.preventDefault();
     setPasswordError(null);
     setPasswordSuccess(null);
+    setPasswordFieldErrors({});
 
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
-      setPasswordError('New password and confirmation do not match');
-      return;
+    const nextErrors: {
+      current_password?: string;
+      new_password?: string;
+      confirm_password?: string;
+    } = {};
+
+    if (!passwordForm.current_password) {
+      nextErrors.current_password = 'Current password is required';
     }
 
-    if (passwordForm.new_password.length < 8) {
-      setPasswordError('New password must be at least 8 characters');
+    if (passwordForm.new_password.length < 8 || passwordForm.new_password.length > 64) {
+      nextErrors.new_password = 'New password must be between 8 and 64 characters';
+    } else {
+      const hasLetter = /[A-Za-z]/.test(passwordForm.new_password);
+      const hasDigit = /[0-9]/.test(passwordForm.new_password);
+      if (!hasLetter || !hasDigit) {
+        nextErrors.new_password = 'New password must contain at least one letter and one digit';
+      }
+    }
+
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      nextErrors.confirm_password = 'New password and confirmation do not match';
+    }
+
+    if (nextErrors.current_password || nextErrors.new_password || nextErrors.confirm_password) {
+      setPasswordFieldErrors(nextErrors);
       return;
     }
 
@@ -313,7 +335,20 @@ export default function Settings() {
         confirm_password: '',
       });
     } catch (err) {
-      setPasswordError(getErrorMessage(err, 'Failed to change password'));
+      const message = getErrorMessage(err, 'Failed to change password');
+      if (
+        message.includes('between 8 and 64') ||
+        message.includes('one letter and one digit') ||
+        message.includes('New password must')
+      ) {
+        setPasswordFieldErrors({ new_password: message });
+      } else if (message.toLowerCase().includes('password')) {
+        setPasswordFieldErrors({ current_password: message });
+      } else if (message.includes('密码')) {
+        setPasswordFieldErrors({ current_password: message });
+      } else {
+        setPasswordError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -361,14 +396,17 @@ export default function Settings() {
   // Password form handlers
   const handleCurrentPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswordForm((prev) => ({ ...prev, current_password: e.target.value }));
+    setPasswordFieldErrors((prev) => ({ ...prev, current_password: undefined }));
   }, []);
 
   const handleNewPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswordForm((prev) => ({ ...prev, new_password: e.target.value }));
+    setPasswordFieldErrors((prev) => ({ ...prev, new_password: undefined }));
   }, []);
 
   const handleConfirmPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswordForm((prev) => ({ ...prev, confirm_password: e.target.value }));
+    setPasswordFieldErrors((prev) => ({ ...prev, confirm_password: undefined }));
   }, []);
 
   // Token form handlers
@@ -439,7 +477,7 @@ export default function Settings() {
               <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
                 <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Usage</p>
                 <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100 tabular-nums">
-                  {storageUsage ? `${storageUsage.total_size_mb} MB` : '-'}
+                  {storageUsage ? formatBytes(storageUsage.total_size) : '-'}
                 </p>
               </div>
               <div className="hidden sm:block rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
@@ -516,6 +554,7 @@ export default function Settings() {
               success={passwordSuccess}
               onCloseError={handleClosePasswordError}
               onCloseSuccess={handleClosePasswordSuccess}
+              fieldErrors={passwordFieldErrors}
               onCurrentPasswordChange={handleCurrentPasswordChange}
               onNewPasswordChange={handleNewPasswordChange}
               onConfirmPasswordChange={handleConfirmPasswordChange}

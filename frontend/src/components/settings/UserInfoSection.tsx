@@ -64,7 +64,7 @@ const UserInfoSection = memo(function UserInfoSection({
           onClose={onCloseError}
           type="error"
           autoDismissMs={5000}
-          className="mb-4"
+          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
         />
       )}
       {success && (
@@ -73,7 +73,7 @@ const UserInfoSection = memo(function UserInfoSection({
           onClose={onCloseSuccess}
           type="info"
           autoDismissMs={3000}
-          className="mb-4"
+          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
         />
       )}
       <form onSubmit={onSubmit} noValidate className="space-y-4">

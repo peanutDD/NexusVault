@@ -54,7 +54,7 @@ const StorageUsageSection = memo(function StorageUsageSection({
               </p>
               <p className="mt-1 text-[length:var(--settings-text-xs)] text-slate-400">
                 {storageUsage.total_size_mb} MB
-                {storageUsage.quota_mb !== null ? ` / ${storageUsage.quota_mb} MB` : ''}
+                {storageUsage.quota !== null ? ` / ${formatBytes(storageUsage.quota)}` : ''}
               </p>
             </div>
 

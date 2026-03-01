@@ -1,8 +1,9 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Key, Copy, Trash2, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { ApiToken } from '../../services/apiTokens';
 import ErrorMessage from '../common/feedback/ErrorMessage';
+import ConfirmDialog from '../common/dialog/ConfirmDialog';
 import SettingsCard from './SettingsCard';
 
 interface TokenForm {
@@ -23,7 +24,7 @@ interface ApiTokenSectionProps {
   onTokenNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onTokenExpiresChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCreateToken: (e: React.FormEvent) => void;
-  onDeleteToken: (tokenId: string) => void;
+  onDeleteToken: (tokenId: string) => Promise<void>;
   onCopyToken: (token: string) => Promise<void>;
   onCloseTokenValue: () => void;
 }
@@ -43,6 +44,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
   onCopyToken,
   onCloseTokenValue,
 }: ApiTokenSectionProps) {
+  const [pendingDeleteToken, setPendingDeleteToken] = useState<ApiToken | null>(null);
   const handleCopyClick = useCallback(() => {
     if (tokenForm.value) {
       onCopyToken(tokenForm.value);
@@ -62,7 +64,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
           onClose={onCloseError}
           type="error"
           autoDismissMs={5000}
-          className="mb-4"
+          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
         />
       )}
       {success && (
@@ -71,9 +73,37 @@ const ApiTokenSection = memo(function ApiTokenSection({
           onClose={onCloseSuccess}
           type="info"
           autoDismissMs={3000}
-          className="mb-4"
+          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteToken)}
+        appearance="glass"
+        variant="danger"
+        icon={<Trash2 className="h-5 w-5" />}
+        iconBgClass="bg-rose-500/15"
+        iconColorClass="text-rose-300"
+        title="Delete API Token"
+        message={
+          pendingDeleteToken ? (
+            <>
+              Delete this token? This action cannot be undone.
+              {'\n'}
+              Token: {pendingDeleteToken.name}
+            </>
+          ) : null
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        loading={loading}
+        onConfirm={async () => {
+          if (!pendingDeleteToken) return;
+          await onDeleteToken(pendingDeleteToken.id);
+          setPendingDeleteToken(null);
+        }}
+        onCancel={() => setPendingDeleteToken(null)}
+      />
 
       <div className="mb-6">
         <div className="mb-3 flex flex-nowrap items-center justify-between gap-3">
@@ -84,7 +114,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
             Use separate tokens for different purposes
           </span>
         </div>
-        <form onSubmit={onCreateToken} className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={onCreateToken} noValidate className="grid gap-4 sm:grid-cols-2">
           <div>
             <label
               htmlFor="new-token-name"
@@ -236,7 +266,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
                   </div>
                   <button
                     type="button"
-                    onClick={() => onDeleteToken(token.id)}
+                    onClick={() => setPendingDeleteToken(token)}
                     disabled={loading}
                     className={cn(
                       'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[length:var(--settings-text-sm)] font-semibold',
