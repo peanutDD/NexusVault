@@ -77,8 +77,8 @@
 .bi-image::before {
     content: "\f42a";
 }
-.bi-film::before {
-    content: "\f3c3";
+.bi-file-earmark-play::before {
+    content: "\F37B";
 }
 .bi-music-note-beamed::before {
     content: "\f49e";
@@ -96,7 +96,7 @@
     content: "\f3bf";
 }
 .bi-filetype-doc::before {
-    content: "\f392";
+    content: "\F744";
 }
 .bi-grid-3x3-gap::before {
     content: "\f3f9";
