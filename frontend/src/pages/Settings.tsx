@@ -16,6 +16,7 @@ import { useClipboard } from '../hooks/useClipboard';
 import PageLayout from '../components/layout/PageLayout';
 import UserInfoSection from '../components/settings/UserInfoSection';
 import StorageUsageSection from '../components/settings/StorageUsageSection';
+import ThemeSection from '../components/settings/ThemeSection';
 import PasswordChangeSection from '../components/settings/PasswordChangeSection';
 import ApiTokenSection from '../components/settings/ApiTokenSection';
 import { Settings2, ArrowLeft } from 'lucide-react';
@@ -579,6 +580,12 @@ export default function Settings() {
                     Storage
                   </a>
                   <a
+                    href="#appearance"
+                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                  >
+                    Appearance
+                  </a>
+                  <a
                     href="#security"
                     className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
                   >
@@ -619,6 +626,8 @@ export default function Settings() {
             />
 
             <StorageUsageSection storageUsage={storageUsage} />
+
+            <ThemeSection />
 
             <PasswordChangeSection
               passwordForm={{

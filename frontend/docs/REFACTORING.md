@@ -1,5 +1,13 @@
 # 前端重构计划与实施记录
 
+## 2026-03-01 最新约定（状态层/表单/请求）
+
+1. **状态分层**：
+   - **server-state**（文件列表、文件夹内容、分页/加载态等）统一交给 TanStack React Query。
+   - **Zustand** 只保留纯客户端状态（如 auth/theme/hydration）。
+2. **Settings 表单统一**：Settings 页的账户/密码/API Token 表单统一使用 React Hook Form + Zod。
+3. **请求统一**：OAuth 回调页统一走 `authService`，避免在页面内直接 `fetch` 以及绕开 axios 统一拦截器行为。
+
 ## 重构目标
 
 1. **高效优雅**：代码简洁、逻辑清晰
@@ -23,7 +31,7 @@
 
 - `useFileList.ts`：877 行，混合了过滤、选择、分组、加载等逻辑
 - `UploadDialog.tsx`：616 行，混合了拖拽、URL 上传、队列管理
-- `fileStore.ts`：职责过重，管理列表、选择、对话框状态
+- legacy Zustand stores：曾承担列表/选择/对话框等状态，但与 server-state 重复，已移除（server-state 交由 React Query）
 
 ### 3. 类型重复
 
@@ -134,11 +142,6 @@ src/
 │   └── index.ts
 │
 ├── store/
-│   ├── files/                          # 文件状态
-│   │   ├── listStore.ts                # 文件列表状态
-│   │   ├── selectionStore.ts           # 选择状态
-│   │   ├── dialogStore.ts              # 对话框状态
-│   │   └── index.ts
 │   ├── authStore.ts
 │   ├── themeStore.ts
 │   ├── hydrationStore.ts
@@ -211,13 +214,9 @@ src/
 - `hooks/files/useFileSelection.ts` - 选择逻辑
 - `hooks/files/useFileGrouping.ts` - 分组逻辑（含 Web Worker 集成）
 
-### 阶段五：拆分 fileStore ✅
+### 阶段五：移除 legacy fileStore/listStore ✅
 
-创建 `store/files/` 目录：
-
-- `listStore.ts` - 文件列表状态
-- `selectionStore.ts` - 选择状态
-- `dialogStore.ts` - 对话框状态
+删除 `fileStore.ts` / `store/files/*Store.ts` 等未引用且承载 server-state 的 Zustand stores；文件列表与文件夹内容改由 React Query hooks 管理（并通过 invalidate/refetch 驱动刷新）。
 
 ### 阶段六：组织 services ✅
 
@@ -289,7 +288,7 @@ import { FileList } from '@/components/files/list';
 import { UploadDialog } from '@/components/files/upload';
 
 // 从 store 导入
-import { useFileListStore } from '@/store/files';
+import { useAuthStore } from '@/store/authStore';
 ```
 
 ---

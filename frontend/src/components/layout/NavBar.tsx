@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../../config/env';
 import { cn } from '../../utils/cn';
 import { ArrowLeft, LogOut, Settings } from 'lucide-react';
+import ThemeToggle from '../common/ThemeToggle';
 
 interface NavBarProps {
   title?: string;
@@ -121,6 +122,8 @@ export default function NavBar({
                   <span className="hidden sm:inline whitespace-nowrap">Settings</span>
                 </button>
               )}
+
+              <ThemeToggle />
 
               <button
                 type="button"

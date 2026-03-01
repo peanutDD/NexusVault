@@ -62,7 +62,8 @@
 - Vite
 - Tailwind CSS
 - React Router
-- Zustand (状态管理)
+- TanStack React Query（server-state：列表/分页/缓存/失效）
+- Zustand（客户端状态：auth/theme 等）
 - Axios
 - React Hook Form + Zod
 - react-markdown + remark-gfm (Markdown 渲染)
@@ -269,7 +270,7 @@ frontend/
 │   │   ├── files/              # 文件过滤 / 选择 / 分组等业务 Hook（useFileFilters/useFileSelection 等）
 │   │   └── useRequestDedup     # 请求去重 Hook（防止重复并发相同请求）
 │   ├── services/               # API 封装（Auth / Files / Folders / Shares）
-│   ├── store/                  # Zustand 状态（文件列表缓存 / 上传队列等）
+│   ├── store/                  # Zustand 状态（auth/theme/hydration 等客户端状态）
 │   ├── utils/                  # 工具函数（mime 类型、格式化、worker 池、文件列表缓存）
 │   └── index.css               # 全局样式（导航栏、霓虹玻璃 UI、Tailwind 覆盖）
 ├── public/                     # 静态资源
@@ -318,16 +319,14 @@ frontend/
   - 通过环境变量控制单文件大小 `MAX_FILE_SIZE` 与 MIME 白名单；  
   - 预留了在中间件层增加限流、速率限制的入口（如基于 IP / 用户维度）。
 
-### 前端高并发与大列表能力（React 19 + Zustand）
+### 前端高并发与大列表能力（React 19 + React Query + Zustand）
 
 - **请求去重与并发控制**  
   - `useRequestDedup` 基于 `REQUEST` 常量（`REQUEST.DEDUP_TTL_MS` / `REQUEST.DEDUP_MAX_CACHE_SIZE`），  
     对相同参数的请求在短时间内复用结果，避免多次点击 / 滚动触发重复请求。  
   - 请求层面的并发上限由 `REQUEST.LIMITER_MAX_CONCURRENT` 控制，可按需收紧。
-- **文件列表缓存（stale-while-revalidate）**  
-  - `useFileList` + `utils/fileListCache`：  
-    - 第一页及后续分页结果会缓存在 `localStorage` 中（LRU 替换，数量由 `FILE_LIST.CACHE_MAX_ENTRIES` 控制）。  
-    - 命中缓存时立即渲染，再在后台静默刷新，既保证首次渲染速度，又能尽量保持数据新鲜。  
+- **server-state 缓存与失效（React Query）**  
+  - 列表/分页、文件夹内容等由 React Query 管理缓存、并发去重、重试与失效；业务操作（删除/重命名/移动等）通过 mutations + invalidate/refetch 刷新视图。  
 - **分页与无限滚动结合**  
   - `FILE_LIST.LIMIT` 控制单页返回量（默认为 60），降低单次渲染压力。  
   - `InfiniteScrollSentinel` + `loadMore`：滑动到底部自动加载下一页，  
@@ -340,8 +339,7 @@ frontend/
     将「按类型聚合 + 排序」这类 O(n) 计算从主线程剥离出来，保持交互流畅。
 - **过滤 / 排序防抖与状态集中管理**  
   - `useFileFilters` 对搜索输入做防抖，避免每个字符都触发一次网络请求与重渲染。  
-  - `useFileList` 统一维护 `files / total / loadedPageCount / selection` 等状态，  
-    结合 Zustand store（如 `fileStore` / `files/listStore`）做缓存与派发，减少多处组件重复计算。
+  - `useFileList` 统一维护筛选/选择/分组等 UI 态；数据获取与分页由 React Query hooks 负责。  
 
 > 总体上：后端依靠 Rust + Axum + SQLx + Tokio 提供高并发处理能力；  
 > 前端则通过请求去重、缓存、虚拟列表与 Worker 分组，确保在大量文件与频繁操作下仍然保持良好的响应速度。
@@ -552,6 +550,9 @@ frontend/
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/file_storage
 JWT_SECRET=your-secret-key
+# 可选：API Token HMAC 密钥（不配则回退用 JWT_SECRET）；支持 previous 做平滑轮换/双验
+# API_TOKEN_HMAC_SECRET=your-api-token-secret
+# API_TOKEN_HMAC_SECRET_PREVIOUS=your-old-api-token-secret
 JWT_EXPIRY=24h
 STORAGE_BACKEND=local
 STORAGE_PATH=./uploads
@@ -562,6 +563,14 @@ MAX_FILE_SIZE=2147483648
 ALLOWED_MIME_TYPES=image/*,video/*,audio/*,application/pdf,text/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/epub+zip,application/x-mobipocket-ebook,application/zip,application/x-7z-compressed,application/x-rar-compressed,application/x-tar,application/gzip,application/x-bzip2
 PORT=3000
 CORS_ORIGIN=*
+
+# 可选：限流（按 IP + 已登录用户写操作）
+# IP_RATE_LIMIT=600
+# USER_RATE_LIMIT=600
+# RATE_LIMIT_WINDOW_SECS=60
+# RATE_LIMIT_MAX_KEYS=20000
+# 是否信任 Forwarded/X-Forwarded-For/X-Real-IP（仅可信反代场景开启；默认用真实连接方 IP）
+# TRUST_PROXY_HEADERS=false
 
 # 可选：管理接口专用 token（启用 /api/admin/*）
 # ADMIN_TOKEN=your-admin-token

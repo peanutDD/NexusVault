@@ -77,3 +77,29 @@ pub async fn pre_migration_repairs(pool: &PgPool) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+pub async fn reset_public_schema(pool: &PgPool) -> anyhow::Result<()> {
+    sqlx::query("DROP SCHEMA IF EXISTS public CASCADE")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE SCHEMA public").execute(pool).await?;
+    Ok(())
+}
+
+pub async fn repair_migration_checksum(
+    pool: &PgPool,
+    migrator: &sqlx::migrate::Migrator,
+    version: i64,
+) -> anyhow::Result<bool> {
+    let Some(migration) = migrator.iter().find(|m| m.version == version) else {
+        return Ok(false);
+    };
+
+    let res = sqlx::query("UPDATE _sqlx_migrations SET checksum = $2 WHERE version = $1")
+        .bind(version)
+        .bind(migration.checksum.as_ref())
+        .execute(pool)
+        .await?;
+
+    Ok(res.rows_affected() > 0)
+}

@@ -23,13 +23,12 @@ export default function ThemeToggle({ className, showLabel = false }: ThemeToggl
       type="button"
       onClick={toggleTheme}
       className={cn(
-        // 让图标始终在按钮内绝对居中（避免在不同主题/不同尺寸下看起来偏移）
-        'inline-flex items-center justify-center',
-        'p-2 rounded-lg transition-all duration-200',
-        'bg-gray-700/50 hover:bg-gray-600/50',
-        'dark:bg-gray-600/50 dark:hover:bg-gray-500/50',
-        'text-gray-300 hover:text-white',
-        'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900',
+        'nav-btn inline-flex items-center justify-center whitespace-nowrap',
+        'nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]',
+        'bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]',
+        'hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]',
+        'active:translate-y-px transition-all duration-200',
+        'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:ring-offset-2 focus:ring-offset-slate-950/60',
         className
       )}
       aria-label={`切换到${effectiveTheme === 'dark' ? '浅色' : '深色'}模式`}
@@ -40,7 +39,6 @@ export default function ThemeToggle({ className, showLabel = false }: ThemeToggl
           <svg
             className={cn(
               'w-5 h-5 transition-transform duration-200 hover:rotate-12',
-              // 避免 SVG 基线导致的 1px 偏移感
               'block'
             )}
             fill="none"

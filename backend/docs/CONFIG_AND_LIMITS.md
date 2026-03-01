@@ -9,6 +9,8 @@
 | `DATABASE_URL` | PostgreSQL 连接串 | 必填 |
 | `REDIS_URL` | Redis 连接串（不配置则禁用 Redis 能力） | 可选 |
 | `JWT_SECRET` | JWT 签名密钥 | 必填 |
+| `API_TOKEN_HMAC_SECRET` | API Token HMAC 密钥（不配则回退用 `JWT_SECRET`） | 可选 |
+| `API_TOKEN_HMAC_SECRET_PREVIOUS` | API Token 上一把 HMAC 密钥（用于平滑轮换/双验） | 可选 |
 | `JWT_EXPIRY` | JWT 过期时间 | `24h` |
 | `PORT` | 服务监听端口 | `3000` |
 | `STORAGE_BACKEND` | 存储后端 | `local` |
@@ -34,6 +36,11 @@
 | `PRESIGN_TTL_SECS` | presigned URL 有效期（秒） | `300` |
 | `TASK_QUEUE_BACKEND` | 任务队列后端（当前仅 `postgres`） | `postgres` |
 | `READ_REPLICA_DATABASE_URL` | 读库连接串（不配则读写同库） | 可选 |
+| `IP_RATE_LIMIT` | IP 级限流：每窗口内最大请求数 | `600` |
+| `USER_RATE_LIMIT` | 已登录用户写操作限流：每窗口内最大请求数 | `600` |
+| `RATE_LIMIT_WINDOW_SECS` | 限流窗口大小（秒） | `60` |
+| `RATE_LIMIT_MAX_KEYS` | 限流缓存最大 key 数 | `20000` |
+| `TRUST_PROXY_HEADERS` | 是否信任 `Forwarded/X-Forwarded-For/X-Real-IP` 作为客户端 IP（仅在可信反代场景开启） | `false` |
 | `SMTP_HOST` | SMTP 服务器地址（修改邮箱验证码发送） | 可选，不配置则验证码仅写入日志 |
 | `SMTP_PORT` | SMTP 端口 | 可选，如 587 |
 | `SMTP_USERNAME` | SMTP 认证用户名（一般为发件邮箱） | 可选 |

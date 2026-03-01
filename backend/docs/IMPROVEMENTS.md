@@ -1,5 +1,26 @@
 # 后端改进记录
 
+## 2026-03-01 认证/限流/迁移安全性补强
+
+- **API Token 密钥轮换（双验/灰度）**：
+  - 新增 `API_TOKEN_HMAC_SECRET`（主密钥）与 `API_TOKEN_HMAC_SECRET_PREVIOUS`（旧密钥），并保持对 `JWT_SECRET` 的兼容回退组合（用于平滑升级与回滚）。
+  - API Token 校验改为按 secrets 列表依次尝试命中（主/旧/兼容），避免“一次换密钥全部 token 失效”。
+  - 相关实现：[`config.rs`](file:///Users/tyone/github/upload-download-util/backend/src/config.rs)、[`api_token.rs`](file:///Users/tyone/github/upload-download-util/backend/src/services/api_token.rs)、[`auth.rs`](file:///Users/tyone/github/upload-download-util/backend/src/extractors/auth.rs)
+
+- **限流可信来源治理（仅在可信反代时信任转发头）**：
+  - 增加 `TRUST_PROXY_HEADERS`：默认不信任 `Forwarded/X-Forwarded-For/X-Real-IP`，用真实连接方 IP 做限流 key；开启后才解析转发头。
+  - 通过 `ConnectInfo<SocketAddr>` 读取 peer addr 作为兜底，避免无转发头时所有请求落入 `unknown` 互相误伤。
+  - 相关实现：[`rate_limit.rs`](file:///Users/tyone/github/upload-download-util/backend/src/middleware/rate_limit.rs)、[`main.rs`](file:///Users/tyone/github/upload-download-util/backend/src/main.rs)
+
+- **迁移安全性：CONCURRENTLY / no-transaction 路线补齐**：
+  - `gen_random_uuid()` 依赖：显式启用 `pgcrypto`，避免新环境迁移失败：[`024_enable_pgcrypto.sql`](file:///Users/tyone/github/upload-download-util/backend/migrations/024_enable_pgcrypto.sql)
+  - 大索引在线重建：将“并发建索引 + 并发删旧索引”拆为单语句 `-- no-transaction` 迁移，避免事务块报错并减少锁风险：
+    - background_tasks 索引：[`026_create_uq_background_tasks_active_dedupe_concurrently.sql`](file:///Users/tyone/github/upload-download-util/backend/migrations/026_create_uq_background_tasks_active_dedupe_concurrently.sql) ～ [`031_drop_idx_background_tasks_locked_until.sql`](file:///Users/tyone/github/upload-download-util/backend/migrations/031_drop_idx_background_tasks_locked_until.sql)
+    - files embedding 索引：[`032_create_idx_files_embedding_concurrently.sql`](file:///Users/tyone/github/upload-download-util/backend/migrations/032_create_idx_files_embedding_concurrently.sql)、[`033_drop_idx_files_embedding.sql`](file:///Users/tyone/github/upload-download-util/backend/migrations/033_drop_idx_files_embedding.sql)
+
+- **测试稳定性：避免并发跑 migrations 的 advisory lock 死锁**：
+  - 在测试辅助函数中为 `sqlx::migrate!().run()` 增加进程内互斥，保证单进程内串行执行迁移：[`tests/common/mod.rs`](file:///Users/tyone/github/upload-download-util/backend/tests/common/mod.rs)
+
 ## 2026-02-22 Redis/缓存/API 与数据库优化（补充）
 
 - **数据库一致性**：为避免并发上传导致同目录重复文件名，增加数据库唯一约束（并在迁移中清理历史重复）：[`019_add_files_unique_constraint.sql`](../migrations/019_add_files_unique_constraint.sql)

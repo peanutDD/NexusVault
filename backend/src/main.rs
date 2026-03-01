@@ -106,10 +106,56 @@ async fn async_main() -> anyhow::Result<()> {
     file_storage_backend::database::pool::pre_migration_repairs(&pool).await?;
 
     // 执行 migrations 目录下的 SQL 迁移
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to run migrations: {}", e))?;
+    let migrator = sqlx::migrate!("./migrations");
+    match migrator.run(&pool).await {
+        Ok(()) => {}
+        Err(sqlx::migrate::MigrateError::VersionMismatch(v)) => {
+            let allow_checksum_repair =
+                std::env::var("REPAIR_MIGRATION_CHECKSUM_ON_MISMATCH").as_deref() == Ok("1");
+            if allow_checksum_repair {
+                tracing::warn!(
+                    version = v,
+                    "migration checksum mismatch detected; repairing _sqlx_migrations checksum"
+                );
+                let repaired = file_storage_backend::database::pool::repair_migration_checksum(
+                    &pool, &migrator, v,
+                )
+                .await?;
+                if repaired {
+                    migrator.run(&pool).await.map_err(|e| {
+                        anyhow::anyhow!("Failed to run migrations after checksum repair: {}", e)
+                    })?;
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "Failed to repair migration checksum for version {}",
+                        v
+                    ));
+                }
+            } else {
+                let allow_reset =
+                    std::env::var("RESET_DB_ON_MIGRATION_MISMATCH").as_deref() == Ok("1");
+                if allow_reset {
+                    tracing::warn!(
+                        version = v,
+                        "migration checksum mismatch detected; resetting public schema (dev only)"
+                    );
+                    file_storage_backend::database::pool::reset_public_schema(&pool).await?;
+                    file_storage_backend::database::pool::pre_migration_repairs(&pool).await?;
+                    migrator.run(&pool).await.map_err(|e| {
+                        anyhow::anyhow!("Failed to run migrations after schema reset: {}", e)
+                    })?;
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "Failed to run migrations: migration {} was previously applied but has been modified",
+                        v
+                    ));
+                }
+            }
+        }
+        Err(err) => {
+            return Err(anyhow::anyhow!("Failed to run migrations: {}", err));
+        }
+    }
 
     // 根据 STORAGE_BACKEND 创建本地或 S3 存储实现
     let storage = create_storage(config.clone())
