@@ -53,7 +53,7 @@ const FileTypeIcon = memo(function FileTypeIcon({
   return (
     <div
       className={cn(
-        'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/20',
+        'flex shrink-0 items-center justify-center bg-purple-500/20 h-[clamp(2rem,6vw,2.5rem)] w-[clamp(2rem,6vw,2.5rem)] rounded-[clamp(0.15rem,0.5vw,0.35rem)]',
         className
       )}
     >

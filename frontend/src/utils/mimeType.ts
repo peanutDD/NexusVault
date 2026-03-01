@@ -137,14 +137,15 @@ export function isPreviewSupported(mime: string): boolean {
 /** 获取预览类型信息 */
 export function getPreviewKind(mime: string, filename?: string) {
   const isGif = isGifType(mime);
+  const isMarkdown = isMarkdownType(mime, filename);
 
   return {
-    supported: isPreviewSupported(mime),
+    supported: isPreviewSupported(mime) || isMarkdown,
     // GIF 在预览层面按“视频”处理（走 <video> 管线），避免大 GIF 卡顿
     isImage: isImageType(mime) && !isGif,
     isPDF: isPdfType(mime),
     isText: isTextType(mime),
-    isMarkdown: isMarkdownType(mime, filename),
+    isMarkdown,
     isVideo: isVideoType(mime) || isGif,
     isAudio: isAudioType(mime),
     // Ugoira 支持已移除，这里固定为 false，避免前端再走任何 Ugoira 分支

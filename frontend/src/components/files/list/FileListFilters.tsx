@@ -36,9 +36,10 @@ const FileListFilters = memo(function FileListFilters({
       { label: 'Audio', value: 'audio/', icon: <i className="bi bi-music-note-beamed" /> },
       { label: 'GIF', value: 'image/gif', icon: <i className="bi bi-filetype-gif" /> },
       { label: 'PDF', value: 'application/pdf', icon: <i className="bi bi-filetype-pdf" />, divider: true },
+      { label: 'MD', value: 'text/markdown', icon: <i className="bi bi-markdown" /> },
       { label: 'Text', value: 'text/', icon: <i className="bi bi-file-text" /> },
       { label: 'Archive', value: 'application/zip', icon: <i className="bi bi-file-zip" /> },
-      { label: 'Apps/Docs', value: 'application/', icon: <i className="bi bi-file-earmark" /> },
+      { label: 'Docs', value: 'application/', icon: <i className="bi bi-filetype-doc" /> },
     ],
     []
   );

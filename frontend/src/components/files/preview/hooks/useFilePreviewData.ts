@@ -84,6 +84,22 @@ export function useFilePreviewData({
   const hlsStartVolumeRef = useRef<number | null>(null);
   const hlsStartMutedRef = useRef<boolean | null>(null);
 
+  useEffect(() => {
+    requestIdRef.current += 1;
+    videoFallbackTriedRef.current = false;
+    gifFallbackTriedRef.current = false;
+    imageFallbackTriedRef.current = false;
+    setError(null);
+    setTextContent(null);
+    setBlobUrl(null);
+    setGifFirstFrameUrl(null);
+    setUseHls(false);
+    setGifTranscodeInProgress(false);
+    setGifTranscodeProgress(null);
+    setImageLoaded(false);
+    setLoading(Boolean(file && kind.supported));
+  }, [file?.id, kind.supported]);
+
   const onImageError = useCallback(() => {
     if (!file) return;
     const isImage = file.mime_type.toLowerCase().startsWith('image/');
@@ -149,6 +165,13 @@ export function useFilePreviewData({
     if (!file || !kind.supported) return;
     const currentRequestId = ++requestIdRef.current;
     const isValidRequest = () => currentRequestId === requestIdRef.current;
+    setLoading(true);
+    setError(null);
+    setTextContent(null);
+    setBlobUrl(null);
+    setGifFirstFrameUrl(null);
+    setUseHls(false);
+    setImageLoaded(false);
     const finish = () => {
       if (isValidRequest()) setLoading(false);
       if (isValidRequest()) {

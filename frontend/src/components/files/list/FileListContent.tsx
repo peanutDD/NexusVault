@@ -254,7 +254,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
         <>
           {/* 全选栏 + 批量工具栏：有选择时整合为一块玻璃拟态，无选择时独立 */}
           {showBatchActions ? (
-            <div className="sticky top-20 sm:top-24 z-40 mb-[var(--bar-gap)]">
+            <div className="sticky top-[clamp(4.75rem,7.6vw,6.25rem)] z-40 mb-[var(--bar-gap)]">
               <div className="glass-panel-soft bars-integrated flex flex-col">
                 <div className="all-files-row flex items-center justify-between gap-4">
                   <div className="flex shrink-0 items-center gap-3">

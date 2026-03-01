@@ -1,4 +1,4 @@
-import { cn } from '../../../utils/cn';
+import { cn } from "../../../utils/cn";
 
 interface SelectionCheckboxProps {
   /** 是否选中 */
@@ -10,7 +10,7 @@ interface SelectionCheckboxProps {
   /** 位置类名（默认 absolute left-2 top-2） */
   positionClassName?: string;
   /** 大小 */
-  size?: 'sm' | 'md';
+  size?: "sm" | "md" | "responsive";
 }
 
 /**
@@ -26,10 +26,11 @@ export function SelectionCheckbox({
   isSelected,
   onClick,
   alwaysVisible = false,
-  positionClassName = 'absolute left-2 top-2',
-  size = 'md',
+  positionClassName = "absolute left-2 top-2",
+  size = "md",
 }: SelectionCheckboxProps) {
-  const isSmall = size === 'sm';
+  const isSmall = size === "sm";
+  const isResponsive = size === "responsive";
 
   // 选中状态：始终显示
   // 未选中状态：默认隐藏，hover 时显示
@@ -44,44 +45,71 @@ export function SelectionCheckbox({
       }}
       className={cn(
         positionClassName,
-        'z-10 flex cursor-pointer items-center justify-center',
+        "z-10 flex cursor-pointer items-center justify-center",
         // 使用 visibility 替代 opacity，性能更好
         // visibility: hidden 的元素不参与事件处理，但保留布局
-        shouldHideByDefault && 'invisible group-hover:visible',
+        shouldHideByDefault && "invisible group-hover:visible",
         // will-change 提示浏览器优化
-        '[will-change:visibility] [contain:layout_style]',
-        isSmall ? 'h-4 w-4' : 'h-5 w-5'
+        "[will-change:visibility] [contain:layout_style]",
+        isResponsive
+          ? "h-[clamp(0.95rem,1.45vw,1.25rem)] w-[clamp(0.95rem,1.45vw,1.25rem)]"
+          : isSmall
+            ? "h-4 w-4"
+            : "h-5 w-5",
       )}
-      aria-label={isSelected ? '取消选择' : '选择'}
+      aria-label={isSelected ? "取消选择" : "选择"}
     >
       {isSelected ? (
         <span
           className={cn(
-            'card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-violet-500',
-            isSmall ? 'h-3 w-3' : 'h-4 w-4'
+            "card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-violet-500",
+            isResponsive
+              ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
+              : isSmall
+                ? "h-3 w-3"
+                : "h-4 w-4",
           )}
         >
           <svg
-            className={cn('text-white', isSmall ? 'h-2 w-2' : 'h-2.5 w-2.5')}
+            className={cn(
+              "text-white",
+              isResponsive
+                ? "h-[clamp(0.45rem,0.75vw,0.62rem)] w-[clamp(0.45rem,0.75vw,0.62rem)]"
+                : isSmall
+                  ? "h-2 w-2"
+                  : "h-2.5 w-2.5",
+            )}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
             strokeWidth={3}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 13l4 4L19 7"
+            />
           </svg>
         </span>
       ) : (
         <span
           className={cn(
-            'flex items-center justify-center rounded-full bg-black/40',
-            isSmall ? 'h-3 w-3' : 'h-4 w-4'
+            "flex items-center justify-center rounded-full bg-black/40",
+            isResponsive
+              ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
+              : isSmall
+                ? "h-3 w-3"
+                : "h-4 w-4",
           )}
         >
           <span
             className={cn(
-              'rounded-full border-2 border-white/60',
-              isSmall ? 'h-1.5 w-1.5' : 'h-2.5 w-2.5'
+              "rounded-full border-2 border-white/60",
+              isResponsive
+                ? "h-[clamp(0.35rem,0.6vw,0.52rem)] w-[clamp(0.35rem,0.6vw,0.52rem)]"
+                : isSmall
+                  ? "h-1.5 w-1.5"
+                  : "h-2.5 w-2.5",
             )}
           />
         </span>

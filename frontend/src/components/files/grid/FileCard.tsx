@@ -97,6 +97,8 @@ const FileCard = memo(
             <SelectionCheckbox
               isSelected={isSelected}
               onClick={() => onSelect(file.id)}
+              size="responsive"
+              positionClassName="absolute left-[clamp(0.4rem,0.9vw,0.6rem)] top-[clamp(0.4rem,0.9vw,0.6rem)]"
             />
 
             <LazyThumbnail

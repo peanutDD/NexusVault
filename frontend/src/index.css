@@ -59,6 +59,9 @@
 .bi-folder2-open::before {
     content: "\f3d8";
 }
+.bi-markdown::before {
+    content: "\f481";
+}
 .bi-folder-plus::before {
     content: "\f3d3";
 }
@@ -92,7 +95,7 @@
 .bi-file-zip::before {
     content: "\f3bf";
 }
-.bi-file-earmark::before {
+.bi-filetype-doc::before {
     content: "\f392";
 }
 .bi-grid-3x3-gap::before {

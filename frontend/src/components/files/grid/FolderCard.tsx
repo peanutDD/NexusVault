@@ -112,7 +112,12 @@ const FolderCard = memo(function FolderCard({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <SelectionCheckbox isSelected={isSelected} onClick={handleSelect} />
+          <SelectionCheckbox
+            isSelected={isSelected}
+            onClick={handleSelect}
+            size="responsive"
+            positionClassName="absolute left-[clamp(0.4rem,0.9vw,0.6rem)] top-[clamp(0.4rem,0.9vw,0.6rem)]"
+          />
           <i
             className="bi bi-folder-fill text-[clamp(1.5rem,3.2vw,2.25rem)] text-purple-400"
             aria-hidden

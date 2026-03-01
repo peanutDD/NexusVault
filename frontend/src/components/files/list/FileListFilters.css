@@ -501,10 +501,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 0.4375rem;
-  height: 0.4375rem;
+  width: 1em;
+  height: 1em;
   font-size: var(--filters-dropdown-font-size);
   opacity: 0.8;
+}
+
+.filtersItemIcon .bi {
+  line-height: 1;
 }
 
 .filtersItemLabel {

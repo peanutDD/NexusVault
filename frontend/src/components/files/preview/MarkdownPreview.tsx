@@ -5,6 +5,7 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import { defaultSchema } from 'hast-util-sanitize';
+import 'highlight.js/styles/github-dark.css';
 import { apiPath } from '../../../config/env';
 import { cn } from '../../../utils/cn';
 import { useClipboard } from '../../../hooks/useClipboard';
@@ -84,7 +85,11 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw, rehypeSanitize(markdownSanitizeSchema), rehypeHighlight]}
+      rehypePlugins={[
+        rehypeRaw,
+        rehypeSanitize(markdownSanitizeSchema),
+        [rehypeHighlight, { detect: true, ignoreMissing: true }],
+      ]}
       components={{
         h1: ({ children, ...props }) => (
           <Heading
@@ -423,7 +428,9 @@ function CodeBlock({
           isDark ? 'text-emerald-50/95' : 'text-slate-900'
         )}
       >
-        <code className={codeClassName}>{code}</code>
+        <code className={codeClassName} style={{ background: 'transparent' }}>
+          {code}
+        </code>
       </pre>
     </div>
   );

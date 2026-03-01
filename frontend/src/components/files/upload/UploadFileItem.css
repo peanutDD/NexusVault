@@ -1,26 +1,120 @@
+/* 方角赛博朋克上传进度条（去除两端曲线） */
+.uploadProgressTrack {
+    background: linear-gradient(
+        180deg,
+        rgba(17, 20, 36, 0.95),
+        rgba(10, 12, 24, 0.95)
+    );
+    border-top: 1px solid rgba(137, 92, 255, 0.35);
+    box-shadow:
+        inset 0 1px 0 rgba(0, 255, 180, 0.08),
+        inset 0 -1px 0 rgba(173, 92, 255, 0.14);
+}
+
+/* <progress> 基础 */
 .uploadProgress {
-  width: 100%;
-  height: 100%;
-  display: block;
-  border: 0;
-  background: transparent;
-  appearance: none;
-  -webkit-appearance: none;
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    border-radius: 0 !important; /* 强制直角 */
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    overflow: hidden;
 }
 
-/* Chrome / Edge */
-.uploadProgress::-webkit-progress-bar {
-  background: transparent;
-}
-
-.uploadProgress::-webkit-progress-value {
-  background-image: linear-gradient(90deg, #10b981, #34d399);
-  transition: width 300ms ease-out;
-}
-
-/* Firefox */
+/* 去掉 Firefox 默认内边框与圆角倾向 */
 .uploadProgress::-moz-progress-bar {
-  background-image: linear-gradient(90deg, #10b981, #34d399);
-  transition: width 300ms ease-out;
+    border-radius: 0 !important;
 }
 
+/* Chrome / Edge 轨道 */
+.uploadProgress::-webkit-progress-bar {
+    border-radius: 0 !important; /* 去除两端曲线 */
+    background: linear-gradient(
+        90deg,
+        rgba(30, 20, 48, 0.9),
+        rgba(16, 22, 44, 0.9)
+    );
+    box-shadow:
+        inset 0 0 8px rgba(161, 84, 255, 0.28),
+        inset 0 0 14px rgba(0, 255, 179, 0.12);
+}
+
+/* Chrome / Edge 进度值 */
+.uploadProgress::-webkit-progress-value {
+    border-radius: 0 !important; /* 方角 */
+    background-image: linear-gradient(
+        90deg,
+        #00ffb4 0%,
+        #00f0ff 24%,
+        #8b5cf6 52%,
+        #d946ef 76%,
+        #00ffb4 100%
+    );
+    background-size: 220% 100%;
+    box-shadow:
+        0 0 6px rgba(0, 255, 180, 0.85),
+        0 0 14px rgba(139, 92, 246, 0.58),
+        0 0 24px rgba(217, 70, 239, 0.36);
+    transition: width 220ms linear;
+    animation: uploadCyberFlow 1.8s linear infinite;
+    position: relative;
+}
+
+/* Firefox 进度值 */
+.uploadProgress::-moz-progress-bar {
+    border-radius: 0 !important; /* 方角 */
+    background-image: linear-gradient(
+        90deg,
+        #00ffb4 0%,
+        #00f0ff 24%,
+        #8b5cf6 52%,
+        #d946ef 76%,
+        #00ffb4 100%
+    );
+    background-size: 220% 100%;
+    box-shadow:
+        0 0 6px rgba(0, 255, 180, 0.85),
+        0 0 14px rgba(139, 92, 246, 0.58),
+        0 0 24px rgba(217, 70, 239, 0.36);
+    transition: width 220ms linear;
+    animation: uploadCyberFlow 1.8s linear infinite;
+}
+
+/* 扫描线层（仅 WebKit） */
+.uploadProgress::-webkit-progress-value::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.2) 0px,
+        rgba(255, 255, 255, 0.2) 2px,
+        rgba(255, 255, 255, 0) 2px,
+        rgba(255, 255, 255, 0) 8px
+    );
+    mix-blend-mode: screen;
+    pointer-events: none;
+}
+
+/* 动态流光 */
+@keyframes uploadCyberFlow {
+    0% {
+        background-position: 0% 50%;
+        filter: saturate(1) brightness(1);
+    }
+    100% {
+        background-position: 220% 50%;
+        filter: saturate(1.15) brightness(1.06);
+    }
+}
+
+/* 减少动态偏好 */
+@media (prefers-reduced-motion: reduce) {
+    .uploadProgress::-webkit-progress-value,
+    .uploadProgress::-moz-progress-bar {
+        animation: none;
+    }
+}

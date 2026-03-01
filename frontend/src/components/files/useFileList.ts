@@ -288,6 +288,57 @@ export function useFileList() {
   }, [filesData]);
   const totalItems = filesData?.pages[0]?.total ?? 0;
 
+  const sortedFiles = useMemo(() => {
+    if (files.length <= 1) return files;
+    if (!sortBy.startsWith('filename_')) return files;
+    const dir = sortBy.endsWith('_asc') ? 1 : -1;
+    const compareName = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    const leadingZeroScore = (s: string) => {
+      let score = 0;
+      let i = 0;
+      while (i < s.length) {
+        const c = s.charCodeAt(i);
+        const isDigit = c >= 48 && c <= 57;
+        if (!isDigit) {
+          i += 1;
+          continue;
+        }
+        const start = i;
+        while (i < s.length) {
+          const cc = s.charCodeAt(i);
+          if (cc < 48 || cc > 57) break;
+          i += 1;
+        }
+        const raw = s.slice(start, i);
+        const stripped = raw.replace(/^0+/, '');
+        const normalized = stripped === '' ? '0' : stripped;
+        score += raw.length - normalized.length;
+      }
+      return score;
+    };
+    const getTime = (v: string) => {
+      const t = Date.parse(v);
+      return Number.isFinite(t) ? t : 0;
+    };
+    const list = [...files];
+    list.sort((a, b) => {
+      const r = compareName(a.original_filename, b.original_filename);
+      if (r !== 0) return r * dir;
+      const z = leadingZeroScore(a.original_filename) - leadingZeroScore(b.original_filename);
+      if (z !== 0) return z * dir;
+      const tr = getTime(a.created_at) - getTime(b.created_at);
+      if (tr !== 0) return tr;
+      const cr = a.original_filename.localeCompare(b.original_filename, undefined, {
+        numeric: false,
+        sensitivity: 'base',
+      });
+      if (cr !== 0) return cr * dir;
+      return a.id.localeCompare(b.id);
+    });
+    return list;
+  }, [files, sortBy]);
+
   // 使用 TanStack Query 获取文件夹内容
   const {
     data: folderContents,
@@ -326,14 +377,27 @@ export function useFileList() {
   const {
     groupedFiles,
     displayFiles,
-    displayFileIndexById,
-  } = useFileGroupingWithIcons(files, isGroupByType, previewFile !== null);
+  } = useFileGroupingWithIcons(sortedFiles, isGroupByType, previewFile !== null);
 
   // 使用时间分组 Hook
   const {
     timeGroupedFiles,
     displayFilesForTime,
-  } = useTimeGrouping(files, isGroupByTime);
+  } = useTimeGrouping(sortedFiles, isGroupByTime);
+
+  const finalDisplayFiles = useMemo(
+    () => (isGroupByTime ? displayFilesForTime : displayFiles),
+    [isGroupByTime, displayFilesForTime, displayFiles]
+  );
+
+  const finalDisplayFileIndexById = useMemo(() => {
+    if (previewFile === null) return new Map<string, number>();
+    const m = new Map<string, number>();
+    for (let i = 0; i < finalDisplayFiles.length; i += 1) {
+      m.set(finalDisplayFiles[i]!.id, i);
+    }
+    return m;
+  }, [finalDisplayFiles, previewFile]);
 
   // 对话框状态
   const [shareFile, setShareFile] = useState<FileMetadata | null>(null);
@@ -468,7 +532,7 @@ export function useFileList() {
     return list;
   }, [mimeType, folders, debouncedSearch, sortBy]);
 
-  const { timeGroupedItems } = useTimeGroupingMixed(files, displayFolders, isGroupByTime);
+  const { timeGroupedItems } = useTimeGroupingMixed(sortedFiles, displayFolders, isGroupByTime);
 
   const handleSelectFile = useCallback((fileId: string, selected: boolean) => {
     setSelectedFiles((prev) => {
@@ -648,8 +712,8 @@ export function useFileList() {
     timeGroupedFiles,
     timeGroupedItems,
     displayFolders,
-    displayFiles: isGroupByTime ? displayFilesForTime : displayFiles,
-    displayFileIndexById,
+    displayFiles: finalDisplayFiles,
+    displayFileIndexById: finalDisplayFileIndexById,
     totalPages: Math.ceil(totalItems / 50), // 简化处理，假设 limit 为 50
     page: 1, // 简化处理，无限滚动不需要页码
     hasMore,
