@@ -55,31 +55,85 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     const group = new THREE.Group();
     scene.add(group);
 
-    // Objects
-    const coreGeometry = new THREE.SphereGeometry(1.6, 32, 32); // Reduced segments
-    const coreMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0b1d18,
-      metalness: 0.25,
-      roughness: 0.4,
-      emissive: 0x08211b,
-      emissiveIntensity: 0.6,
-    });
-    const core = new THREE.Mesh(coreGeometry, coreMaterial);
-    group.add(core);
+    const galaxyGroup = new THREE.Group();
+    galaxyGroup.rotation.x = 0.58;
+    group.add(galaxyGroup);
 
-    const atmosphereGeometry = new THREE.SphereGeometry(1.72, 32, 32); // Reduced segments
-    const atmosphereMaterial = new THREE.MeshBasicMaterial({
+    const galaxyCoreGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+    const galaxyCoreMaterial = new THREE.MeshBasicMaterial({
+      color: 0xd946ef,
+      transparent: true,
+      opacity: 0.35,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const galaxyCore = new THREE.Mesh(galaxyCoreGeometry, galaxyCoreMaterial);
+    galaxyGroup.add(galaxyCore);
+
+    const galaxyGlowGeometry = new THREE.CircleGeometry(2.4, 64);
+    const galaxyGlowMaterial = new THREE.MeshBasicMaterial({
       color: 0x22f3a6,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.12,
       blending: THREE.AdditiveBlending,
-      side: THREE.BackSide,
+      depthWrite: false,
+      side: THREE.DoubleSide,
     });
-    const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-    group.add(atmosphere);
+    const galaxyGlow = new THREE.Mesh(galaxyGlowGeometry, galaxyGlowMaterial);
+    galaxyGlow.rotation.x = Math.PI / 2;
+    galaxyGroup.add(galaxyGlow);
+
+    const spiralCount = 750;
+    const spiralPositions = new Float32Array(spiralCount * 3);
+    const spiralColors = new Float32Array(spiralCount * 3);
+    const cyan = new THREE.Color(0x22f3a6);
+    const magenta = new THREE.Color(0xb455ff);
+    const tmpColor = new THREE.Color();
+    for (let i = 0; i < spiralCount; i += 1) {
+      const arm = i % 2;
+      const r = Math.pow(Math.random(), 1.65) * 3.0;
+      const swirl = r * 2.6;
+      const jitter = (Math.random() - 0.5) * 0.55;
+      const angle = swirl + arm * Math.PI + jitter;
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+      const y = (Math.random() - 0.5) * (0.18 * (1 - r / 3.0));
+
+      const i3 = i * 3;
+      spiralPositions[i3] = x;
+      spiralPositions[i3 + 1] = y;
+      spiralPositions[i3 + 2] = z;
+
+      const t = Math.min(1, Math.max(0, r / 3.0));
+      tmpColor.copy(arm === 0 ? cyan : magenta).lerp(arm === 0 ? magenta : cyan, t * 0.35);
+      tmpColor.multiplyScalar(1 - t * 0.6);
+      spiralColors[i3] = tmpColor.r;
+      spiralColors[i3 + 1] = tmpColor.g;
+      spiralColors[i3 + 2] = tmpColor.b;
+    }
+    const spiralGeometry = new THREE.BufferGeometry();
+    spiralGeometry.setAttribute('position', new THREE.BufferAttribute(spiralPositions, 3));
+    spiralGeometry.setAttribute('color', new THREE.BufferAttribute(spiralColors, 3));
+    const spiralMaterial = new THREE.PointsMaterial({
+      size: 0.05,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+    });
+    const spiral = new THREE.Points(spiralGeometry, spiralMaterial);
+    galaxyGroup.add(spiral);
 
     const orbitGroup = new THREE.Group();
+    orbitGroup.rotation.x = 0.42;
     group.add(orbitGroup);
+
+    const moonOrbitRadius = 3.4;
+    const orbitMarker = new THREE.Object3D();
+    orbitMarker.position.set(moonOrbitRadius, 0, 0);
+    orbitGroup.add(orbitMarker);
 
     const ringGeometry = new THREE.TorusGeometry(2.2, 0.06, 12, 48); // Reduced segments
     const ringMaterial = new THREE.MeshStandardMaterial({
@@ -93,6 +147,20 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     ring.rotation.x = Math.PI / 2.2;
     ring.rotation.y = Math.PI / 6;
     group.add(ring);
+
+    const orbitPathGeometry = new THREE.TorusGeometry(moonOrbitRadius, 0.03, 10, 96);
+    const orbitPathMaterial = new THREE.MeshStandardMaterial({
+      color: 0x22f3a6,
+      metalness: 0.35,
+      roughness: 0.6,
+      emissive: 0x061a12,
+      emissiveIntensity: 0.55,
+      transparent: true,
+      opacity: 0.25,
+    });
+    const orbitPath = new THREE.Mesh(orbitPathGeometry, orbitPathMaterial);
+    orbitPath.rotation.x = Math.PI / 2 + orbitGroup.rotation.x;
+    group.add(orbitPath);
 
     // Particles (Reduced count)
     const particleCount = 100; // Reduced from 320
@@ -181,20 +249,19 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       }
 
       const elapsed = motionTime;
+      const loopSeconds = 24;
+      const phase = ((elapsed % loopSeconds) / loopSeconds) * Math.PI * 2;
 
-      core.rotation.y = elapsed * 0.25;
-      core.rotation.x = elapsed * 0.1;
-      atmosphere.rotation.y = -elapsed * 0.18;
-      ring.rotation.z = elapsed * 0.35;
+      galaxyGroup.rotation.y = phase * 0.65;
+      ring.rotation.z = phase * 1.6;
 
-      const orbitAngle = elapsed * 0.45;
-      orbitGroup.rotation.y = orbitAngle;
+      orbitGroup.rotation.y = phase;
 
-      particles.rotation.y = elapsed * 0.05;
-      particles.rotation.x = elapsed * 0.02;
+      particles.rotation.y = phase;
+      particles.rotation.x = Math.sin(phase * 2) * 0.08;
 
-      pulseLight.intensity = 1 + Math.sin(elapsed * 1.4) * 0.35;
-      group.position.y = Math.sin(elapsed * 0.7) * 0.15;
+      pulseLight.intensity = 1 + Math.sin(phase * 2) * 0.35;
+      group.position.y = Math.sin(phase) * 0.15;
 
       if (!previewContentEl) {
         previewContentEl = document.querySelector('[data-preview-content]') as HTMLElement | null;
@@ -204,26 +271,23 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
         const h = container.clientHeight || 0;
         const base = Math.min(w, h);
 
-        const targetBlend = prefersReducedMotionRef.current ? 0 : isRotationPausedRef.current ? 0 : 1;
         const k = 1 - Math.exp(-delta * 6);
-        orbitBlend += (targetBlend - orbitBlend) * k;
+        if (prefersReducedMotionRef.current) {
+          orbitBlend = 0;
+        } else if (!isRotationPausedRef.current) {
+          orbitBlend += (1 - orbitBlend) * k;
+        }
 
-        core.getWorldPosition(tmpWorld);
+        orbitMarker.getWorldPosition(tmpWorld);
         tmpNdc.copy(tmpWorld).project(camera);
         const cx = (tmpNdc.x * 0.5) * w;
         const cy = (-tmpNdc.y * 0.5) * h;
 
-        const radiusX = Math.min(380, Math.max(80, base * 0.35));
-        const radiusY = Math.min(240, Math.max(50, base * 0.2));
-        const t = elapsed * 0.15;
-        const ox = Math.cos(t) * radiusX;
-        const oy = Math.sin(t) * radiusY;
-
-        const x = (cx + ox) * orbitBlend;
-        const y = (cy + oy) * orbitBlend;
-        const z = (Math.sin(t * 0.9) * Math.min(120, Math.max(30, base * 0.15))) * orbitBlend;
-        const rx = (Math.sin(t * 1.1) * 12) * orbitBlend;
-        const ry = elapsed * 12;
+        const x = cx * orbitBlend;
+        const y = cy * orbitBlend;
+        const z = (Math.sin(phase * 2) * Math.min(90, Math.max(24, base * 0.12))) * orbitBlend;
+        const rx = 0;
+        const ry = 0;
         previewContentEl.style.setProperty('--preview-orbit-x', `${x.toFixed(2)}px`);
         previewContentEl.style.setProperty('--preview-orbit-y', `${y.toFixed(2)}px`);
         previewContentEl.style.setProperty('--preview-orbit-z', `${z.toFixed(2)}px`);
@@ -298,12 +362,16 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       }
       
       // Dispose geometries and materials
-      coreGeometry.dispose();
-      coreMaterial.dispose();
-      atmosphereGeometry.dispose();
-      atmosphereMaterial.dispose();
+      galaxyCoreGeometry.dispose();
+      galaxyCoreMaterial.dispose();
+      galaxyGlowGeometry.dispose();
+      galaxyGlowMaterial.dispose();
+      spiralGeometry.dispose();
+      spiralMaterial.dispose();
       ringGeometry.dispose();
       ringMaterial.dispose();
+      orbitPathGeometry.dispose();
+      orbitPathMaterial.dispose();
       particleGeometry.dispose();
       particleMaterial.dispose();
     };
