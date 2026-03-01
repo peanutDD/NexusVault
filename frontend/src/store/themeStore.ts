@@ -32,13 +32,14 @@ export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => {
       // 初始化时应用主题
-      const initialTheme: 'dark' = 'dark';
+      const initialTheme = 'dark' as const;
       applyTheme();
 
       return {
         theme: 'dark',
         effectiveTheme: initialTheme,
-        setTheme: (_theme: Theme) => {
+        setTheme: (theme: Theme) => {
+          void theme;
           applyTheme();
           set({ theme: 'dark', effectiveTheme: 'dark' });
         },

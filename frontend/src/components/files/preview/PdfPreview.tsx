@@ -54,11 +54,8 @@ function DesktopPdfPreview({
   blobUrl: string;
   title: string;
 }) {
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-
-  useEffect(() => {
-    setIframeLoaded(false);
-  }, [blobUrl]);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const iframeLoaded = loadedFor === blobUrl;
 
   return (
     <div className="flex h-full w-full min-h-0 items-center justify-center pointer-events-none">
@@ -76,7 +73,7 @@ function DesktopPdfPreview({
           src={blobUrl}
           title={title}
           referrerPolicy="no-referrer"
-          onLoad={() => setIframeLoaded(true)}
+          onLoad={() => setLoadedFor(blobUrl)}
           className="h-full w-full border-0 bg-white"
         />
       </div>
@@ -87,7 +84,7 @@ function DesktopPdfPreview({
 // ---------------------------------------------------------------------------
 // 主组件
 // ---------------------------------------------------------------------------
-function PdfPreview({ blobUrl, title, onClose: _onClose }: PdfPreviewProps) {
+function PdfPreview({ blobUrl, title }: PdfPreviewProps) {
   const isMobileLike = useIsMobileLike();
 
   if (isMobileLike) {

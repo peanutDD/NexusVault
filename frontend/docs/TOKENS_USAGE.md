@@ -140,6 +140,35 @@ Token 按层次分为 4 层：
 - 第三方组件强约束样式，无法稳定接 token
 - 快速实验代码（需在 PR 中标注 TODO，后续收敛）
 
+### 5.4 强制范围：页面级容器与通用组件（治理规则）
+
+为避免主题扩展/风格调整时“全站找颜色”，以下目录中的 UI 代码必须以 **Semantic / Component Tokens** 为唯一颜色来源：
+
+- `src/pages/**`
+- `src/components/layout/**`
+- `src/components/common/**`
+
+#### 5.4.1 禁止项（在以上目录中）
+
+- 禁止使用 Tailwind 调色板颜色：`bg-slate-*`、`text-emerald-*`、`border-gray-*`、`ring-blue-*`、`from-purple-*` 等
+- 禁止使用透明度拼接的固定色：`border-white/20`、`bg-black/50` 等
+
+#### 5.4.2 允许项
+
+- 布局类（不涉及颜色语义）：`flex/grid/gap/p-*`、`rounded-*`、`shadow-*`、`z-*` 等
+- 语义 token 映射写法：
+  - `text-[var(--color-text-primary)]`
+  - `bg-[var(--surface-page)]`
+  - `border-[var(--color-border-soft)]`
+  - `ring-[var(--color-focus-ring)]`
+  - `bg-[image:var(--auth-button-gradient)]`
+- 非语义颜色关键字（无主题含义）：`bg-transparent`、`text-current`
+
+#### 5.4.3 渐进式落地（避免全量重写）
+
+- 旧代码允许暂存，但只要在上述目录中修改了某个文件（哪怕只是改文案/交互），该文件中的颜色硬编码应一并迁移到 token
+- 如果当前语义缺少 token：优先新增 **Semantic / Component Token**，禁止在页面里临时“就写一个颜色”
+
 ---
 
 ## 6. 新增 Token 流程（PR 必做）
@@ -185,6 +214,7 @@ PR 中必须包含：
 - [ ] 是否出现同义 token 重复定义
 - [ ] 是否遵循命名前缀规范
 - [ ] 是否把 primitive 直接暴露到业务组件（应优先 semantic/component）
+- [ ] `pages/layout/common` 目录是否仍存在 Tailwind 调色板颜色（必须迁移到 token）
 - [ ] 是否覆盖了 hover/focus/disabled 状态
 - [ ] 是否对深色场景保持一致（本项目默认深色）
 

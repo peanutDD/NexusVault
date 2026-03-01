@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, isValidElement } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -201,11 +201,13 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
           );
         },
         pre: ({ children, ...props }) => {
-          const child = (children as any)?.type === 'code' ? (children as any) : null;
-          const className = child?.props?.className as string | undefined;
+          const childNode = Array.isArray(children) ? children[0] : children;
+          type CodeProps = { className?: string; children?: ReactNode };
+          const child = isValidElement<CodeProps>(childNode) && childNode.type === 'code' ? childNode : null;
+          const className = typeof child?.props?.className === 'string' ? child.props.className : undefined;
           const language =
             typeof className === 'string' ? className.match(/language-([A-Za-z0-9_-]+)/)?.[1] : undefined;
-          const codeChildren = child?.props?.children as ReactNode;
+          const codeChildren = child?.props?.children;
           if (child) {
             return (
               <CodeBlock
