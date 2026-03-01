@@ -245,7 +245,10 @@ api.interceptors.request.use(
   (config) => {
     // 添加认证 token
     const token = getTokenCached();
-    if (token) {
+    const existingAuthHeader =
+      (config.headers as unknown as { Authorization?: unknown; authorization?: unknown })?.Authorization ??
+      (config.headers as unknown as { Authorization?: unknown; authorization?: unknown })?.authorization;
+    if (token && !existingAuthHeader) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 

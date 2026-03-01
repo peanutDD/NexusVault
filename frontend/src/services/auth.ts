@@ -22,6 +22,15 @@ export const authService = {
     return response.data;
   },
 
+  async getMeWithToken(token: string): Promise<{ user: User }> {
+    const response = await api.get<{ user: User }>('/api/auth/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  },
+
   async changePassword(data: {
     current_password: string;
     new_password: string;

@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/auth';
 import { fileService } from '../services/files';
@@ -36,31 +39,124 @@ export default function Settings() {
     new URLSearchParams(window.location.search).has('debugAlerts');
   const { copy: copyToClipboard } = useClipboard();
 
-  const [profileForm, setProfileForm] = useState({
-    username: '',
-    email: '',
-    emailVerificationCode: '',
-  });
   const [sendingCode, setSendingCode] = useState(false);
   const [sendCodeCooldown, setSendCodeCooldown] = useState(0);
 
-  const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: '',
-  });
-  const [passwordFieldErrors, setPasswordFieldErrors] = useState<{
-    current_password?: string;
-    new_password?: string;
-    confirm_password?: string;
-  }>({});
-
   const [apiTokens, setApiTokens] = useState<ApiToken[]>([]);
-  const [tokenForm, setTokenForm] = useState({
-    name: '',
-    expires: '' as number | '',
-    value: null as string | null,
-    showValue: false,
+  const [createdTokenValue, setCreatedTokenValue] = useState<string | null>(null);
+  const [showCreatedTokenValue, setShowCreatedTokenValue] = useState(false);
+
+  const profileSchema = useMemo(() => {
+    const currentEmail = user?.email ?? '';
+    return z
+      .object({
+        username: z
+          .string()
+          .trim()
+          .min(3, 'Username must be at least 3 characters')
+          .max(50, 'Username must be at most 50 characters'),
+        email: z
+          .string()
+          .trim()
+          .superRefine((value, ctx) => {
+            const r = validateEmail(value);
+            if (!r.valid && r.message) {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, message: r.message });
+            }
+          }),
+        emailVerificationCode: z.string().trim().optional(),
+      })
+      .superRefine((data, ctx) => {
+        if (currentEmail && data.email !== currentEmail) {
+          const code = (data.emailVerificationCode ?? '').trim();
+          if (!code) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Email verification code is required when changing email',
+              path: ['emailVerificationCode'],
+            });
+            return;
+          }
+          if (!/^\d{6}$/.test(code)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Verification code must be 6 digits',
+              path: ['emailVerificationCode'],
+            });
+          }
+        }
+      });
+  }, [user?.email]);
+
+  const passwordSchema = useMemo(() => {
+    return z
+      .object({
+        current_password: z.string().min(1, 'Current password is required'),
+        new_password: z
+          .string()
+          .min(8, 'New password must be between 8 and 64 characters')
+          .max(64, 'New password must be between 8 and 64 characters')
+          .refine((v) => /[A-Za-z]/.test(v) && /[0-9]/.test(v), {
+            message: 'New password must contain at least one letter and one digit',
+          }),
+        confirm_password: z.string(),
+      })
+      .superRefine((data, ctx) => {
+        if (data.new_password !== data.confirm_password) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'New password and confirmation do not match',
+            path: ['confirm_password'],
+          });
+        }
+      });
+  }, []);
+
+  const tokenSchema = useMemo(() => {
+    return z.object({
+      name: z.string().trim().min(1, 'Please enter a token name'),
+      expires: z.union([z.literal(''), z.number().int().min(1, 'Expires must be at least 1 day')]),
+    });
+  }, []);
+
+  type ProfileFormValues = z.infer<typeof profileSchema>;
+  type PasswordFormValues = z.infer<typeof passwordSchema>;
+  type TokenFormValues = z.infer<typeof tokenSchema>;
+
+  const {
+    watch: watchProfile,
+    setValue: setProfileValue,
+    handleSubmit: handleProfileSubmit,
+    reset: resetProfile,
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { username: '', email: '', emailVerificationCode: '' },
+    mode: 'onBlur',
+  });
+
+  const {
+    watch: watchPassword,
+    setValue: setPasswordValue,
+    handleSubmit: handlePasswordSubmit,
+    reset: resetPassword,
+    setError: setPasswordFormError,
+    clearErrors: clearPasswordErrors,
+    formState: passwordFormState,
+  } = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { current_password: '', new_password: '', confirm_password: '' },
+    mode: 'onBlur',
+  });
+
+  const {
+    watch: watchToken,
+    setValue: setTokenValue,
+    handleSubmit: handleTokenSubmit,
+    reset: resetToken,
+  } = useForm<TokenFormValues>({
+    resolver: zodResolver(tokenSchema),
+    defaultValues: { name: '', expires: '' },
+    mode: 'onBlur',
   });
 
   useEffect(() => {
@@ -72,13 +168,13 @@ export default function Settings() {
   // Sync profile form when user changes
   useEffect(() => {
     if (user) {
-      setProfileForm((prev) => ({
-        ...prev,
+      resetProfile({
         username: user.username,
         email: user.email,
-      }));
+        emailVerificationCode: '',
+      });
     }
-  }, [user]);
+  }, [user, resetProfile]);
 
   // Send code cooldown timer
   useEffect(() => {
@@ -122,40 +218,39 @@ export default function Settings() {
   }, []);
 
   // Token actions
-  const handleCreateToken = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      setApiTokenError(null);
-      setApiTokenSuccess(null);
-
-      if (!tokenForm.name.trim()) {
-        setApiTokenError('Please enter a token name');
-        return;
+  const handleCreateToken = useMemo(() => {
+    return handleTokenSubmit(
+      async (data) => {
+        setApiTokenError(null);
+        setApiTokenSuccess(null);
+        setLoading(true);
+        try {
+          const response = await apiTokenService.createToken({
+            name: data.name.trim(),
+            expires_in_days: data.expires === '' ? undefined : Number(data.expires),
+          });
+          setCreatedTokenValue(response.token.token);
+          setShowCreatedTokenValue(true);
+          resetToken({ name: '', expires: '' });
+          await loadApiTokens();
+          setApiTokenSuccess(
+            'API Token created. Copy and save it now — it will only be shown once.'
+          );
+        } catch (err) {
+          setApiTokenError(getErrorMessage(err, 'Failed to create API Token'));
+        } finally {
+          setLoading(false);
+        }
+      },
+      (errors) => {
+        const message =
+          errors.name?.message ??
+          errors.expires?.message ??
+          'Please check the form';
+        setApiTokenError(String(message));
       }
-
-      setLoading(true);
-      try {
-        const response = await apiTokenService.createToken({
-          name: tokenForm.name.trim(),
-          expires_in_days: tokenForm.expires ? Number(tokenForm.expires) : undefined,
-        });
-        setTokenForm((prev) => ({
-          ...prev,
-          value: response.token.token,
-          showValue: true,
-          name: '',
-          expires: '',
-        }));
-        await loadApiTokens();
-        setApiTokenSuccess('API Token created. Copy and save it now — it will only be shown once.');
-      } catch (err) {
-        setApiTokenError(getErrorMessage(err, 'Failed to create API Token'));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [tokenForm.name, tokenForm.expires, loadApiTokens]
-  );
+    );
+  }, [handleTokenSubmit, loadApiTokens, resetToken]);
 
   const handleDeleteToken = useCallback(async (tokenId: string) => {
     setLoading(true);
@@ -187,7 +282,7 @@ export default function Settings() {
   const handleSendVerificationCode = useCallback(async () => {
     setProfileError(null);
     setProfileSuccess(null);
-    const email = profileForm.email.trim();
+    const email = (watchProfile('email') ?? '').trim();
     const emailResult = validateEmail(email);
     if (!emailResult.valid && emailResult.message) {
       setProfileError(emailResult.message);
@@ -208,184 +303,142 @@ export default function Settings() {
     } finally {
       setSendingCode(false);
     }
-  }, [profileForm.email, user]);
+  }, [watchProfile, user]);
 
   // Profile update
-  const handleUpdateProfile = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      setProfileError(null);
-      setProfileSuccess(null);
+  const handleUpdateProfile = useMemo(() => {
+    return handleProfileSubmit(
+      async (data) => {
+        setProfileError(null);
+        setProfileSuccess(null);
 
-      const errors: string[] = [];
-      const username = profileForm.username.trim();
-      if (!username) {
-        errors.push('Username is required');
-      } else if (username.length < 3) {
-        errors.push('Username must be at least 3 characters');
-      } else if (username.length > 50) {
-        errors.push('Username must be at most 50 characters');
-      }
-      const emailResult = validateEmail(profileForm.email);
-      if (!emailResult.valid && emailResult.message) {
-        errors.push(emailResult.message);
-      }
-      const email = profileForm.email.trim();
-      if (user && email !== user.email) {
-        if (!profileForm.emailVerificationCode.trim()) {
-          errors.push('Email verification code is required when changing email');
-        } else if (profileForm.emailVerificationCode.trim().length !== 6) {
-          errors.push('Verification code must be 6 digits');
-        }
-      }
-      if (errors.length > 0) {
-        setProfileError(errors.join('; '));
-        return;
-      }
+        const username = data.username.trim();
+        const email = data.email.trim();
 
-      if (user && username === user.username && email === user.email) {
-        setProfileSuccess('No changes made');
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const { username_available, email_available } =
-          await authService.checkProfileAvailability({
-            username: username,
-            email: email,
-          });
-        const availabilityErrors: string[] = [];
-        if (!username_available) availabilityErrors.push('Username is taken');
-        if (!email_available) availabilityErrors.push('Email is taken');
-        if (availabilityErrors.length > 0) {
-          setProfileError(availabilityErrors.join('; '));
-          setLoading(false);
+        if (user && username === user.username && email === user.email) {
+          setProfileSuccess('No changes made');
           return;
         }
 
-        const payload: {
-          username: string;
-          email: string;
-          email_verification_code?: string;
-        } = { username, email };
-        if (user && email !== user.email && profileForm.emailVerificationCode.trim()) {
-          payload.email_verification_code = profileForm.emailVerificationCode.trim();
-        }
+        setLoading(true);
+        try {
+          const { username_available, email_available } =
+            await authService.checkProfileAvailability({
+              username,
+              email,
+            });
+          const availabilityErrors: string[] = [];
+          if (!username_available) availabilityErrors.push('Username is taken');
+          if (!email_available) availabilityErrors.push('Email is taken');
+          if (availabilityErrors.length > 0) {
+            setProfileError(availabilityErrors.join('; '));
+            return;
+          }
 
-        const { user: newUser } = await authService.updateProfile(payload);
-        updateUser(newUser);
-        setProfileSuccess('Profile updated');
-        setProfileForm((p) => ({ ...p, emailVerificationCode: '' }));
-      } catch (err) {
-        setProfileError(getErrorMessage(err, 'Failed to update profile'));
-      } finally {
-        setLoading(false);
+          const payload: {
+            username: string;
+            email: string;
+            email_verification_code?: string;
+          } = { username, email };
+          if (user && email !== user.email && data.emailVerificationCode?.trim()) {
+            payload.email_verification_code = data.emailVerificationCode.trim();
+          }
+
+          const { user: newUser } = await authService.updateProfile(payload);
+          updateUser(newUser);
+          setProfileSuccess('Profile updated');
+          setProfileValue('emailVerificationCode', '');
+        } catch (err) {
+          setProfileError(getErrorMessage(err, 'Failed to update profile'));
+        } finally {
+          setLoading(false);
+        }
+      },
+      (errors) => {
+        const message =
+          errors.username?.message ??
+          errors.email?.message ??
+          errors.emailVerificationCode?.message ??
+          'Please check the form';
+        setProfileError(String(message));
       }
-    },
-    [profileForm, user, updateUser]
-  );
+    );
+  }, [handleProfileSubmit, setProfileValue, updateUser, user]);
 
   // Password update
-  const handleChangePassword = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(null);
-    setPasswordFieldErrors({});
-
-    const nextErrors: {
-      current_password?: string;
-      new_password?: string;
-      confirm_password?: string;
-    } = {};
-
-    if (!passwordForm.current_password) {
-      nextErrors.current_password = 'Current password is required';
-    }
-
-    if (passwordForm.new_password.length < 8 || passwordForm.new_password.length > 64) {
-      nextErrors.new_password = 'New password must be between 8 and 64 characters';
-    } else {
-      const hasLetter = /[A-Za-z]/.test(passwordForm.new_password);
-      const hasDigit = /[0-9]/.test(passwordForm.new_password);
-      if (!hasLetter || !hasDigit) {
-        nextErrors.new_password = 'New password must contain at least one letter and one digit';
+  const handleChangePassword = useMemo(() => {
+    return handlePasswordSubmit(
+      async (data) => {
+        setPasswordError(null);
+        setPasswordSuccess(null);
+        setLoading(true);
+        try {
+          await authService.changePassword({
+            current_password: data.current_password,
+            new_password: data.new_password,
+          });
+          setPasswordSuccess('Password changed');
+          resetPassword({ current_password: '', new_password: '', confirm_password: '' });
+        } catch (err) {
+          const message = getErrorMessage(err, 'Failed to change password');
+          if (
+            message.includes('between 8 and 64') ||
+            message.includes('one letter and one digit') ||
+            message.includes('New password must')
+          ) {
+            setPasswordFormError('new_password', { message });
+          } else if (message.toLowerCase().includes('password') || message.includes('密码')) {
+            setPasswordFormError('current_password', { message });
+          } else {
+            setPasswordError(message);
+          }
+        } finally {
+          setLoading(false);
+        }
+      },
+      () => {
+        setPasswordError(null);
       }
-    }
-
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
-      nextErrors.confirm_password = 'New password and confirmation do not match';
-    }
-
-    if (nextErrors.current_password || nextErrors.new_password || nextErrors.confirm_password) {
-      setPasswordFieldErrors(nextErrors);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await authService.changePassword({
-        current_password: passwordForm.current_password,
-        new_password: passwordForm.new_password,
-      });
-      setPasswordSuccess('Password changed');
-      setPasswordForm({
-        current_password: '',
-        new_password: '',
-        confirm_password: '',
-      });
-    } catch (err) {
-      const message = getErrorMessage(err, 'Failed to change password');
-      if (
-        message.includes('between 8 and 64') ||
-        message.includes('one letter and one digit') ||
-        message.includes('New password must')
-      ) {
-        setPasswordFieldErrors({ new_password: message });
-      } else if (message.toLowerCase().includes('password')) {
-        setPasswordFieldErrors({ current_password: message });
-      } else if (message.includes('密码')) {
-        setPasswordFieldErrors({ current_password: message });
-      } else {
-        setPasswordError(message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [passwordForm]);
+    );
+  }, [handlePasswordSubmit, resetPassword, setPasswordFormError]);
 
   const handleLogout = useCallback(() => {
     clearAuth();
     navigate('/login');
   }, [clearAuth, navigate]);
 
+  const profileValues = watchProfile();
+  const passwordValues = watchPassword();
+  const tokenValues = watchToken();
+
   // Profile form handlers
   const handleProfileUsernameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setProfileForm((prev) => ({ ...prev, username: e.target.value }));
+      setProfileValue('username', e.target.value, { shouldDirty: true });
     },
-    []
+    [setProfileValue]
   );
 
   const handleProfileEmailChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setProfileForm((prev) => ({ ...prev, email: e.target.value }));
+      setProfileValue('email', e.target.value, { shouldDirty: true });
     },
-    []
+    [setProfileValue]
   );
 
   const handleProfileEmailVerificationCodeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setProfileForm((prev) => ({
-        ...prev,
-        emailVerificationCode: e.target.value.replace(/\D/g, '').slice(0, 6),
-      }));
+      setProfileValue(
+        'emailVerificationCode',
+        e.target.value.replace(/\D/g, '').slice(0, 6),
+        { shouldDirty: true }
+      );
     },
-    []
+    [setProfileValue]
   );
 
   const canSendCode = (() => {
-    const email = profileForm.email.trim();
+    const email = (profileValues.email ?? '').trim();
     if (!email) return false;
     const emailResult = validateEmail(email);
     if (!emailResult.valid) return false;
@@ -394,32 +447,48 @@ export default function Settings() {
   })();
 
   // Password form handlers
-  const handleCurrentPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPasswordForm((prev) => ({ ...prev, current_password: e.target.value }));
-    setPasswordFieldErrors((prev) => ({ ...prev, current_password: undefined }));
-  }, []);
+  const handleCurrentPasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setPasswordValue('current_password', e.target.value, { shouldDirty: true });
+      clearPasswordErrors('current_password');
+    },
+    [clearPasswordErrors, setPasswordValue]
+  );
 
-  const handleNewPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPasswordForm((prev) => ({ ...prev, new_password: e.target.value }));
-    setPasswordFieldErrors((prev) => ({ ...prev, new_password: undefined }));
-  }, []);
+  const handleNewPasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setPasswordValue('new_password', e.target.value, { shouldDirty: true });
+      clearPasswordErrors('new_password');
+    },
+    [clearPasswordErrors, setPasswordValue]
+  );
 
-  const handleConfirmPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPasswordForm((prev) => ({ ...prev, confirm_password: e.target.value }));
-    setPasswordFieldErrors((prev) => ({ ...prev, confirm_password: undefined }));
-  }, []);
+  const handleConfirmPasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setPasswordValue('confirm_password', e.target.value, { shouldDirty: true });
+      clearPasswordErrors('confirm_password');
+    },
+    [clearPasswordErrors, setPasswordValue]
+  );
 
   // Token form handlers
-  const handleTokenNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setTokenForm((prev) => ({ ...prev, name: e.target.value }));
-  }, []);
+  const handleTokenNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setTokenValue('name', e.target.value, { shouldDirty: true });
+    },
+    [setTokenValue]
+  );
 
-  const handleTokenExpiresChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setTokenForm((prev) => ({ ...prev, expires: e.target.value ? Number(e.target.value) : '' }));
-  }, []);
+  const handleTokenExpiresChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setTokenValue('expires', e.target.value ? Number(e.target.value) : '', { shouldDirty: true });
+    },
+    [setTokenValue]
+  );
 
   const handleCloseTokenValue = useCallback(() => {
-    setTokenForm((prev) => ({ ...prev, showValue: false, value: null }));
+    setShowCreatedTokenValue(false);
+    setCreatedTokenValue(null);
   }, []);
 
   // Alert close handlers
@@ -529,7 +598,11 @@ export default function Settings() {
           <div className="lg:col-span-8 space-y-6">
             <UserInfoSection
               user={user}
-              profileForm={profileForm}
+              profileForm={{
+                username: profileValues.username ?? '',
+                email: profileValues.email ?? '',
+                emailVerificationCode: profileValues.emailVerificationCode ?? '',
+              }}
               loading={loading}
               error={profileError}
               success={profileSuccess}
@@ -548,13 +621,21 @@ export default function Settings() {
             <StorageUsageSection storageUsage={storageUsage} />
 
             <PasswordChangeSection
-              passwordForm={passwordForm}
+              passwordForm={{
+                current_password: passwordValues.current_password ?? '',
+                new_password: passwordValues.new_password ?? '',
+                confirm_password: passwordValues.confirm_password ?? '',
+              }}
               loading={loading}
               error={passwordError}
               success={passwordSuccess}
               onCloseError={handleClosePasswordError}
               onCloseSuccess={handleClosePasswordSuccess}
-              fieldErrors={passwordFieldErrors}
+              fieldErrors={{
+                current_password: passwordFormState.errors.current_password?.message,
+                new_password: passwordFormState.errors.new_password?.message,
+                confirm_password: passwordFormState.errors.confirm_password?.message,
+              }}
               onCurrentPasswordChange={handleCurrentPasswordChange}
               onNewPasswordChange={handleNewPasswordChange}
               onConfirmPasswordChange={handleConfirmPasswordChange}
@@ -563,7 +644,12 @@ export default function Settings() {
 
             <ApiTokenSection
               apiTokens={apiTokens}
-              tokenForm={tokenForm}
+              tokenForm={{
+                name: tokenValues.name ?? '',
+                expires: tokenValues.expires ?? '',
+                value: createdTokenValue,
+                showValue: showCreatedTokenValue,
+              }}
               loading={loading}
               error={apiTokenError}
               success={apiTokenSuccess}
