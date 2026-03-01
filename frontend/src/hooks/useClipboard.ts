@@ -17,9 +17,34 @@ export function useClipboard(): {
     };
   }, []);
 
+  const fallbackCopy = useCallback((text: string) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', 'true');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '-9999px';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const copy = useCallback(async (text: string): Promise<boolean> => {
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ok = fallbackCopy(text);
+        if (!ok) return false;
+      }
       if (timer.current) clearTimeout(timer.current);
       setCopied(true);
       timer.current = setTimeout(() => {
@@ -28,9 +53,17 @@ export function useClipboard(): {
       }, 1500);
       return true;
     } catch {
-      return false;
+      const ok = fallbackCopy(text);
+      if (!ok) return false;
+      if (timer.current) clearTimeout(timer.current);
+      setCopied(true);
+      timer.current = setTimeout(() => {
+        timer.current = null;
+        setCopied(false);
+      }, 1500);
+      return true;
     }
-  }, []);
+  }, [fallbackCopy]);
 
   return { copy, copied };
 }

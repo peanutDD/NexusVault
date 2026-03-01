@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/auth';
@@ -8,7 +8,7 @@ import type { ApiToken } from '../services/apiTokens';
 import type { StorageUsage } from '../types/files';
 import { getErrorMessage } from '../utils/error';
 import { validateEmail } from '../utils/emailValidation';
-import ErrorMessage from '../components/common/feedback/ErrorMessage';
+import { useClipboard } from '../hooks/useClipboard';
 import PageLayout from '../components/layout/PageLayout';
 import UserInfoSection from '../components/settings/UserInfoSection';
 import StorageUsageSection from '../components/settings/StorageUsageSection';
@@ -22,13 +22,18 @@ export default function Settings() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [apiTokenError, setApiTokenError] = useState<string | null>(null);
+  const [apiTokenSuccess, setApiTokenSuccess] = useState<string | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
   const debugAlerts =
     typeof window !== 'undefined' &&
     Boolean(import.meta.env.DEV) &&
     new URLSearchParams(window.location.search).has('debugAlerts');
+  const { copy: copyToClipboard } = useClipboard();
 
   const [profileForm, setProfileForm] = useState({
     username: '',
@@ -45,13 +50,18 @@ export default function Settings() {
   });
 
   const [apiTokens, setApiTokens] = useState<ApiToken[]>([]);
-  const errorRef = useRef<HTMLDivElement>(null);
   const [tokenForm, setTokenForm] = useState({
     name: '',
     expires: '' as number | '',
     value: null as string | null,
     showValue: false,
   });
+
+  useEffect(() => {
+    if (debugAlerts) {
+      setProfileError('(Debug) Something went wrong. This is a temporary layout check alert.');
+    }
+  }, [debugAlerts]);
 
   // Sync profile form when user changes
   useEffect(() => {
@@ -72,13 +82,6 @@ export default function Settings() {
     }, 1000);
     return () => clearInterval(t);
   }, [sendCodeCooldown]);
-
-  // 错误/成功提示出现时滚动到可见区域
-  useEffect(() => {
-    if (error || success) {
-      errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [error, success]);
 
   // Initial load
   useEffect(() => {
@@ -113,37 +116,40 @@ export default function Settings() {
   }, []);
 
   // Token actions
-  const handleCreateToken = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
+  const handleCreateToken = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setApiTokenError(null);
+      setApiTokenSuccess(null);
 
-    if (!tokenForm.name.trim()) {
-      setError('Please enter a token name');
-      return;
-    }
+      if (!tokenForm.name.trim()) {
+        setApiTokenError('Please enter a token name');
+        return;
+      }
 
-    setLoading(true);
-    try {
-      const response = await apiTokenService.createToken({
-        name: tokenForm.name.trim(),
-        expires_in_days: tokenForm.expires ? Number(tokenForm.expires) : undefined,
-      });
-      setTokenForm((prev) => ({
-        ...prev,
-        value: response.token.token,
-        showValue: true,
-        name: '',
-        expires: '',
-      }));
-      await loadApiTokens();
-      setSuccess('API Token created. Copy and save it now — it will only be shown once.');
-    } catch (err) {
-      setError(getErrorMessage(err, 'Failed to create API Token'));
-    } finally {
-      setLoading(false);
-    }
-  }, [tokenForm.name, tokenForm.expires, loadApiTokens]);
+      setLoading(true);
+      try {
+        const response = await apiTokenService.createToken({
+          name: tokenForm.name.trim(),
+          expires_in_days: tokenForm.expires ? Number(tokenForm.expires) : undefined,
+        });
+        setTokenForm((prev) => ({
+          ...prev,
+          value: response.token.token,
+          showValue: true,
+          name: '',
+          expires: '',
+        }));
+        await loadApiTokens();
+        setApiTokenSuccess('API Token created. Copy and save it now — it will only be shown once.');
+      } catch (err) {
+        setApiTokenError(getErrorMessage(err, 'Failed to create API Token'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tokenForm.name, tokenForm.expires, loadApiTokens]
+  );
 
   const handleDeleteToken = useCallback(async (tokenId: string) => {
     if (!confirm('Delete this API Token? This action cannot be undone.')) {
@@ -153,41 +159,50 @@ export default function Settings() {
     setLoading(true);
     try {
       await apiTokenService.deleteToken(tokenId);
-      setSuccess('API Token deleted');
+      setApiTokenSuccess('API Token deleted');
       await loadApiTokens();
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete API Token'));
+      setApiTokenError(getErrorMessage(err, 'Failed to delete API Token'));
     } finally {
       setLoading(false);
     }
   }, [loadApiTokens]);
 
-  const copyTokenToClipboard = useCallback((token: string) => {
-    navigator.clipboard.writeText(token);
-    setSuccess('Token copied to clipboard');
-  }, []);
+  const copyTokenToClipboard = useCallback(
+    async (token: string) => {
+      setApiTokenError(null);
+      const ok = await copyToClipboard(token);
+      if (!ok) {
+        setApiTokenError('Copy failed. Please select the token and copy manually.');
+        return;
+      }
+      setApiTokenSuccess('Token copied to clipboard');
+    },
+    [copyToClipboard]
+  );
 
   // Send email verification code
   const handleSendVerificationCode = useCallback(async () => {
-    setError(null);
+    setProfileError(null);
+    setProfileSuccess(null);
     const email = profileForm.email.trim();
     const emailResult = validateEmail(email);
     if (!emailResult.valid && emailResult.message) {
-      setError(emailResult.message);
+      setProfileError(emailResult.message);
       return;
     }
     if (user && email === user.email) {
-      setError('New email is the same as current email');
+      setProfileError('New email is the same as current email');
       return;
     }
 
     setSendingCode(true);
     try {
       await authService.sendEmailVerification(email);
-      setSuccess('Verification code sent. Check your inbox.');
+      setProfileSuccess('Verification code sent. Check your inbox.');
       setSendCodeCooldown(60);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to send verification code'));
+      setProfileError(getErrorMessage(err, 'Failed to send verification code'));
     } finally {
       setSendingCode(false);
     }
@@ -197,8 +212,8 @@ export default function Settings() {
   const handleUpdateProfile = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      setError(null);
-      setSuccess(null);
+      setProfileError(null);
+      setProfileSuccess(null);
 
       const errors: string[] = [];
       const username = profileForm.username.trim();
@@ -222,12 +237,12 @@ export default function Settings() {
         }
       }
       if (errors.length > 0) {
-        setError(errors.join('; '));
+        setProfileError(errors.join('; '));
         return;
       }
 
       if (user && username === user.username && email === user.email) {
-        setSuccess('No changes made');
+        setProfileSuccess('No changes made');
         return;
       }
 
@@ -242,7 +257,7 @@ export default function Settings() {
         if (!username_available) availabilityErrors.push('Username is taken');
         if (!email_available) availabilityErrors.push('Email is taken');
         if (availabilityErrors.length > 0) {
-          setError(availabilityErrors.join('; '));
+          setProfileError(availabilityErrors.join('; '));
           setLoading(false);
           return;
         }
@@ -258,10 +273,10 @@ export default function Settings() {
 
         const { user: newUser } = await authService.updateProfile(payload);
         updateUser(newUser);
-        setSuccess('Profile updated');
+        setProfileSuccess('Profile updated');
         setProfileForm((p) => ({ ...p, emailVerificationCode: '' }));
       } catch (err) {
-        setError(getErrorMessage(err, 'Failed to update profile'));
+        setProfileError(getErrorMessage(err, 'Failed to update profile'));
       } finally {
         setLoading(false);
       }
@@ -272,16 +287,16 @@ export default function Settings() {
   // Password update
   const handleChangePassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setPasswordError(null);
+    setPasswordSuccess(null);
 
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      setError('New password and confirmation do not match');
+      setPasswordError('New password and confirmation do not match');
       return;
     }
 
     if (passwordForm.new_password.length < 8) {
-      setError('New password must be at least 8 characters');
+      setPasswordError('New password must be at least 8 characters');
       return;
     }
 
@@ -291,14 +306,14 @@ export default function Settings() {
         current_password: passwordForm.current_password,
         new_password: passwordForm.new_password,
       });
-      setSuccess('Password changed');
+      setPasswordSuccess('Password changed');
       setPasswordForm({
         current_password: '',
         new_password: '',
         confirm_password: '',
       });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to change password'));
+      setPasswordError(getErrorMessage(err, 'Failed to change password'));
     } finally {
       setLoading(false);
     }
@@ -370,8 +385,12 @@ export default function Settings() {
   }, []);
 
   // Alert close handlers
-  const handleCloseError = useCallback(() => setError(null), []);
-  const handleCloseSuccess = useCallback(() => setSuccess(null), []);
+  const handleCloseProfileError = useCallback(() => setProfileError(null), []);
+  const handleCloseProfileSuccess = useCallback(() => setProfileSuccess(null), []);
+  const handleClosePasswordError = useCallback(() => setPasswordError(null), []);
+  const handleClosePasswordSuccess = useCallback(() => setPasswordSuccess(null), []);
+  const handleCloseApiTokenError = useCallback(() => setApiTokenError(null), []);
+  const handleCloseApiTokenSuccess = useCallback(() => setApiTokenSuccess(null), []);
 
   return (
     <PageLayout
@@ -470,38 +489,14 @@ export default function Settings() {
           </aside>
 
           <div className="lg:col-span-8 space-y-6">
-            {(debugAlerts || error || success) && (
-              <div ref={errorRef}>
-                {debugAlerts && !error && !success && (
-                  <ErrorMessage
-                    message="(Debug) Something went wrong. This is a temporary layout check alert."
-                    onClose={() => {}}
-                    type="error"
-                    autoDismissMs={0}
-                  />
-                )}
-                {error && (
-                  <ErrorMessage
-                    message={error}
-                    onClose={handleCloseError}
-                    type="error"
-                    autoDismissMs={5000}
-                  />
-                )}
-                {success && (
-                  <ErrorMessage
-                    message={success}
-                    onClose={handleCloseSuccess}
-                    type="info"
-                    autoDismissMs={5000}
-                  />
-                )}
-              </div>
-            )}
             <UserInfoSection
               user={user}
               profileForm={profileForm}
               loading={loading}
+              error={profileError}
+              success={profileSuccess}
+              onCloseError={handleCloseProfileError}
+              onCloseSuccess={handleCloseProfileSuccess}
               onUsernameChange={handleProfileUsernameChange}
               onEmailChange={handleProfileEmailChange}
               onEmailVerificationCodeChange={handleProfileEmailVerificationCodeChange}
@@ -517,6 +512,10 @@ export default function Settings() {
             <PasswordChangeSection
               passwordForm={passwordForm}
               loading={loading}
+              error={passwordError}
+              success={passwordSuccess}
+              onCloseError={handleClosePasswordError}
+              onCloseSuccess={handleClosePasswordSuccess}
               onCurrentPasswordChange={handleCurrentPasswordChange}
               onNewPasswordChange={handleNewPasswordChange}
               onConfirmPasswordChange={handleConfirmPasswordChange}
@@ -527,6 +526,10 @@ export default function Settings() {
               apiTokens={apiTokens}
               tokenForm={tokenForm}
               loading={loading}
+              error={apiTokenError}
+              success={apiTokenSuccess}
+              onCloseError={handleCloseApiTokenError}
+              onCloseSuccess={handleCloseApiTokenSuccess}
               onTokenNameChange={handleTokenNameChange}
               onTokenExpiresChange={handleTokenExpiresChange}
               onCreateToken={handleCreateToken}

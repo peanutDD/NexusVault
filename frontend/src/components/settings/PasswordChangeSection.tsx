@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { KeyRound } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import ErrorMessage from '../common/feedback/ErrorMessage';
 import SettingsCard from './SettingsCard';
 
 interface PasswordForm {
@@ -12,6 +13,10 @@ interface PasswordForm {
 interface PasswordChangeSectionProps {
   passwordForm: PasswordForm;
   loading: boolean;
+  error?: string | null;
+  success?: string | null;
+  onCloseError?: () => void;
+  onCloseSuccess?: () => void;
   onCurrentPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onNewPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onConfirmPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -21,6 +26,10 @@ interface PasswordChangeSectionProps {
 const PasswordChangeSection = memo(function PasswordChangeSection({
   passwordForm,
   loading,
+  error,
+  success,
+  onCloseError,
+  onCloseSuccess,
   onCurrentPasswordChange,
   onNewPasswordChange,
   onConfirmPasswordChange,
@@ -33,6 +42,24 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
       description="Change your password periodically and avoid reusing it across services."
       icon={<KeyRound className="h-5 w-5" aria-hidden="true" />}
     >
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={onCloseError}
+          type="error"
+          autoDismissMs={5000}
+          className="mb-4"
+        />
+      )}
+      {success && (
+        <ErrorMessage
+          message={success}
+          onClose={onCloseSuccess}
+          type="info"
+          autoDismissMs={3000}
+          className="mb-4"
+        />
+      )}
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label

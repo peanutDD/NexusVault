@@ -2,6 +2,7 @@ import { memo, useCallback } from 'react';
 import { Key, Copy, Trash2, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { ApiToken } from '../../services/apiTokens';
+import ErrorMessage from '../common/feedback/ErrorMessage';
 import SettingsCard from './SettingsCard';
 
 interface TokenForm {
@@ -15,11 +16,15 @@ interface ApiTokenSectionProps {
   apiTokens: ApiToken[];
   tokenForm: TokenForm;
   loading: boolean;
+  error?: string | null;
+  success?: string | null;
+  onCloseError?: () => void;
+  onCloseSuccess?: () => void;
   onTokenNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onTokenExpiresChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCreateToken: (e: React.FormEvent) => void;
   onDeleteToken: (tokenId: string) => void;
-  onCopyToken: (token: string) => void;
+  onCopyToken: (token: string) => Promise<void>;
   onCloseTokenValue: () => void;
 }
 
@@ -27,6 +32,10 @@ const ApiTokenSection = memo(function ApiTokenSection({
   apiTokens,
   tokenForm,
   loading,
+  error,
+  success,
+  onCloseError,
+  onCloseSuccess,
   onTokenNameChange,
   onTokenExpiresChange,
   onCreateToken,
@@ -47,6 +56,24 @@ const ApiTokenSection = memo(function ApiTokenSection({
       description="For programmatic access. New tokens are shown only once — save them immediately."
       icon={<Key className="h-5 w-5" aria-hidden="true" />}
     >
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={onCloseError}
+          type="error"
+          autoDismissMs={5000}
+          className="mb-4"
+        />
+      )}
+      {success && (
+        <ErrorMessage
+          message={success}
+          onClose={onCloseSuccess}
+          type="info"
+          autoDismissMs={3000}
+          className="mb-4"
+        />
+      )}
 
       <div className="mb-6">
         <div className="mb-3 flex flex-nowrap items-center justify-between gap-3">

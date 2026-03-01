@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { UserCircle2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import ErrorMessage from '../common/feedback/ErrorMessage';
 import SettingsCard from './SettingsCard';
 
 interface ProfileForm {
@@ -19,6 +20,10 @@ interface UserInfoSectionProps {
   user: User | null;
   profileForm: ProfileForm;
   loading: boolean;
+  error?: string | null;
+  success?: string | null;
+  onCloseError?: () => void;
+  onCloseSuccess?: () => void;
   onUsernameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onEmailChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onEmailVerificationCodeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -33,6 +38,10 @@ const UserInfoSection = memo(function UserInfoSection({
   user,
   profileForm,
   loading,
+  error,
+  success,
+  onCloseError,
+  onCloseSuccess,
   onUsernameChange,
   onEmailChange,
   onEmailVerificationCodeChange,
@@ -49,6 +58,24 @@ const UserInfoSection = memo(function UserInfoSection({
       description="Update your username and email. Email changes require verification."
       icon={<UserCircle2 className="h-5 w-5" aria-hidden="true" />}
     >
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={onCloseError}
+          type="error"
+          autoDismissMs={5000}
+          className="mb-4"
+        />
+      )}
+      {success && (
+        <ErrorMessage
+          message={success}
+          onClose={onCloseSuccess}
+          type="info"
+          autoDismissMs={3000}
+          className="mb-4"
+        />
+      )}
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         <div>
           <label
