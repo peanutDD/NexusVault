@@ -1,4 +1,4 @@
-import { type ReactNode, useRef } from 'react';
+import { type ReactNode, useId, useRef } from 'react';
 import { cn } from '../../../utils/cn';
 import { useDialog } from '../../../hooks/common/useDialog';
 
@@ -57,10 +57,12 @@ export function BaseDialog({
   footer,
   className,
 }: BaseDialogProps) {
+  const titleId = useId();
+  const descriptionId = useId();
   const defaultFocusRef = useRef<HTMLButtonElement>(null);
   const focusRef = autoFocusRef ?? defaultFocusRef;
 
-  const { handleBackdropClick } = useDialog({
+  const { handleBackdropClick, dialogRef } = useDialog({
     open,
     onClose,
     loading,
@@ -82,7 +84,8 @@ export function BaseDialog({
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
     >
       <div
         className={cn(
@@ -106,12 +109,14 @@ export function BaseDialog({
           maxWidthClasses[maxWidth],
           className
         )}
+        ref={dialogRef}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2
-            id="dialog-title"
+            id={titleId}
             className={cn(
               'text-xl font-semibold transition-colors duration-200',
               isUploadVariant ? 'text-white' : 'text-white dark:text-gray-100'
@@ -142,6 +147,7 @@ export function BaseDialog({
         {/* Description */}
         {description && (
           <p
+            id={descriptionId}
             className={cn(
               'mb-4 text-sm transition-colors duration-200',
               isUploadVariant ? 'text-gray-500' : 'text-gray-300 dark:text-gray-400'

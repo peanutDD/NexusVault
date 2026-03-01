@@ -189,10 +189,39 @@ impl TaskQueue {
         payload: serde_json::Value,
         dedupe_key: Option<&str>,
     ) -> Result<BackgroundTask, AppError> {
-        // 同 dedupe_key 的 pending/running 任务直接复用，避免重复排队
+        let id = Uuid::new_v4();
+        let status = TaskStatus::Pending.as_str().to_string();
         if let Some(key) = dedupe_key {
+            let dedupe = key.to_string();
+            let inserted: Option<(Uuid, String, serde_json::Value, String, i32)> = query_as(
+                "INSERT INTO background_tasks (id, task_type, payload, status, attempts, dedupe_key)
+                 VALUES ($1, $2, $3, $4, 0, $5)
+                 ON CONFLICT (task_type, dedupe_key)
+                   WHERE dedupe_key IS NOT NULL AND status IN ('pending', 'running')
+                 DO NOTHING
+                 RETURNING id, task_type, payload, status, attempts",
+            )
+            .bind(id)
+            .bind(task_type)
+            .bind(&payload)
+            .bind(&status)
+            .bind(&dedupe)
+            .fetch_optional(&*self.pool)
+            .await
+            .map_err(AppError::from)?;
+
+            if let Some(rec) = inserted {
+                return Ok(BackgroundTask {
+                    id: rec.0,
+                    task_type: rec.1,
+                    payload: rec.2,
+                    status: rec.3,
+                    attempts: rec.4,
+                });
+            }
+
             if let Some(existing) = self
-                .find_active_by_dedupe_key(task_type, key)
+                .find_active_by_dedupe_key(task_type, &dedupe)
                 .await
                 .map_err(AppError::from)?
             {
@@ -200,11 +229,7 @@ impl TaskQueue {
             }
         }
 
-        // 创建新任务记录
-        let id = Uuid::new_v4();
-        let status = TaskStatus::Pending.as_str().to_string();
         let dedupe = dedupe_key.map(|s| s.to_string());
-
         let rec: (Uuid, String, serde_json::Value, String, i32) = query_as(
             "INSERT INTO background_tasks (id, task_type, payload, status, attempts, dedupe_key)
              VALUES ($1, $2, $3, $4, 0, $5)

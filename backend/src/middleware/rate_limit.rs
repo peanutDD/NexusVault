@@ -1,5 +1,5 @@
 use axum::{
-    extract::Request,
+    extract::{ConnectInfo, Request},
     http::{HeaderMap, HeaderValue, Method, StatusCode},
     middleware::Next,
     response::Response,
@@ -8,6 +8,7 @@ use deadpool_redis::redis::cmd;
 use deadpool_redis::Pool as RedisPool;
 use moka::sync::Cache;
 use std::{
+    net::{IpAddr, SocketAddr},
     sync::atomic::{AtomicU32, Ordering},
     sync::Arc,
     time::Duration,
@@ -172,19 +173,79 @@ pub fn create_rate_limit_middleware(
 // =============================================================================
 // 辅助函数（请求分类）
 // =============================================================================
-fn get_client_ip(headers: &HeaderMap) -> String {
-    // 使用 Option 链式调用替代嵌套 if-let
-    headers
-        .get("x-forwarded-for")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|s| s.split(',').next())
-        .map(|ip| ip.trim().to_string())
-        .or_else(|| {
-            headers
-                .get("x-real-ip")
-                .and_then(|h| h.to_str().ok())
-                .map(str::to_string)
-        })
+fn parse_ip(raw: &str) -> Option<IpAddr> {
+    let mut s = raw.trim();
+    if s.is_empty() {
+        return None;
+    }
+    s = s.trim_matches('"');
+
+    if let Some(v) = s.strip_prefix('[').and_then(|v| v.strip_suffix(']')) {
+        s = v;
+    }
+
+    if let Some(v) = s.strip_prefix("for=").or_else(|| s.strip_prefix("for=\"")) {
+        s = v.trim_matches('"');
+        if let Some(v) = s.strip_prefix('[').and_then(|v| v.strip_suffix(']')) {
+            s = v;
+        }
+    }
+
+    let candidate = if s.contains(':') && s.matches(':').count() > 1 {
+        s
+    } else {
+        s.split(':').next().unwrap_or(s)
+    };
+
+    candidate.parse::<IpAddr>().ok()
+}
+
+fn forwarded_for_ip(headers: &HeaderMap) -> Option<IpAddr> {
+    let v = headers.get("forwarded")?.to_str().ok()?;
+    for item in v.split(',') {
+        for part in item.split(';') {
+            let t = part.trim();
+            if t.starts_with("for=") {
+                if let Some(ip) = parse_ip(t) {
+                    return Some(ip);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn x_forwarded_for_ip(headers: &HeaderMap) -> Option<IpAddr> {
+    let v = headers.get("x-forwarded-for")?.to_str().ok()?;
+    for part in v.split(',') {
+        if let Some(ip) = parse_ip(part) {
+            return Some(ip);
+        }
+    }
+    None
+}
+
+fn x_real_ip(headers: &HeaderMap) -> Option<IpAddr> {
+    let v = headers.get("x-real-ip")?.to_str().ok()?;
+    parse_ip(v)
+}
+
+fn get_client_ip(
+    headers: &HeaderMap,
+    trust_proxy_headers: bool,
+    peer_addr: Option<SocketAddr>,
+) -> String {
+    let header_ip = if trust_proxy_headers {
+        forwarded_for_ip(headers)
+            .or_else(|| x_forwarded_for_ip(headers))
+            .or_else(|| x_real_ip(headers))
+    } else {
+        None
+    };
+
+    header_ip
+        .or_else(|| peer_addr.map(|a| a.ip()))
+        .map(|ip| ip.to_string())
         .unwrap_or_else(|| "unknown".to_string())
 }
 
@@ -226,7 +287,15 @@ pub async fn rate_limit_middleware(
     }
 
     let method = req.method().clone();
-    let ip_key = get_client_ip(req.headers());
+    let peer_addr = req
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|v| v.0);
+    let ip_key = get_client_ip(
+        req.headers(),
+        app_state.config.trust_proxy_headers,
+        peer_addr,
+    );
 
     // 1. 全局 IP 级限流（包含所有请求）
     if !state.check_ip_rate_limit(&ip_key).await {

@@ -24,17 +24,17 @@ type HmacSha256 = Hmac<Sha256>;
 
 pub struct ApiTokenService {
     pool: PgPool,
-    secret: String,
+    secrets: Vec<String>,
 }
 
 impl ApiTokenService {
-    pub fn new(pool: PgPool, secret: String) -> Self {
-        Self { pool, secret }
+    pub fn new(pool: PgPool, secrets: Vec<String>) -> Self {
+        Self { pool, secrets }
     }
 
     /// 从 AppState 创建 ApiTokenService（工厂方法）
     pub fn from_state(state: &crate::AppState) -> Self {
-        Self::new(state.pool.clone(), state.config.jwt_secret.clone())
+        Self::new(state.pool.clone(), state.config.api_token_hmac_secrets())
     }
 
     /// 生成安全的随机 token
@@ -52,15 +52,21 @@ impl ApiTokenService {
     /// 使用 HMAC-SHA256 加盐哈希 token
     ///
     /// 使用服务器密钥作为盐值，防止彩虹表攻击。secret 为空时返回错误，避免 panic。
-    fn hash_token(&self, token: &str) -> Result<String, AppError> {
-        if self.secret.trim().is_empty() {
+    fn hash_token_with(secret: &str, token: &str) -> Result<String, AppError> {
+        if secret.trim().is_empty() {
             return Err(AppError::Internal);
         }
-        let mut mac =
-            HmacSha256::new_from_slice(self.secret.as_bytes()).map_err(|_| AppError::Internal)?;
+        let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).map_err(|_| AppError::Internal)?;
         mac.update(token.as_bytes());
         let result = mac.finalize();
         Ok(format!("{:x}", result.into_bytes()))
+    }
+
+    fn hash_token(&self, token: &str) -> Result<String, AppError> {
+        let Some(secret) = self.secrets.first() else {
+            return Err(AppError::Internal);
+        };
+        Self::hash_token_with(secret, token)
     }
 
     /// 获取 token 前缀（用于显示）
@@ -97,24 +103,20 @@ impl ApiTokenService {
     /// 验证 token 并返回用户 ID
     pub async fn verify_token(&self, token: &str) -> Result<Uuid, AppError> {
         let repo = ApiTokensRepo::new(&self.pool);
-        let token_hash = self.hash_token(token)?;
-
-        let api_token = repo
-            .find_by_token_hash(&token_hash)
-            .await?
-            .ok_or(AppError::Unauthorized)?;
-
-        // 检查是否过期
-        if let Some(exp) = api_token.expires_at {
-            if exp < Utc::now() {
-                return Err(AppError::Unauthorized);
+        for secret in self.secrets.iter() {
+            let token_hash = Self::hash_token_with(secret, token)?;
+            if let Some(api_token) = repo.find_by_token_hash(&token_hash).await? {
+                if let Some(exp) = api_token.expires_at {
+                    if exp < Utc::now() {
+                        return Err(AppError::Unauthorized);
+                    }
+                }
+                repo.update_last_used(api_token.id).await?;
+                return Ok(api_token.user_id);
             }
         }
 
-        // 更新最后使用时间
-        repo.update_last_used(api_token.id).await?;
-
-        Ok(api_token.user_id)
+        Err(AppError::Unauthorized)
     }
 
     /// 列出用户的所有 API token

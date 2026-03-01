@@ -20,32 +20,60 @@ interface ThemeState {
 /**
  * 应用主题到 DOM
  */
-function applyTheme() {
+function getSystemTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function resolveEffectiveTheme(theme: Theme): 'light' | 'dark' {
+  return theme === 'system' ? getSystemTheme() : theme;
+}
+
+function applyTheme(effectiveTheme: 'light' | 'dark') {
   if (typeof document === 'undefined') return;
-  
   const root = document.documentElement;
-  root.classList.add('dark');
+  if (effectiveTheme === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
 }
 
 
 export const useThemeStore = create<ThemeState>()(
   persist(
-    (set) => {
+    (set, get) => {
       // 初始化时应用主题
-      const initialTheme = 'dark' as const;
-      applyTheme();
+      const initialTheme: Theme = 'system';
+      const initialEffectiveTheme = resolveEffectiveTheme(initialTheme);
+      applyTheme(initialEffectiveTheme);
+
+      if (typeof window !== 'undefined') {
+        const mql = window.matchMedia('(prefers-color-scheme: dark)');
+        const onChange = () => {
+          const { theme } = get();
+          if (theme !== 'system') return;
+          const effectiveTheme = resolveEffectiveTheme('system');
+          applyTheme(effectiveTheme);
+          set({ effectiveTheme });
+        };
+        mql.addEventListener?.('change', onChange);
+        mql.addListener?.(onChange);
+      }
 
       return {
-        theme: 'dark',
-        effectiveTheme: initialTheme,
+        theme: initialTheme,
+        effectiveTheme: initialEffectiveTheme,
         setTheme: (theme: Theme) => {
-          void theme;
-          applyTheme();
-          set({ theme: 'dark', effectiveTheme: 'dark' });
+          const effectiveTheme = resolveEffectiveTheme(theme);
+          applyTheme(effectiveTheme);
+          set({ theme, effectiveTheme });
         },
         toggleTheme: () => {
-          applyTheme();
-          set({ theme: 'dark', effectiveTheme: 'dark' });
+          const nextTheme: Theme = get().effectiveTheme === 'dark' ? 'light' : 'dark';
+          const effectiveTheme = resolveEffectiveTheme(nextTheme);
+          applyTheme(effectiveTheme);
+          set({ theme: nextTheme, effectiveTheme });
         },
       };
     },
@@ -53,9 +81,9 @@ export const useThemeStore = create<ThemeState>()(
       name: 'theme-storage',
       onRehydrateStorage: () => (state) => {
         if (state) {
-          applyTheme();
-          state.theme = 'dark';
-          state.effectiveTheme = 'dark';
+          const effectiveTheme = resolveEffectiveTheme(state.theme);
+          applyTheme(effectiveTheme);
+          state.effectiveTheme = effectiveTheme;
         }
       },
     }

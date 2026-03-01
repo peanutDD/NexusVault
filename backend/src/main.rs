@@ -19,6 +19,7 @@
 // 标准库与第三方 use
 // =============================================================================
 
+use std::net::SocketAddr;
 use std::sync::Arc; // 多线程共享配置与连接池的引用计数指针
 use std::time::Duration; // 定时任务间隔（如清理周期）
 
@@ -177,7 +178,7 @@ async fn async_main() -> anyhow::Result<()> {
     tracing::info!("Server listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app)
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal()) // 收到 SIGINT/SIGTERM 后优雅关闭
         .await?;
 

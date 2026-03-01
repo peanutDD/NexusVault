@@ -25,6 +25,8 @@ pub struct Config {
     pub read_replica_database_url: Option<String>,
     pub redis_url: Option<String>,
     pub jwt_secret: String,
+    pub api_token_hmac_secret: Option<String>,
+    pub api_token_hmac_secret_previous: Option<String>,
     pub jwt_expiry: String,
     pub storage_backend: String,
     pub storage_path: String,
@@ -64,6 +66,7 @@ pub struct Config {
     pub rate_limit_window_secs: u64,
     /// 限流缓存最大 key 数，默认 20_000
     pub rate_limit_max_keys: u64,
+    pub trust_proxy_headers: bool,
 
     /// 邮箱验证码发送：SMTP 服务器（可选，不配置则仅将验证码写入日志，适用于开发）
     pub smtp_host: Option<String>,
@@ -143,6 +146,12 @@ impl Config {
             redis_url: env::var("REDIS_URL").ok().filter(|s| !s.is_empty()),
             jwt_secret: env::var("JWT_SECRET")
                 .map_err(|_| ConfigError::MissingEnvVar("JWT_SECRET".to_string()))?,
+            api_token_hmac_secret: env::var("API_TOKEN_HMAC_SECRET")
+                .ok()
+                .filter(|s| !s.trim().is_empty()),
+            api_token_hmac_secret_previous: env::var("API_TOKEN_HMAC_SECRET_PREVIOUS")
+                .ok()
+                .filter(|s| !s.trim().is_empty()),
             jwt_expiry: env::var("JWT_EXPIRY").unwrap_or_else(|_| "24h".to_string()),
             storage_backend: env::var("STORAGE_BACKEND").unwrap_or_else(|_| "local".to_string()),
             storage_path: env::var("STORAGE_PATH").unwrap_or_else(|_| "./uploads".to_string()),
@@ -212,6 +221,7 @@ impl Config {
             user_rate_limit: env_u32("USER_RATE_LIMIT", 600)?,
             rate_limit_window_secs: env_u64("RATE_LIMIT_WINDOW_SECS", 60)?,
             rate_limit_max_keys: env_u64("RATE_LIMIT_MAX_KEYS", 20_000)?,
+            trust_proxy_headers: env_bool("TRUST_PROXY_HEADERS", false)?,
 
             smtp_host: env::var("SMTP_HOST").ok().filter(|s| !s.is_empty()),
             smtp_port: env::var("SMTP_PORT").ok().and_then(|s| s.parse().ok()),
@@ -269,6 +279,34 @@ impl Config {
         Ok(config)
     }
 
+    pub fn api_token_hmac_secret_effective(&self) -> &str {
+        self.api_token_hmac_secret
+            .as_deref()
+            .unwrap_or(self.jwt_secret.as_str())
+    }
+
+    pub fn api_token_hmac_secrets(&self) -> Vec<String> {
+        let primary = self.api_token_hmac_secret_effective().to_string();
+        let mut secrets = vec![primary.clone()];
+
+        if let Some(previous) = self.api_token_hmac_secret_previous.as_ref() {
+            if previous != &primary {
+                secrets.push(previous.clone());
+            }
+        }
+
+        if self.jwt_secret != primary
+            && !self
+                .api_token_hmac_secret_previous
+                .as_ref()
+                .is_some_and(|s| s == &self.jwt_secret)
+        {
+            secrets.push(self.jwt_secret.clone());
+        }
+
+        secrets
+    }
+
     /// 启动时完整校验，非法则返回 ConfigError 并退出
     fn validate(&self) -> Result<(), ConfigError> {
         if !(PORT_MIN..=PORT_MAX).contains(&self.port) {
@@ -286,6 +324,20 @@ impl Config {
             return Err(ConfigError::InvalidConfig(
                 "JWT_SECRET must be non-empty".to_string(),
             ));
+        }
+        if let Some(secret) = &self.api_token_hmac_secret {
+            if secret.trim().is_empty() {
+                return Err(ConfigError::InvalidConfig(
+                    "API_TOKEN_HMAC_SECRET must be non-empty when provided".to_string(),
+                ));
+            }
+        }
+        if let Some(secret) = &self.api_token_hmac_secret_previous {
+            if secret.trim().is_empty() {
+                return Err(ConfigError::InvalidConfig(
+                    "API_TOKEN_HMAC_SECRET_PREVIOUS must be non-empty when provided".to_string(),
+                ));
+            }
         }
         if self.storage_backend == "local" && self.storage_path.trim().is_empty() {
             return Err(ConfigError::InvalidConfig(

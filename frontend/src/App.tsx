@@ -144,10 +144,6 @@ function App() {
   });
 
   useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
-
-  useEffect(() => {
     posRef.current = devtoolsPos;
   }, [devtoolsPos]);
 

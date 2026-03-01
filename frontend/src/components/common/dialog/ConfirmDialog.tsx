@@ -1,5 +1,6 @@
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { cn } from '../../../utils/cn';
+import { useDialog } from '../../../hooks/common/useDialog';
 
 export type ConfirmVariant = 'danger' | 'warning' | 'info';
 export type ConfirmAppearance = 'default' | 'glass';
@@ -75,6 +76,8 @@ export default function ConfirmDialog({
   loading = false,
 }: ConfirmDialogProps) {
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const messageId = useId();
   const config = variantConfig[variant];
   const isGlass = appearance === 'glass';
 
@@ -89,17 +92,15 @@ export default function ConfirmDialog({
         ? 'border-amber-300/35 bg-amber-500/15 hover:bg-amber-500/20 shadow-[0_14px_40px_rgba(245,158,11,0.16)]'
         : 'border-sky-300/35 bg-sky-500/15 hover:bg-sky-500/20 shadow-[0_14px_40px_rgba(56,189,248,0.16)]';
 
-  // ESC 关闭
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !loading) onCancel();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, onCancel, loading]);
+  useDialog({
+    open,
+    onClose: onCancel,
+    loading,
+    autoFocusRef: confirmButtonRef,
+    closeOnEscape: true,
+    closeOnBackdrop: true,
+  });
 
-  // 聚焦确认按钮
   useEffect(() => {
     if (open) {
       setTimeout(() => confirmButtonRef.current?.focus(), 100);
@@ -118,8 +119,8 @@ export default function ConfirmDialog({
       )}
       role="alertdialog"
       aria-modal="true"
-      aria-labelledby="confirm-title"
-      aria-describedby="confirm-message"
+      aria-labelledby={titleId}
+      aria-describedby={messageId}
     >
       {/* 背景遮罩 */}
       <div
@@ -145,6 +146,7 @@ export default function ConfirmDialog({
               ].filter(Boolean).join(' ')
             : 'rounded-lg bg-[#1C1C28] ring-1 ring-white/10'
         )}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 科幻风：顶部红/青渐变光带（凹槽上缘高光） */}
@@ -183,7 +185,7 @@ export default function ConfirmDialog({
               {displayIcon}
             </div>
             <h3
-              id="confirm-title"
+              id={titleId}
               className={cn(
                 'min-w-0 flex-1 truncate text-sm font-semibold text-white',
                 isSciFi && 'tracking-wide drop-shadow-[0_0_12px_rgba(244,63,94,0.25)]'
@@ -196,7 +198,7 @@ export default function ConfirmDialog({
           {/* 正文：消息容器，支持任意 ReactNode 内容 */}
           <div className="px-4 pb-4">
             <div
-              id="confirm-message"
+              id={messageId}
               className={cn(
                 'max-w-full py-3 text-xs leading-relaxed break-words whitespace-pre-line',
                 isSciFi ? 'text-white/70' : 'text-gray-400'

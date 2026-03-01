@@ -40,20 +40,74 @@ export function useDialog(options: UseDialogOptions): UseDialogReturn {
   } = options;
 
   const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // ESC 关闭
   useEffect(() => {
-    if (!open || !closeOnEscape) return;
+    if (!open) return;
     
     const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        const root = dialogRef.current;
+        if (!root) return;
+
+        const focusables = Array.from(
+          root.querySelectorAll<HTMLElement>(
+            'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => !el.hasAttribute('disabled') && el.tabIndex !== -1 && el.offsetParent !== null);
+
+        if (focusables.length === 0) {
+          e.preventDefault();
+          root.focus();
+          return;
+        }
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+
+        if (e.shiftKey) {
+          if (!active || !root.contains(active) || active === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (!active || !root.contains(active) || active === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+        return;
+      }
+
       if (e.key === 'Escape' && !loading) {
-        onClose();
+        if (closeOnEscape) {
+          onClose();
+        }
       }
     };
     
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose, closeOnEscape, loading]);
+
+  // 关闭时恢复焦点
+  useEffect(() => {
+    if (!open) return;
+
+    if (typeof document !== 'undefined') {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+    }
+
+    return () => {
+      const el = previousFocusRef.current;
+      if (!el) return;
+      if (typeof document !== 'undefined' && document.contains(el)) {
+        el.focus();
+      }
+    };
+  }, [open]);
 
   // 自动聚焦
   useEffect(() => {
