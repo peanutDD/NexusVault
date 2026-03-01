@@ -423,7 +423,9 @@ impl FilesRepository for SqlxFilesRepo {
     ///   - 如果提供了 `cursor`，使用游标分页（keyset pagination）：`WHERE sort_column > cursor`（DESC）或 `WHERE sort_column < cursor`（ASC），不使用 `OFFSET`。
     ///   - 否则使用传统分页：`page` 默认 1，`limit` 默认 20、最大 100，`offset = (page - 1) * limit`。
     /// - 筛选：搜索（`original_filename`/`filename` ILIKE）、MIME（精确或前缀 `image/%`）、分类、文件夹、日期范围、大小范围；根目录（folder_id 为 null/root/空）不按 folder_id 过滤，返回该用户全部文件。
-    /// - 排序：仅允许 `sort_by` ∈ { created_at, filename, file_size }，`sort_order` ∈ { asc, desc }，否则回退默认（created_at DESC）。游标分页时，为确保唯一性，二级排序使用 `id`。
+    /// - 排序：仅允许 `sort_by` ∈ { created_at, filename, file_size, type }，`sort_order` ∈ { asc, desc }，否则回退默认（created_at DESC）。
+    ///   - `sort_by = type`：按预置类型顺序排序（image → gif → video → audio → pdf → text → zip → application → other），并在每个类型内按 created_at DESC、id DESC；该模式不支持游标分页。
+    ///   - 其他字段：游标分页时，为确保唯一性，二级排序使用 `id`。
     /// - SQL 构建：使用 `QueryBuilder` 动态拼接 WHERE，避免手拼字符串与注入；传统分页的 `total_count` 用窗口函数一次查出。
     /// - 超时：本查询在独立事务中执行并 `SET LOCAL statement_timeout = '3s'`，避免慢查询长时间占用连接池。
     async fn list(&self, user_id: Uuid, query: FileListQuery) -> Result<FileListResult, AppError> {
@@ -432,8 +434,6 @@ impl FilesRepository for SqlxFilesRepo {
         use uuid::Uuid;
 
         let limit = query.limit.unwrap_or(20).min(100); // 单页最多 100 条
-        let use_cursor_pagination =
-            query.cursor.is_some() || matches!(query.pagination.as_deref(), Some("cursor")); // 是否使用游标分页
 
         // ---- 筛选条件预解析（空字符串视为未传，不参与 WHERE） ----
         let search_pattern: Option<String> = query
@@ -526,17 +526,32 @@ impl FilesRepository for SqlxFilesRepo {
             });
 
         // ---- 排序字段与方向（白名单，非法值回退默认） ----
-        let sort_column = match query.sort_by.as_deref() {
-            Some("filename") => "original_filename", // API 用 filename，库列名为 original_filename
-            Some("file_size") => "file_size",
-            Some("created_at") | None => "created_at",
-            _ => "created_at", // 非法值回退默认，仅白名单不引入注入
-        };
+        let sort_by = query.sort_by.as_deref().unwrap_or("created_at");
         let sort_direction = match query.sort_order.as_deref() {
             Some("asc") => "ASC",
             Some("desc") | None => "DESC",
             _ => "DESC",
         };
+        let sort_column = match sort_by {
+            "filename" => "original_filename", // API 用 filename，库列名为 original_filename
+            "file_size" => "file_size",
+            "created_at" => "created_at",
+            "type" => "CASE \
+                WHEN lower(mime_type) LIKE 'image/gif%' THEN 2 \
+                WHEN lower(mime_type) LIKE 'image/%' THEN 1 \
+                WHEN lower(mime_type) LIKE 'video/%' THEN 3 \
+                WHEN lower(mime_type) LIKE 'audio/%' THEN 4 \
+                WHEN lower(mime_type) = 'application/pdf' THEN 5 \
+                WHEN lower(mime_type) LIKE 'text/%' THEN 6 \
+                WHEN lower(mime_type) = 'application/zip' OR lower(mime_type) = 'application/x-zip-compressed' THEN 7 \
+                WHEN lower(mime_type) LIKE 'application/%' THEN 8 \
+                ELSE 99 \
+            END",
+            _ => "created_at", // 非法值回退默认，仅白名单不引入注入
+        };
+
+        let use_cursor_pagination = (query.cursor.is_some() || matches!(query.pagination.as_deref(), Some("cursor")))
+            && sort_by != "type";
 
         // ---- 游标解析（如果使用游标分页） ----
         enum CursorValue {
@@ -723,8 +738,9 @@ impl FilesRepository for SqlxFilesRepo {
         qb.push(sort_column); // 已白名单，非用户输入
         qb.push(" ");
         qb.push(sort_direction);
-        // 游标分页时，为确保唯一性，添加 id 作为二级排序
-        if use_cursor_pagination {
+        if sort_by == "type" {
+            qb.push(", created_at DESC, id DESC");
+        } else {
             qb.push(", id ");
             qb.push(sort_direction);
         }

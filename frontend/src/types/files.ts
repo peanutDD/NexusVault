@@ -48,7 +48,7 @@ export interface FileListQuery {
   size_min?: number;
   size_max?: number;
   // 排序参数
-  sort_by?: 'created_at' | 'filename' | 'file_size';
+  sort_by?: 'created_at' | 'filename' | 'file_size' | 'type';
   sort_order?: 'asc' | 'desc';
 }
 

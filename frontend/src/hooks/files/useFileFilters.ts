@@ -18,7 +18,7 @@ export type SortOption =
 /**
  * 排序字段类型
  */
-export type SortField = 'created_at' | 'filename' | 'file_size';
+export type SortField = 'created_at' | 'filename' | 'file_size' | 'type';
 
 /**
  * 排序顺序类型
@@ -72,7 +72,7 @@ export function useFileFilters(): UseFileFiltersReturn {
 
   const [sortField, sortOrder] = useMemo((): [SortField, SortOrder] => {
     if (sortBy === 'type_group' || sortBy === 'time_group') {
-      return ['created_at', 'desc'];
+      return sortBy === 'type_group' ? ['type', 'asc'] : ['created_at', 'desc'];
     }
     if (sortBy.startsWith('created_at_')) {
       return ['created_at', sortBy.endsWith('_asc') ? 'asc' : 'desc'];
