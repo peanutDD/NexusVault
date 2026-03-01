@@ -103,6 +103,8 @@ async fn async_main() -> anyhow::Result<()> {
         None => pool.clone(),
     };
 
+    file_storage_backend::database::pool::pre_migration_repairs(&pool).await?;
+
     // 执行 migrations 目录下的 SQL 迁移
     sqlx::migrate!("./migrations")
         .run(&pool)

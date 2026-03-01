@@ -39,3 +39,41 @@ pub async fn create_pool(database_url: &str) -> anyhow::Result<PgPool> {
 
     Ok(pool)
 }
+
+pub async fn pre_migration_repairs(pool: &PgPool) -> anyhow::Result<()> {
+    let needs_dedupe: bool = sqlx::query_scalar(
+        "SELECT to_regclass('public.background_tasks') IS NOT NULL
+             AND to_regclass('public.uq_background_tasks_active_dedupe') IS NULL",
+    )
+    .fetch_one(pool)
+    .await
+    .unwrap_or(false);
+
+    if needs_dedupe {
+        sqlx::query(
+            "WITH ranked AS (
+               SELECT
+                 id,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY task_type, dedupe_key
+                   ORDER BY (status = 'running') DESC, created_at ASC, id ASC
+                 ) AS rn
+               FROM background_tasks
+               WHERE dedupe_key IS NOT NULL
+                 AND status IN ('pending', 'running')
+             )
+             UPDATE background_tasks t
+             SET status = 'failed',
+                 last_error = 'deduped before migrations',
+                 completed_at = NOW(),
+                 updated_at = NOW()
+             FROM ranked r
+             WHERE t.id = r.id
+               AND r.rn > 1",
+        )
+        .execute(pool)
+        .await?;
+    }
+
+    Ok(())
+}

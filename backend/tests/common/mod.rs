@@ -4,9 +4,11 @@
 
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Once;
+use std::sync::OnceLock;
 use url::Url;
 
 static INIT: Once = Once::new();
+static MIGRATIONS_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
 
 /// 初始化测试环境
 ///
@@ -49,10 +51,34 @@ pub async fn create_test_pool() -> PgPool {
         .await
         .expect("Failed to create test database pool");
 
-    sqlx::migrate!("./migrations")
-        .run(&pool)
+    let lock = MIGRATIONS_LOCK.get_or_init(|| tokio::sync::Mutex::new(()));
+    let _guard = lock.lock().await;
+    file_storage_backend::database::pool::pre_migration_repairs(&pool)
         .await
-        .expect("Failed to run test database migrations");
+        .expect("Failed to run pre-migration repairs");
+    let migrator = sqlx::migrate!("./migrations");
+    if let Err(err) = migrator.run(&pool).await {
+        if matches!(err, sqlx::migrate::MigrateError::VersionMismatch(_)) {
+            sqlx::query("DROP SCHEMA public CASCADE")
+                .execute(&pool)
+                .await
+                .expect("Failed to reset test database schema (drop public)");
+            sqlx::query("CREATE SCHEMA public")
+                .execute(&pool)
+                .await
+                .expect("Failed to reset test database schema (create public)");
+
+            file_storage_backend::database::pool::pre_migration_repairs(&pool)
+                .await
+                .expect("Failed to run pre-migration repairs");
+            migrator
+                .run(&pool)
+                .await
+                .expect("Failed to run test database migrations after schema reset");
+        } else {
+            panic!("Failed to run test database migrations: {}", err);
+        }
+    }
 
     pool
 }
