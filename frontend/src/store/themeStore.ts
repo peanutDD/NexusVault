@@ -34,8 +34,10 @@ function applyTheme(effectiveTheme: 'light' | 'dark') {
   const root = document.documentElement;
   if (effectiveTheme === 'dark') {
     root.classList.add('dark');
+    root.classList.remove('light');
   } else {
     root.classList.remove('dark');
+    root.classList.add('light');
   }
 }
 
@@ -64,7 +66,8 @@ export const useThemeStore = create<ThemeState>()(
       return {
         theme: initialTheme,
         effectiveTheme: initialEffectiveTheme,
-        setTheme: (theme: Theme) => {
+        setTheme: (_theme: Theme) => {
+          const theme = _theme;
           const effectiveTheme = resolveEffectiveTheme(theme);
           applyTheme(effectiveTheme);
           set({ theme, effectiveTheme });

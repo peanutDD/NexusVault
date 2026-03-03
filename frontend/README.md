@@ -43,6 +43,8 @@ npm run dev
 
 默认开发地址为 `http://localhost:5173`。
 
+生产环境通常推荐通过同域名反向代理提供 `/api`，并在构建时不设置（或留空）`VITE_API_BASE_URL`，避免把内网地址写进构建产物。
+
 ## 工程脚本
 
 ### Design Tokens 治理（避免 Tailwind 调色板硬编码）

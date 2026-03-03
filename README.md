@@ -155,6 +155,17 @@ cp .env.example .env
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
+> 🚀 **生产环境部署建议**  
+> - `VITE_API_BASE_URL` 会在 `vite build` 时写入前端静态资源；生产环境不要写内网 IP（如 `192.168.*`），否则外网用户会直连超时。  
+> - 推荐同域名反向代理：前端与后端通过同一域名提供服务，Nginx/Caddy 将 `/api` 反代到后端；此时前端可不设置 `VITE_API_BASE_URL`（留空，走同源 `/api/*`）。  
+> - 若前后端不同域名：设置 `VITE_API_BASE_URL=https://api.example.com`，并在后端配置 `CORS_ORIGIN` 允许前端域名。
+
+### Nginx（局域网裸机示例）
+
+若你在局域网用 IP（例如 `http://192.168.8.59/`）访问，建议用 Nginx 将前端静态站点与 `/api` 反代到后端合并成同源。仓库提供一份可直接复制的模板：
+
+- [deploy/nginx/lan_192.168.8.59.conf](file:///Users/tyone/github/upload-download-util/deploy/nginx/lan_192.168.8.59.conf)
+
 ### 5. 运行前端（开发模式）
 
 ```bash

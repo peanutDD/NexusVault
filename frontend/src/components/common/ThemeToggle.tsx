@@ -28,7 +28,7 @@ export default function ThemeToggle({ className, showLabel = false }: ThemeToggl
         'bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]',
         'hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]',
         'active:translate-y-px transition-all duration-200',
-        'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:ring-offset-2 focus:ring-offset-slate-950/60',
+        'focus:outline-none focus:ring-2 focus:ring-emerald-500/25 dark:focus:ring-emerald-300/25 focus:ring-offset-2 focus:ring-offset-white/80 dark:focus:ring-offset-slate-950/60',
         className
       )}
       aria-label={`切换到${effectiveTheme === 'dark' ? '浅色' : '深色'}模式`}

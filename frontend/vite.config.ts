@@ -1,11 +1,16 @@
 import { defineConfig } from "vitest/config";
+import { loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import compression from "vite-plugin-compression";
 // import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const proxyTarget = env.VITE_DEV_PROXY_TARGET || "http://localhost:3000";
+
+  return {
   plugins: [
     react({
       babel: {
@@ -101,7 +106,7 @@ export default defineConfig({
     // 开发环境下将 /api/* 请求代理到后端
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
       },
@@ -225,4 +230,5 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setupTests.ts"],
   },
+  };
 });

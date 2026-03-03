@@ -416,6 +416,41 @@ html {
     white-space: nowrap;
 }
 
+.light .nav-panel .nav-btn {
+    background: linear-gradient(
+        180deg,
+        rgba(var(--rgb-slate-900), 0.94),
+        rgba(var(--rgb-slate-950), 0.92)
+    );
+    border-color: rgba(var(--rgb-slate-950), 0.26);
+    color: rgba(var(--rgb-white), 0.92);
+    box-shadow:
+        0 18px 60px rgba(var(--rgb-slate-950), 0.14),
+        0 10px 24px rgba(var(--rgb-black), 0.12),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.09);
+}
+
+.light .nav-panel .nav-btn:hover {
+    background: linear-gradient(
+        180deg,
+        rgba(var(--rgb-slate-900), 0.98),
+        rgba(var(--rgb-slate-950), 0.96)
+    );
+    border-color: rgba(var(--rgb-slate-950), 0.34);
+}
+
+.light .nav-panel .nav-icon {
+    color: rgba(var(--rgb-white), 0.9);
+}
+
+.light .nav-panel button[aria-label='Logout'] {
+    border-color: rgba(var(--rgb-red-500), 0.34);
+}
+
+.light .nav-panel button[aria-label='Logout'] .nav-icon {
+    color: rgba(var(--rgb-rose-400), 0.92);
+}
+
 .nav-iconbtn {
     width: var(--nav-control-h);
     height: var(--nav-control-h);
