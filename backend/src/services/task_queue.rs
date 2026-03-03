@@ -674,10 +674,21 @@ pub async fn run_gif_preview_worker(
     }
 
     // 查询最新文件记录，避免任务创建后文件被删除或移动
-    let file: File = state
+    let file: File = match state
         .file_service
         .get_file(payload.file_id, payload.user_id)
-        .await?;
+        .await
+    {
+        Ok(f) => f,
+        Err(AppError::NotFound) => {
+            state
+                .task_queue
+                .mark_failed(task.id, "gif_preview source file not found (deleted or moved)")
+                .await?;
+            return Ok(());
+        }
+        Err(e) => return Err(e),
+    };
 
     // 获取全局并发配额与任务类型配额
     let _global_permit = transcode_semaphore
@@ -809,10 +820,21 @@ pub async fn run_hls_worker(
     }
 
     // 查询最新文件记录，避免任务创建后文件被删除或移动
-    let file: File = state
+    let file: File = match state
         .file_service
         .get_file(payload.file_id, payload.user_id)
-        .await?;
+        .await
+    {
+        Ok(f) => f,
+        Err(AppError::NotFound) => {
+            state
+                .task_queue
+                .mark_failed(task.id, "hls_preview source file not found (deleted or moved)")
+                .await?;
+            return Ok(());
+        }
+        Err(e) => return Err(e),
+    };
 
     // 获取全局并发配额与任务类型配额
     let _global_permit = transcode_semaphore

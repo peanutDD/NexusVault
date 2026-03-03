@@ -113,6 +113,25 @@ impl LocalStorage {
         Self { base_path }
     }
 
+    fn resolve_stored_path(&self, file_path: &str) -> std::path::PathBuf {
+        let candidate = std::path::Path::new(file_path);
+        if candidate.is_absolute() {
+            return candidate.to_path_buf();
+        }
+        let normalized = file_path.strip_prefix("./").unwrap_or(file_path);
+        let base = std::path::Path::new(&self.base_path);
+        let base_name = base.file_name().and_then(|s| s.to_str());
+        if let Some(base_name) = base_name {
+            if normalized.starts_with(&format!("{}/", base_name)) {
+                return base
+                    .parent()
+                    .unwrap_or(base)
+                    .join(normalized);
+            }
+        }
+        base.join(normalized)
+    }
+
     fn get_file_path(&self, user_id: Uuid, file_id: Uuid, filename: &str) -> std::path::PathBuf {
         Path::new(&self.base_path)
             .join(user_id.to_string())
@@ -197,7 +216,7 @@ impl StorageBackend for LocalStorage {
     }
 
     async fn get_file(&self, file_path: &str) -> Result<Vec<u8>, AppError> {
-        let path = Path::new(file_path);
+        let path = self.resolve_stored_path(file_path);
         tokio::fs::read(path).await.map_err(|e| {
             if e.kind() == ErrorKind::NotFound {
                 AppError::NotFound
@@ -208,12 +227,12 @@ impl StorageBackend for LocalStorage {
     }
 
     async fn open_read_stream(&self, file_path: &str) -> Result<StorageReadStream, AppError> {
-        let path = Path::new(file_path);
-        let file = tokio::fs::File::open(path).await.map_err(|e| {
+        let path = self.resolve_stored_path(file_path);
+        let file = tokio::fs::File::open(&path).await.map_err(|e| {
             if e.kind() == ErrorKind::NotFound {
                 AppError::NotFound
             } else {
-                AppError::File(format!("Failed to open file: {}", e))
+                AppError::File(format!("Failed to open file {}: {}", path.display(), e))
             }
         })?;
         Ok(StorageReadStream::Local(file))
@@ -230,8 +249,8 @@ impl StorageBackend for LocalStorage {
     }
 
     async fn delete_file(&self, file_path: &str) -> Result<(), AppError> {
-        let path = Path::new(file_path);
-        tokio::fs::remove_file(path)
+        let path = self.resolve_stored_path(file_path);
+        tokio::fs::remove_file(&path)
             .await
             .map_err(|e| AppError::File(format!("Failed to delete file: {}", e)))?;
 

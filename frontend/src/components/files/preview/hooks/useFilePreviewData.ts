@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { fileService } from '../../../../services/files';
 import { useAuthStore } from '../../../../store/authStore';
 import { getPreviewKind, isGifType } from '../../../../utils/mimeType';
-import { HLS_THRESHOLD_BYTES } from '../constants';
+import { GIF_DIRECT_PREVIEW_BYTES, HLS_THRESHOLD_BYTES } from '../constants';
 
 function getStreamUrl(fileId: string): string {
   const base = fileService.getPreviewUrl(fileId);
@@ -116,6 +116,18 @@ export function useFilePreviewData({
     // GIF 视频预览失败时，不走通用的视频/音频回退逻辑，避免在转码过程中跳到
     // 「视频加载或播放失败」的大提示框，交给 prepare/status + 进度条自己处理。
     if (isGifType(file.mime_type)) {
+      if (gifTranscodeInProgress) {
+        return;
+      }
+      if (gifFallbackTriedRef.current) {
+        setError('GIF 加载或播放失败');
+        return;
+      }
+      gifFallbackTriedRef.current = true;
+      setUseHls(false);
+      setBlobUrl(null);
+      setGifFirstFrameUrl(getStreamUrl(file.id));
+      setLoading(false);
       return;
     }
     if (videoFallbackTriedRef.current) {
@@ -137,7 +149,7 @@ export function useFilePreviewData({
       .then((b) => setBlobUrl(URL.createObjectURL(b)))
       .catch((e) => setError(e instanceof Error ? e.message : '加载失败'))
       .finally(() => setLoading(false));
-  }, [file, blobUrl]);
+  }, [file, blobUrl, gifTranscodeInProgress]);
 
   const tryVideoAudioFallbackRef = useRef(tryVideoAudioFallback);
 
@@ -201,6 +213,13 @@ export function useFilePreviewData({
         };
 
         const startGifVideoPreview = () => {
+          if (file.file_size <= GIF_DIRECT_PREVIEW_BYTES) {
+            setUseHls(false);
+            setBlobUrl(null);
+            setGifFallbackUrl(getStreamUrl(file.id));
+            finish();
+            return;
+          }
           Promise.resolve().then(() => {
             if (!isValidRequest()) return;
             setGifFirstFrameUrl(null);
@@ -237,8 +256,9 @@ export function useFilePreviewData({
               }
 
               const intervalMs = 1500;
+              const maxAttempts = 60;
               let attempt = 0;
-              while (isValidRequest()) {
+              while (isValidRequest() && attempt < maxAttempts) {
                 if (!isValidRequest()) return;
                 await new Promise((resolve) => setTimeout(resolve, intervalMs));
                 const result = await fileService.getVideoPreviewStatus(file.id);
@@ -260,6 +280,9 @@ export function useFilePreviewData({
                 const progress = Math.min(95, Math.round((attempt / 60) * 100));
                 setGifTranscodeProgress(progress);
               }
+              if (!isValidRequest()) return;
+              setError('GIF 预览生成超时，请稍后重试');
+              finish();
             } catch {
               if (!isValidRequest()) return;
               setError('GIF 视频预览生成失败，请稍后重试');
@@ -284,8 +307,9 @@ export function useFilePreviewData({
                 return;
               }
               const intervalMs = 1500;
+              const maxAttempts = 60;
               let attempt = 0;
-              while (isValidRequest()) {
+              while (isValidRequest() && attempt < maxAttempts) {
                 if (!isValidRequest()) return;
                 await new Promise((resolve) => setTimeout(resolve, intervalMs));
                 const status = await fileService.getHlsPreviewStatus(file.id);
@@ -303,6 +327,9 @@ export function useFilePreviewData({
                 const progress = Math.min(95, Math.round((attempt / 60) * 100));
                 setGifTranscodeProgress(progress);
               }
+              if (!isValidRequest()) return;
+              setError('GIF 预览生成超时，请稍后重试');
+              finish();
             } catch {
               if (!isValidRequest()) return;
               setError('GIF 视频预览生成失败，请稍后重试');

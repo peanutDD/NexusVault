@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use std::path::PathBuf;
 use thiserror::Error;
 
 /// 端口有效范围（含）
@@ -136,6 +137,12 @@ impl Config {
         let port = parse_port()?;
         let hls_threshold_bytes = parse_hls_threshold_bytes()?;
         let hls_abr_variants = parse_hls_abr_variants()?;
+        let default_storage_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR")))
+            .join("uploads")
+            .to_string_lossy()
+            .to_string();
 
         let config = Config {
             database_url: env::var("DATABASE_URL")
@@ -154,7 +161,7 @@ impl Config {
                 .filter(|s| !s.trim().is_empty()),
             jwt_expiry: env::var("JWT_EXPIRY").unwrap_or_else(|_| "24h".to_string()),
             storage_backend: env::var("STORAGE_BACKEND").unwrap_or_else(|_| "local".to_string()),
-            storage_path: env::var("STORAGE_PATH").unwrap_or_else(|_| "./uploads".to_string()),
+            storage_path: env::var("STORAGE_PATH").unwrap_or_else(|_| default_storage_path),
             aws_access_key_id: env::var("AWS_ACCESS_KEY_ID").unwrap_or_default(),
             aws_secret_access_key: env::var("AWS_SECRET_ACCESS_KEY").unwrap_or_default(),
             aws_region: env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
