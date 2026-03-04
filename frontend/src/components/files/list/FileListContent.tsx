@@ -386,14 +386,19 @@ const FileListContent: React.FC<FileListContentProps> = ({
                         ids.forEach(id => handleSelectFolder(id, selected));
                       }}
                     />
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
+                    <span
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--glass-bg-b)] text-base text-[var(--glass-text)]"
+                      aria-hidden
+                    >
                       <i className="bi bi-folder2" aria-hidden />
                     </span>
-                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
+                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-[var(--glass-text)] uppercase">
                       FOLDERS
-                      <span className="ml-2 text-[0.7em] text-white/60">({displayFolders.length})</span>
+                      <span className="ml-2 text-[0.7em] text-[var(--glass-text-muted)]">
+                        ({displayFolders.length})
+                      </span>
                     </span>
-                    <div className="flex-1 h-px bg-white/10" />
+                    <div className="flex-1 h-px bg-[var(--color-border-soft)]" />
                   </div>
                   <FolderGrid
                     folders={displayFolders}
@@ -425,11 +430,13 @@ const FileListContent: React.FC<FileListContentProps> = ({
                       }}
                     />
                     {group.icon}
-                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
+                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-[var(--glass-text)] uppercase">
                       {group.label}
-                      <span className="ml-2 text-[0.7em] text-white/60">({group.files.length})</span>
+                      <span className="ml-2 text-[0.7em] text-[var(--glass-text-muted)]">
+                        ({group.files.length})
+                      </span>
                     </span>
-                    <div className="flex-1 h-px bg-white/10" />
+                    <div className="flex-1 h-px bg-[var(--color-border-soft)]" />
                   </div>
                   <FileGrid
                     key={`group-grid-${group.key}`}
@@ -465,16 +472,19 @@ const FileListContent: React.FC<FileListContentProps> = ({
                         folderIds.forEach((id) => handleSelectFolder(id, selected));
                       }}
                     />
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base text-white/90" aria-hidden>
+                    <span
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--glass-bg-b)] text-base text-[var(--glass-text)]"
+                      aria-hidden
+                    >
                       <i className="bi bi-calendar3" aria-hidden />
                     </span>
-                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-white/80 uppercase">
+                    <span className="font-brand text-[clamp(0.7rem,1.4vw,0.8rem)] tracking-[0.18em] text-[var(--glass-text)] uppercase">
                       {group.label}
-                      <span className="ml-2 text-[0.7em] text-white/60">
+                      <span className="ml-2 text-[0.7em] text-[var(--glass-text-muted)]">
                         ({group.files.length + group.folders.length})
                       </span>
                     </span>
-                    <div className="flex-1 h-px bg-white/10" />
+                    <div className="flex-1 h-px bg-[var(--color-border-soft)]" />
                   </div>
                   <MixedGrid
                     key={`time-group-mixed-${group.key}`}
@@ -652,10 +662,10 @@ function GroupSelectCheckbox({ itemIds, selectedIds, onToggle }: GroupSelectChec
       className={`
         flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-150
         ${allSelected
-          ? 'border-white/30 bg-white/15 text-white'
+          ? 'border-[var(--color-border-medium)] bg-[var(--glass-bg-strong)] text-[var(--glass-text)]'
           : someSelected
-            ? 'border-white/30 bg-white/10 text-white'
-            : 'border-white/15 bg-white/5 text-transparent hover:border-white/25 hover:bg-white/10'
+            ? 'border-[var(--color-border-medium)] bg-[var(--glass-bg-soft)] text-[var(--glass-text)]'
+            : 'border-[var(--color-border-soft)] bg-[var(--glass-bg-soft)] text-transparent hover:border-[var(--color-border-medium)] hover:bg-[var(--glass-bg-strong)]'
         }
       `}
       aria-label={allSelected ? '取消全选此分组' : '全选此分组'}
@@ -702,10 +712,10 @@ function GroupSelectCheckboxMixed({
       className={`
         flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-150
         ${allSelected
-          ? 'border-white/30 bg-white/15 text-white'
+          ? 'border-[var(--color-border-medium)] bg-[var(--glass-bg-strong)] text-[var(--glass-text)]'
           : someSelected
-            ? 'border-white/30 bg-white/10 text-white'
-            : 'border-white/15 bg-white/5 text-transparent hover:border-white/25 hover:bg-white/10'
+            ? 'border-[var(--color-border-medium)] bg-[var(--glass-bg-soft)] text-[var(--glass-text)]'
+            : 'border-[var(--color-border-soft)] bg-[var(--glass-bg-soft)] text-transparent hover:border-[var(--color-border-medium)] hover:bg-[var(--glass-bg-strong)]'
         }
       `}
       aria-label="Select group"
@@ -721,7 +731,7 @@ function GroupSelectCheckboxMixed({
 // 空状态图标组件
 function EmptyIcon() {
   return (
-    <svg className="h-10 w-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-10 w-10 text-[var(--glass-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"

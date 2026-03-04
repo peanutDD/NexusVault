@@ -74,11 +74,8 @@ const FileCard = memo(
     return (
       <article
         className={cn(
-          "group relative rounded-md transition-colors",
-          "bg-white/5 backdrop-blur-sm",
-          "hover:bg-white/10 active:bg-white/15",
-          isSelected &&
-            "bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25",
+          "glass-card group relative rounded-md transition-colors",
+          isSelected && "border-[var(--cta-primary-border)]",
         )}
         draggable
         onDragStart={(e) => {
@@ -118,9 +115,9 @@ const FileCard = memo(
                   onPreview(file);
                 }}
                 aria-label="预览"
-                className="rounded-full bg-white/20 p-3 backdrop-blur-sm hover:bg-white/30"
+                className="rounded-full bg-white/20 p-3 backdrop-blur-sm hover:bg-white/30 scale-75"
               >
-                <Eye className="h-6 w-6 text-white" />
+                <Eye className="h-6 w-6 text-white scale-75" />
               </button>
             </div>
           </div>
@@ -129,22 +126,22 @@ const FileCard = memo(
           <div className="flex w-full items-center justify-between gap-2">
             <div className="min-w-0 flex-1 space-y-0.5">
               <p
-                className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-white"
+                className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-[var(--glass-text)]"
                 title={file.original_filename}
               >
                 {file.original_filename}
               </p>
-              <p className="flex min-w-0 items-center gap-1 whitespace-nowrap overflow-hidden text-[clamp(0.38rem,1.25vw,0.55rem)] text-gray-400">
+              <p className="flex min-w-0 items-center gap-1 whitespace-nowrap overflow-hidden text-[clamp(0.38rem,1.25vw,0.55rem)] text-[var(--glass-text-muted)]">
                 <span className="shrink-0">
                   {formatFileSizeCompact(file.file_size)}
                 </span>
                 <span
-                  className="h-0.5 w-0.5 rounded-full bg-gray-600"
+                  className="h-0.5 w-0.5 rounded-full bg-[var(--color-border-medium)]"
                   aria-hidden="true"
                 ></span>
                 <span className="min-w-0 flex-1 truncate">{mimeTypeLabel}</span>
               </p>
-              <p className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.25vw,0.55rem)] text-gray-500">
+              <p className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.25vw,0.55rem)] text-[var(--glass-text-muted)]">
                 {formattedDate}
               </p>
             </div>
@@ -154,7 +151,7 @@ const FileCard = memo(
               <button
                 type="button"
                 onClick={handleToggleMenu}
-                className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-gray-400 hover:bg-white/10 hover:text-white"
+                className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-[var(--glass-text-muted)] hover:bg-[rgba(var(--rgb-white),0.08)] hover:text-[var(--glass-text)]"
                 aria-label="更多操作"
               >
                 <MoreVertical className="scale-50" />

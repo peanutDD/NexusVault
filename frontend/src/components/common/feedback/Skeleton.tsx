@@ -31,7 +31,7 @@ export default function Skeleton({
   height,
   animation = "pulse",
 }: SkeletonProps) {
-  const baseClasses = "bg-gray-700/50 dark:bg-gray-600/50";
+  const baseClasses = "bg-[var(--skeleton-bg)]";
 
   const variantClasses = {
     text: "rounded",
@@ -73,7 +73,7 @@ export default function Skeleton({
  */
 function FileRowSkeleton() {
   return (
-    <tr className="border-b border-gray-700/50">
+    <tr className="border-b border-[var(--skeleton-border)]">
       <td className="px-3 py-2">
         <Skeleton variant="circular" width={18} height={18} />
       </td>
@@ -112,10 +112,10 @@ function FileRowSkeleton() {
  */
 export function FileListSkeleton({ count = 5 }: { count?: number }) {
   return (
-    <div className="min-w-[960px] overflow-hidden rounded-lg bg-gray-800 dark:bg-gray-900">
+    <div className="min-w-[960px] overflow-hidden rounded-lg bg-[var(--skeleton-surface-bg-strong)]">
       <table className="w-full table-fixed border-collapse">
         <thead>
-          <tr className="border-b border-gray-700 bg-gray-700/80 dark:bg-gray-800/80">
+          <tr className="border-b border-[var(--skeleton-border)] bg-[var(--skeleton-header-bg)]">
             <th className="w-12 px-3 py-3" />
             <th className="w-[72px] px-2 py-3" />
             <th className="min-w-[180px] px-3 py-3" />
@@ -141,7 +141,7 @@ export function FileListSkeleton({ count = 5 }: { count?: number }) {
  */
 function FileCardSkeletonItem() {
   return (
-    <div className="rounded-md bg-gray-800/80 p-3">
+    <div className="rounded-md bg-[var(--skeleton-surface-bg)] p-3">
       {/* 缩略图占位 */}
       <Skeleton
         variant="rectangular"
@@ -154,7 +154,7 @@ function FileCardSkeletonItem() {
       {/* 上传时间 */}
       <Skeleton variant="text" width="40%" height={12} className="mb-3" />
       {/* 操作按钮区域 */}
-      <div className="flex items-center justify-between border-t border-gray-700/50 pt-3">
+      <div className="flex items-center justify-between border-t border-[var(--skeleton-border)] pt-3">
         <div className="flex gap-1">
           <Skeleton
             variant="rectangular"

@@ -120,8 +120,8 @@ const FileListPagination = memo(function FileListPagination({
             className={cn(
               'glass-btn h-9 w-9 text-sm font-medium transition-colors',
               page === pageNum
-                ? 'border-white/30 bg-white/14 text-white'
-                : 'text-white/70 hover:text-white'
+                ? 'border-[var(--color-border-medium)] bg-[var(--glass-bg-soft)] text-[var(--glass-text)]'
+                : 'text-[var(--glass-text-muted)] hover:text-[var(--glass-text)]'
             )}
           >
             {pageNum}

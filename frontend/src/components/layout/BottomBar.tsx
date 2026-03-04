@@ -9,6 +9,7 @@ export default function BottomBar() {
       role="contentinfo"
     >
       {/* 科技感背景：网格 + 渐变光带 */}
+      <div className="absolute inset-0 [background:var(--footer-surface-bg)]" />
       <div
         className="absolute inset-0 opacity-[0.07] [background-image:var(--footer-grid-bg-image)] [background-size:var(--footer-grid-bg-size)]"
       />

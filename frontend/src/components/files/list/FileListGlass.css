@@ -2,6 +2,8 @@
   /* 基于全局 Design Tokens 的文件列表语义映射 */
   --glass-bg-a: var(--filelist-glass-bg-strong);
   --glass-bg-b: var(--filelist-glass-bg-soft);
+  --toolbar-bg-a: var(--filelist-toolbar-bg-strong);
+  --toolbar-bg-b: var(--filelist-toolbar-bg-soft);
   --glass-border: var(--filelist-glass-border);
   --glass-border-strong: var(--filelist-glass-border-strong);
   --glass-text: var(--filelist-text);
@@ -21,6 +23,11 @@
   --bar-min-h: var(--filelist-bar-min-h);
   --bar-px: var(--filelist-bar-px);
   --bar-py: var(--filelist-bar-py);
+  --bar-border: var(--filelist-bar-border);
+  --bar-bg-top: var(--filelist-bar-bg-top);
+  --bar-bg-bottom: var(--filelist-bar-bg-bottom);
+  --bar-inset: var(--filelist-bar-inset);
+  --bar-glow: var(--filelist-bar-glow);
 
   /* 过大的 blur 是列表卡顿的主要原因之一 */
   --glass-blur: var(--glass-blur-soft);
@@ -176,6 +183,9 @@
   overflow: hidden;
   z-index: auto;
   border-radius: var(--bar-radius);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(var(--rgb-white), 0.12), transparent 55%),
+    linear-gradient(135deg, var(--toolbar-bg-a), var(--toolbar-bg-b));
 }
 
 /* 搜索框那一行整体缩放到 0.75，保持居中和右对齐 */
@@ -220,15 +230,15 @@
 
 .fileListGlassScope .glass-panel-soft {
   border-radius: var(--glass-radius);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--bar-border);
   background:
-    radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.10), transparent 60%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
+    radial-gradient(120% 90% at 10% 0%, var(--bar-inset), transparent 60%),
+    linear-gradient(180deg, var(--bar-bg-top), var(--bar-bg-bottom));
   box-shadow:
     var(--glass-shadow-soft),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 var(--bar-inset),
     /* 科技感微光 */
-    0 0 15px rgba(34, 211, 238, 0.1);
+    0 0 15px var(--bar-glow);
   -webkit-backdrop-filter: blur(calc(var(--glass-blur) - 5px)) saturate(var(--glass-sat));
   backdrop-filter: blur(calc(var(--glass-blur) - 5px)) saturate(var(--glass-sat));
 }
@@ -591,4 +601,3 @@
   cursor: not-allowed;
   transform: none;
 }
-

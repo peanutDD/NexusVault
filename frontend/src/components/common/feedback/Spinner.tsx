@@ -16,7 +16,7 @@ export default function Spinner({ size = 'md', className }: SpinnerProps) {
     <span
       className={cn(
         sizeClasses[size],
-        'border-gray-600 border-t-purple-400 rounded-full animate-spin',
+        'border-[rgba(var(--rgb-white),0.18)] border-t-[rgba(var(--rgb-malachite-500),0.7)] rounded-full animate-spin',
         className
       )}
       aria-hidden

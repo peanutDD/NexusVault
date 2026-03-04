@@ -21,7 +21,7 @@ export default function PageLayout({
   showSettings,
 }: PageLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col bg-[image:var(--surface-page-gradient)] dark:bg-[image:var(--surface-page-gradient-dark)] transition-colors duration-300">
+    <div className="flex min-h-screen flex-col bg-[image:var(--surface-page-gradient)] transition-colors duration-300">
       <NavBar
         title={title}
         backTo={backTo}
@@ -30,7 +30,7 @@ export default function PageLayout({
         extra={navExtra}
         showSettings={showSettings}
       />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-[clamp(1rem,2.4vw,2rem)] pt-[clamp(5.5rem,10vw,8rem)] animate-fade-in">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-[clamp(1rem,2.4vw,2rem)] pt-[clamp(5.5rem,10vw,8rem)] animate-fade-in text-[var(--color-text-primary)]">
         {children}
       </main>
       <BottomBar />

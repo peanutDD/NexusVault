@@ -510,49 +510,49 @@ export default function Settings() {
       {/* Match NavBar width so the logo aligns with page content */}
       <div className="mx-auto max-w-7xl text-[length:var(--settings-text-md)]">
         {/* Page header (match Home neon/glass style) */}
-        <div className="relative mb-6 overflow-hidden rounded-2xl border border-emerald-300/15 bg-slate-950/30 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-6">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-emerald-400/10" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/40 to-transparent" />
+        <div className="relative mb-6 overflow-hidden rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-surface-bg)] p-5 shadow-[var(--settings-surface-shadow)] backdrop-blur-md sm:p-6">
+          <div className="pointer-events-none absolute inset-0 bg-[image:var(--settings-surface-glow)]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--settings-surface-hairline)] to-transparent" />
 
           <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <button
                 type="button"
                 onClick={() => navigate('/files')}
-                className="font-brand mb-4 inline-flex items-center rounded-xl border border-emerald-300/15 bg-slate-900/35 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:bg-slate-900/50 hover:border-emerald-300/30"
+                className="font-brand mb-4 inline-flex items-center rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:bg-[var(--settings-chip-bg-hover)] hover:border-[var(--settings-chip-border-hover)]"
               >
-                <ArrowLeft className="mr-2 h-4 w-4 shrink-0 text-emerald-200/80" aria-hidden="true" />
+                <ArrowLeft className="mr-2 h-4 w-4 shrink-0 text-[var(--settings-chip-icon)]" aria-hidden="true" />
                 Back to Home
               </button>
               <div className="flex items-center gap-3">
-                <div className="rounded-xl border border-emerald-300/15 bg-slate-900/40 p-2 text-emerald-200/80">
+                <div className="rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-2 text-[var(--settings-chip-icon)]">
                   <Settings2 className="h-5 w-5" aria-hidden="true" />
                 </div>
-                <h1 className="font-brand truncate text-[length:var(--settings-text-xl)] font-normal tracking-widest text-slate-100">
+                <h1 className="font-brand truncate text-[length:var(--settings-text-xl)] font-normal tracking-widest text-[var(--settings-title)]">
                   Settings Center
                 </h1>
               </div>
-              <p className="font-brand mt-2 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-slate-400">
+              <p className="font-brand mt-2 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-subtitle)]">
                 Account info, storage quota, security & token management.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Files</p>
-                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100 tabular-nums">
+              <div className="rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3">
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]">Files</p>
+                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums">
                   {storageUsage ? storageUsage.file_count : '-'}
                 </p>
               </div>
-              <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Usage</p>
-                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100 tabular-nums">
+              <div className="rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3">
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]">Usage</p>
+                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums">
                   {storageUsage ? formatBytes(storageUsage.total_size) : '-'}
                 </p>
               </div>
-              <div className="hidden sm:block rounded-xl border border-emerald-300/10 bg-slate-950/30 p-3">
-                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Tokens</p>
-                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100 tabular-nums">
+              <div className="hidden sm:block rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3">
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]">Tokens</p>
+                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums">
                   {apiTokens.length}
                 </p>
               </div>
@@ -564,36 +564,36 @@ export default function Settings() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <aside className="lg:col-span-4">
             <div className="lg:sticky lg:top-28 space-y-4">
-              <div className="rounded-2xl border border-emerald-300/15 bg-slate-950/25 p-4 text-[length:var(--settings-text-sm)] text-slate-300 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_12px_50px_rgba(0,0,0,0.35)] backdrop-blur-md">
-                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-500">Quick nav</p>
+              <div className="rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-quicknav-bg)] p-4 text-[length:var(--settings-text-sm)] text-[var(--settings-quicknav-text)] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_12px_50px_rgba(0,0,0,0.35)] backdrop-blur-md">
+                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-quicknav-muted)]">Quick nav</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <a
                     href="#profile"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
                   >
                     Account
                   </a>
                   <a
                     href="#storage"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
                   >
                     Storage
                   </a>
                   <a
                     href="#appearance"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
                   >
                     Appearance
                   </a>
                   <a
                     href="#security"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
                   >
                     Security
                   </a>
                   <a
                     href="#api-tokens"
-                    className="font-brand rounded-xl border border-emerald-300/15 bg-slate-900/40 px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-slate-200 hover:border-emerald-300/30"
+                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
                   >
                     Tokens
                   </a>

@@ -318,28 +318,32 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             message={
               deleteConfirm.type === 'batch' ? (
                 <>
-                  <span className="text-white/80">即将删除 {[
+                  <span className="text-[var(--confirm-message-text)]">即将删除 {[
                     deleteConfirm.fileCount && `${deleteConfirm.fileCount} 个文件`,
                     deleteConfirm.folderCount && `${deleteConfirm.folderCount} 个文件夹`,
                   ].filter(Boolean).join(' 和 ')}。</span>
                   <br /><br />
-                  <span className="text-amber-400 text-xs font-medium">此操作不可撤销！</span>
+                  <span className="text-[var(--confirm-warning-icon-text)] text-xs font-medium">此操作不可撤销！</span>
                 </>
               ) : deleteConfirm.type === 'folder' ? (
                 <>
-                  <span className="text-white/75 text-xs">确定要删除文件夹「</span>
-                  <span className="text-rose-300 text-sm font-semibold">{truncateNameForConfirm(deleteConfirm.name ?? '')}</span>
-                  <span className="text-white/75 text-xs">」吗？</span>
+                  <span className="text-[var(--confirm-message-text)] text-xs">确定要删除文件夹「</span>
+                  <span className="text-[var(--confirm-danger-icon-text)] text-sm font-semibold">
+                    {truncateNameForConfirm(deleteConfirm.name ?? '')}
+                  </span>
+                  <span className="text-[var(--confirm-message-text)] text-xs">」吗？</span>
                   <br /><br />
-                  <span className="text-amber-400/90 text-xs">文件夹内的所有内容也会被删除！</span>
+                  <span className="text-[var(--confirm-warning-icon-text)] text-xs">文件夹内的所有内容也会被删除！</span>
                 </>
               ) : (
                 <>
-                  <span className="text-white/75 text-xs">确定要删除文件「</span>
-                  <span className="text-rose-300 text-sm font-semibold">{truncateNameForConfirm(deleteConfirm.name ?? '')}</span>
-                  <span className="text-white/75 text-xs">」吗？</span>
+                  <span className="text-[var(--confirm-message-text)] text-xs">确定要删除文件「</span>
+                  <span className="text-[var(--confirm-danger-icon-text)] text-sm font-semibold">
+                    {truncateNameForConfirm(deleteConfirm.name ?? '')}
+                  </span>
+                  <span className="text-[var(--confirm-message-text)] text-xs">」吗？</span>
                   <br /><br />
-                  <span className="text-amber-400/90 text-xs">此操作不可撤销。</span>
+                  <span className="text-[var(--confirm-warning-icon-text)] text-xs">此操作不可撤销。</span>
                 </>
               )
             }

@@ -87,13 +87,10 @@ const FolderCard = memo(function FolderCard({
   return (
     <div
       className={cn(
-        "group relative cursor-pointer rounded-md transition-colors",
-        "bg-white/5 backdrop-blur-sm",
-        "hover:bg-white/10 active:bg-white/15",
-        isSelected &&
-          "bg-purple-500/15 hover:bg-purple-500/20 active:bg-purple-500/25",
+        "glass-card group relative cursor-pointer rounded-md transition-colors",
+        isSelected && "border-[var(--cta-primary-border)]",
         isDragOver &&
-          "bg-blue-500/20 hover:bg-blue-500/25 active:bg-blue-500/30",
+          "border-[var(--color-border-strong)]",
       )}
       onDoubleClick={handleDoubleClick}
       role="button"
@@ -127,7 +124,7 @@ const FolderCard = memo(function FolderCard({
         {/* 文件夹名称 + 设置按钮 */}
         <div className="flex w-full items-center justify-between gap-2">
           <p
-            className="min-w-0 flex-1 truncate whitespace-nowrap text-center text-[clamp(0.65rem,2.4vw,0.9rem)] font-medium text-white"
+            className="min-w-0 flex-1 truncate whitespace-nowrap text-center text-[clamp(0.65rem,2.4vw,0.9rem)] font-medium text-[var(--glass-text)]"
             title={folder.name}
           >
             {folder.name}
@@ -138,7 +135,7 @@ const FolderCard = memo(function FolderCard({
             <button
               type="button"
               onClick={handleToggleMenu}
-              className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-gray-400 hover:bg-white/10 hover:text-white"
+              className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-[var(--glass-text-muted)] hover:bg-[rgba(var(--rgb-white),0.08)] hover:text-[var(--glass-text)]"
               aria-label="更多操作"
             >
               <MoreVertical className="scale-50" />

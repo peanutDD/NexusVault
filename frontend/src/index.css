@@ -159,6 +159,21 @@ body {
         color 0.3s ease;
 }
 
+.light main {
+    color: var(--color-text-primary);
+}
+
+.light main [class*="text-white"] {
+    color: var(--color-text-primary) !important;
+}
+
+.light main svg,
+.light main .bi,
+.light main [class^="bi-"],
+.light main [class*=" bi-"] {
+    color: var(--color-text-primary) !important;
+}
+
 .font-display {
     font-family: var(--font-display);
 }
@@ -643,9 +658,9 @@ html {
 }
 
 .preview-cyberpunk-root {
-    --preview-green: 34, 243, 166;
-    --preview-purple: 180, 85, 255;
-    --preview-magenta: 217, 70, 239;
+    --preview-green: 12, 226, 94;
+    --preview-purple: 147, 197, 114;
+    --preview-magenta: 51, 204, 153;
     --preview-ink: 6, 8, 14;
     --preview-grid: 34, 243, 166;
 }
@@ -683,19 +698,19 @@ html {
 .confirm-dialog-sci-fi-backdrop {
     background-image: linear-gradient(
         135deg,
-        rgba(34, 211, 238, 0.04) 0%,
+        var(--confirm-danger-sci-fi-b) 0%,
         transparent 50%,
-        rgba(244, 63, 94, 0.04) 100%
+        var(--confirm-danger-sci-fi-a) 100%
     );
     background-size: 100% 100%;
 }
 
 .confirm-dialog-sci-fi-panel {
-    border-color: rgba(244, 63, 94, 0.35);
+    border-color: var(--confirm-danger-glass-border);
     box-shadow:
         0 0 0 1px rgba(255, 255, 255, 0.08),
-        0 0 24px rgba(244, 63, 94, 0.12),
-        0 0 48px rgba(34, 211, 238, 0.06),
+        0 0 24px rgba(var(--rgb-malachite-500), 0.1),
+        0 0 48px rgba(var(--rgb-emerald-400), 0.06),
         inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
@@ -708,10 +723,10 @@ html {
     padding: 1px;
     background: linear-gradient(
         135deg,
-        rgba(34, 211, 238, 0.25) 0%,
+        rgba(var(--rgb-emerald-400), 0.2) 0%,
         transparent 40%,
         transparent 60%,
-        rgba(244, 63, 94, 0.2) 100%
+        rgba(var(--rgb-malachite-500), 0.18) 100%
     );
     -webkit-mask:
         linear-gradient(#fff 0 0) content-box,
@@ -726,36 +741,36 @@ html {
 
 .confirm-dialog-sci-fi-icon {
     box-shadow:
-        0 0 0 1px rgba(244, 63, 94, 0.4),
-        0 0 16px rgba(244, 63, 94, 0.25);
+        0 0 0 1px rgba(var(--rgb-malachite-500), 0.35),
+        0 0 16px rgba(var(--rgb-malachite-500), 0.22);
 }
 
 .confirm-dialog-sci-fi-confirm {
     box-shadow:
-        0 0 0 1px rgba(244, 63, 94, 0.4),
-        0 0 20px rgba(244, 63, 94, 0.2);
+        0 0 0 1px rgba(var(--rgb-malachite-500), 0.35),
+        0 0 20px rgba(var(--rgb-malachite-500), 0.2);
 }
 
 .confirm-dialog-sci-fi-confirm:hover:not(:disabled) {
     box-shadow:
-        0 0 0 1px rgba(244, 63, 94, 0.5),
-        0 0 24px rgba(244, 63, 94, 0.35),
-        0 0 32px rgba(34, 211, 238, 0.1);
+        0 0 0 1px rgba(var(--rgb-malachite-500), 0.44),
+        0 0 24px rgba(var(--rgb-malachite-500), 0.3),
+        0 0 32px rgba(var(--rgb-emerald-400), 0.1);
 }
 
 .confirm-dialog-sci-fi-panel .confirm-dialog-sci-fi-gradient {
     background: linear-gradient(
         to bottom,
-        rgba(244, 63, 94, 0.12),
-        rgba(34, 211, 238, 0.06),
+        rgba(var(--rgb-malachite-500), 0.12),
+        rgba(var(--rgb-emerald-400), 0.06),
         transparent
     );
 }
 
 .confirm-dialog-sci-fi-grid {
     background-image:
-        linear-gradient(rgba(34, 211, 238, 0.6) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(34, 211, 238, 0.6) 1px, transparent 1px);
+        linear-gradient(rgba(var(--rgb-emerald-400), 0.6) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-emerald-400), 0.6) 1px, transparent 1px);
     background-size: 12px 12px;
     opacity: 0.04;
 }
@@ -769,7 +784,7 @@ html {
     background: linear-gradient(
         180deg,
         rgba(0, 0, 0, 0.35) 0%,
-        rgba(244, 63, 94, 0.06) 50%,
+        rgba(var(--rgb-malachite-500), 0.06) 50%,
         rgba(0, 0, 0, 0.3) 100%
     );
     box-shadow:
@@ -787,8 +802,8 @@ html {
     background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(244, 63, 94, 0.3) 20%,
-        rgba(34, 211, 238, 0.2) 80%,
+        rgba(var(--rgb-malachite-500), 0.26) 20%,
+        rgba(var(--rgb-emerald-400), 0.18) 80%,
         transparent 100%
     );
     pointer-events: none;

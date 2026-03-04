@@ -54,7 +54,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
     <div className={wrapperClass}>
       <div className="flex min-w-0 items-center gap-2 whitespace-nowrap text-[0.625rem]">
         <span className="inline-block h-4 w-4 shrink-0 rounded-sm" aria-hidden />
-        <span className="font-brand min-w-0 shrink truncate font-normal tracking-widest leading-none text-gray-300 text-[clamp(0.5rem,1.2vw,0.625rem)]">
+        <span className="font-brand min-w-0 shrink truncate font-normal tracking-widest leading-none text-[rgba(var(--rgb-white),0.86)] text-[clamp(0.5rem,1.2vw,0.625rem)]">
           Already selected {getSelectionText()}
         </span>
       </div>
@@ -72,7 +72,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
             />
             <MoveRight
               strokeWidth={2}
-              className="relative h-[0.65em] w-[0.65em] text-slate-600"
+              className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
             />
           </span>
           <span className="hidden sm:inline">Batch Move</span>
@@ -89,7 +89,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
             />
             <Share2
               strokeWidth={2}
-              className="relative h-[0.65em] w-[0.65em] text-slate-600"
+              className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
             />
           </span>
           <span className="hidden sm:inline">Batch Share</span>
@@ -112,7 +112,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
             />
             <Download
               strokeWidth={2.5}
-              className="relative h-[0.65em] w-[0.65em] text-slate-600"
+              className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
             />
           </span>
           <span className="hidden sm:inline">
@@ -131,7 +131,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
             />
             <Trash2
               strokeWidth={2}
-              className="relative h-[0.65em] w-[0.65em] text-slate-600"
+              className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
             />
           </span>
           <span className="hidden sm:inline">Batch Delete</span>

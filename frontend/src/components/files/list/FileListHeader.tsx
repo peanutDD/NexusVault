@@ -76,7 +76,7 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
               <button
                 type="button"
                 onClick={() => navigateToFolder(null)}
-                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filters-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="All Files"
               >
                 <i className="bi bi-folder2-open shrink-0 text-[0.75rem]" aria-hidden />
@@ -85,7 +85,7 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCreateFolder(true)}
-                className="glass-btn toolbarActionBtn font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                className="glass-btn toolbarActionBtn font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filters-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="New Folder"
               >
                 <i className="bi bi-folder-plus shrink-0 text-[0.75rem]" aria-hidden />
@@ -95,7 +95,7 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenUpload}
-                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-white hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filters-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                   aria-label="Upload File"
                 >
                   <i className="bi bi-cloud-upload shrink-0 text-[0.75rem]" aria-hidden />

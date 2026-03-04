@@ -31,10 +31,10 @@ const variantConfig = {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
       </svg>
     ),
-    iconBg: 'bg-red-500/15',
-    iconColor: 'text-red-400',
-    buttonBg: 'bg-red-600 hover:bg-red-500',
-    accentColor: 'from-red-500/20 via-transparent',
+    iconBg: 'bg-[var(--confirm-danger-icon-bg)]',
+    iconColor: 'text-[var(--confirm-danger-icon-text)]',
+    buttonBg: 'bg-[var(--confirm-danger-button-bg)] hover:bg-[var(--confirm-danger-button-bg-hover)]',
+    accentColor: 'from-[var(--confirm-danger-icon-bg)] via-transparent',
   },
   warning: {
     icon: (
@@ -42,10 +42,10 @@ const variantConfig = {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
     ),
-    iconBg: 'bg-amber-500/15',
-    iconColor: 'text-amber-400',
-    buttonBg: 'bg-amber-600 hover:bg-amber-500',
-    accentColor: 'from-amber-500/20 via-transparent',
+    iconBg: 'bg-[var(--confirm-warning-icon-bg)]',
+    iconColor: 'text-[var(--confirm-warning-icon-text)]',
+    buttonBg: 'bg-[var(--confirm-warning-button-bg)] hover:bg-[var(--confirm-warning-button-bg-hover)]',
+    accentColor: 'from-[var(--confirm-warning-icon-bg)] via-transparent',
   },
   info: {
     icon: (
@@ -53,10 +53,10 @@ const variantConfig = {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    iconBg: 'bg-blue-500/15',
-    iconColor: 'text-blue-400',
-    buttonBg: 'bg-blue-600 hover:bg-blue-500',
-    accentColor: 'from-blue-500/20 via-transparent',
+    iconBg: 'bg-[var(--confirm-info-icon-bg)]',
+    iconColor: 'text-[var(--confirm-info-icon-text)]',
+    buttonBg: 'bg-[var(--confirm-info-button-bg)] hover:bg-[var(--confirm-info-button-bg-hover)]',
+    accentColor: 'from-[var(--confirm-info-icon-bg)] via-transparent',
   },
 };
 
@@ -87,10 +87,10 @@ export default function ConfirmDialog({
 
   const glassConfirmClass =
     variant === 'danger'
-      ? 'border-rose-300/35 bg-rose-500/15 hover:bg-rose-500/20 shadow-[0_14px_40px_rgba(244,63,94,0.18)]'
+      ? 'border-[var(--confirm-danger-glass-border)] bg-[var(--confirm-danger-glass-bg)] hover:bg-[var(--confirm-danger-glass-bg-hover)] shadow-[var(--confirm-danger-glass-shadow)]'
       : variant === 'warning'
-        ? 'border-amber-300/35 bg-amber-500/15 hover:bg-amber-500/20 shadow-[0_14px_40px_rgba(245,158,11,0.16)]'
-        : 'border-sky-300/35 bg-sky-500/15 hover:bg-sky-500/20 shadow-[0_14px_40px_rgba(56,189,248,0.16)]';
+        ? 'border-[var(--confirm-warning-glass-border)] bg-[var(--confirm-warning-glass-bg)] hover:bg-[var(--confirm-warning-glass-bg-hover)] shadow-[var(--confirm-warning-glass-shadow)]'
+        : 'border-[var(--confirm-info-glass-border)] bg-[var(--confirm-info-glass-bg)] hover:bg-[var(--confirm-info-glass-bg-hover)] shadow-[var(--confirm-info-glass-shadow)]';
 
   useDialog({
     open,
@@ -126,7 +126,7 @@ export default function ConfirmDialog({
       <div
         className={cn(
           'absolute inset-0 animate-in fade-in duration-150',
-          isGlass ? 'bg-black/35 backdrop-blur-sm' : 'bg-black/80',
+          isGlass ? 'bg-[var(--confirm-backdrop-glass)] backdrop-blur-sm' : 'bg-[var(--confirm-backdrop)]',
           isSciFi && 'confirm-dialog-sci-fi-backdrop'
         )}
         onClick={() => !loading && onCancel()}
@@ -138,13 +138,13 @@ export default function ConfirmDialog({
           'relative w-full max-w-xs overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-150',
           isGlass
             ? [
-                'glass-panel rounded-2xl ring-1 ring-white/10',
-                'border border-white/20 bg-white/12 text-white backdrop-blur-2xl backdrop-saturate-150',
+                'glass-panel rounded-2xl ring-1',
+                'ring-[var(--confirm-surface-ring)] border border-[var(--confirm-surface-glass-border)] bg-[var(--confirm-surface-glass-bg)] text-[var(--confirm-title-text)] backdrop-blur-2xl backdrop-saturate-150',
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
-                'before:bg-gradient-to-br before:from-white/25 before:via-fuchsia-400/10 before:to-transparent',
+                'before:bg-[image:var(--confirm-surface-glass-highlight)]',
                 isSciFi && 'confirm-dialog-sci-fi-panel',
               ].filter(Boolean).join(' ')
-            : 'rounded-lg bg-[#1C1C28] ring-1 ring-white/10'
+            : 'rounded-lg bg-[var(--confirm-surface-bg)] ring-1 ring-[var(--confirm-surface-ring)] border border-[var(--confirm-surface-border)] text-[var(--confirm-title-text)]'
         )}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
@@ -152,7 +152,7 @@ export default function ConfirmDialog({
         {/* 科幻风：顶部红/青渐变光带（凹槽上缘高光） */}
         {isSciFi && (
           <div
-            className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-gradient-to-r from-cyan-500/0 via-rose-500/60 to-cyan-500/0 pointer-events-none"
+            className='absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-[image:linear-gradient(to_right,transparent,var(--confirm-danger-sci-fi-a),transparent)] pointer-events-none'
             aria-hidden
           />
         )}
@@ -170,8 +170,8 @@ export default function ConfirmDialog({
             className={cn(
               'confirm-dialog-groove flex items-center gap-2.5 rounded-t-2xl border-b px-4 py-2.5 min-h-0 overflow-hidden',
               isSciFi
-                ? 'confirm-dialog-groove-sci-fi border-white/15'
-                : 'bg-black/25 border-white/10 shadow-[inset_0_2px_10px_rgba(0,0,0,0.4)]'
+                ? 'confirm-dialog-groove-sci-fi border-[var(--confirm-groove-border)]'
+                : 'bg-[var(--confirm-groove-bg)] border-[var(--confirm-groove-border)] shadow-[var(--confirm-groove-shadow)]'
             )}
           >
             <div
@@ -187,8 +187,8 @@ export default function ConfirmDialog({
             <h3
               id={titleId}
               className={cn(
-                'min-w-0 flex-1 truncate text-sm font-semibold text-white',
-                isSciFi && 'tracking-wide drop-shadow-[0_0_12px_rgba(244,63,94,0.25)]'
+                'min-w-0 flex-1 truncate text-sm font-semibold text-[var(--confirm-title-text)]',
+                isSciFi && 'tracking-wide drop-shadow-[0_0_12px_rgba(var(--rgb-malachite-500),0.2)]'
               )}
             >
               {title}
@@ -201,7 +201,7 @@ export default function ConfirmDialog({
               id={messageId}
               className={cn(
                 'max-w-full py-3 text-xs leading-relaxed break-words whitespace-pre-line',
-                isSciFi ? 'text-white/70' : 'text-gray-400'
+                isSciFi ? 'text-[var(--confirm-message-text)]' : 'text-[var(--confirm-message-text-muted)]'
               )}
             >
               {message}
@@ -211,7 +211,7 @@ export default function ConfirmDialog({
           <div
             className={cn(
               'flex gap-2 pt-3 border-t',
-              isSciFi ? 'border-white/15' : 'border-white/10'
+              'border-[var(--confirm-divider)]'
             )}
           >
             <button
@@ -221,9 +221,10 @@ export default function ConfirmDialog({
               className={cn(
                 'flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
                 isGlass
-                  ? 'glass-btn text-white/85 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25'
-                  : 'bg-[#2A2A3C] text-gray-300 hover:bg-[#3A3A4D] hover:text-white',
-                isSciFi && 'border border-white/20 hover:border-cyan-400/40 hover:bg-cyan-500/10'
+                  ? 'glass-btn text-[var(--confirm-cancel-text)] hover:text-[var(--confirm-cancel-text-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--confirm-cancel-ring)]'
+                  : 'bg-[var(--confirm-cancel-bg)] text-[var(--confirm-cancel-text)] hover:bg-[var(--confirm-cancel-bg-hover)] hover:text-[var(--confirm-cancel-text-hover)]',
+                isSciFi &&
+                  'border border-[var(--confirm-danger-sci-fi-b)] hover:border-[var(--confirm-danger-sci-fi-a)] hover:bg-[var(--confirm-danger-sci-fi-b)]'
               )}
             >
               {cancelText}
@@ -234,14 +235,14 @@ export default function ConfirmDialog({
               onClick={onConfirm}
               disabled={loading}
               className={cn(
-                'flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all disabled:cursor-not-allowed disabled:opacity-50',
+                'flex-1 rounded-lg px-4 py-2 text-sm font-medium text-[var(--confirm-title-text)] transition-all disabled:cursor-not-allowed disabled:opacity-50',
                 isGlass
                   ? cn(
-                      'glass-btn border text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                      'glass-btn border text-[var(--confirm-title-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]',
                       glassConfirmClass,
                       isSciFi && 'confirm-dialog-sci-fi-confirm'
                     )
-                  : cn(config.buttonBg, 'disabled:cursor-not-allowed disabled:opacity-50'),
+                  : cn(config.buttonBg, 'text-[var(--btn-danger-text)] disabled:cursor-not-allowed disabled:opacity-50'),
                 'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >

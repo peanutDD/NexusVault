@@ -91,22 +91,22 @@ export default function Share() {
 
   if (loading && !passwordRequired) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[image:var(--surface-page-gradient-dark)] flex items-center justify-center px-4">
         <div className="text-center">
           <span
-            className="w-12 h-12 border-4 border-gray-600 border-t-purple-400 rounded-full animate-spin block mx-auto mb-4"
+            className="w-12 h-12 border-4 border-[rgba(var(--rgb-white),0.18)] border-t-[rgba(var(--rgb-malachite-500),0.7)] rounded-full animate-spin block mx-auto mb-4"
             aria-hidden
           />
-          <p className="text-gray-300">加载中...</p>
+          <p className="text-[var(--color-text-secondary)]">加载中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-lg max-w-md w-full p-4 sm:p-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">文件分享</h1>
+    <div className="min-h-screen bg-[image:var(--surface-page-gradient-dark)] flex items-center justify-center p-4">
+      <div className="bg-[var(--modal-surface-bg)] border border-[var(--modal-surface-border)] rounded-lg max-w-md w-full p-4 sm:p-6 shadow-[var(--shadow-glass-md)]">
+        <h1 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)] mb-4 sm:mb-6">文件分享</h1>
 
         {error && (
           <ErrorMessage
@@ -119,7 +119,7 @@ export default function Share() {
         {passwordRequired ? (
           <form onSubmit={handleSubmitPassword} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--control-label-text)] mb-2">
                 请输入访问密码
               </label>
               <input
@@ -127,25 +127,25 @@ export default function Share() {
                 value={password}
                 onChange={handlePasswordChange}
                 required
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-[var(--control-input-bg)] border border-[var(--control-input-border)] rounded-lg text-[var(--control-input-text)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)]"
                 placeholder="分享密码"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              className="w-full px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-lg hover:bg-[var(--btn-primary-bg-hover)] disabled:opacity-50"
             >
               {loading ? '验证中...' : '访问文件'}
             </button>
           </form>
         ) : fileInfo ? (
           <div className="space-y-4">
-            <div className="bg-gray-700 rounded-lg p-4">
-              <h2 className="text-base sm:text-lg font-semibold text-white mb-2">
+            <div className="bg-[rgba(var(--rgb-white),0.06)] border border-[var(--color-border-soft)] rounded-lg p-4">
+              <h2 className="text-base sm:text-lg font-semibold text-[var(--color-text-primary)] mb-2">
                 {fileInfo.filename}
               </h2>
-              <div className="text-sm text-gray-300 space-y-1">
+              <div className="text-sm text-[var(--color-text-secondary)] space-y-1">
                 <p>大小: {formatFileSize(fileInfo.size)}</p>
                 <p>类型: {fileInfo.mime_type}</p>
               </div>
@@ -153,14 +153,14 @@ export default function Share() {
 
             <button
               onClick={handleDownload}
-              className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="w-full px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-lg hover:bg-[var(--btn-primary-bg-hover)]"
             >
               下载文件
             </button>
 
             <button
               onClick={handleNavigateToLogin}
-              className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+              className="w-full px-4 py-2 bg-[var(--btn-secondary-bg)] text-[var(--btn-secondary-text)] border border-[var(--btn-secondary-border)] rounded-lg hover:bg-[var(--btn-secondary-bg-hover)]"
             >
               返回登录
             </button>

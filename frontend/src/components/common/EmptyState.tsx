@@ -34,16 +34,15 @@ export function EmptyState({
       )}
     >
       {icon && (
-        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
+        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(var(--rgb-white),0.06)] ring-1 ring-[var(--color-border-soft)]">
           {icon}
         </div>
       )}
-      <p className="text-lg font-medium text-gray-300">{title}</p>
+      <p className="text-lg font-medium text-[var(--color-text-secondary)]">{title}</p>
       {description && (
-        <p className="mt-1 text-sm text-gray-500 max-w-sm">{description}</p>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)] max-w-sm">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }
-

@@ -14,24 +14,24 @@ interface ErrorMessageProps {
 const typeConfig = {
   error: {
     icon: AlertCircle,
-    iconClass: 'text-rose-400',
-    borderClass: 'border-rose-400/50',
-    accentClass: 'from-rose-500/15 via-transparent to-transparent',
-    hairlineClass: 'via-rose-400/50',
+    iconClass: 'text-[var(--notice-error)]',
+    borderClass: 'border-[var(--notice-error-border)]',
+    accentClass: 'from-[var(--notice-error-accent)] via-transparent to-transparent',
+    hairlineClass: 'via-[var(--notice-error-hairline)]',
   },
   warning: {
     icon: AlertCircle,
-    iconClass: 'text-amber-400',
-    borderClass: 'border-amber-400/50',
-    accentClass: 'from-amber-500/15 via-transparent to-transparent',
-    hairlineClass: 'via-amber-400/50',
+    iconClass: 'text-[var(--notice-warning)]',
+    borderClass: 'border-[var(--notice-warning-border)]',
+    accentClass: 'from-[var(--notice-warning-accent)] via-transparent to-transparent',
+    hairlineClass: 'via-[var(--notice-warning-hairline)]',
   },
   info: {
     icon: CheckCircle2,
-    iconClass: 'text-emerald-400',
-    borderClass: 'border-emerald-400/50',
-    accentClass: 'from-emerald-500/15 via-transparent to-cyan-500/15',
-    hairlineClass: 'via-emerald-300/50',
+    iconClass: 'text-[var(--notice-info)]',
+    borderClass: 'border-[var(--notice-info-border)]',
+    accentClass: 'from-[var(--notice-info-accent)] via-transparent to-[var(--notice-info-accent-to)]',
+    hairlineClass: 'via-[var(--notice-info-hairline)]',
   },
 } as const;
 
@@ -56,7 +56,7 @@ export default function ErrorMessage({
     <div
       className={cn(
         'relative w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4',
-        'bg-slate-900/80 backdrop-blur-xl',
+        'bg-[var(--notice-surface-bg)] backdrop-blur-xl',
         'shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.5)]',
         config.borderClass,
         'animate-fade-in transition-all duration-200',
@@ -95,7 +95,7 @@ export default function ErrorMessage({
         {onClose && (
           <button
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-slate-200"
+            className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[rgba(var(--rgb-white),0.06)] hover:text-[var(--color-text-primary)]"
             aria-label="关闭"
           >
             <X className="h-4 w-4" aria-hidden="true" />

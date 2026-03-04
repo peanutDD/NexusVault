@@ -135,8 +135,8 @@
   border-radius: var(--filters-control-radius);
   border: 1px solid var(--filters-surface-border);
   background:
-    radial-gradient(120% 90% at 15% 0%, rgba(255, 255, 255, 0.22), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+    radial-gradient(120% 90% at 15% 0%, var(--filters-surface-hi), transparent 62%),
+    linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
   box-shadow: var(--filters-surface-shadow);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
@@ -151,7 +151,7 @@
   border-radius: inherit;
   pointer-events: none;
   background:
-    radial-gradient(120% 70% at 85% 0%, rgba(217, 70, 239, 0.14), transparent 62%);
+    radial-gradient(120% 70% at 85% 0%, rgba(var(--rgb-malachite-500), 0.1), transparent 62%);
   opacity: 0.75;
 }
 
@@ -192,7 +192,7 @@
   border-radius: 0;
   border: 0;
   background: transparent;
-  color: rgba(248, 250, 252, 0.9);
+  color: var(--filters-pill-text);
   cursor: pointer;
   transition:
     opacity 120ms ease-out,
@@ -209,7 +209,7 @@
 }
 
 .filtersSearchClearButton:focus-visible {
-  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
@@ -234,13 +234,11 @@
   display: flex;
   align-items: center;
   border-radius: var(--filters-control-radius);
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  border: 1px solid var(--filters-surface-border);
   background:
-    radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.14), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.045));
-  box-shadow:
-    0 18px 60px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    radial-gradient(120% 90% at 10% 0%, var(--filters-surface-hi), transparent 62%),
+    linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
+  box-shadow: var(--filters-surface-shadow);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
   /* 下拉已改为 portal（挂到 body），无需裁剪高光层 */
@@ -257,8 +255,8 @@
   border-radius: inherit;
   pointer-events: none;
   background:
-    radial-gradient(120% 70% at 90% 0%, rgba(16, 185, 129, 0.10), transparent 65%),
-    radial-gradient(100% 70% at 15% 0%, rgba(255, 255, 255, 0.12), transparent 60%);
+    radial-gradient(120% 70% at 90% 0%, rgba(var(--rgb-malachite-500), 0.12), transparent 65%),
+    radial-gradient(100% 70% at 15% 0%, rgba(var(--rgb-white), 0.12), transparent 60%);
   opacity: 0.7;
   z-index: 0;
 }
@@ -311,7 +309,7 @@
   min-width: 0;
   white-space: nowrap;
   text-align: right;
-  color: rgba(255, 255, 255, 0.86);
+  color: var(--filters-text);
   font-weight: 400;
   line-height: 1;
 }
@@ -326,7 +324,7 @@
   width: clamp(0.95rem, 0.95vw, 1.05rem);
   height: clamp(0.95rem, 0.95vw, 1.05rem);
   flex: 0 0 auto;
-  color: rgba(255, 255, 255, 0.80);
+  color: var(--filters-icon);
   transition: transform 180ms ease;
 }
 
@@ -338,9 +336,9 @@
   margin-top: clamp(0.85rem, 1.2vw, 1.05rem);
   padding: clamp(0.65rem, 0.9vw, 0.8rem) clamp(0.85rem, 1.2vw, 1rem);
   border-radius: clamp(0.95rem, 1.5vw, 1.35rem);
-  background: rgba(255, 255, 255, 0.11);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  color: rgba(255, 255, 255, 0.88);
+  background: var(--filters-value-bg);
+  border: 1px solid var(--filters-value-border);
+  color: var(--filters-text);
   font-weight: 600;
   font-size: clamp(0.95rem, 0.75vw + 0.65rem, 1.08rem);
   white-space: nowrap;
@@ -387,14 +385,11 @@
 
   /* 仅在展开时应用视觉样式 */
   border-radius: clamp(0.6rem, 1.0vw, 0.9rem);
-  border: 1px solid rgba(255, 255, 255, 0.20);
-  /* 保持原来的“玻璃”透明度（更亮、更透） */
+  border: 1px solid var(--filters-surface-border);
   background:
-    radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.14), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.045));
-  box-shadow:
-    0 22px 70px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.20);
+    radial-gradient(120% 90% at 10% 0%, var(--filters-surface-hi), transparent 62%),
+    linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
+  box-shadow: var(--filters-surface-shadow);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
 
@@ -416,13 +411,11 @@
   overscroll-behavior: contain;
 
   border-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--filters-surface-border);
   background:
-    radial-gradient(120% 90% at 10% 0%, rgba(255, 255, 255, 0.12), transparent 60%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    radial-gradient(120% 90% at 10% 0%, var(--filters-surface-hi), transparent 60%),
+    linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
+  box-shadow: var(--filters-surface-shadow);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   backdrop-filter: blur(20px) saturate(150%);
   padding: 0.1rem;
@@ -437,7 +430,7 @@
 }
 
 .filtersDropdownPortal::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--filters-dropdown-scrollbar-thumb);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -453,7 +446,7 @@
 }
 
 .filtersCardBodyOpen::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--filters-dropdown-scrollbar-thumb);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -477,7 +470,7 @@
   cursor: pointer;
   padding: 0.2rem 0.25rem;
   border-radius: 0.2rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--filters-dropdown-item-text);
   font-family: var(--font-brand);
   font-size: var(--filters-dropdown-font-size);
   font-weight: 300;
@@ -487,13 +480,13 @@
 }
 
 .filtersItem:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.95);
+  background: var(--filters-dropdown-item-bg-hover);
+  color: var(--filters-dropdown-item-text-hover);
 }
 
 .filtersItemSelected {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(217, 70, 239, 0.14));
-  color: rgba(255, 255, 255, 0.98);
+  background: linear-gradient(135deg, rgba(var(--rgb-emerald-500), 0.18), rgba(var(--rgb-malachite-500), 0.12));
+  color: var(--filters-dropdown-item-selected-text);
 }
 
 .filtersItemIcon {
@@ -526,7 +519,7 @@
   justify-content: center;
   width: 0.375rem;
   height: 0.375rem;
-  color: rgba(168, 85, 247, 0.9);
+  color: var(--filters-dropdown-check);
   font-size: 0.3125rem;
 }
 
@@ -534,7 +527,7 @@
 .filtersDivider {
   height: 1px;
   margin: 0.125rem 0.1875rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--filters-dropdown-divider);
 }
 
 /* NOTE: 避免重复的空 media block（已移除） */

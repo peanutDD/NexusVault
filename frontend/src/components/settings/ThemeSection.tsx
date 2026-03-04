@@ -3,16 +3,16 @@ import { cn } from '../../utils/cn';
 import { useThemeStore } from '../../store/themeStore';
 import SettingsCard from './SettingsCard';
 
-type ThemeOption = 'system' | 'dark' | 'light';
+type ThemeOption = 'dark' | 'light' | 'purple';
 
 const OPTIONS: Array<{
   value: ThemeOption;
   title: string;
   description: string;
 }> = [
-  { value: 'system', title: 'System', description: 'Follow your OS setting.' },
-  { value: 'dark', title: 'Dark', description: 'Use dark theme.' },
+  { value: 'dark', title: 'Dark', description: 'Green dark theme.' },
   { value: 'light', title: 'Light', description: 'Use light theme.' },
+  { value: 'purple', title: 'Purple', description: 'Classic purple theme.' },
 ];
 
 export default function ThemeSection() {
@@ -55,7 +55,7 @@ export default function ThemeSection() {
           Current
         </div>
         <div className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--color-text-primary)]">
-          {theme === 'system' ? `System (${effectiveTheme})` : effectiveTheme}
+          {effectiveTheme}
         </div>
       </div>
     </SettingsCard>

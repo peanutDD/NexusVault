@@ -79,7 +79,7 @@ export function BaseDialog({
     <div
       className={cn(
         'fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in',
-        variant === 'glass' || isUploadVariant ? 'bg-black/70' : 'bg-black/80 dark:bg-black/90'
+        variant === 'glass' || isUploadVariant ? 'bg-[var(--modal-backdrop-glass)]' : 'bg-[var(--modal-backdrop)]'
       )}
       onClick={handleBackdropClick}
       role="dialog"
@@ -92,20 +92,20 @@ export function BaseDialog({
           variant === 'glass'
             ? [
                 'relative w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl',
-                'border border-white/15 bg-white/10 text-white',
+                'border border-[var(--modal-surface-glass-border)] bg-[var(--modal-surface-glass-bg)] text-[var(--color-text-primary)] ring-1 ring-[var(--modal-surface-ring)]',
                 'backdrop-blur-xl backdrop-saturate-150',
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
-                'before:bg-gradient-to-br before:from-white/25 before:via-fuchsia-400/10 before:to-transparent',
+                'before:bg-[image:var(--modal-surface-glass-highlight)]',
               ].join(' ')
             : isUploadVariant
               ? [
-                  'relative w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl text-white',
-                  'border border-white/15 bg-[#1C1C28]/85',
+                  'relative w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl text-[var(--color-text-primary)]',
+                  'border border-[var(--modal-surface-glass-border)] bg-[var(--modal-surface-bg)] ring-1 ring-[var(--modal-surface-ring)]',
                   'backdrop-blur-xl backdrop-saturate-150',
                   'before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:content-[""]',
-                  'before:bg-gradient-to-br before:from-[#6C5DD3]/10 before:via-transparent before:to-transparent',
+                  'before:bg-[image:var(--modal-surface-glass-highlight)]',
                 ].join(' ')
-              : 'bg-gray-800 dark:bg-gray-900 rounded-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl transform transition-all duration-300 animate-fade-in',
+              : 'bg-[var(--modal-surface-bg)] border border-[var(--modal-surface-border)] text-[var(--color-text-primary)] rounded-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl transform transition-all duration-300 animate-fade-in',
           maxWidthClasses[maxWidth],
           className
         )}
@@ -119,7 +119,7 @@ export function BaseDialog({
             id={titleId}
             className={cn(
               'text-xl font-semibold transition-colors duration-200',
-              isUploadVariant ? 'text-white' : 'text-white dark:text-gray-100'
+              'text-[var(--color-text-primary)]'
             )}
           >
             {title}
@@ -132,10 +132,10 @@ export function BaseDialog({
             className={cn(
               'text-2xl leading-none transition-colors duration-200 w-8 h-8 flex items-center justify-center rounded-full',
               variant === 'glass'
-                ? 'text-white/70 hover:text-white hover:bg-white/10'
+                ? 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[rgba(var(--rgb-white),0.08)]'
                 : isUploadVariant
-                  ? 'text-gray-500 hover:text-white hover:bg-gray-800 rounded-md'
-                  : 'text-gray-400 dark:text-gray-500 hover:text-white dark:hover:text-gray-200 hover:bg-gray-700/50 dark:hover:bg-gray-800/50',
+                  ? 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[rgba(var(--rgb-white),0.06)] rounded-md'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[rgba(var(--rgb-white),0.06)]',
               loading && 'opacity-50 cursor-not-allowed'
             )}
             aria-label="关闭"
@@ -150,7 +150,7 @@ export function BaseDialog({
             id={descriptionId}
             className={cn(
               'mb-4 text-sm transition-colors duration-200',
-              isUploadVariant ? 'text-gray-500' : 'text-gray-300 dark:text-gray-400'
+              'text-[var(--color-text-secondary)]'
             )}
           >
             {description}

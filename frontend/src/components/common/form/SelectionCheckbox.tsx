@@ -62,7 +62,7 @@ export function SelectionCheckbox({
       {isSelected ? (
         <span
           className={cn(
-            "card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-violet-500",
+            "card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-[var(--btn-primary-bg)]",
             isResponsive
               ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
               : isSmall
@@ -72,7 +72,7 @@ export function SelectionCheckbox({
         >
           <svg
             className={cn(
-              "text-white",
+              "text-[var(--btn-primary-text)]",
               isResponsive
                 ? "h-[clamp(0.45rem,0.75vw,0.62rem)] w-[clamp(0.45rem,0.75vw,0.62rem)]"
                 : isSmall
@@ -94,7 +94,7 @@ export function SelectionCheckbox({
       ) : (
         <span
           className={cn(
-            "flex items-center justify-center rounded-full bg-black/40",
+            "flex items-center justify-center rounded-full bg-[rgba(var(--rgb-black),0.35)]",
             isResponsive
               ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
               : isSmall
@@ -104,7 +104,7 @@ export function SelectionCheckbox({
         >
           <span
             className={cn(
-              "rounded-full border-2 border-white/60",
+              "rounded-full border-2 border-[rgba(var(--rgb-white),0.6)]",
               isResponsive
                 ? "h-[clamp(0.35rem,0.6vw,0.52rem)] w-[clamp(0.35rem,0.6vw,0.52rem)]"
                 : isSmall
