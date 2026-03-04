@@ -484,27 +484,27 @@ export default function UploadDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--upload-backdrop)] p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="upload-dialog-title"
     >
-      <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[#1C1C28] shadow-2xl animate-fade-in">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[var(--upload-surface-bg)] text-[var(--upload-text)] shadow-2xl animate-fade-in">
         {/* 头部：固定，不参与滚动 */}
         <div className="flex-shrink-0 p-6 pb-0">
           <div className="mb-1 flex items-center justify-between">
-            <h2 id="upload-dialog-title" className="font-brand text-lg font-normal tracking-widest text-white">Upload Files</h2>
+            <h2 id="upload-dialog-title" className="font-brand text-lg font-normal tracking-widest text-[var(--upload-text)]">Upload Files</h2>
             <button
               type="button"
               onClick={handleClose}
               disabled={isUploading}
               aria-label="关闭"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--upload-text-muted)] transition-colors hover:bg-[var(--upload-control-hover)] hover:text-[var(--upload-text)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <CloseIcon />
             </button>
           </div>
-          <p className="font-brand mb-5 text-sm font-normal tracking-widest text-gray-500">Uploaded project attachments</p>
+          <p className="font-brand mb-5 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]">Uploaded project attachments</p>
         </div>
 
         {/* 中间：可滚动，避免把底部按钮顶出视野 */}
@@ -518,8 +518,8 @@ export default function UploadDialog({
           className={cn(
             'relative mb-5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition-all duration-200',
             dragActive
-              ? 'border-[#6C5DD3] bg-[#6C5DD3]/10'
-              : 'border-[#3A3A4D] hover:border-[#4A4A5D]'
+              ? 'border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]'
+              : 'border-[var(--upload-drop-border)] bg-[var(--upload-drop-bg)] hover:border-[var(--upload-drop-border-hover)]'
           )}
         >
           <input
@@ -543,10 +543,10 @@ export default function UploadDialog({
             <FileDocIcon />
           </div>
 
-          <p className="font-brand mb-1 text-sm font-normal tracking-widest text-white">
+          <p className="font-brand mb-1 text-sm font-normal tracking-widest text-[var(--upload-text)]">
             Drag and drop your files
           </p>
-          <p className="font-brand mb-5 text-xs font-normal tracking-widest text-gray-500">
+          <p className="font-brand mb-5 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]">
             Max. File size: {(maxGB > 1) ? `${maxGB} GB` : `${Math.round(maxGB * 1024)} MB`}
           </p>
 
@@ -558,18 +558,18 @@ export default function UploadDialog({
                 inputRef.current.click();
               }
             }}
-            className="font-brand rounded-lg bg-[#2A2A3C] px-5 py-2.5 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#3A3A4D]"
+            className="font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-secondary-text)] transition-colors hover:bg-[var(--btn-secondary-bg-hover)]"
           >
             Select files
           </button>
-          <p className="font-brand mt-2 text-xs text-gray-500">
+          <p className="font-brand mt-2 text-xs text-[var(--upload-text-muted)]">
             支持多选；若多选只显示 1 个，请将多个文件<strong>拖入上方区域</strong>，或多次点击「Select files」逐个添加
           </p>
         </div>
 
         {/* URL 上传 */}
         <div className="mb-5">
-          <p className="font-brand mb-2 text-sm font-normal tracking-widest text-gray-500">Or upload from URL</p>
+          <p className="font-brand mb-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]">Or upload from URL</p>
           <div className="flex gap-2">
             <input
               type="url"
@@ -577,10 +577,10 @@ export default function UploadDialog({
               onChange={(e) => setUrlInput(e.target.value)}
               placeholder="Add file URL"
               className={cn(
-                'font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-white placeholder-gray-600 transition-colors focus:outline-none',
+                'font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none',
                 urlInput.trim()
-                  ? 'border-[#6C5DD3]'
-                  : 'border-[#2A2A3C] focus:border-[#6C5DD3]'
+                  ? 'border-[var(--upload-accent)]'
+                  : 'border-[var(--upload-input-border)] focus:border-[var(--upload-accent)]'
               )}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleUrlUpload();
@@ -590,7 +590,7 @@ export default function UploadDialog({
               type="button"
               onClick={handleUrlUpload}
               disabled={!urlInput.trim() || urlLoading}
-              className="font-brand rounded-lg bg-[#6C5DD3] px-5 py-2.5 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
+              className="font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {urlLoading ? '...' : 'Upload'}
             </button>
@@ -600,42 +600,42 @@ export default function UploadDialog({
         {/* 总文件数 / 大文件数：分开显示、分开提醒 */}
         {uploadFiles.length > 0 && (
           <div className="font-brand mb-3 space-y-2">
-            <div className="flex items-center justify-between rounded-lg bg-[#2A2A3C] px-3 py-2 text-xs font-normal tracking-widest text-gray-400">
+            <div className="flex items-center justify-between rounded-lg bg-[var(--upload-stat-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-stat-text)]">
               <span>文件数量</span>
-              <span className={totalAtLimit ? 'text-amber-400' : 'text-gray-500'}>
+              <span className={totalAtLimit ? 'text-[var(--upload-warning-text)]' : 'text-[var(--upload-stat-value)]'}>
                 {uploadFiles.length} / {maxBatchCount} 个
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-lg bg-[#2A2A3C] px-3 py-2 text-xs font-normal tracking-widest text-gray-400">
+            <div className="flex items-center justify-between rounded-lg bg-[var(--upload-stat-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-stat-text)]">
               <span>大文件（≥100MB）</span>
-              <span className={largeAtLimit ? 'text-amber-400' : 'text-gray-500'}>
+              <span className={largeAtLimit ? 'text-[var(--upload-warning-text)]' : 'text-[var(--upload-stat-value)]'}>
                 {uploadStats.largeFileCount} / {LARGE_FILE_UPLOAD.MAX_CONCURRENT} 个
               </span>
             </div>
           </div>
         )}
         {totalLimitWarning && (
-          <div className="font-brand mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
+          <div className="font-brand mb-3 rounded-lg bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]">
             {totalLimitWarning}
           </div>
         )}
         {largeLimitWarning && (
-          <div className="font-brand mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
+          <div className="font-brand mb-3 rounded-lg bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]">
             {largeLimitWarning}
           </div>
         )}
         {duplicateWarning && (
-          <div className="font-brand mb-3 rounded-lg bg-gray-500/10 px-3 py-2 text-xs font-normal tracking-widest text-gray-400">
+          <div className="font-brand mb-3 rounded-lg bg-[var(--upload-drop-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]">
             {duplicateWarning}
           </div>
         )}
         {uploadFiles.length > 0 && totalAtLimit && !totalLimitWarning && (
-          <div className="font-brand mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
+          <div className="font-brand mb-3 rounded-lg border border-[var(--upload-warning-border)] bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]">
             单次最多 {maxBatchCount} 个文件，当前已满。请先完成或取消后再添加。
           </div>
         )}
         {uploadFiles.length > 0 && largeAtLimit && !largeLimitWarning && (
-          <div className="font-brand mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-normal tracking-widest text-amber-400">
+          <div className="font-brand mb-3 rounded-lg border border-[var(--upload-warning-border)] bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]">
             大文件（≥100MB）最多 {LARGE_FILE_UPLOAD.MAX_CONCURRENT} 个，当前已满。请先完成或取消后再添加。
           </div>
         )}
@@ -644,7 +644,7 @@ export default function UploadDialog({
         {uploadFiles.length > 0 && (
           <div className="mb-5">
             <div className="mb-3 flex items-center justify-between">
-              <p className="font-brand text-sm font-normal tracking-widest text-white">Uploaded Files</p>
+              <p className="font-brand text-sm font-normal tracking-widest text-[var(--upload-text)]">Uploaded Files</p>
             </div>
             <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
               {uploadFiles.map((file) => (
@@ -667,7 +667,7 @@ export default function UploadDialog({
               type="button"
               onClick={handleClose}
               disabled={isUploading}
-              className="font-brand flex-1 rounded-lg bg-[#2A2A3C] px-4 py-2 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#3A3A4D] disabled:cursor-not-allowed disabled:opacity-50"
+              className="font-brand flex-1 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-normal tracking-widest text-[var(--btn-secondary-text)] transition-colors hover:bg-[var(--btn-secondary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
@@ -675,7 +675,7 @@ export default function UploadDialog({
               type="button"
               onClick={handleAttach}
               disabled={uploadFiles.length === 0 || (isUploading && !hasPending)}
-              className="font-brand flex-1 rounded-lg bg-[#6C5DD3] px-4 py-2 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
+              className="font-brand flex-1 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {hasPending
                 ? 'Start Upload'
@@ -717,12 +717,12 @@ function FileDocIcon() {
       {/* 文档主体 */}
       <path
         d="M12 6C12 4.89543 12.8954 4 14 4H28L36 12V42C36 43.1046 35.1046 44 34 44H14C12.8954 44 12 43.1046 12 42V6Z"
-        fill="#6C5DD3"
+        fill="rgb(var(--upload-doc-icon-main))"
       />
       {/* 折角 */}
       <path
         d="M28 4L36 12H30C28.8954 12 28 11.1046 28 10V4Z"
-        fill="#9B8FE8"
+        fill="rgb(var(--upload-doc-icon-fold))"
       />
     </svg>
   );

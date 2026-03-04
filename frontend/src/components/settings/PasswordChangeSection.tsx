@@ -70,7 +70,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
         <div>
           <label
             htmlFor="current-password"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
           >
             Current password
           </label>
@@ -84,15 +84,15 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
             aria-describedby={fieldErrors?.current_password ? 'current-password-error' : undefined}
             className={cn(
               'w-full rounded-xl px-4 py-2.5',
-              'bg-slate-950/40 border border-emerald-300/15',
-              'text-slate-100 placeholder:text-slate-500',
-              'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+              'bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]',
+              'text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]'
             )}
           />
           {fieldErrors?.current_password && (
             <p
               id="current-password-error"
-              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-rose-300"
+              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
             >
               {fieldErrors.current_password}
             </p>
@@ -101,7 +101,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
         <div>
           <label
             htmlFor="new-password"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
           >
             New password
           </label>
@@ -117,20 +117,20 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
             aria-describedby={fieldErrors?.new_password ? 'new-password-error' : undefined}
             className={cn(
               'w-full rounded-xl px-4 py-2.5',
-              'bg-slate-950/40 border border-emerald-300/15',
-              'text-slate-100 placeholder:text-slate-500',
-              'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+              'bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]',
+              'text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]'
             )}
           />
           {fieldErrors?.new_password ? (
             <p
               id="new-password-error"
-              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-rose-300"
+              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
             >
               {fieldErrors.new_password}
             </p>
           ) : (
-            <p className="font-brand text-slate-400 text-[length:var(--settings-text-xs)] font-normal tracking-wide mt-1">
+            <p className="font-brand text-[var(--settings-form-helper)] text-[length:var(--settings-text-xs)] font-normal tracking-wide mt-1">
               8–64 characters, include at least one letter and one digit
             </p>
           )}
@@ -138,7 +138,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
         <div>
           <label
             htmlFor="confirm-password"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
           >
             Confirm new password
           </label>
@@ -154,15 +154,15 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
             aria-describedby={fieldErrors?.confirm_password ? 'confirm-password-error' : undefined}
             className={cn(
               'w-full rounded-xl px-4 py-2.5',
-              'bg-slate-950/40 border border-emerald-300/15',
-              'text-slate-100 placeholder:text-slate-500',
-              'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+              'bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]',
+              'text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]'
             )}
           />
           {fieldErrors?.confirm_password && (
             <p
               id="confirm-password-error"
-              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-rose-300"
+              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
             >
               {fieldErrors.confirm_password}
             </p>
@@ -173,9 +173,8 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
           disabled={loading}
           className={cn(
             'font-brand w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
-            'bg-gradient-to-r from-emerald-500/80 to-cyan-500/80',
-            'text-slate-950',
-            'hover:from-emerald-500 hover:to-cyan-500',
+          'bg-[var(--settings-action-bg)] text-[var(--settings-action-text)]',
+          'hover:bg-[var(--settings-action-bg-hover)]',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         >

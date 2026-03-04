@@ -229,6 +229,9 @@
 }
 
 .fileListGlassScope .glass-panel-soft {
+  --glass-text: rgba(var(--rgb-white), 0.92);
+  --glass-text-muted: rgba(var(--rgb-white), 0.72);
+
   border-radius: var(--glass-radius);
   border: 1px solid var(--bar-border);
   background:

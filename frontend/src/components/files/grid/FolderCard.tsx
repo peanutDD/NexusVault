@@ -102,7 +102,7 @@ const FolderCard = memo(function FolderCard({
       <div className="p-3">
         {/* 文件夹图标：使用和视频文件相同的主色（text-purple-400），但缩小尺寸避免过于抢眼 */}
         <div
-          className="relative mb-3 flex aspect-square items-center justify-center rounded-sm bg-black/20"
+          className="relative mb-3 flex aspect-square items-center justify-center rounded-sm bg-[var(--filelist-folder-icon-bg)]"
           draggable
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
@@ -116,7 +116,7 @@ const FolderCard = memo(function FolderCard({
             positionClassName="absolute left-[clamp(0.4rem,0.9vw,0.6rem)] top-[clamp(0.4rem,0.9vw,0.6rem)]"
           />
           <i
-            className="bi bi-folder-fill text-[clamp(1.5rem,3.2vw,2.25rem)] text-purple-400"
+            className="bi bi-folder-fill text-[clamp(1.5rem,3.2vw,2.25rem)] text-[var(--filelist-folder-icon)]"
             aria-hidden
           />
         </div>
@@ -135,7 +135,7 @@ const FolderCard = memo(function FolderCard({
             <button
               type="button"
               onClick={handleToggleMenu}
-              className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-[var(--glass-text-muted)] hover:bg-[rgba(var(--rgb-white),0.08)] hover:text-[var(--glass-text)]"
+              className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-[var(--glass-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--glass-text)]"
               aria-label="更多操作"
             >
               <MoreVertical className="scale-50" />
@@ -145,42 +145,42 @@ const FolderCard = memo(function FolderCard({
             {isMenuOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={onCloseMenu} />
-                <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-violet-950 bg-violet-950 py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
+                <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
                   <button
                     type="button"
-                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
+                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
                       onOpen(folder);
                     }}
                   >
-                    <FolderOpen className="scale-50 shrink-0 text-white" />
+                    <FolderOpen className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]" />
                     <span className="whitespace-nowrap">打开</span>
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
+                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
                       onRename(folder);
                     }}
                   >
-                    <PencilLine className="scale-50 shrink-0 text-white" />
+                    <PencilLine className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]" />
                     <span className="whitespace-nowrap">重命名</span>
                   </button>
-                  <div className="my-0.5 border-t border-violet-900" />
+                  <div className="my-0.5 border-t border-[var(--filelist-menu-divider)]" />
                   <button
                     type="button"
-                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-white transition-colors hover:bg-violet-900"
+                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
                       onDelete(folder.id);
                     }}
                   >
-                    <Trash2 className="scale-50 shrink-0 text-white" />
+                    <Trash2 className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]" />
                     <span className="whitespace-nowrap">删除</span>
                   </button>
                 </div>

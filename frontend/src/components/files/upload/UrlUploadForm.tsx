@@ -152,7 +152,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
 
   return (
     <div className="mb-5">
-      <p className="font-brand mb-2 text-sm font-normal tracking-widest text-gray-500">
+      <p className="font-brand mb-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]">
         Or upload from URL
       </p>
       <div className="flex gap-2">
@@ -162,10 +162,10 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder="Add file URL"
           className={cn(
-            'font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-white placeholder-gray-600 transition-colors focus:outline-none',
+            'font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none',
             urlInput.trim()
-              ? 'border-[#6C5DD3]'
-              : 'border-[#2A2A3C] focus:border-[#6C5DD3]'
+              ? 'border-[var(--upload-accent)]'
+              : 'border-[var(--upload-input-border)] focus:border-[var(--upload-accent)]'
           )}
           onKeyDown={handleKeyDown}
         />
@@ -173,7 +173,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
           type="button"
           onClick={handleUpload}
           disabled={!urlInput.trim() || loading}
-          className="font-brand rounded-lg bg-[#6C5DD3] px-5 py-2.5 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#7C6DE3] disabled:cursor-not-allowed disabled:opacity-50"
+          className="font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? '...' : 'Upload'}
         </button>

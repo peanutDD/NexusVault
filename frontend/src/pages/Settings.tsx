@@ -564,7 +564,7 @@ export default function Settings() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <aside className="lg:col-span-4">
             <div className="lg:sticky lg:top-28 space-y-4">
-              <div className="rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-quicknav-bg)] p-4 text-[length:var(--settings-text-sm)] text-[var(--settings-quicknav-text)] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_12px_50px_rgba(0,0,0,0.35)] backdrop-blur-md">
+              <div className="rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-quicknav-bg)] p-4 text-[length:var(--settings-text-sm)] text-[var(--settings-quicknav-text)] shadow-[var(--settings-quicknav-shadow)] backdrop-blur-md">
                 <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-quicknav-muted)]">Quick nav</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <a

@@ -82,8 +82,8 @@ const ApiTokenSection = memo(function ApiTokenSection({
         appearance="glass"
         variant="danger"
         icon={<Trash2 className="h-5 w-5" />}
-        iconBgClass="bg-rose-500/15"
-        iconColorClass="text-rose-300"
+        iconBgClass="bg-[var(--settings-danger-icon-bg)]"
+        iconColorClass="text-[var(--settings-danger-icon-text)]"
         title="Delete API Token"
         message={
           pendingDeleteToken ? (
@@ -107,10 +107,10 @@ const ApiTokenSection = memo(function ApiTokenSection({
 
       <div className="mb-6">
         <div className="mb-3 flex flex-nowrap items-center justify-between gap-3">
-          <h3 className="min-w-0 font-brand text-[clamp(0.8rem,2.4vw,0.95rem)] font-semibold tracking-wide text-slate-200 whitespace-nowrap">
+          <h3 className="min-w-0 font-brand text-[clamp(0.8rem,2.4vw,0.95rem)] font-semibold tracking-wide text-[var(--settings-section-title)] whitespace-nowrap">
             Create new token
           </h3>
-          <span className="min-w-0 font-brand text-[clamp(0.65rem,2.1vw,0.75rem)] font-normal tracking-wide text-slate-500 whitespace-nowrap truncate">
+          <span className="min-w-0 font-brand text-[clamp(0.65rem,2.1vw,0.75rem)] font-normal tracking-wide text-[var(--settings-section-subtitle)] whitespace-nowrap truncate">
             Use separate tokens for different purposes
           </span>
         </div>
@@ -118,7 +118,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
           <div>
             <label
               htmlFor="new-token-name"
-              className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
+              className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
             >
               Token name
             </label>
@@ -131,16 +131,16 @@ const ApiTokenSection = memo(function ApiTokenSection({
               required
               className={cn(
                 'w-full rounded-xl px-4 py-2.5',
-                'bg-slate-950/40 border border-emerald-300/15',
-                'text-slate-100 placeholder:text-slate-500',
-                'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+                'bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]',
+                'text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]'
               )}
             />
           </div>
           <div>
             <label
               htmlFor="new-token-expires"
-              className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
+              className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
             >
               Expires in (days, optional)
             </label>
@@ -153,9 +153,9 @@ const ApiTokenSection = memo(function ApiTokenSection({
               placeholder="Leave empty for never"
               className={cn(
                 'w-full rounded-xl px-4 py-2.5',
-                'bg-slate-950/40 border border-emerald-300/15',
-                'text-slate-100 placeholder:text-slate-500',
-                'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+                'bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]',
+                'text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]'
               )}
             />
           </div>
@@ -164,8 +164,8 @@ const ApiTokenSection = memo(function ApiTokenSection({
             disabled={loading}
             className={cn(
               'font-brand sm:col-span-2 w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
-              'bg-gradient-to-r from-emerald-500/80 to-cyan-500/80 text-slate-950',
-              'hover:from-emerald-500 hover:to-cyan-500',
+              'bg-[var(--settings-action-bg)] text-[var(--settings-action-text)]',
+              'hover:bg-[var(--settings-action-bg-hover)]',
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}
           >
@@ -175,27 +175,27 @@ const ApiTokenSection = memo(function ApiTokenSection({
 
         {/* 显示新创建的 Token */}
         {tokenForm.showValue && tokenForm.value && (
-          <div className="mt-4 rounded-xl border border-amber-300/25 bg-amber-500/10 p-4">
+          <div className="mt-4 rounded-xl border border-[var(--settings-warning-panel-border)] bg-[var(--settings-warning-panel-bg)] p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-amber-200">
+                <p className="font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-[var(--settings-warning-panel-text)]">
                   Important: Copy and save now — this token will only be shown once
                 </p>
-                <p className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-amber-200/80">
+                <p className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-warning-panel-muted)]">
                   Save to a password manager or CI secret
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onCloseTokenValue}
-                className="inline-flex items-center justify-center rounded-lg border border-amber-300/25 bg-slate-950/20 p-2 text-amber-100 hover:bg-slate-950/30"
+                className="inline-flex items-center justify-center rounded-lg border border-[var(--settings-warning-close-border)] bg-[var(--settings-warning-close-bg)] p-2 text-[var(--settings-warning-close-text)] hover:bg-[var(--settings-warning-close-bg-hover)]"
                 aria-label="Close token display"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <code className="flex-1 rounded-xl border border-amber-300/20 bg-slate-950/50 px-3 py-2 text-[length:var(--settings-text-xs)] text-amber-100 break-all">
+              <code className="flex-1 rounded-xl border border-[var(--settings-warning-code-border)] bg-[var(--settings-warning-code-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] text-[var(--settings-warning-code-text)] break-all">
                 {tokenForm.value}
               </code>
               <button
@@ -203,7 +203,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
                 onClick={handleCopyClick}
                 className={cn(
                   'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[length:var(--settings-text-sm)] font-semibold',
-                  'bg-amber-400/90 text-slate-950 hover:bg-amber-400'
+                  'bg-[var(--settings-warning-action-bg)] text-[var(--settings-warning-action-text)] hover:bg-[var(--settings-warning-action-bg-hover)]'
                 )}
               >
                 <Copy className="h-4 w-4" aria-hidden="true" />
@@ -216,34 +216,34 @@ const ApiTokenSection = memo(function ApiTokenSection({
 
       {/* Token 列表 */}
       <div>
-        <h3 className="font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-slate-200 mb-3">
+        <h3 className="font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-[var(--settings-section-title)] mb-3">
           Existing tokens
         </h3>
         {apiTokens.length === 0 ? (
-          <p className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-slate-400">No API tokens yet</p>
+          <p className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-panel-muted)]">No API tokens yet</p>
         ) : (
           <div className="space-y-3">
             {apiTokens.map((token) => (
               <div
                 key={token.id}
                 className={cn(
-                  'rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4',
-                  'hover:border-emerald-300/20 transition-colors'
+                  'rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4',
+                  'hover:border-[var(--settings-panel-border-hover)] transition-colors'
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="truncate text-[length:var(--settings-text-sm)] font-semibold text-slate-100">
+                      <h4 className="truncate text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]">
                         {token.name}
                       </h4>
                       {token.expires_at && new Date(token.expires_at) < new Date() && (
-                        <span className="font-brand rounded-full border border-rose-300/25 bg-rose-500/10 px-2 py-0.5 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-rose-200">
+                        <span className="font-brand rounded-full border border-[var(--settings-expired-border)] bg-[var(--settings-expired-bg)] px-2 py-0.5 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-expired-text)]">
                           Expired
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 grid gap-1 text-[length:var(--settings-text-xs)] text-slate-400 sm:grid-cols-2">
+                    <div className="mt-2 grid gap-1 text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)] sm:grid-cols-2">
                       <p className="font-brand font-normal tracking-wide">
                         Created: {new Date(token.created_at).toLocaleString()}
                       </p>
@@ -270,8 +270,8 @@ const ApiTokenSection = memo(function ApiTokenSection({
                     disabled={loading}
                     className={cn(
                       'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[length:var(--settings-text-sm)] font-semibold',
-                      'border border-rose-300/20 bg-rose-500/10 text-rose-200',
-                      'hover:bg-rose-500/15 hover:border-rose-300/30',
+                      'border border-[var(--settings-danger-button-border)] bg-[var(--settings-danger-button-bg)] text-[var(--settings-danger-button-text)]',
+                      'hover:bg-[var(--settings-danger-button-bg-hover)] hover:border-[var(--settings-danger-button-border-hover)]',
                       'disabled:opacity-50 disabled:cursor-not-allowed'
                     )}
                   >

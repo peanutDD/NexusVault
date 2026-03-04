@@ -129,22 +129,24 @@ const UploadFileItem = memo(function UploadFileItem({
     switch (file.status) {
       case "pending":
         return (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-[var(--upload-item-muted)]">
             {formatFileSize(file.size)}
           </span>
         );
       case "uploading":
         return (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-[var(--upload-item-muted)]">
             {formatFileSize(file.size)}
-            <span className="mx-1.5 text-gray-600">|</span>
-            <span className="text-white">{progress}%</span>
+            <span className="mx-1.5 text-[var(--upload-item-muted)]">|</span>
+            <span className="text-[var(--upload-item-text)]">{progress}%</span>
             {file.statusMessage && (
-              <span className="ml-1.5 text-gray-400">{file.statusMessage}</span>
+              <span className="ml-1.5 text-[var(--upload-item-muted)]">
+                {file.statusMessage}
+              </span>
             )}
             {remainingTime && (
               <>
-                <span className="mx-1.5 text-gray-600">·</span>
+                <span className="mx-1.5 text-[var(--upload-item-muted)]">·</span>
                 <span>{remainingTime}</span>
               </>
             )}
@@ -152,10 +154,10 @@ const UploadFileItem = memo(function UploadFileItem({
         );
       case "success":
         return (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-[var(--upload-item-muted)]">
             Upload Successful
-            <span className="mx-1.5 text-gray-600">|</span>
-            <span className="text-white">100%</span>
+            <span className="mx-1.5 text-[var(--upload-item-muted)]">|</span>
+            <span className="text-[var(--upload-item-text)]">100%</span>
           </span>
         );
       case "error":
@@ -166,18 +168,18 @@ const UploadFileItem = memo(function UploadFileItem({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-xl bg-[#1C1C28]">
+    <div className="relative overflow-hidden rounded-xl bg-[var(--upload-item-bg)]">
       {/* 主内容 */}
       <div className="flex items-center gap-3 p-3">
         {/* 文件图标 */}
         <div
           className={cn(
-            "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-gradient-to-br from-white/12 via-white/6 to-transparent shadow-[0_8px_24px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-sm",
+            "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--upload-item-icon-border)] bg-[var(--upload-item-icon-bg)] shadow-[var(--upload-item-icon-shadow)] backdrop-blur-sm",
             mimeTypeInfo.bgClass,
           )}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.38),transparent_42%)]" />
-          <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-white/10" />
+          <div className="pointer-events-none absolute inset-0 bg-[var(--upload-item-icon-highlight)]" />
+          <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-[var(--upload-item-icon-ring)]" />
           <div
             className="pointer-events-none absolute -inset-px rounded-xl opacity-70"
             style={{
@@ -190,7 +192,7 @@ const UploadFileItem = memo(function UploadFileItem({
         {/* 文件信息 */}
         <div className="min-w-0 flex-1">
           <p
-            className="truncate text-sm font-medium text-white"
+            className="truncate text-sm font-medium text-[var(--upload-item-text)]"
             title={file.name}
           >
             {file.name}
@@ -204,7 +206,7 @@ const UploadFileItem = memo(function UploadFileItem({
             <button
               type="button"
               onClick={() => onRetry(file.id)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-[#2A2A3C] hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
               title="重试"
               aria-label="重试上传"
             >
@@ -214,7 +216,7 @@ const UploadFileItem = memo(function UploadFileItem({
           <button
             type="button"
             onClick={() => onRemove(file.id)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-[#2A2A3C] hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
             title="删除"
             aria-label="删除文件"
           >
@@ -249,7 +251,7 @@ function FileIcon({ color }: { color: string }) {
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="relative z-[1] drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+      className="relative z-[1] drop-shadow-[var(--upload-item-icon-drop-shadow)]"
       aria-hidden
     >
       <defs>
@@ -261,8 +263,8 @@ function FileIcon({ color }: { color: string }) {
           y2="22"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.26" />
-          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0.08" />
+          <stop offset="0" stopColor="rgb(var(--upload-doc-icon-paper))" stopOpacity="0.26" />
+          <stop offset="1" stopColor="rgb(var(--upload-doc-icon-paper))" stopOpacity="0.08" />
         </linearGradient>
         <linearGradient
           id="uploadFileIconFold"
@@ -272,8 +274,8 @@ function FileIcon({ color }: { color: string }) {
           y2="7"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.85" />
-          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0.25" />
+          <stop offset="0" stopColor="rgb(var(--upload-doc-icon-fold-highlight))" stopOpacity="0.85" />
+          <stop offset="1" stopColor="rgb(var(--upload-doc-icon-fold-highlight))" stopOpacity="0.25" />
         </linearGradient>
       </defs>
 
@@ -291,12 +293,12 @@ function FileIcon({ color }: { color: string }) {
       />
       <path
         d="M8 13.25C8 12.5596 8.55964 12 9.25 12H14.75C15.4404 12 16 12.5596 16 13.25C16 13.9404 15.4404 14.5 14.75 14.5H9.25C8.55964 14.5 8 13.9404 8 13.25Z"
-        fill="#FFFFFF"
+        fill="rgb(var(--upload-doc-icon-detail))"
         fillOpacity="0.7"
       />
       <path
         d="M8 17C8 16.5858 8.33579 16.25 8.75 16.25H13.25C13.6642 16.25 14 16.5858 14 17C14 17.4142 13.6642 17.75 13.25 17.75H8.75C8.33579 17.75 8 17.4142 8 17Z"
-        fill="#FFFFFF"
+        fill="rgb(var(--upload-doc-icon-detail))"
         fillOpacity="0.45"
       />
     </svg>
@@ -425,20 +427,20 @@ function ErrorTooltip({
       )}
     >
       {/* 主容器 - 渐变背景 */}
-      <div className="overflow-hidden rounded-sm bg-gradient-to-br from-[#1e1e2e] via-[#232334] to-[#1a1a28] shadow-lg ring-1 ring-white/5">
+      <div className="overflow-hidden rounded-sm bg-[var(--upload-tooltip-bg)] shadow-lg ring-1 ring-[var(--upload-tooltip-ring)]">
         {/* 顶部装饰条 */}
-        <div className="h-0.5 bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500" />
+        <div className="h-0.5 bg-[var(--upload-tooltip-accent)]" />
 
         {/* 内容区 */}
         <div className="p-3">
           {/* 标题 */}
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-rose-400">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--upload-tooltip-title)]">
               错误详情
             </span>
             <button
               onClick={onClose}
-              className="flex h-5 w-5 items-center justify-center rounded text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300"
+              className="flex h-5 w-5 items-center justify-center rounded text-[var(--upload-tooltip-close)] transition-colors hover:bg-[var(--upload-tooltip-close-bg)] hover:text-[var(--upload-tooltip-close-hover)]"
               title="关闭"
               aria-label="关闭"
             >
@@ -460,7 +462,7 @@ function ErrorTooltip({
 
           {/* 错误内容 */}
           <div className="max-h-32 overflow-y-auto">
-            <p className="whitespace-pre-line text-[11px] leading-relaxed text-gray-400">
+            <p className="whitespace-pre-line text-[11px] leading-relaxed text-[var(--upload-tooltip-text)]">
               {error}
             </p>
           </div>
@@ -469,7 +471,7 @@ function ErrorTooltip({
 
       {/* 小三角箭头 */}
       <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2">
-        <div className="h-3 w-3 rotate-45 bg-[#1a1a28] ring-1 ring-white/5" />
+        <div className="h-3 w-3 rotate-45 bg-[var(--upload-tooltip-arrow-bg)] ring-1 ring-[var(--upload-tooltip-ring)]" />
       </div>
     </div>,
     document.body,
@@ -507,7 +509,7 @@ function ErrorStatus({ error }: { error?: string }) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className="truncate text-xs text-red-500">{shortError}</span>
+      <span className="truncate text-xs text-[var(--upload-error-text)]">{shortError}</span>
       {hasMoreDetails && (
         <>
           <button
@@ -517,8 +519,8 @@ function ErrorStatus({ error }: { error?: string }) {
             className={cn(
               "flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors",
               showTooltip
-                ? "bg-red-500/40 text-red-300"
-                : "bg-red-500/20 text-red-400 hover:bg-red-500/30",
+                ? "bg-[var(--upload-error-pill-bg-active)] text-[var(--upload-error-pill-text-active)]"
+                : "bg-[var(--upload-error-pill-bg)] text-[var(--upload-error-pill-text)] hover:bg-[var(--upload-error-pill-bg-hover)]",
             )}
             title={showTooltip ? "关闭详情" : "查看详情"}
           >

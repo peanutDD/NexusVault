@@ -344,6 +344,16 @@ impl FolderService {
             }
         }
 
+        if let Some(conflict_name) = repo
+            .find_move_file_name_conflict(user_id, &file_ids, folder_id)
+            .await?
+        {
+            return Err(AppError::Validation(format!(
+                "目标文件夹已存在同名文件：{}",
+                conflict_name
+            )));
+        }
+
         // 更新文件的 folder_id
         repo.move_files_to_folder(user_id, &file_ids, folder_id)
             .await

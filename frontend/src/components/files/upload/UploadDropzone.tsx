@@ -68,8 +68,8 @@ export default function UploadDropzone({
       className={cn(
         'relative mb-5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition-all duration-200',
         dragActive
-          ? 'border-[#6C5DD3] bg-[#6C5DD3]/10'
-          : 'border-[#3A3A4D] hover:border-[#4A4A5D]'
+          ? 'border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]'
+          : 'border-[var(--upload-drop-border)] bg-[var(--upload-drop-bg)] hover:border-[var(--upload-drop-border-hover)]'
       )}
     >
       <input
@@ -86,21 +86,21 @@ export default function UploadDropzone({
         <FileDocIcon />
       </div>
 
-      <p className="font-brand mb-1 text-sm font-normal tracking-widest text-white">
+      <p className="font-brand mb-1 text-sm font-normal tracking-widest text-[var(--upload-text)]">
         Drag and drop your files
       </p>
-      <p className="font-brand mb-5 text-xs font-normal tracking-widest text-gray-500">
+      <p className="font-brand mb-5 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]">
         Max. File size: {maxGB > 1 ? `${maxGB} GB` : `${Math.round(maxGB * 1024)} MB`}
       </p>
 
       <button
         type="button"
         onClick={handleSelectClick}
-        className="font-brand rounded-lg bg-[#2A2A3C] px-5 py-2.5 text-sm font-normal tracking-widest text-white transition-colors hover:bg-[#3A3A4D]"
+        className="font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-secondary-text)] transition-colors hover:bg-[var(--btn-secondary-bg-hover)]"
       >
         Select files
       </button>
-      <p className="font-brand mt-2 text-xs text-gray-500">
+      <p className="font-brand mt-2 text-xs text-[var(--upload-text-muted)]">
         支持多选；若多选只显示 1 个，请将多个文件<strong>拖入上方区域</strong>，或多次点击「Select files」逐个添加
       </p>
     </div>
@@ -120,12 +120,12 @@ function FileDocIcon() {
       {/* 文档主体 */}
       <path
         d="M12 6C12 4.89543 12.8954 4 14 4H28L36 12V42C36 43.1046 35.1046 44 34 44H14C12.8954 44 12 43.1046 12 42V6Z"
-        fill="#6C5DD3"
+        fill="rgb(var(--upload-doc-icon-main))"
       />
       {/* 折角 */}
       <path
         d="M28 4L36 12H30C28.8954 12 28 11.1046 28 10V4Z"
-        fill="#9B8FE8"
+        fill="rgb(var(--upload-doc-icon-fold))"
       />
     </svg>
   );

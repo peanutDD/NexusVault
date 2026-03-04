@@ -205,7 +205,7 @@ export default function FilePreview({
   return (
     <div
       ref={previewRootRef}
-      className="preview-cyberpunk-root fixed inset-0 z-50 flex flex-col overflow-hidden"
+      className="preview-cyberpunk-root fixed inset-0 z-50 flex flex-col overflow-hidden text-[var(--preview-text-primary)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="preview-title"
@@ -289,7 +289,7 @@ export default function FilePreview({
             "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
             "border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]",
             "shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]",
-            "bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-white/80 transition-all duration-200",
+            "bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-[var(--preview-icon)] transition-all duration-200",
             canGoPrev
               ? "hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer"
               : "opacity-30 cursor-not-allowed",
@@ -330,7 +330,7 @@ export default function FilePreview({
                 "shadow-[0_clamp(0.25rem,0.8vw,0.6rem)_clamp(0.5rem,1.5vw,1rem)_rgba(15,23,42,0.85)]",
               )}
             >
-              <span className="text-white/80">
+              <span className="text-[var(--preview-text-primary)]">
                 {currentIndex + 1} / {files.length}
               </span>
             </div>
@@ -395,7 +395,7 @@ export default function FilePreview({
             "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
             "border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]",
             "shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]",
-            "bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-white/80 transition-all duration-200",
+            "bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-[var(--preview-icon)] transition-all duration-200",
             canGoNext
               ? "hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer"
               : "opacity-30 cursor-not-allowed",
@@ -451,12 +451,12 @@ export default function FilePreview({
           >
             <h2
               id="preview-title"
-              className="truncate font-medium text-white text-[clamp(0.8rem,1.8vw,1rem)]"
+              className="truncate font-medium text-[var(--preview-text-primary)] text-[clamp(0.8rem,1.8vw,1rem)]"
               title={file.original_filename}
             >
               {displayFilename}
             </h2>
-            <p className="text-white/55 mt-[clamp(0.2rem,0.5vw,0.25rem)] text-[clamp(0.65rem,1.4vw,0.75rem)]">
+            <p className="text-[var(--preview-text-muted)] mt-[clamp(0.2rem,0.5vw,0.25rem)] text-[clamp(0.65rem,1.4vw,0.75rem)]">
               {formatFileSize(file.file_size)} ·{" "}
               {getMimeTypeLabel(file.mime_type, file.original_filename)} ·{" "}
               {formatPreviewDate(file.created_at)}

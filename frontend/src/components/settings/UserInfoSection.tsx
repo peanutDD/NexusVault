@@ -80,7 +80,7 @@ const UserInfoSection = memo(function UserInfoSection({
         <div>
           <label
             htmlFor="profile-username"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
           >
             Username
           </label>
@@ -94,16 +94,16 @@ const UserInfoSection = memo(function UserInfoSection({
             placeholder="3–50 characters"
             className={cn(
               'w-full rounded-xl px-4 py-2.5',
-              'bg-slate-950/40 border border-emerald-300/15',
-              'text-slate-100 placeholder:text-slate-500',
-              'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+              'bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]',
+              'text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]'
             )}
           />
         </div>
         <div>
           <label
             htmlFor="profile-email"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
+            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
           >
             Email
           </label>
@@ -115,9 +115,9 @@ const UserInfoSection = memo(function UserInfoSection({
               onChange={onEmailChange}
               className={cn(
                 'flex-1 rounded-xl px-4 py-2.5',
-                'bg-slate-950/40 border border-emerald-300/15',
-                'text-slate-100 placeholder:text-slate-500',
-                'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+                'bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]',
+                'text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]'
               )}
             />
             <button
@@ -126,8 +126,8 @@ const UserInfoSection = memo(function UserInfoSection({
               disabled={!canSendCode || sendingCode || sendCodeCooldown > 0 || loading}
               className={cn(
                 'font-brand shrink-0 rounded-xl px-4 py-2.5 text-[length:var(--settings-text-sm)] font-semibold tracking-wide whitespace-nowrap',
-                'border border-emerald-300/15 bg-emerald-500/20 text-emerald-200',
-                'hover:bg-emerald-500/30 hover:border-emerald-300/25',
+                'border border-[var(--settings-secondary-border)] bg-[var(--settings-secondary-bg)] text-[var(--settings-secondary-text)]',
+                'hover:bg-[var(--settings-secondary-bg-hover)] hover:border-[var(--settings-secondary-border-hover)]',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
             >
@@ -142,7 +142,7 @@ const UserInfoSection = memo(function UserInfoSection({
             <div className="mt-2">
               <label
                 htmlFor="profile-email-code"
-                className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-slate-200 mb-2"
+                className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
               >
                 Verification code
               </label>
@@ -157,17 +157,17 @@ const UserInfoSection = memo(function UserInfoSection({
                 maxLength={6}
                 className={cn(
                   'w-full rounded-xl px-4 py-2.5',
-                  'bg-slate-950/40 border border-emerald-300/15',
-                  'text-slate-100 placeholder:text-slate-500',
-                  'focus:outline-none focus:ring-2 focus:ring-emerald-300/25 focus:border-emerald-300/30'
+                  'bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]',
+                  'text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]',
+                  'focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]'
                 )}
               />
             </div>
           )}
         </div>
-        <div className="rounded-xl border border-emerald-300/10 bg-slate-950/30 p-4">
-          <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-slate-400">Registered</p>
-          <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-slate-100">
+        <div className="rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4">
+          <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-panel-label)]">Registered</p>
+          <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]">
             {user?.created_at
               ? new Date(user.created_at).toLocaleString()
               : '-'}
@@ -178,9 +178,8 @@ const UserInfoSection = memo(function UserInfoSection({
           disabled={loading}
           className={cn(
             'font-brand w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide',
-            'bg-gradient-to-r from-emerald-500/80 to-cyan-500/80',
-            'text-slate-950',
-            'hover:from-emerald-500 hover:to-cyan-500',
+            'bg-[var(--settings-action-bg)] text-[var(--settings-action-text)]',
+            'hover:bg-[var(--settings-action-bg-hover)]',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         >

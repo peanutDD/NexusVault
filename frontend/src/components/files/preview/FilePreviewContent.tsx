@@ -117,70 +117,70 @@ export function FilePreviewContent({
           }}
         >
           {/* 装饰光晕与描边，增强卡片层次 */}
-          <div className="absolute -inset-6 rounded-[32px] bg-gradient-to-br from-cyan-400/20 via-transparent to-fuchsia-500/20 blur-2xl" />
-          <div className="absolute -inset-4 rounded-[30px] border border-cyan-300/30 shadow-[0_0_40px_rgba(34,211,238,0.25)]" />
+          <div className="absolute -inset-6 rounded-[32px] bg-[var(--preview-orbit-glow)] blur-2xl" />
+          <div className="absolute -inset-4 rounded-[30px] border border-[var(--preview-orbit-border)] shadow-[var(--preview-orbit-shadow)]" />
           <div className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 translate-y-[clamp(0.55rem,1.6vw,1rem)] [transform-style:preserve-3d]">
             {/* Neck Component */}
             <div className="relative mx-auto h-[clamp(1.2rem,3.2vw,2.1rem)] w-[clamp(1.6rem,3.8vw,2.5rem)] [transform-style:preserve-3d]">
               {/* Thickness layers for neck */}
-              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-transparent border border-slate-700/50 [transform:translateZ(-4px)]" />
-              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-transparent border border-slate-700/50 [transform:translateZ(-8px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-transparent border border-[var(--preview-shell-border)] [transform:translateZ(-4px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-transparent border border-[var(--preview-shell-border)] [transform:translateZ(-8px)]" />
               
               {/* Front Neck */}
-              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] border border-emerald-300/45 bg-gradient-to-b from-emerald-200/40 via-emerald-300/20 to-emerald-500/40 shadow-[0_12px_24px_rgba(10,255,160,0.38)] [transform:translateZ(0px)]">
-                <div className="absolute inset-[clamp(0.18rem,0.45vw,0.3rem)] rounded-[clamp(0.24rem,0.6vw,0.38rem)] border border-emerald-100/30 bg-gradient-to-br from-white/20 via-emerald-100/10 to-transparent" />
-                <div className="absolute inset-x-[clamp(0.2rem,0.55vw,0.34rem)] bottom-[clamp(0.12rem,0.3vw,0.22rem)] h-[clamp(0.18rem,0.45vw,0.28rem)] rounded-full bg-emerald-900/40" />
+              <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] border border-[var(--preview-neck-front-border)] bg-[var(--preview-neck-front-bg)] shadow-[var(--preview-neck-front-shadow)] [transform:translateZ(0px)]">
+                <div className="absolute inset-[clamp(0.18rem,0.45vw,0.3rem)] rounded-[clamp(0.24rem,0.6vw,0.38rem)] border border-[var(--preview-neck-inner-border)] bg-[var(--preview-neck-inner-bg)]" />
+                <div className="absolute inset-x-[clamp(0.2rem,0.55vw,0.34rem)] bottom-[clamp(0.12rem,0.3vw,0.22rem)] h-[clamp(0.18rem,0.45vw,0.28rem)] rounded-full bg-[var(--preview-neck-bottom-bg)]" />
               </div>
             </div>
 
             {/* Wide Base Component */}
             <div className="relative mx-auto -mt-[clamp(0.18rem,0.38vw,0.32rem)] h-[clamp(0.55rem,1.3vw,0.9rem)] w-[clamp(5.2rem,12.5vw,7rem)] [transform-style:preserve-3d]">
               {/* Thickness layers for wide base */}
-              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-transparent border border-slate-700/50 [transform:translateZ(-4px)]" />
-              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-transparent border border-slate-700/50 [transform:translateZ(-8px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-transparent border border-[var(--preview-shell-border)] [transform:translateZ(-4px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-transparent border border-[var(--preview-shell-border)] [transform:translateZ(-8px)]" />
 
               {/* Front Wide Base */}
-              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] border border-emerald-200/35 bg-gradient-to-r from-emerald-400/40 via-emerald-200/40 to-emerald-400/40 shadow-[0_14px_28px_rgba(10,255,160,0.45)] [transform:translateZ(0px)]">
-                <div className="absolute inset-[clamp(0.12rem,0.3vw,0.2rem)] rounded-[clamp(0.6rem,1.4vw,0.95rem)] border border-white/20 bg-gradient-to-r from-white/10 via-transparent to-white/5" />
-                <div className="absolute left-1/2 top-0 h-[clamp(0.2rem,0.5vw,0.32rem)] w-[clamp(3.2rem,7.5vw,4.4rem)] -translate-x-1/2 rounded-b-full bg-emerald-600/40 blur-[clamp(4px,1vw,8px)]" />
+              <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] border border-[var(--preview-base-border)] bg-[var(--preview-base-bg)] shadow-[var(--preview-base-shadow)] [transform:translateZ(0px)]">
+                <div className="absolute inset-[clamp(0.12rem,0.3vw,0.2rem)] rounded-[clamp(0.6rem,1.4vw,0.95rem)] border border-[var(--preview-base-inner-border)] bg-[var(--preview-base-inner-bg)]" />
+                <div className="absolute left-1/2 top-0 h-[clamp(0.2rem,0.5vw,0.32rem)] w-[clamp(3.2rem,7.5vw,4.4rem)] -translate-x-1/2 rounded-b-full bg-[var(--preview-base-top-glow)] blur-[clamp(4px,1vw,8px)]" />
               </div>
             </div>
 
-            <div className="mx-auto -mt-[clamp(0.35rem,0.6vw,0.55rem)] h-[clamp(0.3rem,0.8vw,0.5rem)] w-[clamp(4.2rem,10vw,5.8rem)] rounded-full bg-emerald-300/25 blur-[clamp(6px,1.6vw,12px)]" />
+            <div className="mx-auto -mt-[clamp(0.35rem,0.6vw,0.55rem)] h-[clamp(0.3rem,0.8vw,0.5rem)] w-[clamp(4.2rem,10vw,5.8rem)] rounded-full bg-[var(--preview-base-ambient)] blur-[clamp(6px,1.6vw,12px)]" />
           </div>
           <div className="relative h-full w-full [transform-style:preserve-3d]" style={{ '--t-unit': '0.6vmin' } as React.CSSProperties}>
             {/* ============================= */}
             {/* 3D 侧面与背板（模拟厚度 - 响应式） */}
             {/* ============================= */}
             {/* 侧面层叠 - 使用多个 translateZ 层模拟实体厚度 - 全透明玻璃边框 */}
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-1))] border border-white/10" />
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-2))] border border-white/10" />
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-3))] border border-white/10" />
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-4))] border border-white/10" />
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-5))] border border-white/10" />
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-6))] border border-white/10" />
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-7))] border border-white/10" />
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-8))] border border-white/10" />
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-9))] border border-white/10" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-1))] border border-[var(--preview-depth-border)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-2))] border border-[var(--preview-depth-border)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-3))] border border-[var(--preview-depth-border)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-4))] border border-[var(--preview-depth-border)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-5))] border border-[var(--preview-depth-border)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-6))] border border-[var(--preview-depth-border)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-7))] border border-[var(--preview-depth-border)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-8))] border border-[var(--preview-depth-border)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent [transform:translateZ(calc(var(--t-unit)*-9))] border border-[var(--preview-depth-border)]" />
             
             {/* 背板 - 最底层 - 全透明，仅保留边框 */}
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent shadow-[0_30px_90px_rgba(0,0,0,0.5)] [transform:translateZ(calc(var(--t-unit)*-10))]">
-               <div className="absolute inset-0 rounded-[26px] ring-1 ring-white/10" />
+            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-transparent shadow-[var(--preview-depth-shadow)] [transform:translateZ(calc(var(--t-unit)*-10))]">
+               <div className="absolute inset-0 rounded-[26px] ring-1 ring-[var(--preview-depth-ring)]" />
             </div>
 
              {/* ============================= */}
              {/* 正面屏幕（内容区） */}
              {/* ============================= */}
             {/* 全透明背景，仅保留边框和模糊 */}
-            <div className="relative h-full w-full overflow-hidden rounded-[26px] border border-white/20 bg-transparent backdrop-blur-md shadow-2xl [transform:translateZ(0px)]">
+            <div className="relative h-full w-full overflow-hidden rounded-[26px] border border-[var(--preview-screen-border)] bg-transparent backdrop-blur-md shadow-2xl [transform:translateZ(0px)]">
 
              {/* 浮空标签 - SSTV (赛博朋克风 + 响应式位置 - 右移) */}
              {!loading && !error && supported ? (
                <div className="pointer-events-none absolute left-[clamp(1.2rem,3vw,2.5rem)] top-[clamp(0.6rem,1.6vw,1.2rem)] z-[100] [transform:translateZ(60px)]">
-                 <div className="text-[clamp(0.7rem,1.8vw,1.1rem)] font-semibold uppercase tracking-[0.35em] bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">
+                <div className="text-[clamp(0.7rem,1.8vw,1.1rem)] font-semibold uppercase tracking-[0.35em] bg-[var(--preview-label-text)] bg-clip-text text-transparent drop-shadow-[var(--preview-label-text-shadow)]">
                    SSTV
                  </div>
-                 <div className="mt-[clamp(0.1rem,0.4vw,0.25rem)] h-[clamp(0.12rem,0.3vw,0.18rem)] w-[clamp(2.8rem,7vw,4.6rem)] rounded-full bg-gradient-to-r from-emerald-400/80 via-purple-500/80 to-emerald-400/80 shadow-[0_0_12px_rgba(16,255,160,0.4)]" />
+                <div className="mt-[clamp(0.1rem,0.4vw,0.25rem)] h-[clamp(0.12rem,0.3vw,0.18rem)] w-[clamp(2.8rem,7vw,4.6rem)] rounded-full bg-[var(--preview-label-bar)] shadow-[var(--preview-label-bar-shadow)]" />
                </div>
              ) : null}
       {/* ============================= */}
@@ -188,25 +188,25 @@ export function FilePreviewContent({
       {/* ============================= */}
       {loading ? (
         <div className="flex h-full w-full flex-col items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
-          <SpinnerIcon className="h-12 w-12 text-purple-500" />
-          <span className="text-sm text-white/60">加载中…</span>
+          <SpinnerIcon className="h-12 w-12 text-[var(--preview-spinner)]" />
+          <span className="text-sm text-[var(--preview-text-muted)]">加载中…</span>
         </div>
       ) : null}
 
       {error && !loading ? (
         <div
-          className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-2xl bg-white/5 px-8 py-10 text-center"
+          className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-2xl bg-[var(--preview-surface-soft)] px-8 py-10 text-center"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 明确错误提示 + 快速关闭入口 */}
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--preview-error-icon-bg)]">
             <ErrorIcon />
           </div>
-          <p className="text-lg text-white">{error}</p>
+          <p className="text-lg text-[var(--preview-text-primary)]">{error}</p>
           <button
             type="button"
             onClick={onClose}
-            className="mt-2 rounded-full bg-white/10 px-6 py-2.5 text-sm text-white transition-colors hover:bg-white/20"
+            className="mt-2 rounded-full bg-[var(--preview-action-bg)] px-6 py-2.5 text-sm text-[var(--preview-text-primary)] transition-colors hover:bg-[var(--preview-action-bg-hover)]"
           >
             关闭
           </button>
@@ -243,8 +243,8 @@ export function FilePreviewContent({
               </div>
               {/* 图片未完成解码时保持中心 Loading，避免抖动 */}
               {!imageLoaded ? (
-                <div className="absolute flex items-center justify-center inset-0">
-                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-purple-500" />
+                  <div className="absolute flex items-center justify-center inset-0">
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--preview-loading-border)] border-t-[var(--preview-loading-border-top)]" />
                 </div>
               ) : null}
             </div>
@@ -257,8 +257,8 @@ export function FilePreviewContent({
             <Suspense
               fallback={
                 <div className="flex flex-col items-center gap-4">
-                  <SpinnerIcon className="h-12 w-12 text-purple-500" />
-                  <span className="text-sm text-white/60">加载 PDF…</span>
+                  <SpinnerIcon className="h-12 w-12 text-[var(--preview-spinner)]" />
+                  <span className="text-sm text-[var(--preview-text-muted)]">加载 PDF…</span>
                 </div>
               }
             >
@@ -299,10 +299,10 @@ export function FilePreviewContent({
           {isAudio && blobUrl ? (
             <div className="flex h-full w-full flex-col items-center justify-center pointer-events-none">
               <div
-                className="pointer-events-auto flex flex-col items-center gap-6 rounded-2xl bg-white/5 px-12 py-10"
+                className="pointer-events-auto flex flex-col items-center gap-6 rounded-2xl bg-[var(--preview-surface-soft)] px-12 py-10"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-purple-500/20">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--preview-audio-icon-bg)]">
                   <AudioIcon />
                 </div>
                 <audio
@@ -328,15 +328,15 @@ export function FilePreviewContent({
                 className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,60rem)] overflow-hidden rounded-none bg-transparent shadow-none"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="border-b border-white/10">
-                  <div className="relative overflow-hidden bg-slate-950/90 backdrop-blur-md">
-                    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-emerald-300/80" />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-fuchsia-500/10" />
-                    <div className="pointer-events-none absolute inset-0 opacity-90 [background:radial-gradient(closest-side_at_25%_40%,rgba(110,231,183,0.20),transparent_55%),radial-gradient(closest-side_at_80%_35%,rgba(232,121,249,0.16),transparent_60%)]" />
+                <div className="border-b border-[var(--preview-text-toolbar-border)]">
+                  <div className="relative overflow-hidden bg-[var(--preview-text-toolbar-bg)] backdrop-blur-md">
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[var(--preview-text-toolbar-topline)]" />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-[var(--preview-text-toolbar-bottomline)]" />
+                    <div className="pointer-events-none absolute inset-0 bg-[var(--preview-text-toolbar-glow)]" />
+                    <div className="pointer-events-none absolute inset-0 opacity-90 [background:var(--preview-text-toolbar-ambient)]" />
                     <div className="relative flex h-14 items-center justify-end px-[clamp(0.6rem,1.2vw,1rem)]">
                       <span
-                        className="text-[clamp(0.5rem,0.45vw,0.65rem)] font-brand font-normal tracking-wider text-emerald-200/60 drop-shadow-[0_0_10px_rgba(110,231,183,0.35)]"
+                        className="text-[clamp(0.5rem,0.45vw,0.65rem)] font-brand font-normal tracking-wider text-[var(--preview-text-muted)] drop-shadow-[var(--preview-text-toolbar-shadow)]"
                       >
                         {textContent.split('\n').length} 行
                       </span>
@@ -347,13 +347,15 @@ export function FilePreviewContent({
                 <div
                   className={cn(
                     'h-[calc(100%-56px)] overflow-auto p-4 text-sm leading-relaxed',
-                    isMarkdown ? 'bg-transparent text-gray-100' : 'text-gray-100'
+                    isMarkdown
+                      ? 'bg-transparent text-[var(--preview-text-primary)]'
+                      : 'text-[var(--preview-text-primary)]'
                   )}
                 >
                   {isMarkdown ? (
-                    <MarkdownPreview content={textContent} theme="dark" />
+                    <MarkdownPreview content={textContent} />
                   ) : (
-                    <pre className="h-full overflow-auto text-sm leading-relaxed text-gray-200 whitespace-pre-wrap font-mono">
+                    <pre className="h-full overflow-auto text-sm leading-relaxed text-[var(--preview-text-primary)] whitespace-pre-wrap font-mono">
                       {textContent}
                     </pre>
                   )}
@@ -370,13 +372,13 @@ export function FilePreviewContent({
       {!loading && !error && !supported ? (
         <div className="flex h-full w-full items-center justify-center pointer-events-none">
           <article
-            className="pointer-events-auto group relative rounded-md transition-colors bg-purple-900/40 backdrop-blur-md hover:bg-purple-800/50 max-w-[min(92vw,22rem)] scale-[2]"
+            className="pointer-events-auto group relative rounded-md transition-colors bg-[var(--preview-unsupported-bg)] backdrop-blur-md hover:bg-[var(--preview-unsupported-hover-bg)] max-w-[min(92vw,22rem)] scale-[2]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-3">
               {/* 文件类型图标 */}
-              <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-black/20">
-                <div className="flex h-full w-full items-center justify-center rounded overflow-hidden shrink-0 bg-purple-900/30">
+              <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-[var(--preview-unsupported-thumb-bg)]">
+                <div className="flex h-full w-full items-center justify-center rounded overflow-hidden shrink-0 bg-[var(--preview-unsupported-thumb-inner-bg)]">
                   <FileIcon />
                 </div>
               </div>
@@ -384,17 +386,17 @@ export function FilePreviewContent({
               <div className="flex w-full items-center justify-center">
                 <div className="min-w-0 flex-1 space-y-0.5 text-center">
                   <p
-                    className="truncate whitespace-nowrap text-[clamp(7px,2vw,9px)] font-medium text-white"
+                    className="truncate whitespace-nowrap text-[clamp(7px,2vw,9px)] font-medium text-[var(--preview-text-primary)]"
                     title={file.original_filename}
                   >
                     不支持预览
                   </p>
-                  <p className="flex items-center justify-center gap-1 whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-gray-400">
+                  <p className="flex items-center justify-center gap-1 whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-[var(--preview-text-muted)]">
                     <span>{formatFileSize(file.file_size)}</span>
-                    <span className="h-0.5 w-0.5 rounded-full bg-gray-600" aria-hidden />
+                    <span className="h-0.5 w-0.5 rounded-full bg-[var(--preview-divider)]" aria-hidden />
                     <span>{getMimeTypeLabel(file.mime_type, file.original_filename)}</span>
                   </p>
-                  <p className="whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-gray-500">
+                  <p className="whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-[var(--preview-text-muted)]">
                     {formatDate(file.created_at)}
                   </p>
                 </div>

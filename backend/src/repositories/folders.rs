@@ -324,6 +324,47 @@ impl<'a> FoldersRepo<'a> {
         Ok(result.rows_affected())
     }
 
+    pub async fn find_move_file_name_conflict(
+        &self,
+        user_id: Uuid,
+        file_ids: &[Uuid],
+        folder_id: Option<Uuid>,
+    ) -> Result<Option<String>, AppError> {
+        let conflict: Option<String> = sqlx::query_scalar(
+            r#"
+            WITH moving AS (
+                SELECT id, original_filename
+                FROM files
+                WHERE id = ANY($1) AND user_id = $2
+            ),
+            dupes AS (
+                SELECT original_filename
+                FROM moving
+                GROUP BY original_filename
+                HAVING COUNT(*) > 1
+            ),
+            conflicts AS (
+                SELECT f.original_filename
+                FROM files f
+                JOIN moving m ON f.original_filename = m.original_filename
+                WHERE f.user_id = $2
+                  AND f.folder_id IS NOT DISTINCT FROM $3
+                  AND f.id <> ALL($1)
+            )
+            SELECT original_filename FROM dupes
+            UNION
+            SELECT original_filename FROM conflicts
+            LIMIT 1
+            "#,
+        )
+        .bind(file_ids)
+        .bind(user_id)
+        .bind(folder_id)
+        .fetch_optional(self.pool)
+        .await?;
+        Ok(conflict)
+    }
+
     /// 移动文件到文件夹
     pub async fn move_files_to_folder(
         &self,

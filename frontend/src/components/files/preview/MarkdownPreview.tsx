@@ -12,7 +12,6 @@ import { useClipboard } from '../../../hooks/useClipboard';
 
 interface MarkdownPreviewProps {
   content: string;
-  theme: 'dark';
 }
 
 function toPlainText(node: ReactNode): string {
@@ -72,8 +71,7 @@ const markdownSanitizeSchema = {
   },
 };
 
-export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps) {
-  const isDark = theme === 'dark';
+export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
   const headingCounts = new Map<string, number>();
   const getHeadingId = (text: string) => {
     const base = slugifyHeading(text);
@@ -92,108 +90,57 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
       ]}
       components={{
         h1: ({ children, ...props }) => (
-          <Heading
-            level={1}
-            isDark={isDark}
-            getHeadingId={getHeadingId}
-            {...props}
-          >
+          <Heading level={1} getHeadingId={getHeadingId} {...props}>
             {children as ReactNode}
           </Heading>
         ),
         h2: ({ children, ...props }) => (
-          <Heading
-            level={2}
-            isDark={isDark}
-            getHeadingId={getHeadingId}
-            {...props}
-          >
+          <Heading level={2} getHeadingId={getHeadingId} {...props}>
             {children as ReactNode}
           </Heading>
         ),
         h3: ({ children, ...props }) => (
-          <Heading
-            level={3}
-            isDark={isDark}
-            getHeadingId={getHeadingId}
-            {...props}
-          >
+          <Heading level={3} getHeadingId={getHeadingId} {...props}>
             {children as ReactNode}
           </Heading>
         ),
         h4: ({ children, ...props }) => (
-          <Heading
-            level={4}
-            isDark={isDark}
-            getHeadingId={getHeadingId}
-            {...props}
-          >
+          <Heading level={4} getHeadingId={getHeadingId} {...props}>
             {children as ReactNode}
           </Heading>
         ),
         h5: ({ children, ...props }) => (
-          <Heading
-            level={5}
-            isDark={isDark}
-            getHeadingId={getHeadingId}
-            {...props}
-          >
+          <Heading level={5} getHeadingId={getHeadingId} {...props}>
             {children as ReactNode}
           </Heading>
         ),
         h6: ({ children, ...props }) => (
-          <Heading
-            level={6}
-            isDark={isDark}
-            getHeadingId={getHeadingId}
-            {...props}
-          >
+          <Heading level={6} getHeadingId={getHeadingId} {...props}>
             {children as ReactNode}
           </Heading>
         ),
         p: ({ ...props }) => (
-          <p
-            className={`mb-2 text-xs ${
-              isDark ? 'text-gray-100' : 'text-slate-800'
-            }`}
-            {...props}
-          />
+          <p className="mb-2 text-xs text-[var(--preview-markdown-text)]" {...props} />
         ),
         ul: ({ ...props }) => (
-          <ul
-            className={`mb-2 list-disc pl-5 text-xs ${
-              isDark ? 'text-gray-100' : 'text-slate-800'
-            }`}
-            {...props}
-          />
+          <ul className="mb-2 list-disc pl-5 text-xs text-[var(--preview-markdown-text)]" {...props} />
         ),
         ol: ({ ...props }) => (
-          <ol
-            className={`mb-2 list-decimal pl-5 text-xs ${
-              isDark ? 'text-gray-100' : 'text-slate-800'
-            }`}
-            {...props}
-          />
+          <ol className="mb-2 list-decimal pl-5 text-xs text-[var(--preview-markdown-text)]" {...props} />
         ),
         li: ({ ...props }) => <li className="mb-1" {...props} />,
         code: ({ inline, className, children, ...props }) => {
           const safeChildren = children as ReactNode;
           return inline ? (
             <code
-              className={`rounded px-1 py-0.5 text-[0.7rem] font-mono ${
-                isDark
-                  ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-inset ring-emerald-400/20'
-                  : 'bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-200'
-              }`}
+              className="rounded px-1 py-0.5 text-[0.7rem] font-mono bg-[var(--preview-markdown-code-inline-bg)] text-[var(--preview-markdown-code-inline-text)] ring-1 ring-inset ring-[var(--preview-markdown-code-inline-ring)]"
               {...props}
             >
               {safeChildren}
             </code>
           ) : (
             <code
-              className={`text-xs font-mono ${
-                isDark ? 'text-emerald-50/95' : 'text-slate-900'
-              } ${className ?? ''}`}
+              className={`text-xs font-mono text-[var(--preview-markdown-code-text)] ${className ?? ''}`}
               {...props}
             >
               {safeChildren}
@@ -211,7 +158,6 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
           if (child) {
             return (
               <CodeBlock
-                isDark={isDark}
                 language={language}
                 codeClassName={className}
                 code={codeChildren}
@@ -220,11 +166,7 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
           }
           return (
             <pre
-              className={`mb-3 overflow-auto rounded-md p-3 text-xs font-mono ${
-                isDark
-                  ? 'border border-emerald-400/25 bg-gradient-to-br from-emerald-950/50 via-slate-950/60 to-indigo-950/50 text-emerald-50/95'
-                  : 'border border-emerald-200 bg-gradient-to-br from-slate-100 via-emerald-50 to-cyan-100 text-slate-900'
-              }`}
+              className="mb-3 overflow-auto rounded-md border border-[var(--preview-markdown-pre-border)] bg-[var(--preview-markdown-pre-bg)] p-3 text-xs font-mono text-[var(--preview-markdown-pre-text)]"
               {...props}
             >
               {children as ReactNode}
@@ -233,21 +175,13 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
         },
         blockquote: ({ ...props }) => (
           <blockquote
-            className={`mb-2 border-l-2 pl-3 text-xs ${
-              isDark
-                ? 'border-emerald-400/60 text-emerald-50/90'
-                : 'border-emerald-500/70 text-slate-800'
-            }`}
+            className="mb-2 border-l-2 pl-3 text-xs border-[var(--preview-markdown-blockquote-border)] text-[var(--preview-markdown-blockquote-text)]"
             {...props}
           />
         ),
         a: ({ ...props }) => (
           <a
-            className={`text-xs underline ${
-              isDark
-                ? 'text-emerald-300 hover:text-cyan-200'
-                : 'text-emerald-700 hover:text-cyan-600'
-            }`}
+            className="text-xs underline text-[var(--preview-markdown-link)] hover:text-[var(--preview-markdown-link-hover)]"
             target="_blank"
             rel="noreferrer"
             {...props}
@@ -279,7 +213,7 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
               loading="lazy"
               className={cn(
                 'my-3 mx-auto block max-w-full max-h-[60vh] rounded-md border object-contain',
-                isDark ? 'border-emerald-400/20 bg-emerald-950/10' : 'border-emerald-200 bg-white',
+                'border-[var(--preview-markdown-img-border)] bg-[var(--preview-markdown-img-bg)]',
                 typeof className === 'string' ? className : undefined
               )}
               {...rest}
@@ -288,33 +222,23 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
         },
         table: ({ ...props }) => (
           <div
-            className={`mb-3 overflow-auto rounded-md border ${
-              isDark ? 'border-emerald-400/20' : 'border-emerald-200'
-            }`}
+            className="mb-3 overflow-auto rounded-md border border-[var(--preview-markdown-table-border)]"
           >
             <table
-              className={`min-w-full text-[0.7rem] ${
-                isDark ? 'text-emerald-50/90' : 'text-slate-800'
-              }`}
+              className="min-w-full text-[0.7rem] text-[var(--preview-markdown-table-text)]"
               {...props}
             />
           </div>
         ),
         th: ({ ...props }) => (
           <th
-            className={`border-b px-2 py-1 text-left font-semibold ${
-              isDark
-                ? 'border-emerald-400/20 bg-emerald-400/10'
-                : 'border-emerald-200 bg-emerald-50'
-            }`}
+            className="border-b px-2 py-1 text-left font-semibold border-[var(--preview-markdown-th-border)] bg-[var(--preview-markdown-th-bg)]"
             {...props}
           />
         ),
         td: ({ ...props }) => (
           <td
-            className={`border-b px-2 py-1 align-top ${
-              isDark ? 'border-emerald-400/10' : 'border-emerald-100'
-            }`}
+            className="border-b px-2 py-1 align-top border-[var(--preview-markdown-td-border)]"
             {...props}
           />
         ),
@@ -327,13 +251,11 @@ export default function MarkdownPreview({ content, theme }: MarkdownPreviewProps
 
 function Heading({
   level,
-  isDark,
   getHeadingId,
   children,
   ...props
 }: {
   level: 1 | 2 | 3 | 4 | 5 | 6;
-  isDark: boolean;
   getHeadingId: (text: string) => string;
   children: ReactNode;
   [key: string]: unknown;
@@ -343,7 +265,7 @@ function Heading({
   const Tag = `h${level}` as const;
   const sizeClass =
     level <= 3 ? 'text-sm' : 'text-xs';
-  const colorClass = isDark ? 'text-emerald-50' : 'text-slate-900';
+  const colorClass = 'text-[var(--preview-markdown-heading)]';
 
   return (
     <Tag
@@ -356,7 +278,7 @@ function Heading({
         href={`#${id}`}
         className={cn(
           'ml-1 inline-flex select-none items-center opacity-0 transition-opacity group-hover:opacity-100',
-          isDark ? 'text-emerald-300/50 hover:text-cyan-200' : 'text-emerald-600/70 hover:text-cyan-600'
+          'text-[var(--preview-markdown-heading-link)] hover:text-[var(--preview-markdown-heading-link-hover)]'
         )}
         aria-label="Heading link"
       >
@@ -367,12 +289,10 @@ function Heading({
 }
 
 function CodeBlock({
-  isDark,
   language,
   codeClassName,
   code,
 }: {
-  isDark: boolean;
   language?: string;
   codeClassName?: string;
   code: ReactNode;
@@ -384,25 +304,19 @@ function CodeBlock({
     <div
       className={cn(
         'mb-3 overflow-hidden rounded-md border',
-        isDark
-          ? 'border-emerald-400/25 bg-gradient-to-br from-emerald-950/50 via-slate-950/60 to-indigo-950/50'
-          : 'border-emerald-200 bg-gradient-to-br from-slate-100 via-emerald-50 to-cyan-100'
+        'border-[var(--preview-markdown-codeblock-border)] bg-[var(--preview-markdown-codeblock-bg)]'
       )}
     >
       <div
         className={cn(
           'flex items-center justify-between gap-3 px-3 py-2',
-          isDark
-            ? 'bg-gradient-to-r from-emerald-400/10 via-cyan-400/10 to-fuchsia-400/10'
-            : 'bg-gradient-to-r from-emerald-600/10 via-cyan-600/10 to-fuchsia-600/10'
+          'bg-[var(--preview-markdown-codeblock-header-bg)]'
         )}
       >
         <span
           className={cn(
             'rounded px-2 py-1 text-[0.7rem] font-mono',
-            isDark
-              ? 'bg-emerald-400/10 text-emerald-100/80'
-              : 'bg-emerald-500/10 text-emerald-800/80'
+            'bg-[var(--preview-markdown-codeblock-label-bg)] text-[var(--preview-markdown-codeblock-label-text)]'
           )}
         >
           {language ?? 'text'}
@@ -412,13 +326,9 @@ function CodeBlock({
           onClick={() => void copy(rawText)}
           className={cn(
             'rounded px-2 py-1 text-[0.7rem] transition-colors',
-            isDark
-              ? copied
-                ? 'bg-emerald-400/25 text-emerald-100'
-                : 'bg-emerald-400/15 text-emerald-100/85 hover:bg-emerald-400/25 hover:text-emerald-50'
-              : copied
-                ? 'bg-emerald-600/15 text-emerald-800'
-                : 'bg-emerald-600/10 text-emerald-800/80 hover:bg-emerald-600/15 hover:text-emerald-900'
+            copied
+              ? 'bg-[var(--preview-markdown-codeblock-btn-copied-bg)] text-[var(--preview-markdown-codeblock-btn-copied-text)]'
+              : 'bg-[var(--preview-markdown-codeblock-btn-bg)] text-[var(--preview-markdown-codeblock-btn-text)] hover:bg-[var(--preview-markdown-codeblock-btn-hover-bg)] hover:text-[var(--preview-markdown-codeblock-btn-hover-text)]'
           )}
         >
           {copied ? 'Copied' : 'Copy'}
@@ -427,7 +337,7 @@ function CodeBlock({
       <pre
         className={cn(
           'overflow-auto p-3 text-xs font-mono',
-          isDark ? 'text-emerald-50/95' : 'text-slate-900'
+          'text-[var(--preview-markdown-code-text)]'
         )}
       >
         <code className={codeClassName} style={{ background: 'transparent' }}>
