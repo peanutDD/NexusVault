@@ -11,6 +11,65 @@ interface ErrorMessageProps {
   autoDismissMs?: number;
 }
 
+const textEncoder = new TextEncoder();
+
+const getByteLength = (value: string) => textEncoder.encode(value).length;
+
+const truncateMiddleByBytes = (value: string, maxBytes: number) => {
+  if (maxBytes <= 0 || getByteLength(value) <= maxBytes) return value;
+  const ellipsis = "...";
+  const remainingBytes = maxBytes - getByteLength(ellipsis);
+  if (remainingBytes <= 0) return ellipsis;
+  const chars = [...value];
+  let left = 0;
+  let right = chars.length - 1;
+  let leftPart = "";
+  let rightPart = "";
+  let usedBytes = 0;
+  let takeLeft = true;
+
+  while (left <= right) {
+    const nextChar = takeLeft ? chars[left] : chars[right];
+    const nextBytes = getByteLength(nextChar);
+    if (usedBytes + nextBytes > remainingBytes) break;
+    if (takeLeft) {
+      leftPart += nextChar;
+      left += 1;
+    } else {
+      rightPart = `${nextChar}${rightPart}`;
+      right -= 1;
+    }
+    usedBytes += nextBytes;
+    takeLeft = !takeLeft;
+  }
+
+  return `${leftPart}${ellipsis}${rightPart}`;
+};
+
+const normalizeMessage = (message: string) =>
+  message
+    .replace(/「([^」]+)」/g, (_, fileName: string) => {
+      return `「${truncateMiddleByBytes(fileName, 25)}」`;
+    })
+    .replace(/“([^”]+)”/g, (_, fileName: string) => {
+      return `“${truncateMiddleByBytes(fileName, 25)}”`;
+    })
+    .replace(/"([^"]+)"/g, (_, fileName: string) => {
+      return `"${truncateMiddleByBytes(fileName, 25)}"`;
+    })
+    .replace(/'([^']+)'/g, (_, fileName: string) => {
+      return `'${truncateMiddleByBytes(fileName, 25)}'`;
+    })
+    .replace(/‘([^’]+)’/g, (_, fileName: string) => {
+      return `‘${truncateMiddleByBytes(fileName, 25)}’`;
+    })
+    .replace(
+      /(^|\s)([^\s,，。；：:]+?\.[A-Za-z0-9]{1,10})(?=$|\s|,|，|。|；|：|:)/g,
+      (_, prefix: string, fileName: string) => {
+        return `${prefix}${truncateMiddleByBytes(fileName, 25)}`;
+      },
+    );
+
 const typeConfig = {
   error: {
     icon: AlertCircle,
@@ -47,6 +106,7 @@ export default function ErrorMessage({
 }: ErrorMessageProps) {
   const config = typeConfig[type];
   const Icon = config.icon;
+  const displayMessage = normalizeMessage(message);
 
   useEffect(() => {
     if (autoDismissMs != null && autoDismissMs > 0 && onClose) {
@@ -58,9 +118,9 @@ export default function ErrorMessage({
   return (
     <div
       className={cn(
-        "relative w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4",
+        "relative w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4 text-xs",
         "bg-[var(--notice-surface-bg)] backdrop-blur-xl",
-        "shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.5)]",
+        "shadow-[0_0_0_1px_rgba(var(--rgb-white),0.08),0_12px_40px_rgba(var(--rgb-black),0.5)]",
         config.borderClass,
         "animate-fade-in transition-all duration-200",
         className,
@@ -102,12 +162,12 @@ export default function ErrorMessage({
         <div className="min-w-0 flex-1" data-oid="hakyjqu">
           <p
             className={cn(
-              "text-sm font-medium tracking-wide",
+              "text-[10px] font-medium tracking-wide",
               config.iconClass,
             )}
             data-oid="pfrbya2"
           >
-            {message}
+            {displayMessage}
           </p>
         </div>
         {onClose && (
