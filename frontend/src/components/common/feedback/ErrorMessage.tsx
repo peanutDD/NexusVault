@@ -1,11 +1,11 @@
-import { useEffect } from 'react';
-import { AlertCircle, CheckCircle2, X } from 'lucide-react';
-import { cn } from '../../../utils/cn';
+import { useEffect } from "react";
+import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { cn } from "../../../utils/cn";
 
 interface ErrorMessageProps {
   message: string;
   onClose?: () => void;
-  type?: 'error' | 'warning' | 'info';
+  type?: "error" | "warning" | "info";
   className?: string;
   /** 多少毫秒后自动关闭，不传则不自动关闭 */
   autoDismissMs?: number;
@@ -14,31 +14,34 @@ interface ErrorMessageProps {
 const typeConfig = {
   error: {
     icon: AlertCircle,
-    iconClass: 'text-[var(--notice-error)]',
-    borderClass: 'border-[var(--notice-error-border)]',
-    accentClass: 'from-[var(--notice-error-accent)] via-transparent to-transparent',
-    hairlineClass: 'via-[var(--notice-error-hairline)]',
+    iconClass: "text-[var(--notice-error)]",
+    borderClass: "border-[var(--notice-error-border)]",
+    accentClass:
+      "from-[var(--notice-error-accent)] via-transparent to-transparent",
+    hairlineClass: "via-[var(--notice-error-hairline)]",
   },
   warning: {
     icon: AlertCircle,
-    iconClass: 'text-[var(--notice-warning)]',
-    borderClass: 'border-[var(--notice-warning-border)]',
-    accentClass: 'from-[var(--notice-warning-accent)] via-transparent to-transparent',
-    hairlineClass: 'via-[var(--notice-warning-hairline)]',
+    iconClass: "text-[var(--notice-warning)]",
+    borderClass: "border-[var(--notice-warning-border)]",
+    accentClass:
+      "from-[var(--notice-warning-accent)] via-transparent to-transparent",
+    hairlineClass: "via-[var(--notice-warning-hairline)]",
   },
   info: {
     icon: CheckCircle2,
-    iconClass: 'text-[var(--notice-info)]',
-    borderClass: 'border-[var(--notice-info-border)]',
-    accentClass: 'from-[var(--notice-info-accent)] via-transparent to-[var(--notice-info-accent-to)]',
-    hairlineClass: 'via-[var(--notice-info-hairline)]',
+    iconClass: "text-[var(--notice-info)]",
+    borderClass: "border-[var(--notice-info-border)]",
+    accentClass:
+      "from-[var(--notice-info-accent)] via-transparent to-[var(--notice-info-accent-to)]",
+    hairlineClass: "via-[var(--notice-info-hairline)]",
   },
 } as const;
 
 export default function ErrorMessage({
   message,
   onClose,
-  type = 'error',
+  type = "error",
   className,
   autoDismissMs,
 }: ErrorMessageProps) {
@@ -55,40 +58,55 @@ export default function ErrorMessage({
   return (
     <div
       className={cn(
-        'relative w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4',
-        'bg-[var(--notice-surface-bg)] backdrop-blur-xl',
-        'shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.5)]',
+        "relative w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4",
+        "bg-[var(--notice-surface-bg)] backdrop-blur-xl",
+        "shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.5)]",
         config.borderClass,
-        'animate-fade-in transition-all duration-200',
-        className
+        "animate-fade-in transition-all duration-200",
+        className,
       )}
       role="alert"
+      data-oid="zlnjhhp"
     >
       {/* Glassmorphism ambient glow */}
       <div
         className={cn(
-          'pointer-events-none absolute inset-0 bg-gradient-to-r',
-          config.accentClass
+          "pointer-events-none absolute inset-0 bg-gradient-to-r",
+          config.accentClass,
         )}
-      />
-      <div
-        className={cn(
-          'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent',
-          config.hairlineClass
-        )}
+        data-oid="5ndz-4."
       />
 
-      <div className="relative z-10 flex items-center gap-3">
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent",
+          config.hairlineClass,
+        )}
+        data-oid="lvqttey"
+      />
+
+      <div className="relative z-10 flex items-center gap-3" data-oid="be8-oiu">
         <div
           className={cn(
-            'shrink-0 rounded-xl border border-current/10 bg-current/5 p-2',
-            config.iconClass
+            "shrink-0 rounded-xl border border-current/10 bg-current/5 p-2",
+            config.iconClass,
           )}
+          data-oid="-.r0ji4"
         >
-          <Icon className="h-5 w-5 text-current" aria-hidden="true" />
+          <Icon
+            className="h-5 w-5 text-current"
+            aria-hidden="true"
+            data-oid="ga-8l7x"
+          />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className={cn('text-sm font-medium tracking-wide', config.iconClass)}>
+        <div className="min-w-0 flex-1" data-oid="hakyjqu">
+          <p
+            className={cn(
+              "text-sm font-medium tracking-wide",
+              config.iconClass,
+            )}
+            data-oid="pfrbya2"
+          >
             {message}
           </p>
         </div>
@@ -97,8 +115,9 @@ export default function ErrorMessage({
             onClick={onClose}
             className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[rgba(var(--rgb-white),0.06)] hover:text-[var(--color-text-primary)]"
             aria-label="关闭"
+            data-oid="q78a2sh"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
+            <X className="h-4 w-4" aria-hidden="true" data-oid="j8px__1" />
           </button>
         )}
       </div>

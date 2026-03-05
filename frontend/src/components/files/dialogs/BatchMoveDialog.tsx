@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
-import { folderService } from '../../../services/folders';
-import type { Folder } from '../../../types/folders';
-import { getErrorMessage } from '../../../utils/error';
-import { Home, Check, Loader2, FolderSymlink } from 'lucide-react';
-import { cn } from '../../../utils/cn';
-import ConfirmDialog from '../../common/dialog/ConfirmDialog';
-import ErrorMessage from '../../common/feedback/ErrorMessage';
+import { useState, useEffect, useMemo } from "react";
+import { folderService } from "../../../services/folders";
+import type { Folder } from "../../../types/folders";
+import { getErrorMessage } from "../../../utils/error";
+import { Home, Check, Loader2, FolderSymlink } from "lucide-react";
+import { cn } from "../../../utils/cn";
+import ConfirmDialog from "../../common/dialog/ConfirmDialog";
+import ErrorMessage from "../../common/feedback/ErrorMessage";
 
 interface BatchMoveDialogProps {
   fileIds: string[];
@@ -18,7 +18,7 @@ interface BatchMoveDialogProps {
   onApplyOptimistic?: (
     fileIds: string[],
     folderIds: string[],
-    targetFolderId: string | null
+    targetFolderId: string | null,
   ) => (() => void) | void;
 }
 
@@ -34,15 +34,15 @@ export default function BatchMoveDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(true);
-  const [targetFolderId, setTargetFolderId] = useState<string>('');
+  const [targetFolderId, setTargetFolderId] = useState<string>("");
 
   // 过滤掉要移动的文件夹本身，不能移动到自身
   const availableFolders = useMemo(() => {
     const movingFolderSet = new Set(folderIds);
-    return folders.filter(f => !movingFolderSet.has(f.id));
+    return folders.filter((f) => !movingFolderSet.has(f.id));
   }, [folders, folderIds]);
 
   // 构建选择描述
@@ -50,7 +50,7 @@ export default function BatchMoveDialog({
     const parts: string[] = [];
     if (fileCount > 0) parts.push(`${fileCount} 个文件`);
     if (folderCount > 0) parts.push(`${folderCount} 个文件夹`);
-    return parts.join('、');
+    return parts.join("、");
   }, [fileCount, folderCount]);
 
   useEffect(() => {
@@ -91,26 +91,26 @@ export default function BatchMoveDialog({
       const anyMoved = movedFiles > 0 || movedFolders > 0;
       if (!anyMoved) {
         rollback?.();
-        setError('没有项目被移动，请重试或检查目标位置。');
+        setError("没有项目被移动，请重试或检查目标位置。");
         return;
       }
 
-      const folderName = folderId 
-        ? folders.find(f => f.id === folderId)?.name 
-        : '根目录';
-      
+      const folderName = folderId
+        ? folders.find((f) => f.id === folderId)?.name
+        : "根目录";
+
       const resultParts: string[] = [];
       if (movedFiles > 0) resultParts.push(`${movedFiles} 个文件`);
       if (movedFolders > 0) resultParts.push(`${movedFolders} 个文件夹`);
-      
-      setSuccess(`已将 ${resultParts.join('、')} 移动至「${folderName}」`);
+
+      setSuccess(`已将 ${resultParts.join("、")} 移动至「${folderName}」`);
       setTimeout(() => {
         onMoved?.();
         onClose();
       }, 1200);
     } catch (err) {
       rollback?.();
-      setError(getErrorMessage(err, '移动失败'));
+      setError(getErrorMessage(err, "移动失败"));
     } finally {
       setLoading(false);
     }
@@ -118,10 +118,10 @@ export default function BatchMoveDialog({
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !loading) onClose();
+      if (e.key === "Escape" && !loading) onClose();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [onClose, loading]);
 
   const handleSafeClose = () => {
@@ -129,12 +129,13 @@ export default function BatchMoveDialog({
   };
 
   const message = (
-    <div className="space-y-3">
+    <div className="space-y-3" data-oid="cv5xfoz">
       {error && (
         <ErrorMessage
           message={error}
           onClose={() => setError(null)}
           type="error"
+          data-oid="db9r3ir"
         />
       )}
 
@@ -143,42 +144,86 @@ export default function BatchMoveDialog({
           message={success}
           onClose={() => setSuccess(null)}
           type="info"
+          data-oid="f7dwcxj"
         />
       )}
 
       {/* 已选摘要 */}
-      <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2">
-        <p className="text-[0.65rem] uppercase tracking-[0.18em] text-white/55">已选择</p>
-        <p className="mt-0.5 font-brand text-sm font-normal tracking-wide text-white">
-          <span className="font-semibold text-rose-300">{selectionText}</span>
+      <div
+        className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+        data-oid="0wuphy5"
+      >
+        <p
+          className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          data-oid="mil:15n"
+        >
+          已选择
+        </p>
+        <p
+          className="mt-0.5 font-brand text-sm font-normal tracking-wide text-[var(--dialog-panel-text)]"
+          data-oid="i6ui2fa"
+        >
+          <span className="font-semibold text-[var(--dialog-panel-accent)]" data-oid="nvwq_d3">
+            {selectionText}
+          </span>
         </p>
       </div>
 
       {/* 目标位置：标题 + 列表 */}
-      <div>
-        <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-white/55">目标位置</p>
+      <div data-oid="x:-p7se">
+        <p
+          className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          data-oid="07cslc8"
+        >
+          目标位置
+        </p>
         {loadingFolders ? (
-          <div className="flex items-center justify-center rounded-lg border border-white/10 bg-black/25 py-6 text-gray-200">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            <span className="ml-2 text-xs">加载中…</span>
+          <div
+            className="flex items-center justify-center rounded-lg border border-[var(--dialog-list-loading-border)] bg-[var(--dialog-list-loading-bg)] py-6 text-[var(--dialog-list-loading-text)]"
+            data-oid="zc--m82"
+          >
+            <Loader2
+              className="h-4 w-4 animate-spin"
+              aria-hidden="true"
+              data-oid="9zciazk"
+            />
+
+            <span className="ml-2 text-xs" data-oid="wv0_6ud">
+              加载中…
+            </span>
           </div>
         ) : (
-          <div className="max-h-44 overflow-y-auto rounded-lg border border-white/10 bg-black/35 py-1">
+          <div
+            className="max-h-44 overflow-y-auto rounded-lg border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] py-1"
+            data-oid="jie0rhg"
+          >
             <button
               type="button"
-              onClick={() => setTargetFolderId('')}
+              onClick={() => setTargetFolderId("")}
               disabled={loading}
               className={cn(
-                'flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-xs text-gray-100 transition-colors',
-                targetFolderId === ''
-                  ? 'bg-rose-500/25 text-white'
-                  : 'hover:bg-white/5'
+                "flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-xs text-[var(--dialog-list-item-text)] transition-colors",
+                targetFolderId === ""
+                  ? "bg-[var(--dialog-list-item-selected-bg)] text-[var(--dialog-list-item-selected-text)]"
+                  : "hover:bg-[var(--dialog-list-item-hover-bg)]",
               )}
+              data-oid="ixs:-:s"
             >
-              <Home className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
-              <span className="min-w-0 flex-1 truncate">Root</span>
-              {targetFolderId === '' && (
-                <Check className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+              <Home
+                className="h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-icon)]"
+                aria-hidden="true"
+                data-oid="-vetu5j"
+              />
+
+              <span className="min-w-0 flex-1 truncate" data-oid="rl5.vtc">
+                Root
+              </span>
+              {targetFolderId === "" && (
+                <Check
+                  className="h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-selected-icon)]"
+                  aria-hidden="true"
+                  data-oid="k-jaak5"
+                />
               )}
             </button>
             {availableFolders.map((folder) => (
@@ -188,25 +233,45 @@ export default function BatchMoveDialog({
                 onClick={() => setTargetFolderId(folder.id)}
                 disabled={loading}
                 className={cn(
-                  'flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-xs text-gray-100 transition-colors',
+                  "flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-xs text-[var(--dialog-list-item-text)] transition-colors",
                   targetFolderId === folder.id
-                    ? 'bg-rose-500/25 text-white'
-                    : 'hover:bg-white/5'
+                    ? "bg-[var(--dialog-list-item-selected-bg)] text-[var(--dialog-list-item-selected-text)]"
+                    : "hover:bg-[var(--dialog-list-item-hover-bg)]",
                 )}
+                data-oid="63yc..k"
               >
                 {targetFolderId === folder.id ? (
-                  <i className="bi bi-folder2-open h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden />
+                  <i
+                    className="bi bi-folder2-open h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-selected-icon)]"
+                    aria-hidden
+                    data-oid="yyfkb5t"
+                  />
                 ) : (
-                  <i className="bi bi-folder2 h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden />
+                  <i
+                    className="bi bi-folder2 h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-icon)]"
+                    aria-hidden
+                    data-oid="a6a42ln"
+                  />
                 )}
-                <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+                <span className="min-w-0 flex-1 truncate" data-oid="if0gxoq">
+                  {folder.name}
+                </span>
                 {targetFolderId === folder.id && (
-                  <Check className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+                  <Check
+                    className="h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-selected-icon)]"
+                    aria-hidden="true"
+                    data-oid="wxw2mkm"
+                  />
                 )}
               </button>
             ))}
             {availableFolders.length === 0 && (
-              <p className="px-2.5 py-4 text-center text-xs text-gray-400">暂无可用文件夹</p>
+              <p
+                className="px-2.5 py-4 text-center text-xs text-[var(--dialog-list-item-muted)]"
+                data-oid="usgeo3h"
+              >
+                暂无可用文件夹
+              </p>
             )}
           </div>
         )}
@@ -219,9 +284,9 @@ export default function BatchMoveDialog({
       open
       appearance="glass"
       variant="info"
-      icon={<FolderSymlink className="h-5 w-5" />}
-      iconBgClass="bg-blue-500/15"
-      iconColorClass="text-blue-300"
+      icon={<FolderSymlink className="h-5 w-5" data-oid="g7_mx0g" />}
+      iconBgClass="bg-[var(--dialog-accent-blue-bg)]"
+      iconColorClass="text-[var(--dialog-accent-blue-text)]"
       title="批量移动"
       message={message}
       confirmText="执行移动"
@@ -229,6 +294,7 @@ export default function BatchMoveDialog({
       loading={loading}
       onConfirm={handleMove}
       onCancel={handleSafeClose}
+      data-oid="ufpx8xt"
     />
   );
 }

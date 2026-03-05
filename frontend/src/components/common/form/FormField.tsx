@@ -1,7 +1,7 @@
-import { type InputHTMLAttributes, type SelectHTMLAttributes } from 'react';
+import { type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
 
 const inputBase =
-  'w-full px-3 py-2 bg-[var(--control-input-bg)] border border-[var(--control-input-border)] rounded-lg text-[var(--control-input-text)] placeholder:text-[var(--control-input-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)] disabled:opacity-50';
+  "w-full px-3 py-2 bg-[var(--control-input-bg)] border border-[var(--control-input-border)] rounded-lg text-[var(--control-input-text)] placeholder:text-[var(--control-input-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)] disabled:opacity-50";
 
 interface FormFieldProps {
   label: string;
@@ -19,17 +19,29 @@ export function FormFieldRoot({
   children,
 }: FormFieldProps) {
   return (
-    <div>
+    <div data-oid="-:u35xb">
       <label
         htmlFor={id}
         className="block text-sm font-medium text-[var(--control-label-text)] mb-2"
+        data-oid="-czwnhi"
       >
         {label}
       </label>
       {children}
-      {hint && <p className="text-[var(--control-hint-text)] text-xs mt-1">{hint}</p>}
+      {hint && (
+        <p
+          className="text-[var(--control-hint-text)] text-xs mt-1"
+          data-oid="h.lpxj_"
+        >
+          {hint}
+        </p>
+      )}
       {error && (
-        <p className="text-[var(--control-error-text)] text-sm mt-1" role="alert">
+        <p
+          className="text-[var(--control-error-text)] text-sm mt-1"
+          role="alert"
+          data-oid="w_in_wi"
+        >
           {error}
         </p>
       )}
@@ -38,7 +50,7 @@ export function FormFieldRoot({
 }
 
 interface InputFieldProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> {
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, "className"> {
   label: string;
   id?: string;
   error?: string;
@@ -52,16 +64,27 @@ export function FormFieldInput({
   hint,
   ...inputProps
 }: InputFieldProps) {
-  const fid = id ?? `field-${label.replace(/\s/g, '-')}`;
+  const fid = id ?? `field-${label.replace(/\s/g, "-")}`;
   return (
-    <FormFieldRoot label={label} id={fid} error={error} hint={hint}>
-      <input id={fid} className={inputBase} {...inputProps} />
+    <FormFieldRoot
+      label={label}
+      id={fid}
+      error={error}
+      hint={hint}
+      data-oid="y1-0095"
+    >
+      <input
+        id={fid}
+        className={inputBase}
+        {...inputProps}
+        data-oid="qcgty.1"
+      />
     </FormFieldRoot>
   );
 }
 
 interface SelectFieldProps
-  extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className'> {
+  extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "className"> {
   label: string;
   id?: string;
   error?: string;
@@ -77,12 +100,23 @@ export function FormFieldSelect({
   options,
   ...selectProps
 }: SelectFieldProps) {
-  const fid = id ?? `field-${label.replace(/\s/g, '-')}`;
+  const fid = id ?? `field-${label.replace(/\s/g, "-")}`;
   return (
-    <FormFieldRoot label={label} id={fid} error={error} hint={hint}>
-      <select id={fid} className={inputBase} {...selectProps}>
+    <FormFieldRoot
+      label={label}
+      id={fid}
+      error={error}
+      hint={hint}
+      data-oid="o:mge42"
+    >
+      <select
+        id={fid}
+        className={inputBase}
+        {...selectProps}
+        data-oid="_k.h1ku"
+      >
         {options.map((o) => (
-          <option key={o.value} value={o.value}>
+          <option key={o.value} value={o.value} data-oid="sajjmfo">
             {o.label}
           </option>
         ))}

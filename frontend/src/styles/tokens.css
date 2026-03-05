@@ -1,4 +1,6 @@
-:root {
+:root,
+[data-theme="dark"],
+.dark {
     /* Typography */
     --font-sans:
         ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -38,6 +40,174 @@
     --rgb-rose-400: 251, 113, 133;
     --rgb-red-500: 239, 68, 68;
     --rgb-red-200: 254, 202, 202;
+
+    --file-card-text: rgba(var(--rgb-white), 0.92);
+    --file-card-text-muted: rgba(var(--rgb-white), 0.65);
+    --file-card-thumb-bg: rgba(var(--rgb-black), 0.2);
+    --file-card-preview-overlay-bg: rgba(var(--rgb-black), 0.4);
+    --file-card-preview-btn-bg: rgba(var(--rgb-white), 0.2);
+    --file-card-preview-btn-bg-hover: rgba(var(--rgb-white), 0.3);
+    --file-card-preview-btn-text: rgba(var(--rgb-white), 1);
+    --file-card-menu-border: rgb(var(--rgb-purple-950));
+    --file-card-menu-bg: rgb(var(--rgb-purple-950));
+    --file-card-menu-item-hover-bg: rgb(var(--rgb-purple-900));
+    --file-card-menu-text: rgba(var(--rgb-white), 1);
+    --file-card-menu-trigger-hover-bg: rgba(var(--rgb-white), 0.08);
+    --file-card-menu-divider: rgb(var(--rgb-purple-900));
+
+    --spinner-track-color: rgba(var(--rgb-white), 0.18);
+    --spinner-accent-color: rgba(var(--rgb-malachite-500), 0.7);
+    --loading-text: rgba(var(--rgb-white), 0.5);
+    --loading-overlay-bg: rgba(var(--rgb-slate-900), 0.6);
+    --app-shell-loading-bg: rgba(var(--rgb-slate-900), 1);
+    --app-shell-loading-text: rgba(var(--rgb-slate-400), 1);
+    --layout-footer-space: clamp(7rem, 12vw, 9.5rem);
+
+    --filelist-revalidating-text: rgba(var(--rgb-slate-500), 1);
+    --filelist-selection-label: rgba(var(--rgb-slate-300), 1);
+    --filelist-selection-count: rgba(250, 204, 21, 1);
+    --filelist-total-text: rgba(var(--rgb-slate-400), 1);
+    --filelist-check-border-checked: rgba(var(--rgb-white), 0.3);
+    --filelist-check-bg-checked: rgba(var(--rgb-white), 0.15);
+    --filelist-check-text-checked: rgba(var(--rgb-white), 1);
+    --filelist-check-border: rgba(var(--rgb-white), 0.15);
+    --filelist-check-bg: rgba(var(--rgb-white), 0.05);
+    --filelist-check-border-hover: rgba(var(--rgb-white), 0.25);
+    --filelist-check-bg-hover: rgba(var(--rgb-white), 0.1);
+
+    --upload-mime-video-color: #8b5cf6;
+    --upload-mime-video-bg: rgba(76, 29, 149, 0.3);
+    --upload-mime-pdf-color: #ef4444;
+    --upload-mime-pdf-bg: rgba(127, 29, 29, 0.3);
+    --upload-mime-audio-color: #22c55e;
+    --upload-mime-audio-bg: rgba(20, 83, 45, 0.3);
+    --upload-mime-image-color: #6c5dd3;
+    --upload-mime-image-bg: rgba(49, 46, 129, 0.3);
+    --upload-mime-doc-color: #3b82f6;
+    --upload-mime-doc-bg: rgba(30, 58, 138, 0.3);
+    --upload-mime-sheet-color: #10b981;
+    --upload-mime-sheet-bg: rgba(6, 78, 59, 0.3);
+    --upload-mime-archive-color: #f59e0b;
+    --upload-mime-archive-bg: rgba(120, 53, 15, 0.3);
+    --upload-mime-text-color: #6b7280;
+    --upload-mime-text-bg: rgba(76, 29, 149, 0.3);
+    --upload-mime-default-color: #6b7280;
+    --upload-mime-default-bg: rgba(76, 29, 149, 0.3);
+
+    --preview-icon-file: rgba(var(--rgb-slate-500), 1);
+    --preview-icon-image: rgba(var(--rgb-slate-500), 1);
+    --preview-icon-video: rgba(var(--rgb-purple-400), 1);
+    --preview-icon-pdf: rgba(var(--rgb-red-500), 1);
+    --preview-icon-audio: rgba(var(--rgb-emerald-400), 1);
+    --preview-icon-error: rgba(var(--rgb-red-500), 1);
+
+    --filetype-icon-wrapper-bg: rgba(var(--rgb-purple-500), 0.2);
+    --filetype-icon-pdf: rgba(var(--rgb-purple-400), 1);
+    --filetype-icon-image: rgba(96, 165, 250, 1);
+    --filetype-icon-video: rgba(var(--rgb-purple-400), 1);
+    --filetype-icon-audio: rgba(var(--rgb-emerald-400), 1);
+    --filetype-icon-doc: rgba(59, 130, 246, 1);
+    --filetype-icon-sheet: rgba(var(--rgb-emerald-400), 1);
+    --filetype-icon-archive: rgba(251, 191, 36, 1);
+    --filetype-icon-text: rgba(var(--rgb-slate-400), 1);
+    --filetype-icon-default: rgba(var(--rgb-purple-400), 1);
+
+    --thumbnail-container-bg: rgba(var(--rgb-purple-900), 0.35);
+    --thumbnail-placeholder-bg: rgba(var(--rgb-slate-600), 0.9);
+
+    --file-type-badge-bg: rgba(var(--rgb-white), 0.1);
+    --file-type-badge-text: rgba(var(--rgb-white), 0.9);
+    --file-type-badge-bg-1: var(--file-type-badge-bg);
+    --file-type-badge-text-1: var(--file-type-badge-text);
+
+    --dialog-label-text: rgba(var(--rgb-slate-300), 0.9);
+    --dialog-label-muted: rgba(var(--rgb-white), 0.55);
+    --dialog-field-bg: rgba(var(--rgb-white), 0.1);
+    --dialog-field-border: rgba(var(--rgb-white), 0.15);
+    --dialog-field-text: rgba(var(--rgb-white), 1);
+    --dialog-field-placeholder: rgba(var(--rgb-white), 0.5);
+    --dialog-field-focus-border: rgba(var(--rgb-rose-400), 0.9);
+    --dialog-field-focus-ring: rgba(var(--rgb-purple-400), 0.4);
+    --dialog-panel-bg: rgba(var(--rgb-white), 0.05);
+    --dialog-panel-border: rgba(var(--rgb-white), 0.15);
+    --dialog-panel-title: rgba(var(--rgb-white), 0.55);
+    --dialog-panel-text: rgba(var(--rgb-white), 1);
+    --dialog-panel-accent: rgba(var(--rgb-rose-400), 0.9);
+    --dialog-inline-text: rgba(var(--rgb-white), 0.7);
+    --dialog-list-bg: rgba(var(--rgb-black), 0.35);
+    --dialog-list-border: rgba(var(--rgb-white), 0.1);
+    --dialog-list-item-text: rgba(var(--rgb-white), 0.95);
+    --dialog-list-item-muted: rgba(var(--rgb-white), 0.7);
+    --dialog-list-item-hover-bg: rgba(var(--rgb-white), 0.05);
+    --dialog-list-item-selected-bg: rgba(var(--rgb-rose-400), 0.25);
+    --dialog-list-item-selected-text: rgba(var(--rgb-white), 1);
+    --dialog-list-item-icon: rgba(var(--rgb-slate-400), 1);
+    --dialog-list-item-selected-icon: rgba(var(--rgb-rose-400), 1);
+    --dialog-list-input-bg: rgba(var(--rgb-black), 0.6);
+    --dialog-list-input-border: rgba(var(--rgb-white), 0.15);
+    --dialog-list-input-text: rgba(var(--rgb-white), 1);
+    --dialog-list-loading-bg: rgba(var(--rgb-black), 0.25);
+    --dialog-list-loading-border: rgba(var(--rgb-white), 0.1);
+    --dialog-list-loading-text: rgba(var(--rgb-slate-200), 1);
+    --dialog-action-bg: rgba(var(--rgb-white), 0.1);
+    --dialog-action-border: rgba(var(--rgb-white), 0.15);
+    --dialog-action-text: rgba(var(--rgb-white), 1);
+    --dialog-action-hover-bg: rgba(var(--rgb-white), 0.15);
+    --dialog-primary-btn-bg: linear-gradient(
+        to right,
+        rgba(var(--rgb-purple-500), 0.7),
+        rgba(var(--rgb-fuchsia-500), 0.6)
+    );
+    --dialog-primary-btn-text: rgba(var(--rgb-white), 1);
+    --dialog-primary-btn-shadow: 0 12px 35px rgba(var(--rgb-purple-500), 0.18);
+    --dialog-warning-bg: rgba(251, 191, 36, 0.15);
+    --dialog-warning-border: rgba(251, 191, 36, 0.35);
+    --dialog-warning-text: rgba(251, 191, 36, 0.9);
+    --dialog-accent-rose-bg: rgba(var(--rgb-rose-400), 0.15);
+    --dialog-accent-rose-text: rgba(var(--rgb-rose-400), 0.9);
+    --dialog-accent-blue-bg: rgba(59, 130, 246, 0.15);
+    --dialog-accent-blue-text: rgba(147, 197, 253, 0.9);
+    --dialog-batch-action-bg: rgba(var(--rgb-rose-400), 0.25);
+    --dialog-batch-action-border: rgba(var(--rgb-rose-400), 0.4);
+    --dialog-batch-action-shadow: 0 10px 30px rgba(244, 63, 94, 0.35);
+
+    --modal-close-hover-bg: rgba(var(--rgb-white), 0.08);
+    --modal-close-hover-bg-upload: rgba(var(--rgb-white), 0.06);
+
+    --preview-floating-bg: rgba(var(--rgb-white), 0.1);
+    --preview-floating-border: rgba(var(--rgb-white), 0.2);
+    --preview-floating-shadow: 0 clamp(0.35rem, 1vw, 0.75rem)
+        clamp(0.6rem, 2vw, 1.25rem) rgba(var(--rgb-slate-900), 0.85);
+    --preview-floating-btn-text: rgba(var(--rgb-white), 0.85);
+    --preview-floating-btn-muted: rgba(var(--rgb-white), 0.8);
+    --preview-floating-btn-hover-bg: rgba(var(--rgb-white), 0.1);
+    --preview-floating-btn-active-bg: rgba(var(--rgb-white), 0.15);
+
+    --preview-pdf-toolbar-bg: rgba(var(--rgb-black), 0.7);
+    --preview-pdf-toolbar-border: rgba(var(--rgb-white), 0.1);
+    --preview-pdf-btn-bg: rgba(var(--rgb-white), 0.1);
+    --preview-pdf-btn-text: rgba(var(--rgb-white), 0.8);
+    --preview-pdf-btn-muted: rgba(var(--rgb-white), 0.7);
+    --preview-pdf-btn-hover-bg: rgba(var(--rgb-white), 0.2);
+    --preview-pdf-btn-active-bg: rgba(var(--rgb-white), 0.25);
+    --preview-pdf-page-text: rgba(var(--rgb-white), 0.8);
+    --preview-pdf-page-divider: rgba(var(--rgb-white), 0.35);
+    --preview-pdf-page-subtext: rgba(var(--rgb-white), 0.4);
+    --preview-pdf-open-btn-bg: rgba(var(--rgb-white), 0.1);
+    --preview-pdf-open-btn-hover-bg: rgba(var(--rgb-white), 0.2);
+    --preview-pdf-open-btn-active-bg: rgba(var(--rgb-white), 0.25);
+    --preview-pdf-open-btn-text: rgba(var(--rgb-white), 1);
+    --preview-pdf-error-icon-bg: rgba(239, 68, 68, 0.2);
+    --preview-pdf-error-icon-text: rgba(248, 113, 113, 1);
+    --preview-pdf-error-text: rgba(253, 186, 186, 0.9);
+
+    --dialog-liquid-ice: 226, 238, 255;
+    --dialog-liquid-cyan: 150, 214, 255;
+    --dialog-liquid-mint: 166, 244, 228;
+    --dialog-liquid-lavender: 210, 198, 255;
+    --dialog-liquid-pink: 255, 196, 230;
+    --dialog-liquid-shadow: 18, 24, 40;
+    --dialog-liquid-glass: 255, 255, 255;
 
     /* Semantic text */
     --color-text-primary: rgba(var(--rgb-white), 0.92);
@@ -454,6 +624,40 @@
     --filelist-menu-icon: rgba(var(--rgb-white), 0.95);
     --filelist-menu-item-hover-bg: rgba(var(--rgb-purple-900), 1);
     --filelist-menu-divider: rgba(var(--rgb-purple-900), 1);
+    --filelist-btn-text: rgba(var(--rgb-white), 0.92);
+    --filelist-btn-border: rgba(var(--rgb-white), 0.14);
+    --filelist-btn-bg: rgba(var(--rgb-white), 0.08);
+    --filelist-btn-bg-hover: rgba(var(--rgb-white), 0.12);
+    --filelist-btn-border-hover: rgba(var(--rgb-white), 0.2);
+    --filelist-toolbar-btn-border: rgba(var(--rgb-white), 0.22);
+    --filelist-toolbar-btn-bg:
+        radial-gradient(120% 90% at 15% 0%, rgba(var(--rgb-purple-500), 0.18), transparent 62%),
+        linear-gradient(180deg, rgba(var(--rgb-white), 0.16), rgba(var(--rgb-white), 0.08));
+    --filelist-toolbar-btn-bg-hover:
+        radial-gradient(120% 90% at 15% 0%, rgba(var(--rgb-purple-500), 0.24), transparent 62%),
+        linear-gradient(180deg, rgba(var(--rgb-white), 0.22), rgba(var(--rgb-white), 0.12));
+    --filelist-toolbar-btn-border-hover: rgba(var(--rgb-white), 0.3);
+    --filelist-card-border: rgba(var(--rgb-white), 0.12);
+    --filelist-card-border-hover: rgba(var(--rgb-white), 0.18);
+    --filelist-card-highlight: rgba(var(--rgb-white), 0.14);
+    --filelist-card-bg-top: rgba(var(--rgb-white), 0.08);
+    --filelist-card-bg-bottom: rgba(var(--rgb-white), 0.04);
+    --filelist-card-inset: rgba(var(--rgb-white), 0.16);
+    --filelist-card-hover-shadow:
+        0 16px 40px rgba(var(--rgb-black), 0.38),
+        0 0 20px rgba(var(--rgb-purple-500), 0.18);
+    --filelist-thumb-border: rgba(var(--rgb-white), 0.1);
+    --filelist-thumb-highlight: rgba(var(--rgb-white), 0.12);
+    --filelist-thumb-bg-top: rgba(var(--rgb-white), 0.09);
+    --filelist-thumb-bg-bottom: rgba(var(--rgb-white), 0.03);
+    --filelist-chip-border: rgba(var(--rgb-white), 0.12);
+    --filelist-chip-bg: rgba(var(--rgb-white), 0.06);
+    --filelist-chip-bg-hover: rgba(var(--rgb-white), 0.1);
+    --filelist-chip-border-hover: rgba(var(--rgb-white), 0.18);
+    --filelist-iconbtn-border: rgba(var(--rgb-white), 0.1);
+    --filelist-iconbtn-bg: rgba(var(--rgb-white), 0.06);
+    --filelist-iconbtn-bg-hover: rgba(var(--rgb-white), 0.1);
+    --filelist-iconbtn-border-hover: rgba(var(--rgb-white), 0.18);
 
     /* Filter semantic tokens */
     --filters-bar-gap: clamp(0.5rem, 0.75vw, 0.65rem);
@@ -546,7 +750,7 @@
         rgba(var(--rgb-emerald-400), 0.08),
         transparent
     );
-    --upload-surface-bg: rgba(var(--rgb-slate-950), 0.92);
+    --upload-surface-bg: rgba(var(--rgb-slate-800), 0.92);
     --upload-text: rgba(var(--rgb-white), 0.92);
     --upload-text-muted: rgba(var(--rgb-slate-400), 0.9);
     --upload-control-hover: rgba(var(--rgb-white), 0.08);
@@ -865,9 +1069,258 @@
     --confirm-info-glass-bg: rgba(var(--rgb-emerald-400), 0.14);
     --confirm-info-glass-bg-hover: rgba(var(--rgb-emerald-400), 0.18);
     --confirm-info-glass-shadow: 0 14px 40px rgba(var(--rgb-emerald-400), 0.14);
+
+    --filelist-glass-bg-strong-1: var(--filelist-glass-bg-strong);
+    --filelist-glass-bg-soft-1: var(--filelist-glass-bg-soft);
+    --filelist-glass-highlight-strong-1: var(--filelist-glass-highlight-strong);
+    --filelist-glass-highlight-soft-1: var(--filelist-glass-highlight-soft);
+    --filelist-glass-border-1: var(--filelist-glass-border);
+    --filelist-glass-border-strong-1: var(--filelist-glass-border-strong);
+    --filelist-text-1: var(--filelist-text);
+    --filelist-text-muted-1: var(--filelist-text-muted);
+    --filelist-shadow-panel-1: var(--filelist-shadow-panel);
+    --filelist-shadow-panel-soft-1: var(--filelist-shadow-panel-soft);
+    --filelist-toolbar-bg-strong-1: var(--filelist-toolbar-bg-strong);
+    --filelist-toolbar-bg-soft-1: var(--filelist-toolbar-bg-soft);
+    --filelist-menu-trigger-hover-bg-1: var(--filelist-menu-trigger-hover-bg);
+    --filelist-menu-bg-1: var(--filelist-menu-bg);
+    --filelist-menu-border-1: var(--filelist-menu-border);
+    --filelist-menu-text-1: var(--filelist-menu-text);
+    --filelist-menu-icon-1: var(--filelist-menu-icon);
+    --filelist-menu-item-hover-bg-1: var(--filelist-menu-item-hover-bg);
+    --filelist-menu-divider-1: var(--filelist-menu-divider);
+    --filelist-card-border-1: var(--filelist-card-border);
+    --filelist-card-border-hover-1: var(--filelist-card-border-hover);
+    --filelist-card-highlight-1: var(--filelist-card-highlight);
+    --filelist-card-bg-top-1: var(--filelist-card-bg-top);
+    --filelist-card-bg-bottom-1: var(--filelist-card-bg-bottom);
+    --filelist-card-inset-1: var(--filelist-card-inset);
+    --filelist-card-hover-shadow-1: var(--filelist-card-hover-shadow);
+    --filelist-thumb-border-1: var(--filelist-thumb-border);
+    --filelist-thumb-highlight-1: var(--filelist-thumb-highlight);
+    --filelist-thumb-bg-top-1: var(--filelist-thumb-bg-top);
+    --filelist-thumb-bg-bottom-1: var(--filelist-thumb-bg-bottom);
+    --filelist-chip-border-1: var(--filelist-chip-border);
+    --filelist-chip-bg-1: var(--filelist-chip-bg);
+    --filelist-chip-bg-hover-1: var(--filelist-chip-bg-hover);
+    --filelist-chip-border-hover-1: var(--filelist-chip-border-hover);
+    --filelist-iconbtn-border-1: var(--filelist-iconbtn-border);
+    --filelist-iconbtn-bg-1: var(--filelist-iconbtn-bg);
+    --filelist-iconbtn-bg-hover-1: var(--filelist-iconbtn-bg-hover);
+    --filelist-iconbtn-border-hover-1: var(--filelist-iconbtn-border-hover);
+    --filelist-revalidating-text-1: var(--filelist-revalidating-text);
+    --filelist-selection-label-1: var(--filelist-selection-label);
+    --filelist-selection-count-1: var(--filelist-selection-count);
+    --filelist-total-text-1: var(--filelist-total-text);
+    --filelist-check-border-checked-1: var(--filelist-check-border-checked);
+    --filelist-check-bg-checked-1: var(--filelist-check-bg-checked);
+    --filelist-check-text-checked-1: var(--filelist-check-text-checked);
+    --filelist-check-border-1: var(--filelist-check-border);
+    --filelist-check-bg-1: var(--filelist-check-bg);
+    --filelist-check-border-hover-1: var(--filelist-check-border-hover);
+    --filelist-check-bg-hover-1: var(--filelist-check-bg-hover);
+    --file-card-menu-border-1: var(--file-card-menu-border);
+    --file-card-menu-bg-1: var(--file-card-menu-bg);
+    --file-card-menu-item-hover-bg-1: var(--file-card-menu-item-hover-bg);
+    --file-card-menu-text-1: var(--file-card-menu-text);
+    --file-card-menu-trigger-hover-bg-1: var(--file-card-menu-trigger-hover-bg);
+    --file-card-menu-divider-1: var(--file-card-menu-divider);
+    --dialog-panel-border-1: var(--dialog-panel-border);
+    --dialog-panel-bg-1: var(--dialog-panel-bg);
+    --dialog-panel-title-1: var(--dialog-panel-title);
+    --dialog-panel-text-1: var(--dialog-panel-text);
+    --dialog-panel-accent-1: var(--dialog-panel-accent);
+    --dialog-list-loading-border-1: var(--dialog-list-loading-border);
+    --dialog-list-loading-bg-1: var(--dialog-list-loading-bg);
+    --dialog-list-loading-text-1: var(--dialog-list-loading-text);
+    --dialog-list-border-1: var(--dialog-list-border);
+    --dialog-list-bg-1: var(--dialog-list-bg);
+    --dialog-list-item-text-1: var(--dialog-list-item-text);
+    --dialog-list-item-selected-bg-1: var(--dialog-list-item-selected-bg);
+    --dialog-list-item-selected-text-1: var(--dialog-list-item-selected-text);
+    --dialog-list-item-hover-bg-1: var(--dialog-list-item-hover-bg);
+    --dialog-list-item-icon-1: var(--dialog-list-item-icon);
+    --dialog-list-item-selected-icon-1: var(--dialog-list-item-selected-icon);
+    --dialog-list-item-muted-1: var(--dialog-list-item-muted);
+    --dialog-field-border-1: var(--dialog-field-border);
+    --dialog-field-bg-1: var(--dialog-field-bg);
+    --dialog-field-text-1: var(--dialog-field-text);
+    --dialog-field-placeholder-1: var(--dialog-field-placeholder);
+    --dialog-field-focus-border-1: var(--dialog-field-focus-border);
+    --dialog-list-input-border-1: var(--dialog-list-input-border);
+    --dialog-list-input-bg-1: var(--dialog-list-input-bg);
+    --dialog-list-input-text-1: var(--dialog-list-input-text);
+    --dialog-action-border-1: var(--dialog-action-border);
+    --dialog-action-bg-1: var(--dialog-action-bg);
+    --dialog-action-text-1: var(--dialog-action-text);
+    --dialog-action-hover-bg-1: var(--dialog-action-hover-bg);
+    --dialog-batch-action-border-1: var(--dialog-batch-action-border);
+    --dialog-batch-action-bg-1: var(--dialog-batch-action-bg);
+    --dialog-batch-action-shadow-1: var(--dialog-batch-action-shadow);
+    --dialog-warning-border-1: var(--dialog-warning-border);
+    --dialog-warning-bg-1: var(--dialog-warning-bg);
+    --dialog-warning-text-1: var(--dialog-warning-text);
+    --dialog-accent-blue-bg-1: var(--dialog-accent-blue-bg);
+    --dialog-accent-blue-text-1: var(--dialog-accent-blue-text);
+    --upload-text-1: var(--upload-text);
+    --upload-text-muted-1: var(--upload-text-muted);
+    --upload-input-text-1: var(--upload-input-text);
+    --upload-input-placeholder-1: var(--upload-input-placeholder);
+    --upload-input-border-1: var(--upload-input-border);
+    --upload-accent-1: var(--upload-accent);
+    --upload-accent-bg-1: var(--upload-accent-bg);
+    --upload-drop-border-1: var(--upload-drop-border);
+    --upload-drop-bg-1: var(--upload-drop-bg);
+    --upload-drop-border-hover-1: var(--upload-drop-border-hover);
+    --upload-backdrop-1: var(--upload-backdrop);
+    --upload-surface-bg-1: var(--upload-surface-bg);
+    --upload-control-hover-1: var(--upload-control-hover);
+    --upload-stat-bg-1: var(--upload-stat-bg);
+    --upload-stat-text-1: var(--upload-stat-text);
+    --upload-stat-value-1: var(--upload-stat-value);
+    --upload-warning-border-1: var(--upload-warning-border);
+    --upload-warning-bg-1: var(--upload-warning-bg);
+    --upload-warning-text-1: var(--upload-warning-text);
+    --upload-item-bg-1: var(--upload-item-bg);
+    --upload-item-text-1: var(--upload-item-text);
+    --upload-item-muted-1: var(--upload-item-muted);
+    --upload-item-action-text-1: var(--upload-item-action-text);
+    --upload-item-action-hover-bg-1: var(--upload-item-action-hover-bg);
+    --upload-item-action-hover-text-1: var(--upload-item-action-hover-text);
+    --upload-item-icon-border-1: var(--upload-item-icon-border);
+    --upload-item-icon-bg-1: var(--upload-item-icon-bg);
+    --upload-item-icon-shadow-1: var(--upload-item-icon-shadow);
+    --upload-item-icon-highlight-1: var(--upload-item-icon-highlight);
+    --upload-item-icon-ring-1: var(--upload-item-icon-ring);
+    --upload-item-icon-drop-shadow-1: var(--upload-item-icon-drop-shadow);
+    --upload-doc-icon-main-1: var(--upload-doc-icon-main);
+    --upload-doc-icon-fold-1: var(--upload-doc-icon-fold);
+    --upload-doc-icon-paper-1: var(--upload-doc-icon-paper);
+    --upload-doc-icon-fold-highlight-1: var(--upload-doc-icon-fold-highlight);
+    --upload-doc-icon-detail-1: var(--upload-doc-icon-detail);
+    --upload-tooltip-bg-1: var(--upload-tooltip-bg);
+    --upload-tooltip-ring-1: var(--upload-tooltip-ring);
+    --upload-tooltip-accent-1: var(--upload-tooltip-accent);
+    --upload-tooltip-title-1: var(--upload-tooltip-title);
+    --upload-tooltip-close-1: var(--upload-tooltip-close);
+    --upload-tooltip-close-bg-1: var(--upload-tooltip-close-bg);
+    --upload-tooltip-close-hover-1: var(--upload-tooltip-close-hover);
+    --upload-tooltip-text-1: var(--upload-tooltip-text);
+    --upload-tooltip-arrow-bg-1: var(--upload-tooltip-arrow-bg);
+    --upload-error-text-1: var(--upload-error-text);
+    --upload-error-pill-bg-1: var(--upload-error-pill-bg);
+    --upload-error-pill-text-1: var(--upload-error-pill-text);
+    --upload-error-pill-bg-hover-1: var(--upload-error-pill-bg-hover);
+    --upload-error-pill-bg-active-1: var(--upload-error-pill-bg-active);
+    --upload-error-pill-text-active-1: var(--upload-error-pill-text-active);
+    --upload-progress-track-bg-1: var(--upload-progress-track-bg);
+    --upload-progress-track-border-1: var(--upload-progress-track-border);
+    --upload-progress-track-shadow-1: var(--upload-progress-track-shadow);
+    --upload-progress-bar-bg-1: var(--upload-progress-bar-bg);
+    --upload-progress-bar-shadow-1: var(--upload-progress-bar-shadow);
+    --upload-progress-value-bg-1: var(--upload-progress-value-bg);
+    --upload-progress-value-shadow-1: var(--upload-progress-value-shadow);
+    --upload-progress-scanline-1: var(--upload-progress-scanline);
+    --upload-mime-video-color-1: var(--upload-mime-video-color);
+    --upload-mime-video-bg-1: var(--upload-mime-video-bg);
+    --upload-mime-pdf-color-1: var(--upload-mime-pdf-color);
+    --upload-mime-pdf-bg-1: var(--upload-mime-pdf-bg);
+    --upload-mime-audio-color-1: var(--upload-mime-audio-color);
+    --upload-mime-audio-bg-1: var(--upload-mime-audio-bg);
+    --upload-mime-image-color-1: var(--upload-mime-image-color);
+    --upload-mime-image-bg-1: var(--upload-mime-image-bg);
+    --upload-mime-doc-color-1: var(--upload-mime-doc-color);
+    --upload-mime-doc-bg-1: var(--upload-mime-doc-bg);
+    --upload-mime-sheet-color-1: var(--upload-mime-sheet-color);
+    --upload-mime-sheet-bg-1: var(--upload-mime-sheet-bg);
+    --upload-mime-archive-color-1: var(--upload-mime-archive-color);
+    --upload-mime-archive-bg-1: var(--upload-mime-archive-bg);
+    --upload-mime-text-color-1: var(--upload-mime-text-color);
+    --upload-mime-text-bg-1: var(--upload-mime-text-bg);
+    --upload-mime-default-color-1: var(--upload-mime-default-color);
+    --upload-mime-default-bg-1: var(--upload-mime-default-bg);
 }
 
-.light {
+[data-theme="dark"], .dark {
+    --color-text-primary: rgba(var(--rgb-white), 0.92);
+    --color-text-secondary: rgba(var(--rgb-slate-300), 0.9);
+    --color-text-muted: rgba(var(--rgb-white), 0.65);
+    --color-text-disabled: rgba(var(--rgb-slate-400), 0.65);
+
+    --color-border-soft: rgba(var(--rgb-white), 0.12);
+    --color-border-medium: rgba(var(--rgb-white), 0.2);
+    --color-border-strong: rgba(var(--rgb-white), 0.28);
+
+    --control-input-bg: rgba(var(--rgb-slate-900), 0.6);
+    --control-input-border: rgba(var(--rgb-emerald-300), 0.18);
+    --control-input-text: var(--color-text-primary);
+    --control-input-placeholder: rgba(var(--rgb-white), 0.58);
+    --control-input-ring: rgba(var(--rgb-malachite-500), 0.3);
+
+    --control-label-text: rgba(var(--rgb-slate-300), 0.92);
+    --control-hint-text: rgba(var(--rgb-white), 0.62);
+    --control-error-text: rgba(var(--rgb-rose-400), 0.92);
+
+    --color-focus-ring: rgba(var(--rgb-malachite-500), 0.62);
+
+    --surface-page-gradient:
+        radial-gradient(
+            1050px circle at 16% 10%,
+            rgba(var(--rgb-malachite-500), 0.16),
+            transparent 58%
+        ),
+        radial-gradient(
+            900px circle at 88% 20%,
+            rgba(var(--rgb-emerald-400), 0.1),
+            transparent 60%
+        ),
+        radial-gradient(
+            760px circle at 18% 86%,
+            rgba(var(--rgb-mantis-500), 0.12),
+            transparent 62%
+        ),
+        linear-gradient(135deg, rgb(var(--rgb-slate-950)), rgb(var(--rgb-slate-900)), rgb(var(--rgb-slate-950)));
+    --surface-page-gradient-dark:
+        radial-gradient(
+            1100px circle at 18% 12%,
+            rgba(var(--rgb-malachite-500), 0.12),
+            transparent 60%
+        ),
+        radial-gradient(
+            940px circle at 86% 22%,
+            rgba(var(--rgb-emerald-400), 0.08),
+            transparent 62%
+        ),
+        radial-gradient(
+            760px circle at 20% 86%,
+            rgba(var(--rgb-asparagus-600), 0.14),
+            transparent 64%
+        ),
+        linear-gradient(135deg, rgb(var(--rgb-slate-950)), rgb(var(--rgb-slate-950)), rgb(var(--rgb-slate-900)));
+
+    --glass-bg-strong: rgba(var(--rgb-white), 0.09);
+    --glass-bg-soft: rgba(var(--rgb-white), 0.035);
+    --glass-highlight-strong: rgba(var(--rgb-white), 0.16);
+    --glass-highlight-soft: rgba(var(--rgb-white), 0.1);
+    --glass-blur-strong: clamp(16px, 2vw, 24px);
+    --glass-blur-medium: clamp(12px, 1.5vw, 18px);
+    --glass-blur-soft: clamp(10px, 1.2vw, 14px);
+    --glass-saturate-strong: 150%;
+    --glass-saturate-soft: 125%;
+
+    --shadow-glass-lg:
+        0 clamp(14px, 1.8vw, 22px) clamp(48px, 6vw, 78px) rgba(var(--rgb-black), 0.48);
+    --shadow-glass-md:
+        0 clamp(8px, 1.2vw, 14px) clamp(28px, 4vw, 48px) rgba(var(--rgb-black), 0.34);
+    --shadow-glass-card:
+        0 clamp(6px, 1vw, 12px) clamp(18px, 2.6vw, 32px) rgba(var(--rgb-black), 0.34);
+    --shadow-neon-purple-soft:
+        0 0 clamp(12px, 1.6vw, 20px) rgba(var(--rgb-malachite-500), 0.16);
+    --shadow-neon-cyan-soft:
+        0 0 clamp(12px, 1.6vw, 20px) rgba(var(--rgb-emerald-400), 0.14);
+}
+
+[data-theme="light"], .light {
     --color-text-primary: rgba(var(--rgb-slate-900), 0.92);
     --color-text-secondary: rgba(var(--rgb-slate-700), 0.84);
     --color-text-muted: rgba(var(--rgb-slate-600), 0.7);
@@ -1162,6 +1615,11 @@
     --filelist-text: rgba(var(--rgb-slate-900), 0.9);
     --filelist-text-muted: rgba(var(--rgb-slate-700), 0.7);
 
+    --file-type-badge-bg: rgba(var(--rgb-slate-900), 0.08);
+    --file-type-badge-text: rgba(var(--rgb-slate-800), 0.92);
+    --file-type-badge-bg-1: var(--file-type-badge-bg);
+    --file-type-badge-text-1: var(--file-type-badge-text);
+
     --filelist-shadow-panel: var(--shadow-glass-lg);
     --filelist-shadow-panel-soft: var(--shadow-glass-md);
     --filelist-shadow-card: var(--shadow-glass-card);
@@ -1178,6 +1636,40 @@
     --filelist-menu-icon: rgba(var(--rgb-slate-700), 0.9);
     --filelist-menu-item-hover-bg: rgba(var(--rgb-slate-900), 0.06);
     --filelist-menu-divider: rgba(var(--rgb-slate-900), 0.1);
+    --filelist-btn-text: rgba(var(--rgb-slate-900), 0.9);
+    --filelist-btn-border: rgba(var(--rgb-slate-900), 0.14);
+    --filelist-btn-bg: rgba(var(--rgb-white), 0.76);
+    --filelist-btn-bg-hover: rgba(var(--rgb-white), 0.9);
+    --filelist-btn-border-hover: rgba(var(--rgb-slate-900), 0.24);
+    --filelist-toolbar-btn-border: rgba(var(--rgb-slate-900), 0.22);
+    --filelist-toolbar-btn-bg:
+        radial-gradient(120% 90% at 15% 0%, rgba(var(--rgb-purple-500), 0.12), transparent 62%),
+        linear-gradient(180deg, rgba(var(--rgb-white), 0.92), rgba(var(--rgb-white), 0.72));
+    --filelist-toolbar-btn-bg-hover:
+        radial-gradient(120% 90% at 15% 0%, rgba(var(--rgb-purple-500), 0.16), transparent 62%),
+        linear-gradient(180deg, rgba(var(--rgb-white), 0.98), rgba(var(--rgb-white), 0.8));
+    --filelist-toolbar-btn-border-hover: rgba(var(--rgb-slate-900), 0.3);
+    --filelist-card-border: rgba(var(--rgb-slate-900), 0.14);
+    --filelist-card-border-hover: rgba(var(--rgb-slate-900), 0.22);
+    --filelist-card-highlight: rgba(var(--rgb-white), 0.18);
+    --filelist-card-bg-top: rgba(var(--rgb-white), 0.8);
+    --filelist-card-bg-bottom: rgba(var(--rgb-white), 0.62);
+    --filelist-card-inset: rgba(var(--rgb-white), 0.9);
+    --filelist-card-hover-shadow:
+        0 12px 28px rgba(var(--rgb-black), 0.16),
+        0 0 14px rgba(var(--rgb-slate-900), 0.12);
+    --filelist-thumb-border: rgba(var(--rgb-slate-900), 0.14);
+    --filelist-thumb-highlight: rgba(var(--rgb-white), 0.8);
+    --filelist-thumb-bg-top: rgba(var(--rgb-white), 0.78);
+    --filelist-thumb-bg-bottom: rgba(var(--rgb-white), 0.62);
+    --filelist-chip-border: rgba(var(--rgb-slate-900), 0.14);
+    --filelist-chip-bg: rgba(var(--rgb-slate-900), 0.05);
+    --filelist-chip-bg-hover: rgba(var(--rgb-slate-900), 0.1);
+    --filelist-chip-border-hover: rgba(var(--rgb-slate-900), 0.22);
+    --filelist-iconbtn-border: rgba(var(--rgb-slate-900), 0.14);
+    --filelist-iconbtn-bg: rgba(var(--rgb-slate-900), 0.05);
+    --filelist-iconbtn-bg-hover: rgba(var(--rgb-slate-900), 0.1);
+    --filelist-iconbtn-border-hover: rgba(var(--rgb-slate-900), 0.22);
 
     --filelist-toolbar-bg-strong: rgba(var(--rgb-malachite-500), 0.78);
     --filelist-toolbar-bg-soft: rgba(var(--rgb-emerald-500), 0.62);
@@ -1187,6 +1679,45 @@
     --filelist-bar-bg-bottom: rgba(var(--rgb-purple-950), 0.66);
     --filelist-bar-inset: rgba(var(--rgb-white), 0.12);
     --filelist-bar-glow: rgba(var(--rgb-cyan-400), 0.12);
+    --filelist-revalidating-text: rgba(var(--rgb-slate-600), 0.9);
+    --filelist-selection-label: rgba(var(--rgb-slate-800), 0.92);
+    --filelist-selection-count: rgba(146, 64, 14, 0.96);
+    --filelist-total-text: rgba(var(--rgb-slate-700), 0.86);
+    --filelist-check-border-checked: rgba(var(--rgb-slate-900), 0.35);
+    --filelist-check-bg-checked: rgba(var(--rgb-slate-900), 0.14);
+    --filelist-check-text-checked: rgba(var(--rgb-slate-900), 1);
+    --filelist-check-border: rgba(var(--rgb-slate-900), 0.22);
+    --filelist-check-bg: rgba(var(--rgb-slate-900), 0.04);
+    --filelist-check-border-hover: rgba(var(--rgb-slate-900), 0.32);
+    --filelist-check-bg-hover: rgba(var(--rgb-slate-900), 0.1);
+    --spinner-track-color: rgba(var(--rgb-slate-900), 0.2);
+    --spinner-accent-color: rgba(var(--rgb-malachite-500), 0.78);
+    --loading-text: rgba(var(--rgb-slate-700), 0.82);
+    --loading-overlay-bg: rgba(var(--rgb-black), 0.72);
+    --app-shell-loading-bg: rgba(var(--rgb-white), 1);
+    --app-shell-loading-text: rgba(var(--rgb-slate-700), 0.9);
+    --preview-icon-file: rgba(var(--rgb-slate-700), 0.95);
+    --preview-icon-image: rgba(var(--rgb-slate-700), 0.95);
+    --preview-icon-video: rgba(var(--rgb-purple-600), 0.95);
+    --preview-icon-pdf: rgba(var(--rgb-red-500), 0.9);
+    --preview-icon-audio: rgba(var(--rgb-emerald-500), 0.95);
+    --preview-icon-error: rgba(var(--rgb-red-500), 0.9);
+
+    /* File Card overrides for Light Theme */
+    --file-card-text: rgba(var(--rgb-slate-900), 0.92);
+    --file-card-text-muted: rgba(var(--rgb-slate-700), 0.84);
+    --file-card-thumb-bg: rgba(var(--rgb-slate-900), 0.05);
+    --file-card-preview-overlay-bg: rgba(var(--rgb-white), 0.85);
+    --file-card-preview-btn-bg: rgba(var(--rgb-slate-900), 0.08);
+    --file-card-preview-btn-bg-hover: rgba(var(--rgb-slate-900), 0.15);
+    --file-card-preview-btn-text: rgba(var(--rgb-slate-900), 0.95);
+    
+    --file-card-menu-bg: rgba(var(--rgb-white), 0.98);
+    --file-card-menu-border: rgba(var(--rgb-slate-900), 0.1);
+    --file-card-menu-text: rgba(var(--rgb-slate-900), 0.9);
+    --file-card-menu-item-hover-bg: rgba(var(--rgb-slate-900), 0.05);
+    --file-card-menu-trigger-hover-bg: rgba(var(--rgb-slate-900), 0.05);
+    --file-card-menu-divider: rgba(var(--rgb-slate-900), 0.1);
 
     --filters-surface-border: rgba(var(--rgb-slate-950), 0.14);
     --filters-surface-bg-top: rgba(var(--rgb-white), 0.78);
@@ -1589,9 +2120,98 @@
     --confirm-info-glass-bg: rgba(var(--rgb-emerald-500), 0.12);
     --confirm-info-glass-bg-hover: rgba(var(--rgb-emerald-500), 0.16);
     --confirm-info-glass-shadow: 0 14px 40px rgba(var(--rgb-emerald-500), 0.08);
+
+    --dialog-label-text: rgba(var(--rgb-slate-700), 0.9);
+    --dialog-label-muted: rgba(var(--rgb-slate-600), 0.72);
+    --dialog-field-bg: rgba(var(--rgb-white), 0.9);
+    --dialog-field-border: rgba(var(--rgb-slate-900), 0.12);
+    --dialog-field-text: rgba(var(--rgb-slate-900), 0.92);
+    --dialog-field-placeholder: rgba(var(--rgb-slate-500), 0.6);
+    --dialog-field-focus-border: rgba(var(--rgb-emerald-500), 0.6);
+    --dialog-field-focus-ring: rgba(var(--rgb-emerald-500), 0.22);
+    --dialog-panel-bg: rgba(var(--rgb-white), 0.72);
+    --dialog-panel-border: rgba(var(--rgb-slate-900), 0.12);
+    --dialog-panel-title: rgba(var(--rgb-slate-600), 0.75);
+    --dialog-panel-text: rgba(var(--rgb-slate-900), 0.92);
+    --dialog-panel-accent: rgba(var(--rgb-rose-400), 0.85);
+    --dialog-inline-text: rgba(var(--rgb-slate-600), 0.8);
+    --dialog-list-bg: rgba(var(--rgb-white), 0.72);
+    --dialog-list-border: rgba(var(--rgb-slate-900), 0.1);
+    --dialog-list-item-text: rgba(var(--rgb-slate-900), 0.92);
+    --dialog-list-item-muted: rgba(var(--rgb-slate-600), 0.78);
+    --dialog-list-item-hover-bg: rgba(var(--rgb-slate-900), 0.06);
+    --dialog-list-item-selected-bg: rgba(var(--rgb-rose-400), 0.18);
+    --dialog-list-item-selected-text: rgba(var(--rgb-slate-900), 0.95);
+    --dialog-list-item-icon: rgba(var(--rgb-slate-500), 0.9);
+    --dialog-list-item-selected-icon: rgba(var(--rgb-rose-400), 0.9);
+    --dialog-list-input-bg: rgba(var(--rgb-white), 0.9);
+    --dialog-list-input-border: rgba(var(--rgb-slate-900), 0.14);
+    --dialog-list-input-text: rgba(var(--rgb-slate-900), 0.9);
+    --dialog-list-loading-bg: rgba(var(--rgb-white), 0.7);
+    --dialog-list-loading-border: rgba(var(--rgb-slate-900), 0.12);
+    --dialog-list-loading-text: rgba(var(--rgb-slate-700), 0.9);
+    --dialog-action-bg: rgba(var(--rgb-white), 0.86);
+    --dialog-action-border: rgba(var(--rgb-slate-900), 0.12);
+    --dialog-action-text: rgba(var(--rgb-slate-900), 0.9);
+    --dialog-action-hover-bg: rgba(var(--rgb-white), 0.92);
+    --dialog-primary-btn-bg: linear-gradient(
+        to right,
+        rgba(var(--rgb-emerald-500), 0.7),
+        rgba(var(--rgb-cyan-400), 0.6)
+    );
+    --dialog-primary-btn-text: rgba(var(--rgb-slate-950), 1);
+    --dialog-primary-btn-shadow: 0 12px 35px rgba(var(--rgb-emerald-500), 0.18);
+    --dialog-warning-bg: rgba(251, 191, 36, 0.12);
+    --dialog-warning-border: rgba(251, 191, 36, 0.3);
+    --dialog-warning-text: rgba(180, 83, 9, 0.9);
+    --dialog-accent-rose-bg: rgba(var(--rgb-rose-400), 0.14);
+    --dialog-accent-rose-text: rgba(var(--rgb-rose-400), 0.85);
+    --dialog-accent-blue-bg: rgba(59, 130, 246, 0.12);
+    --dialog-accent-blue-text: rgba(96, 165, 250, 0.9);
+    --dialog-batch-action-bg: rgba(var(--rgb-rose-400), 0.2);
+    --dialog-batch-action-border: rgba(var(--rgb-rose-400), 0.3);
+    --dialog-batch-action-shadow: 0 10px 30px rgba(244, 63, 94, 0.22);
+
+    --modal-close-hover-bg: rgba(var(--rgb-slate-900), 0.06);
+    --modal-close-hover-bg-upload: rgba(var(--rgb-slate-900), 0.04);
+
+    --preview-floating-bg: rgba(var(--rgb-slate-900), 0.06);
+    --preview-floating-border: rgba(var(--rgb-slate-900), 0.12);
+    --preview-floating-shadow: 0 clamp(0.35rem, 1vw, 0.75rem)
+        clamp(0.6rem, 2vw, 1.25rem) rgba(var(--rgb-slate-900), 0.2);
+    --preview-floating-btn-text: rgba(var(--rgb-slate-900), 0.85);
+    --preview-floating-btn-muted: rgba(var(--rgb-slate-700), 0.8);
+    --preview-floating-btn-hover-bg: rgba(var(--rgb-slate-900), 0.08);
+    --preview-floating-btn-active-bg: rgba(var(--rgb-slate-900), 0.12);
+
+    --preview-pdf-toolbar-bg: rgba(var(--rgb-white), 0.95);
+    --preview-pdf-toolbar-border: rgba(var(--rgb-slate-900), 0.12);
+    --preview-pdf-btn-bg: rgba(var(--rgb-slate-900), 0.06);
+    --preview-pdf-btn-text: rgba(var(--rgb-slate-700), 0.85);
+    --preview-pdf-btn-muted: rgba(var(--rgb-slate-600), 0.7);
+    --preview-pdf-btn-hover-bg: rgba(var(--rgb-slate-900), 0.1);
+    --preview-pdf-btn-active-bg: rgba(var(--rgb-slate-900), 0.14);
+    --preview-pdf-page-text: rgba(var(--rgb-slate-900), 0.85);
+    --preview-pdf-page-divider: rgba(var(--rgb-slate-500), 0.4);
+    --preview-pdf-page-subtext: rgba(var(--rgb-slate-500), 0.6);
+    --preview-pdf-open-btn-bg: rgba(var(--rgb-slate-900), 0.06);
+    --preview-pdf-open-btn-hover-bg: rgba(var(--rgb-slate-900), 0.12);
+    --preview-pdf-open-btn-active-bg: rgba(var(--rgb-slate-900), 0.16);
+    --preview-pdf-open-btn-text: rgba(var(--rgb-slate-900), 0.9);
+    --preview-pdf-error-icon-bg: rgba(var(--rgb-red-500), 0.12);
+    --preview-pdf-error-icon-text: rgba(var(--rgb-red-500), 0.9);
+    --preview-pdf-error-text: rgba(var(--rgb-red-500), 0.8);
+
+    --dialog-liquid-ice: 238, 244, 255;
+    --dialog-liquid-cyan: 170, 230, 255;
+    --dialog-liquid-mint: 190, 250, 235;
+    --dialog-liquid-lavender: 220, 210, 255;
+    --dialog-liquid-pink: 255, 210, 240;
+    --dialog-liquid-shadow: 30, 40, 60;
+    --dialog-liquid-glass: 255, 255, 255;
 }
 
-.purple {
+[data-theme="purple"], .purple {
     --color-focus-ring: rgba(var(--rgb-purple-500), 0.88);
 
     --surface-page-gradient: linear-gradient(
@@ -1690,6 +2310,23 @@
     --filelist-menu-icon: rgba(var(--rgb-white), 0.9);
     --filelist-menu-item-hover-bg: rgba(var(--rgb-purple-900), 0.9);
     --filelist-menu-divider: rgba(var(--rgb-purple-900), 0.7);
+    --filelist-btn-text: rgba(var(--rgb-white), 0.95);
+    --filelist-btn-border: rgba(var(--rgb-white), 0.16);
+    --filelist-btn-bg: rgba(var(--rgb-white), 0.1);
+    --filelist-btn-bg-hover: rgba(var(--rgb-white), 0.14);
+    --filelist-btn-border-hover: rgba(var(--rgb-white), 0.24);
+    --filelist-toolbar-btn-border: rgba(var(--rgb-white), 0.22);
+    --filelist-toolbar-btn-bg:
+        radial-gradient(120% 90% at 15% 0%, rgba(var(--rgb-purple-500), 0.22), transparent 62%),
+        linear-gradient(180deg, rgba(var(--rgb-white), 0.18), rgba(var(--rgb-white), 0.1));
+    --filelist-toolbar-btn-bg-hover:
+        radial-gradient(120% 90% at 15% 0%, rgba(var(--rgb-purple-500), 0.3), transparent 62%),
+        linear-gradient(180deg, rgba(var(--rgb-white), 0.24), rgba(var(--rgb-white), 0.14));
+    --filelist-toolbar-btn-border-hover: rgba(var(--rgb-white), 0.32);
+    --file-type-badge-bg: rgba(var(--rgb-white), 0.14);
+    --file-type-badge-text: rgba(var(--rgb-white), 0.95);
+    --file-type-badge-bg-1: var(--file-type-badge-bg);
+    --file-type-badge-text-1: var(--file-type-badge-text);
 
     --btn-primary-bg: rgba(var(--rgb-purple-500), 0.9);
     --btn-primary-bg-hover: rgba(var(--rgb-fuchsia-500), 0.5);
@@ -1964,4 +2601,93 @@
         rgba(var(--rgb-emerald-400), 0.1)
     );
     --settings-surface-hairline: rgba(var(--rgb-emerald-300), 0.4);
+
+    --dialog-label-text: rgba(var(--rgb-slate-200), 0.9);
+    --dialog-label-muted: rgba(var(--rgb-white), 0.6);
+    --dialog-field-bg: rgba(var(--rgb-white), 0.12);
+    --dialog-field-border: rgba(var(--rgb-white), 0.16);
+    --dialog-field-text: rgba(var(--rgb-white), 0.95);
+    --dialog-field-placeholder: rgba(var(--rgb-white), 0.45);
+    --dialog-field-focus-border: rgba(var(--rgb-purple-400), 0.7);
+    --dialog-field-focus-ring: rgba(var(--rgb-purple-400), 0.45);
+    --dialog-panel-bg: rgba(var(--rgb-white), 0.08);
+    --dialog-panel-border: rgba(var(--rgb-white), 0.14);
+    --dialog-panel-title: rgba(var(--rgb-white), 0.6);
+    --dialog-panel-text: rgba(var(--rgb-white), 0.95);
+    --dialog-panel-accent: rgba(var(--rgb-rose-400), 0.9);
+    --dialog-inline-text: rgba(var(--rgb-white), 0.75);
+    --dialog-list-bg: rgba(var(--rgb-purple-950), 0.35);
+    --dialog-list-border: rgba(var(--rgb-white), 0.12);
+    --dialog-list-item-text: rgba(var(--rgb-white), 0.95);
+    --dialog-list-item-muted: rgba(var(--rgb-white), 0.7);
+    --dialog-list-item-hover-bg: rgba(var(--rgb-white), 0.08);
+    --dialog-list-item-selected-bg: rgba(var(--rgb-rose-400), 0.28);
+    --dialog-list-item-selected-text: rgba(var(--rgb-white), 0.98);
+    --dialog-list-item-icon: rgba(var(--rgb-slate-300), 0.9);
+    --dialog-list-item-selected-icon: rgba(var(--rgb-rose-300), 0.95);
+    --dialog-list-input-bg: rgba(var(--rgb-purple-950), 0.55);
+    --dialog-list-input-border: rgba(var(--rgb-white), 0.18);
+    --dialog-list-input-text: rgba(var(--rgb-white), 0.95);
+    --dialog-list-loading-bg: rgba(var(--rgb-purple-950), 0.3);
+    --dialog-list-loading-border: rgba(var(--rgb-white), 0.12);
+    --dialog-list-loading-text: rgba(var(--rgb-white), 0.85);
+    --dialog-action-bg: rgba(var(--rgb-white), 0.12);
+    --dialog-action-border: rgba(var(--rgb-white), 0.18);
+    --dialog-action-text: rgba(var(--rgb-white), 0.95);
+    --dialog-action-hover-bg: rgba(var(--rgb-white), 0.2);
+    --dialog-primary-btn-bg: linear-gradient(
+        to right,
+        rgba(var(--rgb-purple-500), 0.75),
+        rgba(var(--rgb-fuchsia-500), 0.7)
+    );
+    --dialog-primary-btn-text: rgba(var(--rgb-white), 0.98);
+    --dialog-primary-btn-shadow: 0 12px 35px rgba(var(--rgb-purple-500), 0.28);
+    --dialog-warning-bg: rgba(251, 191, 36, 0.18);
+    --dialog-warning-border: rgba(251, 191, 36, 0.4);
+    --dialog-warning-text: rgba(253, 230, 138, 0.95);
+    --dialog-accent-rose-bg: rgba(var(--rgb-rose-400), 0.18);
+    --dialog-accent-rose-text: rgba(var(--rgb-rose-300), 0.95);
+    --dialog-accent-blue-bg: rgba(96, 165, 250, 0.18);
+    --dialog-accent-blue-text: rgba(191, 219, 254, 0.95);
+    --dialog-batch-action-bg: rgba(var(--rgb-rose-400), 0.28);
+    --dialog-batch-action-border: rgba(var(--rgb-rose-400), 0.45);
+    --dialog-batch-action-shadow: 0 12px 32px rgba(244, 63, 94, 0.4);
+
+    --modal-close-hover-bg: rgba(var(--rgb-white), 0.1);
+    --modal-close-hover-bg-upload: rgba(var(--rgb-white), 0.08);
+
+    --preview-floating-bg: rgba(var(--rgb-white), 0.14);
+    --preview-floating-border: rgba(var(--rgb-white), 0.22);
+    --preview-floating-shadow: 0 clamp(0.35rem, 1vw, 0.75rem)
+        clamp(0.6rem, 2vw, 1.25rem) rgba(var(--rgb-purple-950), 0.6);
+    --preview-floating-btn-text: rgba(var(--rgb-white), 0.9);
+    --preview-floating-btn-muted: rgba(var(--rgb-white), 0.78);
+    --preview-floating-btn-hover-bg: rgba(var(--rgb-white), 0.12);
+    --preview-floating-btn-active-bg: rgba(var(--rgb-white), 0.18);
+
+    --preview-pdf-toolbar-bg: rgba(var(--rgb-purple-950), 0.8);
+    --preview-pdf-toolbar-border: rgba(var(--rgb-white), 0.14);
+    --preview-pdf-btn-bg: rgba(var(--rgb-white), 0.12);
+    --preview-pdf-btn-text: rgba(var(--rgb-white), 0.85);
+    --preview-pdf-btn-muted: rgba(var(--rgb-white), 0.7);
+    --preview-pdf-btn-hover-bg: rgba(var(--rgb-white), 0.2);
+    --preview-pdf-btn-active-bg: rgba(var(--rgb-white), 0.26);
+    --preview-pdf-page-text: rgba(var(--rgb-white), 0.85);
+    --preview-pdf-page-divider: rgba(var(--rgb-white), 0.4);
+    --preview-pdf-page-subtext: rgba(var(--rgb-white), 0.5);
+    --preview-pdf-open-btn-bg: rgba(var(--rgb-white), 0.12);
+    --preview-pdf-open-btn-hover-bg: rgba(var(--rgb-white), 0.22);
+    --preview-pdf-open-btn-active-bg: rgba(var(--rgb-white), 0.28);
+    --preview-pdf-open-btn-text: rgba(var(--rgb-white), 0.95);
+    --preview-pdf-error-icon-bg: rgba(var(--rgb-red-500), 0.24);
+    --preview-pdf-error-icon-text: rgba(var(--rgb-red-200), 0.95);
+    --preview-pdf-error-text: rgba(var(--rgb-red-200), 0.9);
+
+    --dialog-liquid-ice: 210, 210, 255;
+    --dialog-liquid-cyan: 160, 190, 255;
+    --dialog-liquid-mint: 180, 230, 240;
+    --dialog-liquid-lavender: 190, 170, 255;
+    --dialog-liquid-pink: 240, 180, 255;
+    --dialog-liquid-shadow: 20, 16, 40;
+    --dialog-liquid-glass: 255, 255, 255;
 }

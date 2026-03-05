@@ -1,6 +1,6 @@
-import { memo } from 'react';
-import type { Folder } from '../../types/folders';
-import { cn } from '../../utils/cn';
+import { memo } from "react";
+import type { Folder } from "../../types/folders";
+import { cn } from "../../utils/cn";
 
 interface FolderBreadcrumbProps {
   path: Folder[];
@@ -19,7 +19,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
 }: FolderBreadcrumbProps) {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = "move";
   };
 
   const handleDrop = (e: React.DragEvent, folderId: string | null) => {
@@ -31,6 +31,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
     <nav
       className="font-brand flex items-center justify-start gap-1 overflow-x-auto whitespace-nowrap font-normal tracking-widest text-[0.625rem] leading-none text-gray-300"
       aria-label="面包屑导航"
+      data-oid="im_2rc0"
     >
       {/* 根目录 */}
       <button
@@ -39,27 +40,39 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, null)}
         className={cn(
-          'glass-chip flex items-center gap-1 px-2 py-1 transition-colors whitespace-nowrap',
-          path.length === 0 ? 'text-white' : 'text-gray-400 hover:text-white'
+          "glass-chip flex items-center gap-1 px-2 py-1 transition-colors whitespace-nowrap",
+          path.length === 0 ? "text-white" : "text-gray-400 hover:text-white",
         )}
+        data-oid="ha.a-tv"
       >
-        <HomeIcon className="h-3.5 w-3.5 shrink-0" />
-        <span>All Files</span>
+        <HomeIcon className="h-3.5 w-3.5 shrink-0" data-oid="dj:zxma" />
+        <span data-oid="1t0:uam">All Files</span>
       </button>
 
       {/* 路径项 */}
       {path.map((folder, index) => (
-        <div key={folder.id} className="flex shrink-0 items-center">
-          <ChevronIcon className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+        <div
+          key={folder.id}
+          className="flex shrink-0 items-center"
+          data-oid="m0m6tsp"
+        >
+          <ChevronIcon
+            className="h-3.5 w-3.5 shrink-0 text-gray-500"
+            data-oid="12ne7sn"
+          />
+
           <button
             type="button"
             onClick={() => onNavigate(folder.id)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, folder.id)}
             className={cn(
-              'glass-chip px-2 py-1 transition-colors whitespace-nowrap',
-              index === path.length - 1 ? 'text-white' : 'text-gray-400 hover:text-white'
+              "glass-chip px-2 py-1 transition-colors whitespace-nowrap",
+              index === path.length - 1
+                ? "text-white"
+                : "text-gray-400 hover:text-white",
             )}
+            data-oid=".qzvcbd"
           >
             {folder.name}
           </button>
@@ -77,12 +90,14 @@ function HomeIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
+      data-oid="mk2dy7x"
     >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
         d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+        data-oid="34feupn"
       />
     </svg>
   );
@@ -96,12 +111,14 @@ function ChevronIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
+      data-oid="y3beha3"
     >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
         d="M9 5l7 7-7 7"
+        data-oid="dk1x:d."
       />
     </svg>
   );

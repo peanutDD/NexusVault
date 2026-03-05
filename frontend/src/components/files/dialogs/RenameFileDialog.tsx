@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { PencilLine } from 'lucide-react';
-import type { FileMetadata } from '../../../types/files';
-import { getErrorMessage } from '../../../utils/error';
-import ConfirmDialog from '../../common/dialog/ConfirmDialog';
-import ErrorMessage from '../../common/feedback/ErrorMessage';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { PencilLine } from "lucide-react";
+import type { FileMetadata } from "../../../types/files";
+import { getErrorMessage } from "../../../utils/error";
+import ConfirmDialog from "../../common/dialog/ConfirmDialog";
+import ErrorMessage from "../../common/feedback/ErrorMessage";
 
 interface RenameFileDialogProps {
   open: boolean;
@@ -16,13 +16,17 @@ interface RenameFileDialogProps {
 function validateFileName(name: string): { valid: boolean; error?: string } {
   const trimmed = name.trim();
   if (!trimmed) {
-    return { valid: false, error: '文件名不能为空' };
+    return { valid: false, error: "文件名不能为空" };
   }
-  if (trimmed.includes('/') || trimmed.includes('\\') || trimmed.includes('\0')) {
-    return { valid: false, error: '文件名包含非法字符' };
+  if (
+    trimmed.includes("/") ||
+    trimmed.includes("\\") ||
+    trimmed.includes("\0")
+  ) {
+    return { valid: false, error: "文件名包含非法字符" };
   }
   if (trimmed.length > 120) {
-    return { valid: false, error: '文件名过长（最大 120 字符）' };
+    return { valid: false, error: "文件名过长（最大 120 字符）" };
   }
   return { valid: true };
 }
@@ -34,7 +38,7 @@ export default function RenameFileDialog({
   onRename,
   onRenamed,
 }: RenameFileDialogProps) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,7 +64,7 @@ export default function RenameFileDialog({
 
     const validation = validateFileName(name);
     if (!validation.valid) {
-      setError(validation.error ?? '验证失败');
+      setError(validation.error ?? "验证失败");
       return;
     }
 
@@ -72,7 +76,7 @@ export default function RenameFileDialog({
       onRenamed?.();
       onClose();
     } catch (err) {
-      setError(getErrorMessage(err, '重命名失败'));
+      setError(getErrorMessage(err, "重命名失败"));
     } finally {
       setLoading(false);
     }
@@ -83,33 +87,55 @@ export default function RenameFileDialog({
       e.preventDefault();
       handleRename();
     },
-    [handleRename]
+    [handleRename],
   );
 
   if (!open || !file) return null;
 
   const inputClass =
-    'w-full rounded-lg border border-white/15 bg-transparent px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:border-rose-400 focus:outline-none';
+    "w-full rounded-lg border border-[var(--dialog-field-border)] bg-transparent px-2.5 py-1.5 text-xs text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:border-[var(--dialog-field-focus-border)] focus:outline-none";
 
   const message = (
-    <div className="space-y-3">
+    <div className="space-y-3" data-oid="sd_-6s6">
       {error && (
         <ErrorMessage
           message={error}
           onClose={() => setError(null)}
           type="error"
+          data-oid="0oorbfd"
         />
       )}
-      <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2">
-        <p className="text-[0.65rem] uppercase tracking-[0.18em] text-white/55">当前名称</p>
-        <p className="mt-0.5 font-brand text-sm font-normal tracking-wide text-white">
-          <span className="font-semibold text-rose-300">{file.original_filename}</span>
+      <div
+        className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+        data-oid=".l57pri"
+      >
+        <p
+          className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          data-oid="pf4xm-t"
+        >
+          当前名称
+        </p>
+        <p
+          className="mt-0.5 font-brand text-sm font-normal tracking-wide text-[var(--dialog-panel-text)]"
+          data-oid="pg37h37"
+        >
+          <span className="font-semibold text-[var(--dialog-panel-accent)]" data-oid="0m8wbhc">
+            {file.original_filename}
+          </span>
         </p>
       </div>
-      <div>
-        <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-white/55">新名称</p>
-        <div className="rounded-lg border border-white/10 bg-black/35 p-2.5">
-          <form onSubmit={handleSubmit}>
+      <div data-oid="cuffx5v">
+        <p
+          className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          data-oid="cb-z1sh"
+        >
+          新名称
+        </p>
+        <div
+          className="rounded-lg border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] p-2.5"
+          data-oid="wyydj7i"
+        >
+          <form onSubmit={handleSubmit} data-oid="2c1dk6e">
             <input
               ref={inputRef}
               type="text"
@@ -119,6 +145,7 @@ export default function RenameFileDialog({
               maxLength={120}
               className={inputClass}
               disabled={loading}
+              data-oid="6pdea:x"
             />
           </form>
         </div>
@@ -131,9 +158,9 @@ export default function RenameFileDialog({
       open={open}
       appearance="glass"
       variant="info"
-      icon={<PencilLine className="h-5 w-5" />}
-      iconBgClass="bg-rose-500/15"
-      iconColorClass="text-rose-300"
+      icon={<PencilLine className="h-5 w-5" data-oid="rysf3zt" />}
+      iconBgClass="bg-[var(--dialog-accent-rose-bg)]"
+      iconColorClass="text-[var(--dialog-accent-rose-text)]"
       title="重命名文件"
       message={message}
       confirmText="保存"
@@ -141,6 +168,7 @@ export default function RenameFileDialog({
       loading={loading}
       onConfirm={handleRename}
       onCancel={onClose}
+      data-oid="8qroea:"
     />
   );
 }

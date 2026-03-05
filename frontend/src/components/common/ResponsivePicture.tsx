@@ -3,10 +3,11 @@
  * 当前仅单 URL 时退化为 <img>，并统一设置 decoding="async" 与 fetchPriority。
  */
 
-import type { ImgHTMLAttributes } from 'react';
-import { cn } from '../../utils/cn';
+import type { ImgHTMLAttributes } from "react";
+import { cn } from "../../utils/cn";
 
-export interface ResponsivePictureProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'srcSet' | 'sizes'> {
+export interface ResponsivePictureProps
+  extends Omit<ImgHTMLAttributes<HTMLImageElement>, "srcSet" | "sizes"> {
   src: string;
   /** AVIF 地址，后端支持时传入 */
   avifSrc?: string;
@@ -17,9 +18,9 @@ export interface ResponsivePictureProps extends Omit<ImgHTMLAttributes<HTMLImage
   /** 与 srcset 配合的 sizes，如 "(max-width: 600px) 100vw, 50vw" */
   sizes?: string;
   /** 解码方式，默认 async 不阻塞主线程 */
-  decoding?: 'async' | 'sync' | 'auto';
+  decoding?: "async" | "sync" | "auto";
   /** 优先级提示：首屏关键图 high，列表缩略图 low */
-  fetchPriority?: 'high' | 'low' | 'auto';
+  fetchPriority?: "high" | "low" | "auto";
   className?: string;
 }
 
@@ -29,7 +30,7 @@ export function ResponsivePicture({
   webpSrc,
   srcSet,
   sizes,
-  decoding = 'async',
+  decoding = "async",
   fetchPriority,
   className,
   alt,
@@ -55,17 +56,33 @@ export function ResponsivePicture({
 
   if (hasModernFormat) {
     return (
-      <picture>
-        {avifSrc && <source type="image/avif" srcSet={avifSrc} sizes={sizes} />}
-        {webpSrc && <source type="image/webp" srcSet={webpSrc} sizes={sizes} />}
-        <img {...imgProps} />
+      <picture data-oid=".0f3e:9">
+        {avifSrc && (
+          <source
+            type="image/avif"
+            srcSet={avifSrc}
+            sizes={sizes}
+            data-oid="x5ui5ce"
+          />
+        )}
+        {webpSrc && (
+          <source
+            type="image/webp"
+            srcSet={webpSrc}
+            sizes={sizes}
+            data-oid="i9v3zxc"
+          />
+        )}
+        <img {...imgProps} data-oid="2nh-ssl" />
       </picture>
     );
   }
 
   if (hasResponsive) {
-    return <img {...imgProps} srcSet={srcSet} sizes={sizes} />;
+    return (
+      <img {...imgProps} srcSet={srcSet} sizes={sizes} data-oid="7soxs4j" />
+    );
   }
 
-  return <img {...imgProps} />;
+  return <img {...imgProps} data-oid=":.494i_" />;
 }

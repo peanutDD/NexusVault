@@ -1,25 +1,25 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useAuthStore } from '../store/authStore';
-import { authService } from '../services/auth';
-import { fileService } from '../services/files';
-import { apiTokenService } from '../services/apiTokens';
-import type { ApiToken } from '../services/apiTokens';
-import type { StorageUsage } from '../types/files';
-import { getErrorMessage } from '../utils/error';
-import { validateEmail } from '../utils/emailValidation';
-import { formatBytes } from '../utils/format';
-import { useClipboard } from '../hooks/useClipboard';
-import PageLayout from '../components/layout/PageLayout';
-import UserInfoSection from '../components/settings/UserInfoSection';
-import StorageUsageSection from '../components/settings/StorageUsageSection';
-import ThemeSection from '../components/settings/ThemeSection';
-import PasswordChangeSection from '../components/settings/PasswordChangeSection';
-import ApiTokenSection from '../components/settings/ApiTokenSection';
-import { Settings2, ArrowLeft } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useAuthStore } from "../store/authStore";
+import { authService } from "../services/auth";
+import { fileService } from "../services/files";
+import { apiTokenService } from "../services/apiTokens";
+import type { ApiToken } from "../services/apiTokens";
+import type { StorageUsage } from "../types/files";
+import { getErrorMessage } from "../utils/error";
+import { validateEmail } from "../utils/emailValidation";
+import { formatBytes } from "../utils/format";
+import { useClipboard } from "../hooks/useClipboard";
+import PageLayout from "../components/layout/PageLayout";
+import UserInfoSection from "../components/settings/UserInfoSection";
+import StorageUsageSection from "../components/settings/StorageUsageSection";
+import ThemeSection from "../components/settings/ThemeSection";
+import PasswordChangeSection from "../components/settings/PasswordChangeSection";
+import ApiTokenSection from "../components/settings/ApiTokenSection";
+import { Settings2, ArrowLeft } from "lucide-react";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -35,27 +35,29 @@ export default function Settings() {
   const [apiTokenSuccess, setApiTokenSuccess] = useState<string | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
   const debugAlerts =
-    typeof window !== 'undefined' &&
+    typeof window !== "undefined" &&
     Boolean(import.meta.env.DEV) &&
-    new URLSearchParams(window.location.search).has('debugAlerts');
+    new URLSearchParams(window.location.search).has("debugAlerts");
   const { copy: copyToClipboard } = useClipboard();
 
   const [sendingCode, setSendingCode] = useState(false);
   const [sendCodeCooldown, setSendCodeCooldown] = useState(0);
 
   const [apiTokens, setApiTokens] = useState<ApiToken[]>([]);
-  const [createdTokenValue, setCreatedTokenValue] = useState<string | null>(null);
+  const [createdTokenValue, setCreatedTokenValue] = useState<string | null>(
+    null,
+  );
   const [showCreatedTokenValue, setShowCreatedTokenValue] = useState(false);
 
   const profileSchema = useMemo(() => {
-    const currentEmail = user?.email ?? '';
+    const currentEmail = user?.email ?? "";
     return z
       .object({
         username: z
           .string()
           .trim()
-          .min(3, 'Username must be at least 3 characters')
-          .max(50, 'Username must be at most 50 characters'),
+          .min(3, "Username must be at least 3 characters")
+          .max(50, "Username must be at most 50 characters"),
         email: z
           .string()
           .trim()
@@ -69,20 +71,21 @@ export default function Settings() {
       })
       .superRefine((data, ctx) => {
         if (currentEmail && data.email !== currentEmail) {
-          const code = (data.emailVerificationCode ?? '').trim();
+          const code = (data.emailVerificationCode ?? "").trim();
           if (!code) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: 'Email verification code is required when changing email',
-              path: ['emailVerificationCode'],
+              message:
+                "Email verification code is required when changing email",
+              path: ["emailVerificationCode"],
             });
             return;
           }
           if (!/^\d{6}$/.test(code)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: 'Verification code must be 6 digits',
-              path: ['emailVerificationCode'],
+              message: "Verification code must be 6 digits",
+              path: ["emailVerificationCode"],
             });
           }
         }
@@ -92,13 +95,14 @@ export default function Settings() {
   const passwordSchema = useMemo(() => {
     return z
       .object({
-        current_password: z.string().min(1, 'Current password is required'),
+        current_password: z.string().min(1, "Current password is required"),
         new_password: z
           .string()
-          .min(8, 'New password must be between 8 and 64 characters')
-          .max(64, 'New password must be between 8 and 64 characters')
+          .min(8, "New password must be between 8 and 64 characters")
+          .max(64, "New password must be between 8 and 64 characters")
           .refine((v) => /[A-Za-z]/.test(v) && /[0-9]/.test(v), {
-            message: 'New password must contain at least one letter and one digit',
+            message:
+              "New password must contain at least one letter and one digit",
           }),
         confirm_password: z.string(),
       })
@@ -106,8 +110,8 @@ export default function Settings() {
         if (data.new_password !== data.confirm_password) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'New password and confirmation do not match',
-            path: ['confirm_password'],
+            message: "New password and confirmation do not match",
+            path: ["confirm_password"],
           });
         }
       });
@@ -115,8 +119,11 @@ export default function Settings() {
 
   const tokenSchema = useMemo(() => {
     return z.object({
-      name: z.string().trim().min(1, 'Please enter a token name'),
-      expires: z.union([z.literal(''), z.number().int().min(1, 'Expires must be at least 1 day')]),
+      name: z.string().trim().min(1, "Please enter a token name"),
+      expires: z.union([
+        z.literal(""),
+        z.number().int().min(1, "Expires must be at least 1 day"),
+      ]),
     });
   }, []);
 
@@ -131,8 +138,8 @@ export default function Settings() {
     reset: resetProfile,
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { username: '', email: '', emailVerificationCode: '' },
-    mode: 'onBlur',
+    defaultValues: { username: "", email: "", emailVerificationCode: "" },
+    mode: "onBlur",
   });
 
   const {
@@ -145,8 +152,12 @@ export default function Settings() {
     formState: passwordFormState,
   } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
-    defaultValues: { current_password: '', new_password: '', confirm_password: '' },
-    mode: 'onBlur',
+    defaultValues: {
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    },
+    mode: "onBlur",
   });
 
   const {
@@ -156,13 +167,15 @@ export default function Settings() {
     reset: resetToken,
   } = useForm<TokenFormValues>({
     resolver: zodResolver(tokenSchema),
-    defaultValues: { name: '', expires: '' },
-    mode: 'onBlur',
+    defaultValues: { name: "", expires: "" },
+    mode: "onBlur",
   });
 
   useEffect(() => {
     if (debugAlerts) {
-      setProfileError('(Debug) Something went wrong. This is a temporary layout check alert.');
+      setProfileError(
+        "(Debug) Something went wrong. This is a temporary layout check alert.",
+      );
     }
   }, [debugAlerts]);
 
@@ -172,7 +185,7 @@ export default function Settings() {
       resetProfile({
         username: user.username,
         email: user.email,
-        emailVerificationCode: '',
+        emailVerificationCode: "",
       });
     }
   }, [user, resetProfile]);
@@ -189,10 +202,7 @@ export default function Settings() {
   // Initial load
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      fileService.getStorageUsage(),
-      apiTokenService.listTokens(),
-    ])
+    Promise.all([fileService.getStorageUsage(), apiTokenService.listTokens()])
       .then(([usage, tokens]) => {
         if (mounted) {
           setStorageUsage(usage);
@@ -201,7 +211,7 @@ export default function Settings() {
       })
       .catch((err) => {
         if (mounted) {
-          console.error('Settings load error:', err);
+          console.error("Settings load error:", err);
         }
       });
     return () => {
@@ -214,7 +224,7 @@ export default function Settings() {
       const tokens = await apiTokenService.listTokens();
       setApiTokens(tokens);
     } catch (err) {
-      console.error('Failed to load API tokens:', err);
+      console.error("Failed to load API tokens:", err);
     }
   }, []);
 
@@ -228,17 +238,18 @@ export default function Settings() {
         try {
           const response = await apiTokenService.createToken({
             name: data.name.trim(),
-            expires_in_days: data.expires === '' ? undefined : Number(data.expires),
+            expires_in_days:
+              data.expires === "" ? undefined : Number(data.expires),
           });
           setCreatedTokenValue(response.token.token);
           setShowCreatedTokenValue(true);
-          resetToken({ name: '', expires: '' });
+          resetToken({ name: "", expires: "" });
           await loadApiTokens();
           setApiTokenSuccess(
-            'API Token created. Copy and save it now — it will only be shown once.'
+            "API Token created. Copy and save it now — it will only be shown once.",
           );
         } catch (err) {
-          setApiTokenError(getErrorMessage(err, 'Failed to create API Token'));
+          setApiTokenError(getErrorMessage(err, "Failed to create API Token"));
         } finally {
           setLoading(false);
         }
@@ -247,60 +258,65 @@ export default function Settings() {
         const message =
           errors.name?.message ??
           errors.expires?.message ??
-          'Please check the form';
+          "Please check the form";
         setApiTokenError(String(message));
-      }
+      },
     );
   }, [handleTokenSubmit, loadApiTokens, resetToken]);
 
-  const handleDeleteToken = useCallback(async (tokenId: string) => {
-    setLoading(true);
-    try {
-      await apiTokenService.deleteToken(tokenId);
-      setApiTokenSuccess('API Token deleted');
-      await loadApiTokens();
-    } catch (err) {
-      setApiTokenError(getErrorMessage(err, 'Failed to delete API Token'));
-    } finally {
-      setLoading(false);
-    }
-  }, [loadApiTokens]);
+  const handleDeleteToken = useCallback(
+    async (tokenId: string) => {
+      setLoading(true);
+      try {
+        await apiTokenService.deleteToken(tokenId);
+        setApiTokenSuccess("API Token deleted");
+        await loadApiTokens();
+      } catch (err) {
+        setApiTokenError(getErrorMessage(err, "Failed to delete API Token"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadApiTokens],
+  );
 
   const copyTokenToClipboard = useCallback(
     async (token: string) => {
       setApiTokenError(null);
       const ok = await copyToClipboard(token);
       if (!ok) {
-        setApiTokenError('Copy failed. Please select the token and copy manually.');
+        setApiTokenError(
+          "Copy failed. Please select the token and copy manually.",
+        );
         return;
       }
-      setApiTokenSuccess('Token copied to clipboard');
+      setApiTokenSuccess("Token copied to clipboard");
     },
-    [copyToClipboard]
+    [copyToClipboard],
   );
 
   // Send email verification code
   const handleSendVerificationCode = useCallback(async () => {
     setProfileError(null);
     setProfileSuccess(null);
-    const email = (watchProfile('email') ?? '').trim();
+    const email = (watchProfile("email") ?? "").trim();
     const emailResult = validateEmail(email);
     if (!emailResult.valid && emailResult.message) {
       setProfileError(emailResult.message);
       return;
     }
     if (user && email === user.email) {
-      setProfileError('New email is the same as current email');
+      setProfileError("New email is the same as current email");
       return;
     }
 
     setSendingCode(true);
     try {
       await authService.sendEmailVerification(email);
-      setProfileSuccess('Verification code sent. Check your inbox.');
+      setProfileSuccess("Verification code sent. Check your inbox.");
       setSendCodeCooldown(60);
     } catch (err) {
-      setProfileError(getErrorMessage(err, 'Failed to send verification code'));
+      setProfileError(getErrorMessage(err, "Failed to send verification code"));
     } finally {
       setSendingCode(false);
     }
@@ -317,7 +333,7 @@ export default function Settings() {
         const email = data.email.trim();
 
         if (user && username === user.username && email === user.email) {
-          setProfileSuccess('No changes made');
+          setProfileSuccess("No changes made");
           return;
         }
 
@@ -329,10 +345,10 @@ export default function Settings() {
               email,
             });
           const availabilityErrors: string[] = [];
-          if (!username_available) availabilityErrors.push('Username is taken');
-          if (!email_available) availabilityErrors.push('Email is taken');
+          if (!username_available) availabilityErrors.push("Username is taken");
+          if (!email_available) availabilityErrors.push("Email is taken");
           if (availabilityErrors.length > 0) {
-            setProfileError(availabilityErrors.join('; '));
+            setProfileError(availabilityErrors.join("; "));
             return;
           }
 
@@ -341,16 +357,20 @@ export default function Settings() {
             email: string;
             email_verification_code?: string;
           } = { username, email };
-          if (user && email !== user.email && data.emailVerificationCode?.trim()) {
+          if (
+            user &&
+            email !== user.email &&
+            data.emailVerificationCode?.trim()
+          ) {
             payload.email_verification_code = data.emailVerificationCode.trim();
           }
 
           const { user: newUser } = await authService.updateProfile(payload);
           updateUser(newUser);
-          setProfileSuccess('Profile updated');
-          setProfileValue('emailVerificationCode', '');
+          setProfileSuccess("Profile updated");
+          setProfileValue("emailVerificationCode", "");
         } catch (err) {
-          setProfileError(getErrorMessage(err, 'Failed to update profile'));
+          setProfileError(getErrorMessage(err, "Failed to update profile"));
         } finally {
           setLoading(false);
         }
@@ -360,9 +380,9 @@ export default function Settings() {
           errors.username?.message ??
           errors.email?.message ??
           errors.emailVerificationCode?.message ??
-          'Please check the form';
+          "Please check the form";
         setProfileError(String(message));
-      }
+      },
     );
   }, [handleProfileSubmit, setProfileValue, updateUser, user]);
 
@@ -378,18 +398,25 @@ export default function Settings() {
             current_password: data.current_password,
             new_password: data.new_password,
           });
-          setPasswordSuccess('Password changed');
-          resetPassword({ current_password: '', new_password: '', confirm_password: '' });
+          setPasswordSuccess("Password changed");
+          resetPassword({
+            current_password: "",
+            new_password: "",
+            confirm_password: "",
+          });
         } catch (err) {
-          const message = getErrorMessage(err, 'Failed to change password');
+          const message = getErrorMessage(err, "Failed to change password");
           if (
-            message.includes('between 8 and 64') ||
-            message.includes('one letter and one digit') ||
-            message.includes('New password must')
+            message.includes("between 8 and 64") ||
+            message.includes("one letter and one digit") ||
+            message.includes("New password must")
           ) {
-            setPasswordFormError('new_password', { message });
-          } else if (message.toLowerCase().includes('password') || message.includes('密码')) {
-            setPasswordFormError('current_password', { message });
+            setPasswordFormError("new_password", { message });
+          } else if (
+            message.toLowerCase().includes("password") ||
+            message.includes("密码")
+          ) {
+            setPasswordFormError("current_password", { message });
           } else {
             setPasswordError(message);
           }
@@ -399,13 +426,13 @@ export default function Settings() {
       },
       () => {
         setPasswordError(null);
-      }
+      },
     );
   }, [handlePasswordSubmit, resetPassword, setPasswordFormError]);
 
   const handleLogout = useCallback(() => {
     clearAuth();
-    navigate('/login');
+    navigate("/login");
   }, [clearAuth, navigate]);
 
   const profileValues = watchProfile();
@@ -415,31 +442,31 @@ export default function Settings() {
   // Profile form handlers
   const handleProfileUsernameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setProfileValue('username', e.target.value, { shouldDirty: true });
+      setProfileValue("username", e.target.value, { shouldDirty: true });
     },
-    [setProfileValue]
+    [setProfileValue],
   );
 
   const handleProfileEmailChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setProfileValue('email', e.target.value, { shouldDirty: true });
+      setProfileValue("email", e.target.value, { shouldDirty: true });
     },
-    [setProfileValue]
+    [setProfileValue],
   );
 
   const handleProfileEmailVerificationCodeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setProfileValue(
-        'emailVerificationCode',
-        e.target.value.replace(/\D/g, '').slice(0, 6),
-        { shouldDirty: true }
+        "emailVerificationCode",
+        e.target.value.replace(/\D/g, "").slice(0, 6),
+        { shouldDirty: true },
       );
     },
-    [setProfileValue]
+    [setProfileValue],
   );
 
   const canSendCode = (() => {
-    const email = (profileValues.email ?? '').trim();
+    const email = (profileValues.email ?? "").trim();
     if (!email) return false;
     const emailResult = validateEmail(email);
     if (!emailResult.valid) return false;
@@ -450,41 +477,47 @@ export default function Settings() {
   // Password form handlers
   const handleCurrentPasswordChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setPasswordValue('current_password', e.target.value, { shouldDirty: true });
-      clearPasswordErrors('current_password');
+      setPasswordValue("current_password", e.target.value, {
+        shouldDirty: true,
+      });
+      clearPasswordErrors("current_password");
     },
-    [clearPasswordErrors, setPasswordValue]
+    [clearPasswordErrors, setPasswordValue],
   );
 
   const handleNewPasswordChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setPasswordValue('new_password', e.target.value, { shouldDirty: true });
-      clearPasswordErrors('new_password');
+      setPasswordValue("new_password", e.target.value, { shouldDirty: true });
+      clearPasswordErrors("new_password");
     },
-    [clearPasswordErrors, setPasswordValue]
+    [clearPasswordErrors, setPasswordValue],
   );
 
   const handleConfirmPasswordChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setPasswordValue('confirm_password', e.target.value, { shouldDirty: true });
-      clearPasswordErrors('confirm_password');
+      setPasswordValue("confirm_password", e.target.value, {
+        shouldDirty: true,
+      });
+      clearPasswordErrors("confirm_password");
     },
-    [clearPasswordErrors, setPasswordValue]
+    [clearPasswordErrors, setPasswordValue],
   );
 
   // Token form handlers
   const handleTokenNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setTokenValue('name', e.target.value, { shouldDirty: true });
+      setTokenValue("name", e.target.value, { shouldDirty: true });
     },
-    [setTokenValue]
+    [setTokenValue],
   );
 
   const handleTokenExpiresChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setTokenValue('expires', e.target.value ? Number(e.target.value) : '', { shouldDirty: true });
+      setTokenValue("expires", e.target.value ? Number(e.target.value) : "", {
+        shouldDirty: true,
+      });
     },
-    [setTokenValue]
+    [setTokenValue],
   );
 
   const handleCloseTokenValue = useCallback(() => {
@@ -494,11 +527,26 @@ export default function Settings() {
 
   // Alert close handlers
   const handleCloseProfileError = useCallback(() => setProfileError(null), []);
-  const handleCloseProfileSuccess = useCallback(() => setProfileSuccess(null), []);
-  const handleClosePasswordError = useCallback(() => setPasswordError(null), []);
-  const handleClosePasswordSuccess = useCallback(() => setPasswordSuccess(null), []);
-  const handleCloseApiTokenError = useCallback(() => setApiTokenError(null), []);
-  const handleCloseApiTokenSuccess = useCallback(() => setApiTokenSuccess(null), []);
+  const handleCloseProfileSuccess = useCallback(
+    () => setProfileSuccess(null),
+    [],
+  );
+  const handleClosePasswordError = useCallback(
+    () => setPasswordError(null),
+    [],
+  );
+  const handleClosePasswordSuccess = useCallback(
+    () => setPasswordSuccess(null),
+    [],
+  );
+  const handleCloseApiTokenError = useCallback(
+    () => setApiTokenError(null),
+    [],
+  );
+  const handleCloseApiTokenSuccess = useCallback(
+    () => setApiTokenSuccess(null),
+    [],
+  );
 
   return (
     <PageLayout
@@ -506,53 +554,124 @@ export default function Settings() {
       username={user?.username}
       onLogout={handleLogout}
       showSettings={false}
+      data-oid="nr697ev"
     >
       {/* Match NavBar width so the logo aligns with page content */}
-      <div className="mx-auto max-w-7xl text-[length:var(--settings-text-md)]">
+      <div
+        className="mx-auto max-w-7xl text-[length:var(--settings-text-md)]"
+        data-oid="ke2.spo"
+      >
         {/* Page header (match Home neon/glass style) */}
-        <div className="relative mb-6 overflow-hidden rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-surface-bg)] p-5 shadow-[var(--settings-surface-shadow)] backdrop-blur-md sm:p-6">
-          <div className="pointer-events-none absolute inset-0 bg-[image:var(--settings-surface-glow)]" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--settings-surface-hairline)] to-transparent" />
+        <div
+          className="relative mb-6 overflow-hidden rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-surface-bg)] p-5 shadow-[var(--settings-surface-shadow)] backdrop-blur-md sm:p-6"
+          data-oid="8u-ne0x"
+        >
+          <div
+            className="pointer-events-none absolute inset-0 bg-[image:var(--settings-surface-glow)]"
+            data-oid="u7wgxbr"
+          />
 
-          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--settings-surface-hairline)] to-transparent"
+            data-oid="ej.4-er"
+          />
+
+          <div
+            className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            data-oid="5hj.--8"
+          >
+            <div className="min-w-0" data-oid="tc3yanx">
               <button
                 type="button"
-                onClick={() => navigate('/files')}
+                onClick={() => navigate("/files")}
                 className="font-brand mb-4 inline-flex items-center rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:bg-[var(--settings-chip-bg-hover)] hover:border-[var(--settings-chip-border-hover)]"
+                data-oid="li-ft82"
               >
-                <ArrowLeft className="mr-2 h-4 w-4 shrink-0 text-[var(--settings-chip-icon)]" aria-hidden="true" />
+                <ArrowLeft
+                  className="mr-2 h-4 w-4 shrink-0 text-[var(--settings-chip-icon)]"
+                  aria-hidden="true"
+                  data-oid="mf5bp9k"
+                />
                 Back to Home
               </button>
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-2 text-[var(--settings-chip-icon)]">
-                  <Settings2 className="h-5 w-5" aria-hidden="true" />
+              <div className="flex items-center gap-3" data-oid="lvlcydi">
+                <div
+                  className="rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-2 text-[var(--settings-chip-icon)]"
+                  data-oid="06je80s"
+                >
+                  <Settings2
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                    data-oid="6q_g5bq"
+                  />
                 </div>
-                <h1 className="font-brand truncate text-[length:var(--settings-text-xl)] font-normal tracking-widest text-[var(--settings-title)]">
+                <h1
+                  className="font-brand truncate text-[length:var(--settings-text-xl)] font-normal tracking-widest text-[var(--settings-title)]"
+                  data-oid=":ph..cd"
+                >
                   Settings Center
                 </h1>
               </div>
-              <p className="font-brand mt-2 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-subtitle)]">
+              <p
+                className="font-brand mt-2 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-subtitle)]"
+                data-oid="59c-6-q"
+              >
                 Account info, storage quota, security & token management.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3">
-                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]">Files</p>
-                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums">
-                  {storageUsage ? storageUsage.file_count : '-'}
+            <div
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+              data-oid="duty7hg"
+            >
+              <div
+                className="rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3"
+                data-oid="u.f.93l"
+              >
+                <p
+                  className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]"
+                  data-oid="a3v:fob"
+                >
+                  Files
+                </p>
+                <p
+                  className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
+                  data-oid="xi:vm2r"
+                >
+                  {storageUsage ? storageUsage.file_count : "-"}
                 </p>
               </div>
-              <div className="rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3">
-                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]">Usage</p>
-                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums">
-                  {storageUsage ? formatBytes(storageUsage.total_size) : '-'}
+              <div
+                className="rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3"
+                data-oid="oj887ag"
+              >
+                <p
+                  className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]"
+                  data-oid="i.vmzng"
+                >
+                  Usage
+                </p>
+                <p
+                  className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
+                  data-oid="0mw84c0"
+                >
+                  {storageUsage ? formatBytes(storageUsage.total_size) : "-"}
                 </p>
               </div>
-              <div className="hidden sm:block rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3">
-                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]">Tokens</p>
-                <p className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums">
+              <div
+                className="hidden sm:block rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3"
+                data-oid="66o_98f"
+              >
+                <p
+                  className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]"
+                  data-oid="75dwf9p"
+                >
+                  Tokens
+                </p>
+                <p
+                  className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
+                  data-oid="wij1zkh"
+                >
                   {apiTokens.length}
                 </p>
               </div>
@@ -561,39 +680,55 @@ export default function Settings() {
         </div>
 
         {/* Two-column layout: quick nav on the left, content on the right */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <aside className="lg:col-span-4">
-            <div className="lg:sticky lg:top-28 space-y-4">
-              <div className="rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-quicknav-bg)] p-4 text-[length:var(--settings-text-sm)] text-[var(--settings-quicknav-text)] shadow-[var(--settings-quicknav-shadow)] backdrop-blur-md">
-                <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-quicknav-muted)]">Quick nav</p>
-                <div className="mt-3 flex flex-wrap gap-2">
+        <div
+          className="grid grid-cols-1 gap-6 lg:grid-cols-12"
+          data-oid="xe7ci2f"
+        >
+          <aside className="lg:col-span-4" data-oid="j2k.gno">
+            <div className="lg:sticky lg:top-28 space-y-4" data-oid="6q1rkzk">
+              <div
+                className="rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-quicknav-bg)] p-4 text-[length:var(--settings-text-sm)] text-[var(--settings-quicknav-text)] shadow-[var(--settings-quicknav-shadow)] backdrop-blur-md"
+                data-oid=":40--9t"
+              >
+                <p
+                  className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-quicknav-muted)]"
+                  data-oid="9tppe.2"
+                >
+                  Quick nav
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2" data-oid="ofccbv_">
                   <a
                     href="#profile"
                     className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
+                    data-oid="1r.x_54"
                   >
                     Account
                   </a>
                   <a
                     href="#storage"
                     className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
+                    data-oid="m65reru"
                   >
                     Storage
                   </a>
                   <a
                     href="#appearance"
                     className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
+                    data-oid="xv.vpy2"
                   >
                     Appearance
                   </a>
                   <a
                     href="#security"
                     className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
+                    data-oid=":3imrtb"
                   >
                     Security
                   </a>
                   <a
                     href="#api-tokens"
                     className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
+                    data-oid="y_u57_4"
                   >
                     Tokens
                   </a>
@@ -602,13 +737,14 @@ export default function Settings() {
             </div>
           </aside>
 
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-6" data-oid="g884a9r">
             <UserInfoSection
               user={user}
               profileForm={{
-                username: profileValues.username ?? '',
-                email: profileValues.email ?? '',
-                emailVerificationCode: profileValues.emailVerificationCode ?? '',
+                username: profileValues.username ?? "",
+                email: profileValues.email ?? "",
+                emailVerificationCode:
+                  profileValues.emailVerificationCode ?? "",
               }}
               loading={loading}
               error={profileError}
@@ -617,23 +753,29 @@ export default function Settings() {
               onCloseSuccess={handleCloseProfileSuccess}
               onUsernameChange={handleProfileUsernameChange}
               onEmailChange={handleProfileEmailChange}
-              onEmailVerificationCodeChange={handleProfileEmailVerificationCodeChange}
+              onEmailVerificationCodeChange={
+                handleProfileEmailVerificationCodeChange
+              }
               onSendVerificationCode={handleSendVerificationCode}
               sendingCode={sendingCode}
               sendCodeCooldown={sendCodeCooldown}
               canSendCode={canSendCode}
               onSubmit={handleUpdateProfile}
+              data-oid="1jpbmmd"
             />
 
-            <StorageUsageSection storageUsage={storageUsage} />
+            <StorageUsageSection
+              storageUsage={storageUsage}
+              data-oid="jcf9:wl"
+            />
 
-            <ThemeSection />
+            <ThemeSection data-oid="-93dk47" />
 
             <PasswordChangeSection
               passwordForm={{
-                current_password: passwordValues.current_password ?? '',
-                new_password: passwordValues.new_password ?? '',
-                confirm_password: passwordValues.confirm_password ?? '',
+                current_password: passwordValues.current_password ?? "",
+                new_password: passwordValues.new_password ?? "",
+                confirm_password: passwordValues.confirm_password ?? "",
               }}
               loading={loading}
               error={passwordError}
@@ -641,21 +783,24 @@ export default function Settings() {
               onCloseError={handleClosePasswordError}
               onCloseSuccess={handleClosePasswordSuccess}
               fieldErrors={{
-                current_password: passwordFormState.errors.current_password?.message,
+                current_password:
+                  passwordFormState.errors.current_password?.message,
                 new_password: passwordFormState.errors.new_password?.message,
-                confirm_password: passwordFormState.errors.confirm_password?.message,
+                confirm_password:
+                  passwordFormState.errors.confirm_password?.message,
               }}
               onCurrentPasswordChange={handleCurrentPasswordChange}
               onNewPasswordChange={handleNewPasswordChange}
               onConfirmPasswordChange={handleConfirmPasswordChange}
               onSubmit={handleChangePassword}
+              data-oid="0py-1mt"
             />
 
             <ApiTokenSection
               apiTokens={apiTokens}
               tokenForm={{
-                name: tokenValues.name ?? '',
-                expires: tokenValues.expires ?? '',
+                name: tokenValues.name ?? "",
+                expires: tokenValues.expires ?? "",
                 value: createdTokenValue,
                 showValue: showCreatedTokenValue,
               }}
@@ -670,6 +815,7 @@ export default function Settings() {
               onDeleteToken={handleDeleteToken}
               onCopyToken={copyTokenToClipboard}
               onCloseTokenValue={handleCloseTokenValue}
+              data-oid="y70j20v"
             />
           </div>
         </div>

@@ -1,11 +1,11 @@
-import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import type { DragEvent } from 'react';
-import type { FileMetadata } from '../../../types/files';
-import type { Folder } from '../../../types/folders';
-import FileCard from './FileCard';
-import FolderCard from './FolderCard';
-import type { MixedGridItem } from './MixedGrid';
-import { FILE_LIST } from '../../../constants';
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
+import type { DragEvent } from "react";
+import type { FileMetadata } from "../../../types/files";
+import type { Folder } from "../../../types/folders";
+import FileCard from "./FileCard";
+import FolderCard from "./FolderCard";
+import type { MixedGridItem } from "./MixedGrid";
+import { FILE_LIST } from "../../../constants";
 
 function getColumnsFromWidth(width: number): number {
   if (width >= 1280) return 10;
@@ -27,9 +27,13 @@ interface VirtualizedMixedGridProps {
   onDownloadFile: (file: FileMetadata) => void;
   onRenameFolder: (folder: Folder) => void;
   onRenameFile: (file: FileMetadata) => void;
-  onDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
+  onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
   onFileDragStart: (fileId: string, e: DragEvent) => void;
-  onDropOnFolder: (folderId: string, fileIds: string[], folderIds: string[]) => void;
+  onDropOnFolder: (
+    folderId: string,
+    fileIds: string[],
+    folderIds: string[],
+  ) => void;
   openFileMenuId: string | null;
   openFolderMenuId: string | null;
   onToggleFileMenu: (id: string) => void;
@@ -62,14 +66,16 @@ export default function VirtualizedMixedGrid({
   const topSpacerRef = useRef<HTMLDivElement>(null);
   const bottomSpacerRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(() =>
-    getColumnsFromWidth(typeof window !== 'undefined' ? window.innerWidth : 1280)
+    getColumnsFromWidth(
+      typeof window !== "undefined" ? window.innerWidth : 1280,
+    ),
   );
   const [containerWidth, setContainerWidth] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth : 1280
+    typeof window !== "undefined" ? window.innerWidth : 1280,
   );
   const [containerTop, setContainerTop] = useState(0);
   const [visibleHeight, setVisibleHeight] = useState(
-    typeof window !== 'undefined' ? window.innerHeight : 800
+    typeof window !== "undefined" ? window.innerHeight : 800,
   );
 
   const rafIdRef = useRef<number | null>(null);
@@ -108,9 +114,9 @@ export default function VirtualizedMixedGrid({
       }, RESIZE_THROTTLE_MS);
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
       if (resizeTimeout !== null) clearTimeout(resizeTimeout);
     };
   }, [updateViewport]);
@@ -118,9 +124,9 @@ export default function VirtualizedMixedGrid({
   useEffect(() => {
     updateViewport();
     const handleScroll = () => scheduleUpdate();
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener("scroll", handleScroll);
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
@@ -147,11 +153,18 @@ export default function VirtualizedMixedGrid({
   }, [items.length, columns, updateViewport]);
 
   const rowHeight = useMemo(() => {
-    if (!containerWidth || columns <= 0) return FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
+    if (!containerWidth || columns <= 0)
+      return FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
     const gap = 8;
-    const cardWidth = Math.max(0, (containerWidth - gap * (columns - 1)) / columns);
+    const cardWidth = Math.max(
+      0,
+      (containerWidth - gap * (columns - 1)) / columns,
+    );
     const extraHeight = 92;
-    return Math.max(FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT, Math.round(cardWidth + extraHeight));
+    return Math.max(
+      FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT,
+      Math.round(cardWidth + extraHeight),
+    );
   }, [containerWidth, columns]);
 
   const rowCount = Math.ceil(items.length / columns);
@@ -160,108 +173,150 @@ export default function VirtualizedMixedGrid({
 
   const visibleRange = useMemo(() => {
     if (rowCount === 0) return { startRow: 0, endRow: -1 };
-    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const viewportHeight =
+      typeof window !== "undefined" ? window.innerHeight : 800;
     if (visibleHeight <= 0 || containerTop > viewportHeight) {
       return { startRow: 0, endRow: Math.min(rowCount - 1, overscan * 2) };
     }
-    const startRow = Math.max(0, Math.floor(scrollTopInContainer / rowHeight) - overscan);
+    const startRow = Math.max(
+      0,
+      Math.floor(scrollTopInContainer / rowHeight) - overscan,
+    );
     const endRow = Math.min(
       rowCount - 1,
-      Math.ceil((scrollTopInContainer + visibleHeight) / rowHeight) + overscan
+      Math.ceil((scrollTopInContainer + visibleHeight) / rowHeight) + overscan,
     );
     return { startRow, endRow };
-  }, [scrollTopInContainer, visibleHeight, rowHeight, rowCount, overscan, containerTop]);
+  }, [
+    scrollTopInContainer,
+    visibleHeight,
+    rowHeight,
+    rowCount,
+    overscan,
+    containerTop,
+  ]);
 
   const topSpacerHeight = Math.max(0, visibleRange.startRow * rowHeight);
-  const bottomSpacerHeight = Math.max(0, (rowCount - visibleRange.endRow - 1) * rowHeight);
+  const bottomSpacerHeight = Math.max(
+    0,
+    (rowCount - visibleRange.endRow - 1) * rowHeight,
+  );
 
   useEffect(() => {
     const el = containerRef.current;
-    if (el) el.style.setProperty('--grid-cols', String(columns));
+    if (el) el.style.setProperty("--grid-cols", String(columns));
   }, [columns]);
   useEffect(() => {
     const el = containerRef.current;
-    if (el) el.style.setProperty('--virtual-row-height', `${rowHeight}px`);
+    if (el) el.style.setProperty("--virtual-row-height", `${rowHeight}px`);
   }, [rowHeight]);
   useEffect(() => {
     const el = topSpacerRef.current;
-    if (el) el.style.setProperty('height', `${topSpacerHeight}px`);
+    if (el) el.style.setProperty("height", `${topSpacerHeight}px`);
   }, [topSpacerHeight]);
   useEffect(() => {
     const el = bottomSpacerRef.current;
-    if (el) el.style.setProperty('height', `${bottomSpacerHeight}px`);
+    if (el) el.style.setProperty("height", `${bottomSpacerHeight}px`);
   }, [bottomSpacerHeight]);
 
   if (items.length === 0) return null;
 
   return (
-    <div ref={containerRef} className="w-full" aria-label="文件列表">
-      {topSpacerHeight > 0 && <div ref={topSpacerRef} aria-hidden="true" />}
+    <div
+      ref={containerRef}
+      className="w-full"
+      aria-label="文件列表"
+      data-oid="op1m421"
+    >
+      {topSpacerHeight > 0 && (
+        <div ref={topSpacerRef} aria-hidden="true" data-oid="j-f01-:" />
+      )}
 
       {visibleRange.endRow >= visibleRange.startRow &&
-        Array.from({ length: visibleRange.endRow - visibleRange.startRow + 1 }, (_, i) => {
-          const rowIndex = visibleRange.startRow + i;
-          const start = rowIndex * columns;
-          const rowItems = items.slice(start, start + columns);
-          if (rowItems.length === 0) return null;
+        Array.from(
+          { length: visibleRange.endRow - visibleRange.startRow + 1 },
+          (_, i) => {
+            const rowIndex = visibleRange.startRow + i;
+            const start = rowIndex * columns;
+            const rowItems = items.slice(start, start + columns);
+            if (rowItems.length === 0) return null;
 
-          return (
-            <div key={rowIndex} className="virtualized-row mb-2 last:mb-0">
-              <div className="grid gap-2 [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]">
-                {rowItems.map((item) => {
-                  if (item.type === 'folder') {
-                    const folder = item.folder;
+            return (
+              <div
+                key={rowIndex}
+                className="virtualized-row mb-2 last:mb-0"
+                data-oid="jzokoas"
+              >
+                <div
+                  className="grid gap-2 [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
+                  data-oid="u0k78u0"
+                >
+                  {rowItems.map((item) => {
+                    if (item.type === "folder") {
+                      const folder = item.folder;
+                      return (
+                        <FolderCard
+                          key={`folder-${folder.id}`}
+                          folder={folder}
+                          isSelected={selectedFolders.has(folder.id)}
+                          onSelect={(id) =>
+                            onSelectFolder(id, !selectedFolders.has(id))
+                          }
+                          onOpen={(f) => onOpenFolder(f.id)}
+                          onRename={onRenameFolder}
+                          onDelete={() => onDelete(folder, "folder")}
+                          onDrop={(e, target) => {
+                            const fileId = e.dataTransfer.getData(
+                              "application/file-id",
+                            );
+                            const folderId = e.dataTransfer.getData(
+                              "application/folder-id",
+                            );
+                            onDropOnFolder(
+                              target.id,
+                              fileId ? [fileId] : [],
+                              folderId ? [folderId] : [],
+                            );
+                          }}
+                          isMenuOpen={openFolderMenuId === folder.id}
+                          onToggleMenu={onToggleFolderMenu}
+                          onCloseMenu={onCloseMenu}
+                          data-oid="nqcj-9x"
+                        />
+                      );
+                    }
+
+                    const file = item.file;
                     return (
-                      <FolderCard
-                        key={`folder-${folder.id}`}
-                        folder={folder}
-                        isSelected={selectedFolders.has(folder.id)}
-                        onSelect={(id) => onSelectFolder(id, !selectedFolders.has(id))}
-                        onOpen={(f) => onOpenFolder(f.id)}
-                        onRename={onRenameFolder}
-                        onDelete={() => onDelete(folder, 'folder')}
-                        onDrop={(e, target) => {
-                          const fileId = e.dataTransfer.getData('application/file-id');
-                          const folderId = e.dataTransfer.getData('application/folder-id');
-                          onDropOnFolder(
-                            target.id,
-                            fileId ? [fileId] : [],
-                            folderId ? [folderId] : []
-                          );
-                        }}
-                        isMenuOpen={openFolderMenuId === folder.id}
-                        onToggleMenu={onToggleFolderMenu}
+                      <FileCard
+                        key={`file-${file.id}`}
+                        file={file}
+                        isSelected={selectedFiles.has(file.id)}
+                        onSelect={(id) =>
+                          onSelectFile(id, !selectedFiles.has(id))
+                        }
+                        onPreview={onPreviewFile}
+                        onShare={onShareFile}
+                        onDownload={onDownloadFile}
+                        onRename={() => onRenameFile(file)}
+                        onDelete={() => onDelete(file, "file")}
+                        onDragStart={(e) => onFileDragStart(file.id, e)}
+                        isMenuOpen={openFileMenuId === file.id}
+                        onToggleMenu={onToggleFileMenu}
                         onCloseMenu={onCloseMenu}
+                        data-oid="7hvdt_8"
                       />
                     );
-                  }
-
-                  const file = item.file;
-                  return (
-                    <FileCard
-                      key={`file-${file.id}`}
-                      file={file}
-                      isSelected={selectedFiles.has(file.id)}
-                      onSelect={(id) => onSelectFile(id, !selectedFiles.has(id))}
-                      onPreview={onPreviewFile}
-                      onShare={onShareFile}
-                      onDownload={onDownloadFile}
-                      onRename={() => onRenameFile(file)}
-                      onDelete={() => onDelete(file, 'file')}
-                      onDragStart={(e) => onFileDragStart(file.id, e)}
-                      isMenuOpen={openFileMenuId === file.id}
-                      onToggleMenu={onToggleFileMenu}
-                      onCloseMenu={onCloseMenu}
-                    />
-                  );
-                })}
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          },
+        )}
 
-      {bottomSpacerHeight > 0 && <div ref={bottomSpacerRef} aria-hidden="true" />}
+      {bottomSpacerHeight > 0 && (
+        <div ref={bottomSpacerRef} aria-hidden="true" data-oid="wn2oua8" />
+      )}
     </div>
   );
 }
-

@@ -1,13 +1,13 @@
 /* 新建文件夹对话框：赛博朋克玻璃拟态 */
 
 .liquidDialogScope {
-  --liquid-ice: 226, 238, 255;
-  --liquid-cyan: 150, 214, 255;
-  --liquid-mint: 166, 244, 228;
-  --liquid-lavender: 210, 198, 255;
-  --liquid-pink: 255, 196, 230;
-  --liquid-shadow: 18, 24, 40;
-  --liquid-glass: 255, 255, 255;
+  --liquid-ice: var(--dialog-liquid-ice);
+  --liquid-cyan: var(--dialog-liquid-cyan);
+  --liquid-mint: var(--dialog-liquid-mint);
+  --liquid-lavender: var(--dialog-liquid-lavender);
+  --liquid-pink: var(--dialog-liquid-pink);
+  --liquid-shadow: var(--dialog-liquid-shadow);
+  --liquid-glass: var(--dialog-liquid-glass);
 }
 
 .liquidDialogPanel {

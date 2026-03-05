@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { shareService, type CreateShareRequest } from '../../../services/shares';
-import { getErrorMessage } from '../../../utils/error';
-import ErrorMessage from '../../common/feedback/ErrorMessage';
-import Modal from '../../common/dialog/Modal';
+import { useState } from "react";
+import {
+  shareService,
+  type CreateShareRequest,
+} from "../../../services/shares";
+import { getErrorMessage } from "../../../utils/error";
+import ErrorMessage from "../../common/feedback/ErrorMessage";
+import Modal from "../../common/dialog/Modal";
 
 interface ShareDialogProps {
   fileId: string;
@@ -44,7 +47,7 @@ export default function ShareDialog({
       setShareUrl(response.share.url);
       onShareCreated?.(response.share.url);
     } catch (err) {
-      setError(getErrorMessage(err, '创建分享链接失败'));
+      setError(getErrorMessage(err, "创建分享链接失败"));
     } finally {
       setLoading(false);
     }
@@ -53,7 +56,7 @@ export default function ShareDialog({
   const handleCopyUrl = () => {
     if (shareUrl) {
       navigator.clipboard.writeText(shareUrl);
-      alert('链接已复制到剪贴板');
+      alert("链接已复制到剪贴板");
     }
   };
 
@@ -64,137 +67,167 @@ export default function ShareDialog({
       onClose={onClose}
       maxWidth="sm"
       variant="glass"
+      data-oid="ha-3jeg"
     >
-        {/* 文件名（单独一行，带截断与完整 tooltip，避免撑坏容器） */}
-        <div className="mb-3">
-          <div className="text-xs text-gray-400 mb-1">文件</div>
-          <div
-            className="max-w-full truncate rounded-md bg-white/5 px-3 py-1.5 text-xs text-gray-100"
-            title={filename}
-          >
-            {filename}
-          </div>
+      {/* 文件名（单独一行，带截断与完整 tooltip，避免撑坏容器） */}
+      <div className="mb-3" data-oid="-vbx0o8">
+        <div className="text-xs text-[var(--dialog-label-text)] mb-1" data-oid="9.7-w6o">
+          文件
         </div>
+        <div
+          className="max-w-full truncate rounded-md bg-[var(--dialog-panel-bg)] px-3 py-1.5 text-xs text-[var(--dialog-panel-text)]"
+          title={filename}
+          data-oid="_j-dtrm"
+        >
+          {filename}
+        </div>
+      </div>
 
-        {error && (
-          <ErrorMessage
-            message={error}
-            onClose={() => setError(null)}
-            type="error"
-          />
-        )}
+      {error && (
+        <ErrorMessage
+          message={error}
+          onClose={() => setError(null)}
+          type="error"
+          data-oid="kye358_"
+        />
+      )}
 
-        {shareUrl ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                分享链接
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  id="share-url"
-                  title="分享链接"
-                  placeholder="分享链接"
-                  aria-label="分享链接"
-                  value={shareUrl}
-                  readOnly
-                  className="flex-1 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/50"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopyUrl}
-                  className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
-                >
-                  复制
-                </button>
-              </div>
+      {shareUrl ? (
+        <div className="space-y-4" data-oid="b3v4t29">
+          <div data-oid=".gzyxg0">
+            <label
+              className="block text-sm font-medium text-[var(--dialog-label-text)] mb-2"
+              data-oid="65by4hc"
+            >
+              分享链接
+            </label>
+            <div className="flex gap-2" data-oid="w5q63pd">
+              <input
+                type="text"
+                id="share-url"
+                title="分享链接"
+                placeholder="分享链接"
+                aria-label="分享链接"
+                value={shareUrl}
+                readOnly
+                className="flex-1 rounded-lg border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-3 py-2 text-sm text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)]"
+                data-oid="qtp2-_b"
+              />
+
+              <button
+                type="button"
+                onClick={handleCopyUrl}
+                className="rounded-lg border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-4 py-2 text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
+                data-oid="olsz3-y"
+              >
+                复制
+              </button>
             </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-lg border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-4 py-2 text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
+            data-oid="1vd3adg"
+          >
+            关闭
+          </button>
+        </div>
+      ) : (
+        <form
+          onSubmit={handleCreateShare}
+          className="space-y-4"
+          data-oid="i0fe.1p"
+        >
+          <div data-oid="z8-w-2:">
+            <label
+              className="block text-sm font-medium text-[var(--dialog-label-text)] mb-2"
+              data-oid="_sm-kis"
+            >
+              密码保护（可选）
+            </label>
+            <input
+              type="password"
+              value={formData.password || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              placeholder="留空则不设置密码"
+              className="w-full rounded-lg border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-3 py-2 text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
+              data-oid="b7c46:8"
+            />
+          </div>
+
+          <div data-oid="yncw7if">
+            <label
+              className="block text-sm font-medium text-[var(--dialog-label-text)] mb-2"
+              data-oid="05pv7kx"
+            >
+              过期时间（可选，天数）
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={formData.expires_in_days || ""}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  expires_in_days: e.target.value
+                    ? parseInt(e.target.value)
+                    : undefined,
+                })
+              }
+              placeholder="留空则永不过期"
+              className="w-full rounded-lg border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-3 py-2 text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
+              data-oid="_bbummf"
+            />
+          </div>
+
+          <div data-oid="scllrnz">
+            <label
+              className="block text-sm font-medium text-[var(--dialog-label-text)] mb-2"
+              data-oid="erudwy2"
+            >
+              最大下载次数（可选）
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={formData.max_downloads || ""}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  max_downloads: e.target.value
+                    ? parseInt(e.target.value)
+                    : undefined,
+                })
+              }
+              placeholder="留空则不限制"
+              className="w-full rounded-lg border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-3 py-2 text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
+              data-oid=":hrr6:v"
+            />
+          </div>
+
+          <div className="flex gap-3" data-oid="wjdgrwk">
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
+              className="flex-1 rounded-lg border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-4 py-2 text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
+              data-oid="swjf94z"
             >
-              关闭
+              取消
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 rounded-lg bg-[image:var(--dialog-primary-btn-bg)] px-4 py-2 text-[var(--dialog-primary-btn-text)] shadow-[var(--dialog-primary-btn-shadow)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              data-oid="swe2txq"
+            >
+              {loading ? "创建中..." : "创建分享"}
             </button>
           </div>
-        ) : (
-          <form onSubmit={handleCreateShare} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                密码保护（可选）
-              </label>
-              <input
-                type="password"
-                value={formData.password || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                placeholder="留空则不设置密码"
-                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                过期时间（可选，天数）
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.expires_in_days || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    expires_in_days: e.target.value
-                      ? parseInt(e.target.value)
-                      : undefined,
-                  })
-                }
-                placeholder="留空则永不过期"
-                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                最大下载次数（可选）
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.max_downloads || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    max_downloads: e.target.value
-                      ? parseInt(e.target.value)
-                      : undefined,
-                  })
-                }
-                placeholder="留空则不限制"
-                className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/40"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/15"
-              >
-                取消
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 rounded-lg bg-gradient-to-r from-purple-500/70 to-fuchsia-500/60 px-4 py-2 text-white shadow-[0_12px_35px_rgba(168,85,247,0.18)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? '创建中...' : '创建分享'}
-              </button>
-            </div>
-          </form>
-        )}
+        </form>
+      )}
     </Modal>
   );
 }

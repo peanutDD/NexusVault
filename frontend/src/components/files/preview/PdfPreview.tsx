@@ -58,14 +58,32 @@ function DesktopPdfPreview({
   const iframeLoaded = loadedFor === blobUrl;
 
   return (
-    <div className="flex h-full w-full min-h-0 items-center justify-center pointer-events-none">
-      <div className="pointer-events-auto relative h-full max-h-full w-full max-w-full overflow-hidden rounded-lg shadow-2xl">
+    <div
+      className="flex h-full w-full min-h-0 items-center justify-center pointer-events-none"
+      data-oid="v_jgls0"
+    >
+      <div
+        className="pointer-events-auto relative h-full max-h-full w-full max-w-full overflow-hidden rounded-lg shadow-2xl"
+        data-oid="9qsx6qa"
+      >
         {/* 加载指示 */}
         {!iframeLoaded && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-900/60">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-purple-400" />
-              <span className="text-sm text-white/50">加载 PDF…</span>
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--loading-overlay-bg)]"
+            data-oid="s.p0dpy"
+          >
+            <div
+              className="flex flex-col items-center gap-3"
+              data-oid="u4jnraz"
+            >
+              <div
+                className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                data-oid="lkl.snn"
+              />
+
+              <span className="text-sm text-[var(--loading-text)]" data-oid="ofg95wm">
+                加载 PDF…
+              </span>
             </div>
           </div>
         )}
@@ -75,6 +93,7 @@ function DesktopPdfPreview({
           referrerPolicy="no-referrer"
           onLoad={() => setLoadedFor(blobUrl)}
           className="h-full w-full border-0 bg-white"
+          data-oid=":_9e-mz"
         />
       </div>
     </div>
@@ -89,26 +108,48 @@ function PdfPreview({ blobUrl, title }: PdfPreviewProps) {
 
   if (isMobileLike) {
     return (
-      <div className="flex h-full w-full min-h-0 items-stretch justify-center pointer-events-none">
-        <div className="pointer-events-auto h-full w-full">
+      <div
+        className="flex h-full w-full min-h-0 items-stretch justify-center pointer-events-none"
+        data-oid="jth7ifz"
+      >
+        <div className="pointer-events-auto h-full w-full" data-oid="gxa56q6">
           <Suspense
             fallback={
-              <div className="flex h-full w-full min-h-[200px] items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-purple-400" />
-                  <span className="text-sm text-white/50">加载 PDF…</span>
+              <div
+                className="flex h-full w-full min-h-[200px] items-center justify-center"
+                data-oid="y4swyuy"
+              >
+                <div
+                  className="flex flex-col items-center gap-3"
+                  data-oid="dpcktor"
+                >
+                  <div
+                    className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                    data-oid="nig-vli"
+                  />
+
+                  <span className="text-sm text-[var(--loading-text)]" data-oid="5.k_xqi">
+                    加载 PDF…
+                  </span>
                 </div>
               </div>
             }
+            data-oid="mdjxh0l"
           >
-            <MobilePdfPreview blobUrl={blobUrl} title={title} />
+            <MobilePdfPreview
+              blobUrl={blobUrl}
+              title={title}
+              data-oid=".3uc7ov"
+            />
           </Suspense>
         </div>
       </div>
     );
   }
 
-  return <DesktopPdfPreview blobUrl={blobUrl} title={title} />;
+  return (
+    <DesktopPdfPreview blobUrl={blobUrl} title={title} data-oid="pq4br2j" />
+  );
 }
 
 export default memo(PdfPreview);

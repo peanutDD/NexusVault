@@ -229,8 +229,8 @@
 }
 
 .fileListGlassScope .glass-panel-soft {
-  --glass-text: rgba(var(--rgb-white), 0.92);
-  --glass-text-muted: rgba(var(--rgb-white), 0.72);
+  --glass-text: var(--filelist-text);
+  --glass-text-muted: var(--filelist-text-muted);
 
   border-radius: var(--glass-radius);
   border: 1px solid var(--bar-border);
@@ -249,13 +249,13 @@
 /* 卡片（用于：文件/文件夹卡片） */
 .fileListGlassScope .glass-card {
   border-radius: var(--glass-radius);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--filelist-card-border);
   background:
-    radial-gradient(120% 100% at 10% 10%, rgba(255, 255, 255, 0.14), transparent 55%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+    radial-gradient(120% 100% at 10% 10%, var(--filelist-card-highlight), transparent 55%),
+    linear-gradient(180deg, var(--filelist-card-bg-top), var(--filelist-card-bg-bottom));
   box-shadow:
     0 12px 32px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    inset 0 1px 0 var(--filelist-card-inset);
   /* 性能关键：列表里卡片数量多，去掉 backdrop-filter 避免滚动卡顿 */
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -272,10 +272,10 @@
   padding: 1px;
   background: linear-gradient(
     135deg,
-    rgba(168, 85, 247, 0.3),
-    rgba(34, 211, 238, 0.3),
-    rgba(16, 185, 129, 0.3),
-    rgba(168, 85, 247, 0.3)
+    var(--filelist-tech-glow-purple),
+    var(--filelist-tech-glow-cyan),
+    var(--filelist-tech-glow-green),
+    var(--filelist-tech-glow-purple)
   );
   background-size: 200% 200%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -290,10 +290,8 @@
 
 .fileListGlassScope .glass-card:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 
-    0 16px 40px rgba(0, 0, 0, 0.38),
-    0 0 20px rgba(168, 85, 247, 0.18);
+  border-color: var(--filelist-card-border-hover);
+  box-shadow: var(--filelist-card-hover-shadow);
 }
 
 .fileListGlassScope .glass-card:hover::after {
@@ -312,10 +310,10 @@
 /* 缩略图容器 */
 .fileListGlassScope .glass-thumb {
   border-radius: var(--glass-radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--filelist-thumb-border);
   background:
-    radial-gradient(110% 80% at 10% 0%, rgba(255, 255, 255, 0.12), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+    radial-gradient(110% 80% at 10% 0%, var(--filelist-thumb-highlight), transparent 62%),
+    linear-gradient(180deg, var(--filelist-thumb-bg-top), var(--filelist-thumb-bg-bottom));
   /* 性能关键：缩略图容器同样数量多，去掉 blur */
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -324,8 +322,8 @@
 /* 芯片/面包屑按钮 */
 .fileListGlassScope .glass-chip {
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--filelist-chip-border);
+  background: var(--filelist-chip-bg);
   color: var(--glass-text-muted);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -333,24 +331,24 @@
 }
 
 .fileListGlassScope .glass-chip:hover {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--filelist-chip-bg-hover);
+  border-color: var(--filelist-chip-border-hover);
   color: var(--glass-text);
 }
 
 /* 图标按钮 */
 .fileListGlassScope .glass-iconbtn {
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--filelist-iconbtn-border);
+  background: var(--filelist-iconbtn-bg);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
 .fileListGlassScope .glass-iconbtn:hover {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--filelist-iconbtn-bg-hover);
+  border-color: var(--filelist-iconbtn-border-hover);
   transform: translateY(-0.5px);
 }
 
@@ -452,9 +450,9 @@
 /* 主按钮（用于：批量操作按钮、分页按钮等） */
 .fileListGlassScope .glass-btn {
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--filelist-btn-border);
+  background: var(--filelist-btn-bg);
+  color: var(--filelist-btn-text);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
@@ -468,20 +466,16 @@
   align-items: center;
   box-sizing: border-box;
   border-radius: 999px;
-  border-color: rgba(255, 255, 255, 0.22);
-  background:
-    radial-gradient(120% 90% at 15% 0%, rgba(168, 85, 247, 0.18), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  border-color: var(--filelist-toolbar-btn-border);
+  background: var(--filelist-toolbar-btn-bg);
   box-shadow:
     0 10px 28px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .fileListGlassScope .glass-btn.toolbarActionBtn:hover {
-  background:
-    radial-gradient(120% 90% at 15% 0%, rgba(168, 85, 247, 0.24), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12));
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--filelist-toolbar-btn-bg-hover);
+  border-color: var(--filelist-toolbar-btn-border-hover);
   transform: translateY(-1px);
 }
 
@@ -594,8 +588,8 @@
 }
 
 .fileListGlassScope .glass-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.20);
+  background: var(--filelist-btn-bg-hover);
+  border-color: var(--filelist-btn-border-hover);
   transform: translateY(-0.5px);
 }
 

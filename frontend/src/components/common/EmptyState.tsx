@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { cn } from '../../utils/cn';
+import type { ReactNode } from "react";
+import { cn } from "../../utils/cn";
 
 interface EmptyStateProps {
   /** 主标题，如「暂无文件」「文件夹为空」 */
@@ -29,20 +29,38 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'glass-panel-soft flex flex-col items-center justify-center py-16 px-4 text-center',
-        className
+        "glass-panel-soft flex flex-col items-center justify-center py-16 px-4 text-center",
+        className,
       )}
+      data-oid="4twbe5_"
     >
       {icon && (
-        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(var(--rgb-white),0.06)] ring-1 ring-[var(--color-border-soft)]">
+        <div
+          className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(var(--rgb-white),0.06)] ring-1 ring-[var(--color-border-soft)]"
+          data-oid="2z8bf-l"
+        >
           {icon}
         </div>
       )}
-      <p className="text-lg font-medium text-[var(--color-text-secondary)]">{title}</p>
+      <p
+        className="text-lg font-medium text-[var(--color-text-secondary)]"
+        data-oid="b_tqwby"
+      >
+        {title}
+      </p>
       {description && (
-        <p className="mt-1 text-sm text-[var(--color-text-muted)] max-w-sm">{description}</p>
+        <p
+          className="mt-1 text-sm text-[var(--color-text-muted)] max-w-sm"
+          data-oid="eio-46a"
+        >
+          {description}
+        </p>
       )}
-      {action && <div className="mt-4">{action}</div>}
+      {action && (
+        <div className="mt-4" data-oid="vus2in8">
+          {action}
+        </div>
+      )}
     </div>
   );
 }

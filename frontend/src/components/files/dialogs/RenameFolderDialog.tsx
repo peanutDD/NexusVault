@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { PencilLine } from 'lucide-react';
-import type { Folder } from '../../../types/folders';
-import { getErrorMessage } from '../../../utils/error';
-import { validateFolderName } from '../../../hooks/folders/useFolderValidation';
-import ConfirmDialog from '../../common/dialog/ConfirmDialog';
-import ErrorMessage from '../../common/feedback/ErrorMessage';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { PencilLine } from "lucide-react";
+import type { Folder } from "../../../types/folders";
+import { getErrorMessage } from "../../../utils/error";
+import { validateFolderName } from "../../../hooks/folders/useFolderValidation";
+import ConfirmDialog from "../../common/dialog/ConfirmDialog";
+import ErrorMessage from "../../common/feedback/ErrorMessage";
 
 interface RenameFolderDialogProps {
   open: boolean;
@@ -26,7 +26,7 @@ export default function RenameFolderDialog({
   onRename,
   onRenamed,
 }: RenameFolderDialogProps) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +54,7 @@ export default function RenameFolderDialog({
 
     const validation = validateFolderName(name);
     if (!validation.valid) {
-      setError(validation.error ?? '验证失败');
+      setError(validation.error ?? "验证失败");
       return;
     }
 
@@ -66,7 +66,7 @@ export default function RenameFolderDialog({
       onRenamed?.();
       onClose();
     } catch (err) {
-      setError(getErrorMessage(err, '重命名失败'));
+      setError(getErrorMessage(err, "重命名失败"));
     } finally {
       setLoading(false);
     }
@@ -77,33 +77,55 @@ export default function RenameFolderDialog({
       e.preventDefault();
       handleRename();
     },
-    [handleRename]
+    [handleRename],
   );
 
   if (!open || !folder) return null;
 
   const inputClass =
-    'w-full rounded-lg border border-white/15 bg-transparent px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:border-rose-400 focus:outline-none';
+    "w-full rounded-lg border border-[var(--dialog-field-border)] bg-transparent px-2.5 py-1.5 text-xs text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:border-[var(--dialog-field-focus-border)] focus:outline-none";
 
   const message = (
-    <div className="space-y-3">
+    <div className="space-y-3" data-oid="-wv2vqd">
       {error && (
         <ErrorMessage
           message={error}
           onClose={() => setError(null)}
           type="error"
+          data-oid=".92ttl2"
         />
       )}
-      <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2">
-        <p className="text-[0.65rem] uppercase tracking-[0.18em] text-white/55">当前名称</p>
-        <p className="mt-0.5 font-brand text-sm font-normal tracking-wide text-white">
-          <span className="font-semibold text-rose-300">{folder.name}</span>
+      <div
+        className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+        data-oid="y9u739u"
+      >
+        <p
+          className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          data-oid="eu52bs9"
+        >
+          当前名称
+        </p>
+        <p
+          className="mt-0.5 font-brand text-sm font-normal tracking-wide text-[var(--dialog-panel-text)]"
+          data-oid="68231ko"
+        >
+          <span className="font-semibold text-[var(--dialog-panel-accent)]" data-oid="ks9eoho">
+            {folder.name}
+          </span>
         </p>
       </div>
-      <div>
-        <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-white/55">新名称</p>
-        <div className="rounded-lg border border-white/10 bg-black/35 p-2.5">
-          <form onSubmit={handleSubmit}>
+      <div data-oid="xc_-ycb">
+        <p
+          className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          data-oid="ug_.i2y"
+        >
+          新名称
+        </p>
+        <div
+          className="rounded-lg border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] p-2.5"
+          data-oid="tk86h.r"
+        >
+          <form onSubmit={handleSubmit} data-oid="gkgdi8t">
             <input
               ref={inputRef}
               type="text"
@@ -113,6 +135,7 @@ export default function RenameFolderDialog({
               maxLength={80}
               className={inputClass}
               disabled={loading}
+              data-oid="ha.4hl:"
             />
           </form>
         </div>
@@ -125,9 +148,9 @@ export default function RenameFolderDialog({
       open={open}
       appearance="glass"
       variant="info"
-      icon={<PencilLine className="h-5 w-5" />}
-      iconBgClass="bg-rose-500/15"
-      iconColorClass="text-rose-300"
+      icon={<PencilLine className="h-5 w-5" data-oid="r8z_ckl" />}
+      iconBgClass="bg-[var(--dialog-accent-rose-bg)]"
+      iconColorClass="text-[var(--dialog-accent-rose-text)]"
       title="重命名文件夹"
       message={message}
       confirmText="保存"
@@ -135,6 +158,7 @@ export default function RenameFolderDialog({
       loading={loading}
       onConfirm={handleRename}
       onCancel={onClose}
+      data-oid="m.wmozj"
     />
   );
 }

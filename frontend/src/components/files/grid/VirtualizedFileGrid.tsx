@@ -1,8 +1,8 @@
-import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import type { FileMetadata } from '../../../types/files';
-import type { Folder } from '../../../types/folders';
-import FileCard from './FileCard';
-import { FILE_LIST } from '../../../constants';
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
+import type { FileMetadata } from "../../../types/files";
+import type { Folder } from "../../../types/folders";
+import FileCard from "./FileCard";
+import { FILE_LIST } from "../../../constants";
 
 /** 根据窗口宽度估算网格列数（与 FileGrid/FolderGrid 保持一致） */
 function getColumnsFromWidth(width: number): number {
@@ -21,7 +21,7 @@ interface VirtualizedFileGridProps {
   onShare: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
   onRename: (file: FileMetadata) => void;
-  onDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
+  onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
   onDragStart: (fileId: string, e: React.DragEvent) => void;
   openFileMenuId: string | null;
   onToggleMenu: (id: string) => void;
@@ -56,16 +56,18 @@ export default function VirtualizedFileGrid({
   const topSpacerRef = useRef<HTMLDivElement>(null);
   const bottomSpacerRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(() =>
-    getColumnsFromWidth(typeof window !== 'undefined' ? window.innerWidth : 1280)
+    getColumnsFromWidth(
+      typeof window !== "undefined" ? window.innerWidth : 1280,
+    ),
   );
   const [containerWidth, setContainerWidth] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth : 1280
+    typeof window !== "undefined" ? window.innerWidth : 1280,
   );
   /** 容器顶部相对于视口顶部的偏移（<0 表示已向上滚过） */
   const [containerTop, setContainerTop] = useState(0);
   /** 容器在视口内的可见高度（像素） */
   const [visibleHeight, setVisibleHeight] = useState(
-    typeof window !== 'undefined' ? window.innerHeight : 800
+    typeof window !== "undefined" ? window.innerHeight : 800,
   );
 
   // 使用 refs 跟踪 RAF 和节流状态
@@ -111,9 +113,9 @@ export default function VirtualizedFileGrid({
       }, RESIZE_THROTTLE_MS);
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
       if (resizeTimeout !== null) clearTimeout(resizeTimeout);
     };
   }, [updateViewport]);
@@ -128,9 +130,9 @@ export default function VirtualizedFileGrid({
       scheduleUpdate();
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener("scroll", handleScroll);
       // 清理挂起的 RAF
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
@@ -160,11 +162,18 @@ export default function VirtualizedFileGrid({
   }, [files.length, columns, updateViewport]);
 
   const rowHeight = useMemo(() => {
-    if (!containerWidth || columns <= 0) return FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
+    if (!containerWidth || columns <= 0)
+      return FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
     const gap = 8; // tailwind gap-2 = 0.5rem
-    const cardWidth = Math.max(0, (containerWidth - gap * (columns - 1)) / columns);
+    const cardWidth = Math.max(
+      0,
+      (containerWidth - gap * (columns - 1)) / columns,
+    );
     const extraHeight = 92; // p-3 + meta 区 + 间距（经验值，避免明显过高导致底部空白）
-    return Math.max(FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT, Math.round(cardWidth + extraHeight));
+    return Math.max(
+      FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT,
+      Math.round(cardWidth + extraHeight),
+    );
   }, [containerWidth, columns]);
   const rowCount = Math.ceil(files.length / columns);
   const overscan = 2;
@@ -176,83 +185,115 @@ export default function VirtualizedFileGrid({
     if (rowCount === 0) return { startRow: 0, endRow: -1 };
 
     // 如果列表不在视口内或可见高度为 0，至少渲染前几行
-    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const viewportHeight =
+      typeof window !== "undefined" ? window.innerHeight : 800;
     if (visibleHeight <= 0 || containerTop > viewportHeight) {
       return { startRow: 0, endRow: Math.min(rowCount - 1, overscan * 2) };
     }
 
-    const startRow = Math.max(0, Math.floor(scrollTopInContainer / rowHeight) - overscan);
+    const startRow = Math.max(
+      0,
+      Math.floor(scrollTopInContainer / rowHeight) - overscan,
+    );
     const endRow = Math.min(
       rowCount - 1,
-      Math.ceil((scrollTopInContainer + visibleHeight) / rowHeight) + overscan
+      Math.ceil((scrollTopInContainer + visibleHeight) / rowHeight) + overscan,
     );
     return { startRow, endRow };
-  }, [scrollTopInContainer, visibleHeight, rowHeight, rowCount, overscan, containerTop]);
+  }, [
+    scrollTopInContainer,
+    visibleHeight,
+    rowHeight,
+    rowCount,
+    overscan,
+    containerTop,
+  ]);
 
   const topSpacerHeight = Math.max(0, visibleRange.startRow * rowHeight);
-  const bottomSpacerHeight = Math.max(0, (rowCount - visibleRange.endRow - 1) * rowHeight);
+  const bottomSpacerHeight = Math.max(
+    0,
+    (rowCount - visibleRange.endRow - 1) * rowHeight,
+  );
 
   // 将 columns / spacer 高度同步到 DOM，避免内联 style 触发 lint
   useEffect(() => {
     const el = containerRef.current;
-    if (el) el.style.setProperty('--grid-cols', String(columns));
+    if (el) el.style.setProperty("--grid-cols", String(columns));
   }, [columns]);
   useEffect(() => {
     const el = containerRef.current;
-    if (el) el.style.setProperty('--virtual-row-height', `${rowHeight}px`);
+    if (el) el.style.setProperty("--virtual-row-height", `${rowHeight}px`);
   }, [rowHeight]);
   useEffect(() => {
     const el = topSpacerRef.current;
-    if (el) el.style.setProperty('height', `${topSpacerHeight}px`);
+    if (el) el.style.setProperty("height", `${topSpacerHeight}px`);
   }, [topSpacerHeight]);
   useEffect(() => {
     const el = bottomSpacerRef.current;
-    if (el) el.style.setProperty('height', `${bottomSpacerHeight}px`);
+    if (el) el.style.setProperty("height", `${bottomSpacerHeight}px`);
   }, [bottomSpacerHeight]);
 
   if (files.length === 0) return null;
 
   return (
-    <div ref={containerRef} className="w-full" aria-label="文件列表">
+    <div
+      ref={containerRef}
+      className="w-full"
+      aria-label="文件列表"
+      data-oid="l.ic_.p"
+    >
       {/* 顶部占位，保证滚动高度接近真实高度 */}
-      {topSpacerHeight > 0 && <div ref={topSpacerRef} aria-hidden="true" />}
+      {topSpacerHeight > 0 && (
+        <div ref={topSpacerRef} aria-hidden="true" data-oid="cp-0vp-" />
+      )}
 
       {visibleRange.endRow >= visibleRange.startRow &&
-        Array.from({ length: visibleRange.endRow - visibleRange.startRow + 1 }, (_, i) => {
-          const rowIndex = visibleRange.startRow + i;
-          const start = rowIndex * columns;
-          const rowFiles = files.slice(start, start + columns);
-          if (rowFiles.length === 0) return null;
+        Array.from(
+          { length: visibleRange.endRow - visibleRange.startRow + 1 },
+          (_, i) => {
+            const rowIndex = visibleRange.startRow + i;
+            const start = rowIndex * columns;
+            const rowFiles = files.slice(start, start + columns);
+            if (rowFiles.length === 0) return null;
 
-          return (
-            <div key={rowIndex} className="virtualized-row mb-2 last:mb-0">
+            return (
               <div
-                className="grid gap-2 [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
+                key={rowIndex}
+                className="virtualized-row mb-2 last:mb-0"
+                data-oid="qbzn4v8"
               >
-                {rowFiles.map((file) => (
-                  <FileCard
-                    key={file.id}
-                    file={file}
-                    isSelected={selectedFiles.has(file.id)}
-                    onSelect={(id) => onSelect(id, !selectedFiles.has(id))}
-                    onPreview={onPreview}
-                    onShare={onShare}
-                    onDownload={onDownload}
-                    onRename={() => onRename(file)}
-                    onDelete={() => onDelete(file, 'file')}
-                    onDragStart={(e, file) => onDragStart(file.id, e)}
-                    isMenuOpen={openFileMenuId === file.id}
-                    onToggleMenu={onToggleMenu}
-                    onCloseMenu={onCloseMenu}
-                  />
-                ))}
+                <div
+                  className="grid gap-2 [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
+                  data-oid="pq_c030"
+                >
+                  {rowFiles.map((file) => (
+                    <FileCard
+                      key={file.id}
+                      file={file}
+                      isSelected={selectedFiles.has(file.id)}
+                      onSelect={(id) => onSelect(id, !selectedFiles.has(id))}
+                      onPreview={onPreview}
+                      onShare={onShare}
+                      onDownload={onDownload}
+                      onRename={() => onRename(file)}
+                      onDelete={() => onDelete(file, "file")}
+                      onDragStart={(e, file) => onDragStart(file.id, e)}
+                      isMenuOpen={openFileMenuId === file.id}
+                      onToggleMenu={onToggleMenu}
+                      onCloseMenu={onCloseMenu}
+                      data-oid="yl4xq88"
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          },
+        )}
 
       {/* 底部占位，补齐剩余高度 */}
-      {bottomSpacerHeight > 0 && <div ref={bottomSpacerRef} aria-hidden="true" />}
+      {bottomSpacerHeight > 0 && (
+        <div ref={bottomSpacerRef} aria-hidden="true" data-oid="badkmi9" />
+      )}
     </div>
   );
 }

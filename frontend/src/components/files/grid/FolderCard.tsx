@@ -89,8 +89,7 @@ const FolderCard = memo(function FolderCard({
       className={cn(
         "glass-card group relative cursor-pointer rounded-md transition-colors",
         isSelected && "border-[var(--cta-primary-border)]",
-        isDragOver &&
-          "border-[var(--color-border-strong)]",
+        isDragOver && "border-[var(--color-border-strong)]",
       )}
       onDoubleClick={handleDoubleClick}
       role="button"
@@ -98,8 +97,9 @@ const FolderCard = memo(function FolderCard({
       onKeyDown={(e) => {
         if (e.key === "Enter") onOpen(folder);
       }}
+      data-oid="y3sabdy"
     >
-      <div className="p-3">
+      <div className="p-3" data-oid="tw-paus">
         {/* 文件夹图标：使用和视频文件相同的主色（text-purple-400），但缩小尺寸避免过于抢眼 */}
         <div
           className="relative mb-3 flex aspect-square items-center justify-center rounded-sm bg-[var(--filelist-folder-icon-bg)]"
@@ -108,44 +108,61 @@ const FolderCard = memo(function FolderCard({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          data-oid="69zytmi"
         >
           <SelectionCheckbox
             isSelected={isSelected}
             onClick={handleSelect}
             size="responsive"
             positionClassName="absolute left-[clamp(0.4rem,0.9vw,0.6rem)] top-[clamp(0.4rem,0.9vw,0.6rem)]"
+            data-oid="4exa0wc"
           />
+
           <i
             className="bi bi-folder-fill text-[clamp(1.5rem,3.2vw,2.25rem)] text-[var(--filelist-folder-icon)]"
             aria-hidden
+            data-oid="3:fkme9"
           />
         </div>
 
         {/* 文件夹名称 + 设置按钮 */}
-        <div className="flex w-full items-center justify-between gap-2">
+        <div
+          className="flex w-full items-center justify-between gap-2"
+          data-oid="ebqewy5"
+        >
           <p
             className="min-w-0 flex-1 truncate whitespace-nowrap text-center text-[clamp(0.65rem,2.4vw,0.9rem)] font-medium text-[var(--glass-text)]"
             title={folder.name}
+            data-oid="7ndc6ny"
           >
             {folder.name}
           </p>
 
           {/* 设置按钮（与文字同一行，右对齐） */}
-          <div className="relative flex-shrink-0">
+          <div className="relative flex-shrink-0" data-oid="b-9cfh-">
             <button
               type="button"
               onClick={handleToggleMenu}
               className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-[var(--glass-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--glass-text)]"
               aria-label="更多操作"
+              data-oid="v.ta39e"
             >
-              <MoreVertical className="scale-50" />
+              <MoreVertical className="scale-50" data-oid="d8iuuo." />
             </button>
 
             {/* 玻璃拟态菜单 */}
             {isMenuOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={onCloseMenu} />
-                <div className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100">
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={onCloseMenu}
+                  data-oid="0cciqz9"
+                />
+
+                <div
+                  className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
+                  data-oid="9xqi6te"
+                >
                   <button
                     type="button"
                     className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
@@ -154,9 +171,16 @@ const FolderCard = memo(function FolderCard({
                       onCloseMenu();
                       onOpen(folder);
                     }}
+                    data-oid="ishdm9z"
                   >
-                    <FolderOpen className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]" />
-                    <span className="whitespace-nowrap">打开</span>
+                    <FolderOpen
+                      className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]"
+                      data-oid="1_cslmy"
+                    />
+
+                    <span className="whitespace-nowrap" data-oid="3sxo2w.">
+                      打开
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -166,11 +190,22 @@ const FolderCard = memo(function FolderCard({
                       onCloseMenu();
                       onRename(folder);
                     }}
+                    data-oid="otal830"
                   >
-                    <PencilLine className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]" />
-                    <span className="whitespace-nowrap">重命名</span>
+                    <PencilLine
+                      className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]"
+                      data-oid="is04_-l"
+                    />
+
+                    <span className="whitespace-nowrap" data-oid="6zseb6d">
+                      重命名
+                    </span>
                   </button>
-                  <div className="my-0.5 border-t border-[var(--filelist-menu-divider)]" />
+                  <div
+                    className="my-0.5 border-t border-[var(--filelist-menu-divider)]"
+                    data-oid="ux:37vq"
+                  />
+
                   <button
                     type="button"
                     className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
@@ -179,9 +214,16 @@ const FolderCard = memo(function FolderCard({
                       onCloseMenu();
                       onDelete(folder.id);
                     }}
+                    data-oid="j2_pyh."
                   >
-                    <Trash2 className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]" />
-                    <span className="whitespace-nowrap">删除</span>
+                    <Trash2
+                      className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]"
+                      data-oid="b5w8:n8"
+                    />
+
+                    <span className="whitespace-nowrap" data-oid="_ugimy-">
+                      删除
+                    </span>
                   </button>
                 </div>
               </>

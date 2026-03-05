@@ -209,6 +209,7 @@ export default function FilePreview({
       role="dialog"
       aria-modal="true"
       aria-labelledby="preview-title"
+      data-oid="i.zkwzs"
     >
       {/* ---- 背景层（点击关闭） ---- */}
       <div
@@ -216,22 +217,31 @@ export default function FilePreview({
         style={{ backgroundColor: "rgba(var(--preview-ink), 0.92)" }}
         onClick={onClose}
         aria-hidden
+        data-oid="fj47v.w"
       />
 
       {mount3D && (
-        <Suspense fallback={null}>
-          <FilePreviewBackground3D isRotationPaused={isRotationPaused} />
+        <Suspense fallback={null} data-oid="3glt49c">
+          <FilePreviewBackground3D
+            isRotationPaused={isRotationPaused}
+            data-oid="9h9imx0"
+          />
         </Suspense>
       )}
 
-      <div className="pointer-events-none absolute inset-0 z-[2]">
+      <div
+        className="pointer-events-none absolute inset-0 z-[2]"
+        data-oid="svab85m"
+      >
         <div
           className="absolute inset-0 opacity-45 mix-blend-screen"
           style={{
             backgroundImage:
               "linear-gradient(180deg, rgba(var(--preview-green), 0.26), rgba(var(--preview-purple), 0.18) 45%, rgba(var(--preview-ink), 0.55)), radial-gradient(circle at 50% 30%, rgba(var(--preview-green), 0.3), transparent 55%)",
           }}
+          data-oid="_up3-o:"
         />
+
         <div
           className="absolute inset-0 opacity-30"
           style={{
@@ -239,41 +249,73 @@ export default function FilePreview({
               "linear-gradient(rgba(var(--preview-green), 0.25) 1px, transparent 1px)",
             backgroundSize: "100% 4px",
           }}
+          data-oid="dyz10uc"
         />
-        <div className="preview-neon-frame absolute left-[8%] top-[12%] h-10 w-24 rounded-sm" />
-        <div className="preview-neon-frame alt absolute right-[10%] top-[18%] h-12 w-28 rounded-sm" />
-        <div className="preview-neon-frame soft absolute left-[12%] bottom-[18%] h-8 w-20 rounded-sm" />
-        <div className="preview-neon-frame alt soft absolute right-[14%] bottom-[12%] h-10 w-24 rounded-sm" />
-        <div className="preview-neon-ring absolute left-1/2 top-[8%] h-[120px] w-[120px] -translate-x-1/2 rounded-full" />
+
+        <div
+          className="preview-neon-frame absolute left-[8%] top-[12%] h-10 w-24 rounded-sm"
+          data-oid="0:uwm.s"
+        />
+
+        <div
+          className="preview-neon-frame alt absolute right-[10%] top-[18%] h-12 w-28 rounded-sm"
+          data-oid="5jowg3c"
+        />
+
+        <div
+          className="preview-neon-frame soft absolute left-[12%] bottom-[18%] h-8 w-20 rounded-sm"
+          data-oid="1f:__x_"
+        />
+
+        <div
+          className="preview-neon-frame alt soft absolute right-[14%] bottom-[12%] h-10 w-24 rounded-sm"
+          data-oid="-vn171l"
+        />
+
+        <div
+          className="preview-neon-ring absolute left-1/2 top-[8%] h-[120px] w-[120px] -translate-x-1/2 rounded-full"
+          data-oid="mp5h9t9"
+        />
       </div>
 
       {/* ---- 装饰渐变 ---- */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        data-oid=":qmfpi6"
+      >
         <div
           className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full blur-3xl"
           style={{
             background:
               "radial-gradient(circle, rgba(var(--preview-green), 0.22), transparent 65%)",
           }}
+          data-oid="_luhfen"
         />
+
         <div
           className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full blur-3xl"
           style={{
             background:
               "radial-gradient(circle, rgba(var(--preview-purple), 0.2), transparent 65%)",
           }}
+          data-oid="ozlg2_0"
         />
+
         <div
           className="absolute left-1/2 top-1/2 h-1/3 w-1/3 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
           style={{
             background:
               "radial-gradient(circle, rgba(var(--preview-magenta), 0.16), transparent 65%)",
           }}
+          data-oid="dzs1unr"
         />
       </div>
 
       {/* ---- 网格纹理 ---- */}
-      <div className="preview-grid-pattern pointer-events-none absolute inset-0" />
+      <div
+        className="preview-grid-pattern pointer-events-none absolute inset-0"
+        data-oid="8g09uvy"
+      />
 
       {/* ---- 左侧导航按钮 ---- */}
       {files.length > 1 && (
@@ -295,6 +337,7 @@ export default function FilePreview({
               : "opacity-30 cursor-not-allowed",
           )}
           aria-label="上一个文件"
+          data-oid="1u2s148"
         >
           <svg
             className="shrink-0 w-[clamp(1rem,2.5vw,1.5rem)] h-[clamp(1rem,2.5vw,1.5rem)]"
@@ -302,11 +345,13 @@ export default function FilePreview({
             stroke="currentColor"
             viewBox="0 0 24 24"
             strokeWidth="clamp(1.5, 0.4vw, 2.5)"
+            data-oid="2mniwy."
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               d="M15 19l-7-7 7-7"
+              data-oid=":-.ujt6"
             />
           </svg>
         </button>
@@ -316,11 +361,15 @@ export default function FilePreview({
       <div
         className="relative z-20 flex shrink-0 items-center justify-between bg-gradient-to-b from-black/70 via-black/40 to-transparent px-4 py-3"
         onClick={(e) => e.stopPropagation()}
+        data-oid="0_8_xes"
       >
-        <div className="flex items-center gap-3" />
-        <div className="flex items-center gap-2" />
+        <div className="flex items-center gap-3" data-oid="omtvpu3" />
+        <div className="flex items-center gap-2" data-oid="sj8woog" />
         {files.length > 1 && (
-          <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2">
+          <div
+            className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2"
+            data-oid="ptnb6vs"
+          >
             <div
               className={cn(
                 "inline-flex items-center rounded-full bg-white/10 backdrop-blur-xl border-solid",
@@ -329,8 +378,12 @@ export default function FilePreview({
                 "border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.2)] text-[clamp(0.6rem,1.2vw,0.7rem)]",
                 "shadow-[0_clamp(0.25rem,0.8vw,0.6rem)_clamp(0.5rem,1.5vw,1rem)_rgba(15,23,42,0.85)]",
               )}
+              data-oid="2ug-018"
             >
-              <span className="text-[var(--preview-text-primary)]">
+              <span
+                className="text-[var(--preview-text-primary)]"
+                data-oid="ks8479d"
+              >
                 {currentIndex + 1} / {files.length}
               </span>
             </div>
@@ -363,6 +416,7 @@ export default function FilePreview({
         onImageError={onImageError}
         onClose={onClose}
         formatDate={formatPreviewDate}
+        data-oid="gyzog51"
       />
 
       <FilePreviewToolbar
@@ -380,6 +434,7 @@ export default function FilePreview({
         onToggleRotation={handleToggleRotation}
         isRotationPaused={isRotationPaused}
         className="absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] bottom-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
+        data-oid="raibeex"
       />
 
       {files.length > 1 && (
@@ -401,6 +456,7 @@ export default function FilePreview({
               : "opacity-30 cursor-not-allowed",
           )}
           aria-label="下一个文件"
+          data-oid="k1l2xfs"
         >
           <svg
             className="shrink-0 w-[clamp(1rem,2.5vw,1.5rem)] h-[clamp(1rem,2.5vw,1.5rem)]"
@@ -408,11 +464,13 @@ export default function FilePreview({
             stroke="currentColor"
             viewBox="0 0 24 24"
             strokeWidth="clamp(1.5, 0.4vw, 2.5)"
+            data-oid="qxkd8d-"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               d="M9 5l7 7-7 7"
+              data-oid="ftin3jx"
             />
           </svg>
         </button>
@@ -433,14 +491,16 @@ export default function FilePreview({
         onToggleRotation={handleToggleRotation}
         isRotationPaused={isRotationPaused}
         className="absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
+        data-oid="h1nkeo3"
       />
 
       {/* ---- 底部文件信息 ---- */}
       <div
         className="relative z-20 shrink-0 bg-gradient-to-t from-black/70 to-transparent px-[clamp(0.8rem,2vw,1rem)] py-[clamp(0.9rem,2.25vw,1.25rem)]"
         onClick={(e) => e.stopPropagation()}
+        data-oid="8u:a17z"
       >
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-3xl" data-oid="j24dcaf">
           <div
             className={cn(
               "mx-auto max-w-2xl rounded-xl bg-white/5 text-center backdrop-blur-sm border-solid",
@@ -448,15 +508,20 @@ export default function FilePreview({
               "border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.1)]",
               "shadow-[0_clamp(0.2rem,0.6vw,0.4rem)_clamp(0.4rem,1.2vw,0.8rem)_rgba(0,0,0,0.2)]",
             )}
+            data-oid="86:.xt."
           >
             <h2
               id="preview-title"
               className="truncate font-medium text-[var(--preview-text-primary)] text-[clamp(0.8rem,1.8vw,1rem)]"
               title={file.original_filename}
+              data-oid="fl7a_5r"
             >
               {displayFilename}
             </h2>
-            <p className="text-[var(--preview-text-muted)] mt-[clamp(0.2rem,0.5vw,0.25rem)] text-[clamp(0.65rem,1.4vw,0.75rem)]">
+            <p
+              className="text-[var(--preview-text-muted)] mt-[clamp(0.2rem,0.5vw,0.25rem)] text-[clamp(0.65rem,1.4vw,0.75rem)]"
+              data-oid="n97uwfn"
+            >
               {formatFileSize(file.file_size)} ·{" "}
               {getMimeTypeLabel(file.mime_type, file.original_filename)} ·{" "}
               {formatPreviewDate(file.created_at)}

@@ -58,6 +58,7 @@ export function SelectionCheckbox({
             : "h-5 w-5",
       )}
       aria-label={isSelected ? "取消选择" : "选择"}
+      data-oid="giuccid"
     >
       {isSelected ? (
         <span
@@ -69,6 +70,7 @@ export function SelectionCheckbox({
                 ? "h-3 w-3"
                 : "h-4 w-4",
           )}
+          data-oid="2.imuw_"
         >
           <svg
             className={cn(
@@ -83,11 +85,13 @@ export function SelectionCheckbox({
             stroke="currentColor"
             viewBox="0 0 24 24"
             strokeWidth={3}
+            data-oid=".ut6.kf"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               d="M5 13l4 4L19 7"
+              data-oid="5m1uzy0"
             />
           </svg>
         </span>
@@ -101,6 +105,7 @@ export function SelectionCheckbox({
                 ? "h-3 w-3"
                 : "h-4 w-4",
           )}
+          data-oid="4jdh1lb"
         >
           <span
             className={cn(
@@ -111,6 +116,7 @@ export function SelectionCheckbox({
                   ? "h-1.5 w-1.5"
                   : "h-2.5 w-2.5",
             )}
+            data-oid="v3q45d5"
           />
         </span>
       )}

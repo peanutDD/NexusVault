@@ -1,6 +1,6 @@
-import { useRef, useCallback, useEffect } from 'react';
-import { cn } from '../../../utils/cn';
-import { getMaxFileSizeGB } from '../../../utils/uploadValidation';
+import { useRef, useCallback, useEffect } from "react";
+import { cn } from "../../../utils/cn";
+import { getMaxFileSizeGB } from "../../../utils/uploadValidation";
 
 interface UploadDropzoneProps {
   /** 拖拽状态 */
@@ -34,8 +34,8 @@ export default function UploadDropzone({
   // 打开弹窗时清空 input
   useEffect(() => {
     if (open && inputRef.current) {
-      inputRef.current.value = '';
-      inputRef.current.setAttribute('multiple', '');
+      inputRef.current.value = "";
+      inputRef.current.setAttribute("multiple", "");
     }
   }, [open]);
 
@@ -46,15 +46,15 @@ export default function UploadDropzone({
       onFilesSelect(Array.from(list));
       // 清空 input 以允许重复选择相同文件
       setTimeout(() => {
-        if (inputRef.current) inputRef.current.value = '';
+        if (inputRef.current) inputRef.current.value = "";
       }, 0);
     },
-    [onFilesSelect]
+    [onFilesSelect],
   );
 
   const handleSelectClick = useCallback(() => {
     if (inputRef.current) {
-      inputRef.current.value = '';
+      inputRef.current.value = "";
       inputRef.current.click();
     }
   }, []);
@@ -66,11 +66,12 @@ export default function UploadDropzone({
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={cn(
-        'relative mb-5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition-all duration-200',
+        "relative mb-5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition-all duration-200",
         dragActive
-          ? 'border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]'
-          : 'border-[var(--upload-drop-border)] bg-[var(--upload-drop-bg)] hover:border-[var(--upload-drop-border-hover)]'
+          ? "border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]"
+          : "border-[var(--upload-drop-border)] bg-[var(--upload-drop-bg)] hover:border-[var(--upload-drop-border-hover)]",
       )}
+      data-oid="avv7z.z"
     >
       <input
         ref={inputRef}
@@ -79,29 +80,43 @@ export default function UploadDropzone({
         className="hidden"
         aria-label="选择文件"
         onChange={handleFileChange}
+        data-oid="agx7h35"
       />
 
       {/* 文件图标 */}
-      <div className="mb-4">
-        <FileDocIcon />
+      <div className="mb-4" data-oid="y.1zluq">
+        <FileDocIcon data-oid="-9-iufi" />
       </div>
 
-      <p className="font-brand mb-1 text-sm font-normal tracking-widest text-[var(--upload-text)]">
+      <p
+        className="font-brand mb-1 text-sm font-normal tracking-widest text-[var(--upload-text)]"
+        data-oid="3:sil7f"
+      >
         Drag and drop your files
       </p>
-      <p className="font-brand mb-5 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]">
-        Max. File size: {maxGB > 1 ? `${maxGB} GB` : `${Math.round(maxGB * 1024)} MB`}
+      <p
+        className="font-brand mb-5 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]"
+        data-oid="7lkgayu"
+      >
+        Max. File size:{" "}
+        {maxGB > 1 ? `${maxGB} GB` : `${Math.round(maxGB * 1024)} MB`}
       </p>
 
       <button
         type="button"
         onClick={handleSelectClick}
         className="font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-secondary-text)] transition-colors hover:bg-[var(--btn-secondary-bg-hover)]"
+        data-oid="vxr0jy_"
       >
         Select files
       </button>
-      <p className="font-brand mt-2 text-xs text-[var(--upload-text-muted)]">
-        支持多选；若多选只显示 1 个，请将多个文件<strong>拖入上方区域</strong>，或多次点击「Select files」逐个添加
+      <p
+        className="font-brand mt-2 text-xs text-[var(--upload-text-muted)]"
+        data-oid="ujhry_7"
+      >
+        支持多选；若多选只显示 1 个，请将多个文件
+        <strong data-oid="ds2aa16">拖入上方区域</strong>，或多次点击「Select
+        files」逐个添加
       </p>
     </div>
   );
@@ -116,16 +131,20 @@ function FileDocIcon() {
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      data-oid="og-gqs6"
     >
       {/* 文档主体 */}
       <path
         d="M12 6C12 4.89543 12.8954 4 14 4H28L36 12V42C36 43.1046 35.1046 44 34 44H14C12.8954 44 12 43.1046 12 42V6Z"
         fill="rgb(var(--upload-doc-icon-main))"
+        data-oid="7u_f4f:"
       />
+
       {/* 折角 */}
       <path
         d="M28 4L36 12H30C28.8954 12 28 11.1046 28 10V4Z"
         fill="rgb(var(--upload-doc-icon-fold))"
+        data-oid="xmp:1n4"
       />
     </svg>
   );

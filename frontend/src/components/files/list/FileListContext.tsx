@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- Context and hook are intentionally co-located */
-import { createContext, use } from 'react';
-import type { FileMetadata } from '../../../types/files';
-import type { Folder } from '../../../types/folders';
+import { createContext, use } from "react";
+import type { FileMetadata } from "../../../types/files";
+import type { Folder } from "../../../types/folders";
 
 /**
  * 文件列表上下文类型
@@ -51,7 +51,9 @@ export const FileListContext = createContext<FileListContextValue | null>(null);
 export function useFileListContext(): FileListContextValue {
   const context = use(FileListContext);
   if (!context) {
-    throw new Error('useFileListContext must be used within a FileListProvider');
+    throw new Error(
+      "useFileListContext must be used within a FileListProvider",
+    );
   }
   return context;
 }

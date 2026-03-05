@@ -99,19 +99,19 @@ export function getMimeTypeLabel(mime: string, filename?: string): string {
 export function getMimeTypeInfo(mime: string): MimeTypeInfo {
   // 使用 Map 查找替代多个 if-else
   const typeMap: Array<[() => boolean, MimeTypeInfo]> = [
-    [() => isVideoType(mime), { label: 'VIDEO', color: '#8B5CF6', bgClass: 'bg-purple-900/30' }],
-    [() => isPdfType(mime), { label: 'PDF', color: '#EF4444', bgClass: 'bg-red-900/30' }],
-    [() => isAudioType(mime), { label: 'AUDIO', color: '#22C55E', bgClass: 'bg-green-900/30' }],
-    [() => isImageType(mime), { label: 'IMAGE', color: '#6C5DD3', bgClass: 'bg-indigo-900/30' }],
-    [() => isDocumentType(mime), { label: 'DOC', color: '#3B82F6', bgClass: 'bg-blue-900/30' }],
-    [() => isSpreadsheetType(mime), { label: 'SHEET', color: '#10B981', bgClass: 'bg-emerald-900/30' }],
-    [() => isArchiveType(mime), { label: 'ZIP', color: '#F59E0B', bgClass: 'bg-amber-900/30' }],
+    [() => isVideoType(mime), { label: 'VIDEO', color: 'var(--upload-mime-video-color)', bgClass: 'bg-[var(--upload-mime-video-bg)]' }],
+    [() => isPdfType(mime), { label: 'PDF', color: 'var(--upload-mime-pdf-color)', bgClass: 'bg-[var(--upload-mime-pdf-bg)]' }],
+    [() => isAudioType(mime), { label: 'AUDIO', color: 'var(--upload-mime-audio-color)', bgClass: 'bg-[var(--upload-mime-audio-bg)]' }],
+    [() => isImageType(mime), { label: 'IMAGE', color: 'var(--upload-mime-image-color)', bgClass: 'bg-[var(--upload-mime-image-bg)]' }],
+    [() => isDocumentType(mime), { label: 'DOC', color: 'var(--upload-mime-doc-color)', bgClass: 'bg-[var(--upload-mime-doc-bg)]' }],
+    [() => isSpreadsheetType(mime), { label: 'SHEET', color: 'var(--upload-mime-sheet-color)', bgClass: 'bg-[var(--upload-mime-sheet-bg)]' }],
+    [() => isArchiveType(mime), { label: 'ZIP', color: 'var(--upload-mime-archive-color)', bgClass: 'bg-[var(--upload-mime-archive-bg)]' }],
     // 文本等其他类型：占位背景与视频卡片保持一致的紫色系
-    [() => isTextType(mime), { label: 'TEXT', color: '#6B7280', bgClass: 'bg-purple-900/30' }],
+    [() => isTextType(mime), { label: 'TEXT', color: 'var(--upload-mime-text-color)', bgClass: 'bg-[var(--upload-mime-text-bg)]' }],
   ];
 
   const match = typeMap.find(([predicate]) => predicate());
-  return match?.[1] ?? { label: 'FILE', color: '#6B7280', bgClass: 'bg-purple-900/30' };
+  return match?.[1] ?? { label: 'FILE', color: 'var(--upload-mime-default-color)', bgClass: 'bg-[var(--upload-mime-default-bg)]' };
 }
 
 /** 获取图标颜色（用于 UploadFileItem 等组件） */

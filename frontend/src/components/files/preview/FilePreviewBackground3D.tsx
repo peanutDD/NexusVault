@@ -1,11 +1,13 @@
-import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
 
 interface FilePreviewBackground3DProps {
   isRotationPaused: boolean;
 }
 
-export default function FilePreviewBackground3D({ isRotationPaused }: FilePreviewBackground3DProps) {
+export default function FilePreviewBackground3D({
+  isRotationPaused,
+}: FilePreviewBackground3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isRotationPausedRef = useRef(isRotationPaused);
   const prefersReducedMotionRef = useRef(false);
@@ -18,12 +20,17 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     const container = containerRef.current;
     if (!container) return;
 
-    const mql = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const mql = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     prefersReducedMotionRef.current = Boolean(mql?.matches);
 
     // Initialize Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, prefersReducedMotionRef.current ? 1 : 2));
+    renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio,
+        prefersReducedMotionRef.current ? 1 : 2,
+      ),
+    );
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -37,7 +44,7 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       45,
       container.clientWidth / container.clientHeight,
       0.1,
-      100
+      100,
     );
     // 增加相机距离，从 8 改为 14，确保在移动端小屏幕上也能看到完整场景
     camera.position.set(0, 0, 14);
@@ -105,15 +112,23 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       spiralPositions[i3 + 2] = z;
 
       const t = Math.min(1, Math.max(0, r / 3.0));
-      tmpColor.copy(arm === 0 ? cyan : magenta).lerp(arm === 0 ? magenta : cyan, t * 0.35);
+      tmpColor
+        .copy(arm === 0 ? cyan : magenta)
+        .lerp(arm === 0 ? magenta : cyan, t * 0.35);
       tmpColor.multiplyScalar(1 - t * 0.6);
       spiralColors[i3] = tmpColor.r;
       spiralColors[i3 + 1] = tmpColor.g;
       spiralColors[i3 + 2] = tmpColor.b;
     }
     const spiralGeometry = new THREE.BufferGeometry();
-    spiralGeometry.setAttribute('position', new THREE.BufferAttribute(spiralPositions, 3));
-    spiralGeometry.setAttribute('color', new THREE.BufferAttribute(spiralColors, 3));
+    spiralGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(spiralPositions, 3),
+    );
+    spiralGeometry.setAttribute(
+      "color",
+      new THREE.BufferAttribute(spiralColors, 3),
+    );
     const spiralMaterial = new THREE.PointsMaterial({
       size: 0.05,
       sizeAttenuation: true,
@@ -148,7 +163,12 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     ring.rotation.y = Math.PI / 6;
     group.add(ring);
 
-    const orbitPathGeometry = new THREE.TorusGeometry(moonOrbitRadius, 0.03, 10, 96);
+    const orbitPathGeometry = new THREE.TorusGeometry(
+      moonOrbitRadius,
+      0.03,
+      10,
+      96,
+    );
     const orbitPathMaterial = new THREE.MeshStandardMaterial({
       color: 0x22f3a6,
       metalness: 0.35,
@@ -173,8 +193,8 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     }
     const particleGeometry = new THREE.BufferGeometry();
     particleGeometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(particlePositions, 3)
+      "position",
+      new THREE.BufferAttribute(particlePositions, 3),
     );
     const particleMaterial = new THREE.PointsMaterial({
       color: 0xd7fff1,
@@ -192,25 +212,26 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     auroraGroup.position.set(0.6, 2.6, -3.1);
     auroraGroup.rotation.set(-0.48, 0.25, 0.05);
     scene.add(auroraGroup);
-    
+
     // Create static aurora ribbons instead of dynamic ones
-    for (let i = 0; i < 2; i += 1) { // Reduced from 3
-        const width = 16;
-        const height = 3.6;
-        const geometry = new THREE.PlaneGeometry(width, height, 20, 4); // Reduced segments
-        const material = new THREE.MeshBasicMaterial({
-            color: i === 0 ? 0x2bffb9 : 0xb455ff,
-            transparent: true,
-            opacity: 0.3,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            side: THREE.DoubleSide,
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(-2.2 + i * 0.9, 0.1 + i * 0.18, -i * 0.8);
-        mesh.rotation.y = -0.18 + i * 0.1;
-        mesh.rotation.z = 0.12 - i * 0.07;
-        auroraGroup.add(mesh);
+    for (let i = 0; i < 2; i += 1) {
+      // Reduced from 3
+      const width = 16;
+      const height = 3.6;
+      const geometry = new THREE.PlaneGeometry(width, height, 20, 4); // Reduced segments
+      const material = new THREE.MeshBasicMaterial({
+        color: i === 0 ? 0x2bffb9 : 0xb455ff,
+        transparent: true,
+        opacity: 0.3,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(-2.2 + i * 0.9, 0.1 + i * 0.18, -i * 0.8);
+      mesh.rotation.y = -0.18 + i * 0.1;
+      mesh.rotation.z = 0.12 - i * 0.07;
+      auroraGroup.add(mesh);
     }
 
     // Resize Handler
@@ -264,7 +285,9 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
       group.position.y = Math.sin(phase) * 0.15;
 
       if (!previewContentEl) {
-        previewContentEl = document.querySelector('[data-preview-content]') as HTMLElement | null;
+        previewContentEl = document.querySelector(
+          "[data-preview-content]",
+        ) as HTMLElement | null;
       }
       if (previewContentEl) {
         const w = container.clientWidth || 0;
@@ -280,19 +303,37 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
 
         orbitMarker.getWorldPosition(tmpWorld);
         tmpNdc.copy(tmpWorld).project(camera);
-        const cx = (tmpNdc.x * 0.5) * w;
-        const cy = (-tmpNdc.y * 0.5) * h;
+        const cx = tmpNdc.x * 0.5 * w;
+        const cy = -tmpNdc.y * 0.5 * h;
 
         const x = cx * orbitBlend;
         const y = cy * orbitBlend;
-        const z = (Math.sin(phase * 2) * Math.min(90, Math.max(24, base * 0.12))) * orbitBlend;
+        const z =
+          Math.sin(phase * 2) *
+          Math.min(90, Math.max(24, base * 0.12)) *
+          orbitBlend;
         const rx = 0;
         const ry = 0;
-        previewContentEl.style.setProperty('--preview-orbit-x', `${x.toFixed(2)}px`);
-        previewContentEl.style.setProperty('--preview-orbit-y', `${y.toFixed(2)}px`);
-        previewContentEl.style.setProperty('--preview-orbit-z', `${z.toFixed(2)}px`);
-        previewContentEl.style.setProperty('--preview-orbit-rx', `${rx.toFixed(2)}deg`);
-        previewContentEl.style.setProperty('--preview-orbit-ry', `${ry.toFixed(2)}deg`);
+        previewContentEl.style.setProperty(
+          "--preview-orbit-x",
+          `${x.toFixed(2)}px`,
+        );
+        previewContentEl.style.setProperty(
+          "--preview-orbit-y",
+          `${y.toFixed(2)}px`,
+        );
+        previewContentEl.style.setProperty(
+          "--preview-orbit-z",
+          `${z.toFixed(2)}px`,
+        );
+        previewContentEl.style.setProperty(
+          "--preview-orbit-rx",
+          `${rx.toFixed(2)}deg`,
+        );
+        previewContentEl.style.setProperty(
+          "--preview-orbit-ry",
+          `${ry.toFixed(2)}deg`,
+        );
       }
 
       renderer.render(scene, camera);
@@ -324,7 +365,12 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
 
     const onReducedMotionChange = () => {
       prefersReducedMotionRef.current = Boolean(mql?.matches);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, prefersReducedMotionRef.current ? 1 : 2));
+      renderer.setPixelRatio(
+        Math.min(
+          window.devicePixelRatio,
+          prefersReducedMotionRef.current ? 1 : 2,
+        ),
+      );
       if (prefersReducedMotionRef.current) {
         stop();
         renderFrame(0);
@@ -334,7 +380,7 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     };
 
     if (mql) {
-      mql.addEventListener('change', onReducedMotionChange);
+      mql.addEventListener("change", onReducedMotionChange);
     }
 
     start();
@@ -342,25 +388,29 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     // Cleanup
     return () => {
       if (mql) {
-        mql.removeEventListener('change', onReducedMotionChange);
+        mql.removeEventListener("change", onReducedMotionChange);
       }
       stop();
       resizeObserver.disconnect();
-      
-      if (container && renderer.domElement && container.contains(renderer.domElement)) {
-          container.removeChild(renderer.domElement);
+
+      if (
+        container &&
+        renderer.domElement &&
+        container.contains(renderer.domElement)
+      ) {
+        container.removeChild(renderer.domElement);
       }
-      
+
       renderer.dispose();
 
       if (previewContentEl) {
-        previewContentEl.style.removeProperty('--preview-orbit-x');
-        previewContentEl.style.removeProperty('--preview-orbit-y');
-        previewContentEl.style.removeProperty('--preview-orbit-z');
-        previewContentEl.style.removeProperty('--preview-orbit-rx');
-        previewContentEl.style.removeProperty('--preview-orbit-ry');
+        previewContentEl.style.removeProperty("--preview-orbit-x");
+        previewContentEl.style.removeProperty("--preview-orbit-y");
+        previewContentEl.style.removeProperty("--preview-orbit-z");
+        previewContentEl.style.removeProperty("--preview-orbit-rx");
+        previewContentEl.style.removeProperty("--preview-orbit-ry");
       }
-      
+
       // Dispose geometries and materials
       galaxyCoreGeometry.dispose();
       galaxyCoreMaterial.dispose();
@@ -377,5 +427,11 @@ export default function FilePreviewBackground3D({ isRotationPaused }: FilePrevie
     };
   }, []); // Run only once on mount
 
-  return <div ref={containerRef} className="absolute inset-0 z-[1] pointer-events-none" />;
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 z-[1] pointer-events-none"
+      data-oid="k4gk46v"
+    />
+  );
 }

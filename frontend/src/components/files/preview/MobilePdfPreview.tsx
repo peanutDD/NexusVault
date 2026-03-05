@@ -287,6 +287,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
     <div
       className="flex h-full w-full flex-col overflow-hidden"
       onClick={(e) => e.stopPropagation()}
+      data-oid="qkcogqd"
     >
       {/* ------------------------------------------------------------------ */}
       {/* 可滚动内容区（canvas） */}
@@ -298,42 +299,69 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
         style={{ touchAction: "pan-y pinch-zoom" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        data-oid="1v7_s4v"
       >
         {/* 文档加载中 */}
         {docLoading && (
-          <div className="flex h-full w-full min-h-[200px] items-center justify-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-purple-400" />
-              <span className="text-sm text-white/50">正在加载 PDF…</span>
+          <div
+            className="flex h-full w-full min-h-[200px] items-center justify-center"
+            data-oid="ev5n:_x"
+          >
+            <div
+              className="flex flex-col items-center gap-3"
+              data-oid="b0znml7"
+            >
+              <div
+                className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                data-oid="rqtmjzh"
+              />
+
+              <span className="text-sm text-[var(--loading-text)]" data-oid="sca1ymm">
+                正在加载 PDF…
+              </span>
             </div>
           </div>
         )}
 
         {/* 出错 */}
         {error && !docLoading && (
-          <div className="flex h-full w-full min-h-[200px] items-center justify-center px-6">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/20">
+          <div
+            className="flex h-full w-full min-h-[200px] items-center justify-center px-6"
+            data-oid="8s9gc03"
+          >
+            <div
+              className="flex flex-col items-center gap-4 text-center"
+              data-oid="ko1orak"
+            >
+              <div
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--preview-pdf-error-icon-bg)]"
+                data-oid="69txr4y"
+              >
                 <svg
-                  className="h-7 w-7 text-red-400"
+                  className="h-7 w-7 text-[var(--preview-pdf-error-icon-text)]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  data-oid="lp31nyp"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
                     d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                    data-oid="d280y-y"
                   />
                 </svg>
               </div>
-              <p className="text-sm text-red-300">{error}</p>
+              <p className="text-sm text-[var(--preview-pdf-error-text)]" data-oid="sao9zis">
+                {error}
+              </p>
               <a
                 href={blobUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-full bg-white/10 px-5 py-2 text-sm text-white transition-colors hover:bg-white/20 active:bg-white/25"
+                className="rounded-full bg-[var(--preview-pdf-open-btn-bg)] px-5 py-2 text-sm text-[var(--preview-pdf-open-btn-text)] transition-colors hover:bg-[var(--preview-pdf-open-btn-hover-bg)] active:bg-[var(--preview-pdf-open-btn-active-bg)]"
+                data-oid="hj9.2ui"
               >
                 在新标签中打开
               </a>
@@ -343,11 +371,20 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
 
         {/* Canvas 页面内容 */}
         {!docLoading && !error && (
-          <div className="relative p-1 flex items-start justify-center w-full">
+          <div
+            className="relative p-1 flex items-start justify-center w-full"
+            data-oid="o-dennq"
+          >
             {/* 每页渲染 Loading 遮罩 */}
             {pageLoading && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-purple-400" />
+              <div
+                className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--loading-overlay-bg)] backdrop-blur-[2px]"
+                data-oid="qcfzi3o"
+              >
+                <div
+                  className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                  data-oid="6wantz-"
+                />
               </div>
             )}
             <canvas
@@ -358,6 +395,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
                 opacity: pageLoading ? 0.55 : 1,
                 transition: "opacity 0.18s ease",
               }}
+              data-oid="k.nps.f"
             />
           </div>
         )}
@@ -369,8 +407,9 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
       {numPages > 0 && (
         <div
           className="flex shrink-0 items-center justify-between gap-2 px-3 py-2
-                     bg-black/70 backdrop-blur-md border-t border-white/10"
+                     bg-[var(--preview-pdf-toolbar-bg)] backdrop-blur-md border-t border-[var(--preview-pdf-toolbar-border)]"
           onClick={(e) => e.stopPropagation()}
+          data-oid="s1eh5vm"
         >
           {/* 上一页 */}
           <button
@@ -378,21 +417,24 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             onClick={goToPrev}
             disabled={currentPage <= 1}
             className="flex h-9 w-9 items-center justify-center rounded-full
-                       bg-white/10 text-white/80 transition-colors
-                       disabled:opacity-25 active:bg-white/25"
+                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-text)] transition-colors
+                       disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
             aria-label="上一页"
+            data-oid="ddcus-n"
           >
             <svg
               className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              data-oid="hot8j03"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M15 19l-7-7 7-7"
+                data-oid="8wgivlm"
               />
             </svg>
           </button>
@@ -403,33 +445,47 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             onClick={zoomOut}
             disabled={userScale <= MIN_SCALE}
             className="flex h-8 w-8 items-center justify-center rounded-full
-                       bg-white/10 text-white/70 text-lg font-bold transition-colors
-                       disabled:opacity-25 active:bg-white/25"
+                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] text-lg font-bold transition-colors
+                       disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
             aria-label="缩小"
+            data-oid="c841dnq"
           >
             <svg
               className="h-4 w-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              data-oid="v1xqr_5"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2.5}
                 d="M20 12H4"
+                data-oid="zv..hh3"
               />
             </svg>
           </button>
 
           {/* 页码 & 缩放比 */}
-          <div className="flex flex-col items-center leading-tight">
-            <span className="text-sm font-medium text-white/80">
+          <div
+            className="flex flex-col items-center leading-tight"
+            data-oid="hevdb4s"
+          >
+            <span
+              className="text-sm font-medium text-[var(--preview-pdf-page-text)]"
+              data-oid="h7dt3u6"
+            >
               {currentPage}
-              <span className="text-white/35 mx-1">/</span>
+              <span className="text-[var(--preview-pdf-page-divider)] mx-1" data-oid="-_luic4">
+                /
+              </span>
               {numPages}
             </span>
-            <span className="text-[10px] text-white/40 tabular-nums">
+            <span
+              className="text-[10px] text-[var(--preview-pdf-page-subtext)] tabular-nums"
+              data-oid="pbarn28"
+            >
               {Math.round(userScale * 100)}%
             </span>
           </div>
@@ -440,21 +496,24 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             onClick={zoomIn}
             disabled={userScale >= MAX_SCALE}
             className="flex h-8 w-8 items-center justify-center rounded-full
-                       bg-white/10 text-white/70 transition-colors
-                       disabled:opacity-25 active:bg-white/25"
+                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] transition-colors
+                       disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
             aria-label="放大"
+            data-oid="9sco1ge"
           >
             <svg
               className="h-4 w-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              data-oid="avod9hg"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2.5}
                 d="M12 4v16m8-8H4"
+                data-oid="2ojvysd"
               />
             </svg>
           </button>
@@ -465,21 +524,24 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             onClick={goToNext}
             disabled={currentPage >= numPages}
             className="flex h-9 w-9 items-center justify-center rounded-full
-                       bg-white/10 text-white/80 transition-colors
-                       disabled:opacity-25 active:bg-white/25"
+                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-text)] transition-colors
+                       disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
             aria-label="下一页"
+            data-oid="86hhplk"
           >
             <svg
               className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              data-oid="zcwys3g"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M9 5l7 7-7 7"
+                data-oid="hyhu-lj"
               />
             </svg>
           </button>

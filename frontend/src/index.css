@@ -159,32 +159,6 @@ body {
         color 0.3s ease;
 }
 
-.light main {
-    color: var(--color-text-primary);
-}
-
-.light main [class*="text-white"] {
-    color: var(--color-text-primary) !important;
-}
-
-.light main svg,
-.light main .bi,
-.light main [class^="bi-"],
-.light main [class*=" bi-"] {
-    color: var(--color-text-primary) !important;
-}
-
-.light main .fileListGlassScope .glass-panel-soft [class*="text-white"] {
-    color: rgba(var(--rgb-white), 0.92) !important;
-}
-
-.light main .fileListGlassScope .glass-panel-soft svg,
-.light main .fileListGlassScope .glass-panel-soft .bi,
-.light main .fileListGlassScope .glass-panel-soft [class^="bi-"],
-.light main .fileListGlassScope .glass-panel-soft [class*=" bi-"] {
-    color: rgba(var(--rgb-white), 0.92) !important;
-}
-
 .font-display {
     font-family: var(--font-display);
 }

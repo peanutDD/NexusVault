@@ -1,18 +1,18 @@
-import { memo } from 'react';
-import { cn } from '../../utils/cn';
+import { memo } from "react";
+import { cn } from "../../utils/cn";
 
-type MacActionVariant = 'selected' | 'move' | 'share' | 'download' | 'delete';
+type MacActionVariant = "selected" | "move" | "share" | "download" | "delete";
 
 interface MacActionIconProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant: MacActionVariant;
 }
 
 const BOOTSTRAP_ICON: Record<MacActionVariant, string> = {
-  selected: 'bi-check-circle-fill',
-  move: 'bi-arrow-left-right',
-  share: 'bi-share-fill',
-  download: 'bi-download',
-  delete: 'bi-trash-fill',
+  selected: "bi-check-circle-fill",
+  move: "bi-arrow-left-right",
+  share: "bi-share-fill",
+  download: "bi-download",
+  delete: "bi-trash-fill",
 };
 
 /**
@@ -28,12 +28,16 @@ export const MacActionIcon = memo(function MacActionIcon({
 
   return (
     <span
-      className={cn('macActionIcon', `macActionIcon--${variant}`, className)}
+      className={cn("macActionIcon", `macActionIcon--${variant}`, className)}
       aria-hidden="true"
       {...props}
+      data-oid="vkoqbtr"
     >
-      <i className={cn('macActionIconGlyph', 'bi', biClass)} aria-hidden="true" />
+      <i
+        className={cn("macActionIconGlyph", "bi", biClass)}
+        aria-hidden="true"
+        data-oid="3__3b_6"
+      />
     </span>
   );
 });
-

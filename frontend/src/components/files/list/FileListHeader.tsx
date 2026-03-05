@@ -1,8 +1,8 @@
 /**
  * FileListHeader 组件
- * 
+ *
  * 文件列表的头部组件，包含面包屑导航和顶部工具栏
- * 
+ *
  * @param props 组件属性
  * @param props.folderPath 当前文件夹路径
  * @param props.navigateToFolder 导航到文件夹的回调函数
@@ -15,11 +15,11 @@
  * @param props.onSortChange 排序方式变化的回调函数
  * @param props.onOpenUpload 打开上传对话框的回调函数
  */
-import React from 'react';
-import FolderBreadcrumb from '../FolderBreadcrumb';
-import FileListFilters from './FileListFilters';
+import React from "react";
+import FolderBreadcrumb from "../FolderBreadcrumb";
+import FileListFilters from "./FileListFilters";
 
-import type { Folder } from '../../../types/folders';
+import type { Folder } from "../../../types/folders";
 
 interface FileListHeaderProps {
   folderPath: Folder[];
@@ -52,17 +52,21 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
     <>
       {/* 面包屑：进入文件夹后置顶、左对齐 */}
       {folderPath.length > 0 && (
-        <div className="flex justify-start">
+        <div className="flex justify-start" data-oid="fezl6p:">
           <FolderBreadcrumb
             path={folderPath}
             onNavigate={navigateToFolder}
             onDrop={handleDropOnBreadcrumb}
+            data-oid="p1bfd0o"
           />
         </div>
       )}
 
       {/* 顶部工具区（复刻截图布局，整体缩放到 0.75） */}
-      <div className="glass-panel glass-panel-toolbar fileListToolbarScale75 p-3">
+      <div
+        className="glass-panel glass-panel-toolbar fileListToolbarScale75 p-3"
+        data-oid="x7gq7h9"
+      >
         <FileListFilters
           layout="screenshot"
           search={search}
@@ -72,38 +76,60 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
           onMimeTypeChange={onMimeTypeChange}
           onSortChange={onSortChange}
           actions={
-            <div className="flex flex-nowrap items-center gap-2">
+            <div
+              className="flex flex-nowrap items-center gap-2"
+              data-oid="-qrfhc7"
+            >
               <button
                 type="button"
                 onClick={() => navigateToFolder(null)}
-                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[rgba(var(--rgb-slate-50),0.86)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="All Files"
+                data-oid="k350jq9"
               >
-                <i className="bi bi-folder2-open shrink-0 text-[0.75rem]" aria-hidden />
-                <span>All Files</span>
+                <i
+                  className="bi bi-folder2-open shrink-0 text-[0.75rem]"
+                  aria-hidden
+                  data-oid="ido6hk6"
+                />
+
+                <span data-oid="ufgayry">All Files</span>
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreateFolder(true)}
-                className="glass-btn toolbarActionBtn font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[rgba(var(--rgb-slate-50),0.86)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="New Folder"
+                data-oid=":iv9u9g"
               >
-                <i className="bi bi-folder-plus shrink-0 text-[0.75rem]" aria-hidden />
-                <span>New Folder</span>
+                <i
+                  className="bi bi-folder-plus shrink-0 text-[0.75rem]"
+                  aria-hidden
+                  data-oid="dbviwyd"
+                />
+
+                <span data-oid="ebr--_h">New Folder</span>
               </button>
               {onOpenUpload && (
                 <button
                   type="button"
                   onClick={onOpenUpload}
-                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[rgba(var(--rgb-slate-50),0.86)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                   aria-label="Upload File"
+                  data-oid="zanhkec"
                 >
-                  <i className="bi bi-cloud-upload shrink-0 text-[0.75rem]" aria-hidden />
-                  <span>Upload File</span>
+                  <i
+                    className="bi bi-cloud-upload shrink-0 text-[0.75rem]"
+                    aria-hidden
+                    data-oid="fajfb:-"
+                  />
+
+                  <span data-oid="fdi6yj_">Upload File</span>
                 </button>
               )}
             </div>
           }
+          data-oid="sa526di"
         />
       </div>
     </>

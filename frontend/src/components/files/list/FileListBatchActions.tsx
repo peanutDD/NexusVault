@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Circle, Download, MoveRight, Share2, Trash2 } from 'lucide-react';
+import { memo } from "react";
+import { Circle, Download, MoveRight, Share2, Trash2 } from "lucide-react";
 
 interface FileListBatchActionsProps {
   selectedFileCount: number;
@@ -31,110 +31,168 @@ const FileListBatchActions = memo(function FileListBatchActions({
   const getSelectionText = () => {
     const parts: string[] = [];
     if (selectedFileCount > 0) {
-      parts.push(`${selectedFileCount} file${selectedFileCount === 1 ? '' : 's'}`);
+      parts.push(
+        `${selectedFileCount} file${selectedFileCount === 1 ? "" : "s"}`,
+      );
     }
     if (selectedFolderCount > 0) {
-      parts.push(`${selectedFolderCount} folder${selectedFolderCount === 1 ? '' : 's'}`);
+      parts.push(
+        `${selectedFolderCount} folder${selectedFolderCount === 1 ? "" : "s"}`,
+      );
     }
-    return parts.join(', ');
+    return parts.join(", ");
   };
 
   /* 与 ALL FILES 栏一致：text-[0.625rem] leading-none */
   const rowClass =
-    'font-brand font-normal tracking-widest text-[0.625rem] leading-none';
+    "font-brand font-normal tracking-widest text-[0.625rem] leading-none";
   const btnClass =
-    'glass-btn inline-flex items-center justify-center sm:justify-start gap-2 px-2 py-1 hover:border-white/25 ' +
+    "glass-btn inline-flex items-center justify-center sm:justify-start gap-2 px-2 py-1 hover:border-white/25 " +
     rowClass;
 
   const wrapperClass = bare
-    ? 'batch-actions-row flex items-center justify-between gap-4 animate-fade-in transition-all duration-200'
-    : 'batch-actions-bar glass-panel-soft flex items-center justify-between gap-4 animate-fade-in transition-all duration-200';
+    ? "batch-actions-row flex items-center justify-between gap-4 animate-fade-in transition-all duration-200"
+    : "batch-actions-bar glass-panel-soft flex items-center justify-between gap-4 animate-fade-in transition-all duration-200";
 
   return (
-    <div className={wrapperClass}>
-      <div className="flex min-w-0 items-center gap-2 whitespace-nowrap text-[0.625rem]">
-        <span className="inline-block h-4 w-4 shrink-0 rounded-sm" aria-hidden />
-        <span className="font-brand min-w-0 shrink truncate font-normal tracking-widest leading-none text-[rgba(var(--rgb-white),0.86)] text-[clamp(0.5rem,1.2vw,0.625rem)]">
+    <div className={wrapperClass} data-oid="4faqf4j">
+      <div
+        className="flex min-w-0 items-center gap-2 whitespace-nowrap text-[0.625rem]"
+        data-oid="zvxz73n"
+      >
+        <span
+          className="inline-block h-4 w-4 shrink-0 rounded-sm"
+          aria-hidden
+          data-oid="4y63_0t"
+        />
+
+        <span
+          className="font-brand min-w-0 shrink truncate font-normal tracking-widest leading-none text-[rgba(var(--rgb-white),0.86)] text-[clamp(0.5rem,1.2vw,0.625rem)]"
+          data-oid="z8d:i3l"
+        >
           Already selected {getSelectionText()}
         </span>
       </div>
 
-      <div className="flex min-w-0 items-center justify-end gap-1.5 overflow-x-auto whitespace-nowrap text-[0.625rem]">
-        <button type="button" onClick={onBatchMove} className={btnClass}>
+      <div
+        className="flex min-w-0 items-center justify-end gap-1.5 overflow-x-auto whitespace-nowrap text-[0.625rem]"
+        data-oid=":7zr0ik"
+      >
+        <button
+          type="button"
+          onClick={onBatchMove}
+          className={btnClass}
+          data-oid="v6ltkew"
+        >
           <span
             className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
             aria-hidden
+            data-oid="0k0iytx"
           >
             <Circle
               fill="currentColor"
               strokeWidth={0}
               className="absolute inset-0 h-full w-full text-white/90"
+              data-oid="27gb1u7"
             />
+
             <MoveRight
               strokeWidth={2}
               className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
+              data-oid=".:4i8.8"
             />
           </span>
-          <span className="hidden sm:inline">Batch Move</span>
+          <span className="hidden sm:inline" data-oid="ndudl2d">
+            Batch Move
+          </span>
         </button>
-        <button type="button" onClick={onBatchShare} className={btnClass}>
+        <button
+          type="button"
+          onClick={onBatchShare}
+          className={btnClass}
+          data-oid="kpmxorg"
+        >
           <span
             className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
             aria-hidden
+            data-oid="fnn9p:r"
           >
             <Circle
               fill="currentColor"
               strokeWidth={0}
               className="absolute inset-0 h-full w-full text-white/90"
+              data-oid="v5a:eso"
             />
+
             <Share2
               strokeWidth={2}
               className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
+              data-oid="hcdh6lw"
             />
           </span>
-          <span className="hidden sm:inline">Batch Share</span>
+          <span className="hidden sm:inline" data-oid="8n9.0-c">
+            Batch Share
+          </span>
         </button>
         <button
           type="button"
           onClick={onBatchDownload}
           disabled={batchDownloading}
-          className={btnClass + (batchDownloading ? ' cursor-wait opacity-70' : '')}
-          title={batchDownloading ? '正在打包 ZIP，请稍候…' : undefined}
+          className={
+            btnClass + (batchDownloading ? " cursor-wait opacity-70" : "")
+          }
+          title={batchDownloading ? "正在打包 ZIP，请稍候…" : undefined}
+          data-oid="m4pbcwk"
         >
           <span
             className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
             aria-hidden
+            data-oid="z6n5kgd"
           >
             <Circle
               fill="currentColor"
               strokeWidth={0}
               className="absolute inset-0 h-full w-full text-white/90"
+              data-oid="1z1g5n0"
             />
+
             <Download
               strokeWidth={2.5}
               className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
+              data-oid=".x9tmcw"
             />
           </span>
-          <span className="hidden sm:inline">
-            {batchDownloading ? '打包中…' : 'Batch Download ZIP'}
+          <span className="hidden sm:inline" data-oid="w6k92kx">
+            {batchDownloading ? "打包中…" : "Batch Download ZIP"}
           </span>
         </button>
-        <button type="button" onClick={onBatchDelete} className={btnClass}>
+        <button
+          type="button"
+          onClick={onBatchDelete}
+          className={btnClass}
+          data-oid="q64jv5u"
+        >
           <span
             className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
             aria-hidden
+            data-oid="1vo6bll"
           >
             <Circle
               fill="currentColor"
               strokeWidth={0}
               className="absolute inset-0 h-full w-full text-white/90"
+              data-oid="c75qi3f"
             />
+
             <Trash2
               strokeWidth={2}
               className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
+              data-oid="385v02v"
             />
           </span>
-          <span className="hidden sm:inline">Batch Delete</span>
+          <span className="hidden sm:inline" data-oid="uu21om_">
+            Batch Delete
+          </span>
         </button>
       </div>
     </div>

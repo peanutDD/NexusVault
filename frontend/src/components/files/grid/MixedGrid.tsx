@@ -1,12 +1,12 @@
-import type { DragEvent } from 'react';
-import type { FileMetadata } from '../../../types/files';
-import type { Folder } from '../../../types/folders';
-import FileCard from './FileCard';
-import FolderCard from './FolderCard';
+import type { DragEvent } from "react";
+import type { FileMetadata } from "../../../types/files";
+import type { Folder } from "../../../types/folders";
+import FileCard from "./FileCard";
+import FolderCard from "./FolderCard";
 
 export type MixedGridItem =
-  | { type: 'file'; file: FileMetadata }
-  | { type: 'folder'; folder: Folder };
+  | { type: "file"; file: FileMetadata }
+  | { type: "folder"; folder: Folder };
 
 interface MixedGridProps {
   items: MixedGridItem[];
@@ -20,9 +20,13 @@ interface MixedGridProps {
   onDownloadFile: (file: FileMetadata) => void;
   onRenameFolder: (folder: Folder) => void;
   onRenameFile: (file: FileMetadata) => void;
-  onDelete: (file: FileMetadata | Folder, type: 'file' | 'folder') => void;
+  onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
   onFileDragStart: (fileId: string, e: DragEvent) => void;
-  onDropOnFolder: (folderId: string, fileIds: string[], folderIds: string[]) => void;
+  onDropOnFolder: (
+    folderId: string,
+    fileIds: string[],
+    folderIds: string[],
+  ) => void;
   openFileMenuId: string | null;
   openFolderMenuId: string | null;
   onToggleFileMenu: (id: string) => void;
@@ -54,9 +58,12 @@ export default function MixedGrid({
   if (items.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+    <div
+      className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
+      data-oid="kt4n62z"
+    >
       {items.map((item) => {
-        if (item.type === 'folder') {
+        if (item.type === "folder") {
           const folder = item.folder;
           return (
             <FolderCard
@@ -66,15 +73,22 @@ export default function MixedGrid({
               onSelect={(id) => onSelectFolder(id, !selectedFolders.has(id))}
               onOpen={(f) => onOpenFolder(f.id)}
               onRename={onRenameFolder}
-              onDelete={() => onDelete(folder, 'folder')}
+              onDelete={() => onDelete(folder, "folder")}
               onDrop={(e, target) => {
-                const fileId = e.dataTransfer.getData('application/file-id');
-                const folderId = e.dataTransfer.getData('application/folder-id');
-                onDropOnFolder(target.id, fileId ? [fileId] : [], folderId ? [folderId] : []);
+                const fileId = e.dataTransfer.getData("application/file-id");
+                const folderId = e.dataTransfer.getData(
+                  "application/folder-id",
+                );
+                onDropOnFolder(
+                  target.id,
+                  fileId ? [fileId] : [],
+                  folderId ? [folderId] : [],
+                );
               }}
               isMenuOpen={openFolderMenuId === folder.id}
               onToggleMenu={onToggleFolderMenu}
               onCloseMenu={onCloseMenu}
+              data-oid="3fvb5qm"
             />
           );
         }
@@ -90,11 +104,12 @@ export default function MixedGrid({
             onShare={onShareFile}
             onDownload={onDownloadFile}
             onRename={() => onRenameFile(file)}
-            onDelete={() => onDelete(file, 'file')}
+            onDelete={() => onDelete(file, "file")}
             onDragStart={(e) => onFileDragStart(file.id, e)}
             isMenuOpen={openFileMenuId === file.id}
             onToggleMenu={onToggleFileMenu}
             onCloseMenu={onCloseMenu}
+            data-oid="no510gx"
           />
         );
       })}

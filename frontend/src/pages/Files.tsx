@@ -1,13 +1,15 @@
-import { useState, useCallback, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '../store/authStore';
-import PageLayout from '../components/layout/PageLayout';
-import FileList from '../components/files/list/FileList';
-import { clearFileListCache } from '../utils/fileListCache';
+import { useState, useCallback, lazy, Suspense } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "../store/authStore";
+import PageLayout from "../components/layout/PageLayout";
+import FileList from "../components/files/list/FileList";
+import { clearFileListCache } from "../utils/fileListCache";
 
 // 懒加载重型对话框组件
-const UploadDialog = lazy(() => import('../components/files/upload/UploadDialog'));
+const UploadDialog = lazy(
+  () => import("../components/files/upload/UploadDialog"),
+);
 
 export default function Files() {
   const navigate = useNavigate();
@@ -19,24 +21,29 @@ export default function Files() {
 
   const handleLogout = useCallback(() => {
     clearAuth();
-    navigate('/login');
+    navigate("/login");
   }, [clearAuth, navigate]);
 
   const handleUploadComplete = useCallback(() => {
     clearFileListCache();
-    queryClient.invalidateQueries({ queryKey: ['files'] });
+    queryClient.invalidateQueries({ queryKey: ["files"] });
     setRefreshKey((k) => k + 1);
   }, [queryClient]);
 
   return (
-    <PageLayout username={user?.username} onLogout={handleLogout}>
+    <PageLayout
+      username={user?.username}
+      onLogout={handleLogout}
+      data-oid="_.p3.bw"
+    >
       {/* 上传对话框 - 懒加载 */}
       {uploadDialogOpen && (
-        <Suspense fallback={null}>
+        <Suspense fallback={null} data-oid="9oj81xl">
           <UploadDialog
             open={uploadDialogOpen}
             onClose={() => setUploadDialogOpen(false)}
             onUploadComplete={handleUploadComplete}
+            data-oid="jpx-5gw"
           />
         </Suspense>
       )}
@@ -45,6 +52,7 @@ export default function Files() {
       <FileList
         key={refreshKey}
         onOpenUpload={() => setUploadDialogOpen(true)}
+        data-oid="b.s_-vo"
       />
     </PageLayout>
   );

@@ -17,6 +17,7 @@ interface ThemeState {
 function applyTheme(effectiveTheme: Theme) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
+  root.setAttribute('data-theme', effectiveTheme);
   root.classList.remove('light', 'purple');
   if (effectiveTheme === 'light') {
     root.classList.remove('dark');

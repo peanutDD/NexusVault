@@ -1,5 +1,5 @@
-import type { Folder } from '../../../types/folders';
-import FolderCard from './FolderCard';
+import type { Folder } from "../../../types/folders";
+import FolderCard from "./FolderCard";
 
 interface FolderGridProps {
   folders: Folder[];
@@ -37,7 +37,10 @@ export default function FolderGrid({
   if (folders.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+    <div
+      className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
+      data-oid="n3w0d77"
+    >
       {folders.map((folder) => (
         <FolderCard
           key={folder.id}
@@ -48,13 +51,18 @@ export default function FolderGrid({
           onRename={onRename}
           onDelete={onDelete}
           onDrop={(e, target) => {
-            const fileId = e.dataTransfer.getData('application/file-id');
-            const folderId = e.dataTransfer.getData('application/folder-id');
-            onDrop(target.id, fileId ? [fileId] : [], folderId ? [folderId] : []);
+            const fileId = e.dataTransfer.getData("application/file-id");
+            const folderId = e.dataTransfer.getData("application/folder-id");
+            onDrop(
+              target.id,
+              fileId ? [fileId] : [],
+              folderId ? [folderId] : [],
+            );
           }}
           isMenuOpen={openFolderMenuId === folder.id}
           onToggleMenu={onToggleMenu}
           onCloseMenu={onCloseMenu}
+          data-oid="iorwr2u"
         />
       ))}
     </div>
