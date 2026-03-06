@@ -14,6 +14,7 @@ interface BatchMoveDialogProps {
   folderCount: number;
   onClose: () => void;
   onMoved?: () => void;
+  onPartialMoved?: () => void;
   /** 执行移动前乐观更新，返回回滚函数；失败时调用回滚 */
   onApplyOptimistic?: (
     fileIds: string[],
@@ -22,6 +23,24 @@ interface BatchMoveDialogProps {
   ) => (() => void) | void;
 }
 
+const truncateByChars = (value: string, maxChars: number) => {
+  if (maxChars <= 0) return "";
+  const chars = [...value.trim()];
+  if (chars.length <= maxChars) return chars.join("");
+  return `${chars.slice(0, Math.max(0, maxChars - 1)).join("")}…`;
+};
+
+const toShortBatchError = (value: string) => truncateByChars(value, 20);
+
+const formatConflictDetail = (value: string) => {
+  const normalized = value
+    .replace(/^目标文件夹已存在同名文件[:：]?\s*/g, "")
+    .replace(/^文件冲突[:：]?\s*/g, "")
+    .trim();
+  if (!normalized) return "同名冲突";
+  return normalized;
+};
+
 export default function BatchMoveDialog({
   fileIds,
   folderIds,
@@ -29,11 +48,13 @@ export default function BatchMoveDialog({
   folderCount,
   onClose,
   onMoved,
+  onPartialMoved,
   onApplyOptimistic,
 }: BatchMoveDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string[]>([]);
 
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(true);
@@ -72,6 +93,7 @@ export default function BatchMoveDialog({
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setErrorDetails([]);
 
     const folderId = targetFolderId || null;
     const rollback = onApplyOptimistic?.(fileIds, folderIds, folderId);
@@ -79,9 +101,17 @@ export default function BatchMoveDialog({
     try {
       let movedFiles = 0;
       let movedFolders = 0;
+      let failedFiles = 0;
+      let failedFileErrors: string[] = [];
 
       if (fileIds.length > 0) {
-        movedFiles = await folderService.moveFilesToFolder(fileIds, folderId);
+        const fileMoveResult = await folderService.moveFilesToFolderPartial(
+          fileIds,
+          folderId,
+        );
+        movedFiles = fileMoveResult.moved;
+        failedFiles = fileMoveResult.failed;
+        failedFileErrors = fileMoveResult.errors;
       }
 
       if (folderIds.length > 0) {
@@ -89,9 +119,19 @@ export default function BatchMoveDialog({
       }
 
       const anyMoved = movedFiles > 0 || movedFolders > 0;
+      const conflictDetails = failedFileErrors
+        .filter((item) => item.trim().length > 0)
+        .slice(0, 5)
+        .map((item) => toShortBatchError(formatConflictDetail(item)));
+
       if (!anyMoved) {
         rollback?.();
-        setError("没有项目被移动，请重试或检查目标位置。");
+        if (failedFiles > 0) {
+          setError(toShortBatchError(`冲突${failedFiles}个，未移动`));
+          setErrorDetails(conflictDetails);
+        } else {
+          setError(toShortBatchError("没有项目被移动，请检查目标"));
+        }
         return;
       }
 
@@ -104,13 +144,21 @@ export default function BatchMoveDialog({
       if (movedFolders > 0) resultParts.push(`${movedFolders} 个文件夹`);
 
       setSuccess(`已将 ${resultParts.join("、")} 移动至「${folderName}」`);
-      setTimeout(() => {
-        onMoved?.();
-        onClose();
-      }, 1200);
+
+      if (failedFiles > 0) {
+        setError(toShortBatchError(`已移${movedFiles}个，冲突${failedFiles}个`));
+        setErrorDetails(conflictDetails);
+        onPartialMoved?.();
+      } else {
+        setTimeout(() => {
+          onMoved?.();
+          onClose();
+        }, 1200);
+      }
     } catch (err) {
       rollback?.();
-      setError(getErrorMessage(err, "移动失败"));
+      setError(toShortBatchError(getErrorMessage(err, "移动失败")));
+      setErrorDetails([]);
     } finally {
       setLoading(false);
     }
@@ -133,10 +181,37 @@ export default function BatchMoveDialog({
       {error && (
         <ErrorMessage
           message={error}
-          onClose={() => setError(null)}
+          onClose={() => {
+            setError(null);
+            setErrorDetails([]);
+          }}
           type="error"
           data-oid="db9r3ir"
         />
+      )}
+      {errorDetails.length > 0 && (
+        <div
+          className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+          data-oid="r14y2ft"
+        >
+          <p
+            className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+            data-oid="ii2_3y4"
+          >
+            冲突文件
+          </p>
+          <ul className="mt-1.5 space-y-1" data-oid="x6xjivh">
+            {errorDetails.map((item, index) => (
+              <li
+                key={`${item}-${index}`}
+                className="text-[10px] text-[var(--notice-error)]"
+                data-oid="tz5pq6a"
+              >
+                {`${index + 1}. ${item}`}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {success && (

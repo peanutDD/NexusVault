@@ -56,6 +56,11 @@ pub async fn create_folder_handler(
 ) -> Result<Response, AppError> {
     let folder_service = FolderService::from_state(&state);
     let folder = folder_service.create_folder(user_id, req).await?;
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
     Ok(json_response(json!({ "folder": folder })))
 }
 
@@ -179,6 +184,11 @@ pub async fn rename_folder_handler(
 ) -> Result<Response, AppError> {
     let folder_service = FolderService::from_state(&state);
     let folder = folder_service.rename_folder(user_id, id, req).await?;
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
     Ok(json_response(json!({ "folder": folder })))
 }
 
@@ -203,6 +213,11 @@ pub async fn delete_folder_handler(
 ) -> Result<Response, AppError> {
     let folder_service = FolderService::from_state(&state);
     let affected = folder_service.delete_folder(user_id, id).await?;
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
     Ok(json_response(json!({
         "message": "文件夹删除成功",
         "affected_files": affected
@@ -235,6 +250,11 @@ pub async fn move_folder_handler(
 ) -> Result<Response, AppError> {
     let folder_service = FolderService::from_state(&state);
     let folder = folder_service.move_folder(user_id, id, req).await?;
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
     Ok(json_response(json!({ "folder": folder })))
 }
 
@@ -264,6 +284,11 @@ pub async fn move_files_to_folder_handler(
     let moved = folder_service
         .move_files_to_folder(user_id, req.file_ids, req.folder_id)
         .await?;
+    if let Some(pool) = &state.redis {
+        let _ = crate::services::redis::RedisService::new(pool.clone())
+            .bump_user_cache_version(user_id)
+            .await;
+    }
     Ok(json_response(json!({
         "message": "文件移动成功",
         "moved": moved

@@ -1,7 +1,8 @@
 /* 方角赛博朋克上传进度条（去除两端曲线） */
 .uploadProgressTrack {
     background: var(--upload-progress-track-bg);
-    border-top: 1px solid var(--upload-progress-track-border);
+    border: 1px solid var(--upload-progress-track-border);
+    border-radius: 999px;
     box-shadow: var(--upload-progress-track-shadow);
 }
 
@@ -11,7 +12,7 @@
     height: 100%;
     display: block;
     border: 0;
-    border-radius: 0 !important; /* 强制直角 */
+    border-radius: 999px !important;
     background: transparent;
     appearance: none;
     -webkit-appearance: none;
@@ -20,19 +21,19 @@
 
 /* 去掉 Firefox 默认内边框与圆角倾向 */
 .uploadProgress::-moz-progress-bar {
-    border-radius: 0 !important;
+    border-radius: 999px !important;
 }
 
 /* Chrome / Edge 轨道 */
 .uploadProgress::-webkit-progress-bar {
-    border-radius: 0 !important; /* 去除两端曲线 */
+    border-radius: 999px !important;
     background: var(--upload-progress-bar-bg);
     box-shadow: var(--upload-progress-bar-shadow);
 }
 
 /* Chrome / Edge 进度值 */
 .uploadProgress::-webkit-progress-value {
-    border-radius: 0 !important; /* 方角 */
+    border-radius: 999px !important;
     background-image: var(--upload-progress-value-bg);
     background-size: 220% 100%;
     box-shadow: var(--upload-progress-value-shadow);
@@ -43,7 +44,7 @@
 
 /* Firefox 进度值 */
 .uploadProgress::-moz-progress-bar {
-    border-radius: 0 !important; /* 方角 */
+    border-radius: 999px !important;
     background-image: var(--upload-progress-value-bg);
     background-size: 220% 100%;
     box-shadow: var(--upload-progress-value-shadow);
@@ -79,4 +80,19 @@
     .uploadProgress::-moz-progress-bar {
         animation: none;
     }
+}
+
+.uploadFileItemCyber {
+    border: 1px solid rgba(86, 179, 194, 0.34);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 8px 18px rgba(2, 16, 22, 0.42);
+}
+
+.uploadFileItemName {
+    text-shadow: 0 0 8px rgba(255, 201, 169, 0.22);
+}
+
+.uploadFileItemActionBtn {
+    border: 1px solid rgba(86, 179, 194, 0.28);
 }

@@ -133,12 +133,12 @@ export function FilePreviewContent({
           />
 
           <div
-            className="absolute -inset-4 rounded-[30px] border border-[var(--preview-orbit-border)] shadow-[var(--preview-orbit-shadow)]"
+            className="absolute -inset-4 rounded-[30px] shadow-[var(--preview-orbit-shadow)]"
             data-oid="ch3s5ae"
           />
 
           <div
-            className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 translate-y-[clamp(0.55rem,1.6vw,1rem)] [transform-style:preserve-3d]"
+            className="preview-rainbow-pedestal pointer-events-none absolute left-1/2 top-full -translate-x-1/2 translate-y-[clamp(0.55rem,1.6vw,1rem)] [transform-style:preserve-3d]"
             data-oid="vp:mjap"
           >
             {/* Neck Component */}

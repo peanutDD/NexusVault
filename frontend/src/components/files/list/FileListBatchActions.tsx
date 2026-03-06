@@ -84,24 +84,12 @@ const FileListBatchActions = memo(function FileListBatchActions({
           className={btnClass}
           data-oid="v6ltkew"
         >
-          <span
-            className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
+          <MoveRight
+            strokeWidth={2}
+            className="h-[1em] w-[1em] shrink-0 text-white/90"
             aria-hidden
-            data-oid="0k0iytx"
-          >
-            <Circle
-              fill="currentColor"
-              strokeWidth={0}
-              className="absolute inset-0 h-full w-full text-white/90"
-              data-oid="27gb1u7"
-            />
-
-            <MoveRight
-              strokeWidth={2}
-              className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
-              data-oid=".:4i8.8"
-            />
-          </span>
+            data-oid=".:4i8.8"
+          />
           <span className="hidden sm:inline" data-oid="ndudl2d">
             Batch Move
           </span>

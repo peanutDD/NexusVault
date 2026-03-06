@@ -8,7 +8,7 @@
 // 依赖
 // =============================================================================
 
-import { useMemo, useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { fileService } from "../../../services/files";
 import { formatFileSize } from "../../../utils/format";
 import { cn } from "../../../utils/cn";
@@ -21,8 +21,6 @@ import { useFilePreviewEffects } from "./hooks/useFilePreviewEffects";
 import { FilePreviewContent } from "./FilePreviewContent.tsx";
 import { FilePreviewToolbar } from "./FilePreviewToolbar.tsx";
 import { truncateFilename, formatPreviewDate } from "./utils";
-
-const FilePreviewBackground3D = lazy(() => import("./FilePreviewBackground3D"));
 
 // =============================================================================
 // 类型
@@ -108,7 +106,6 @@ export default function FilePreview({
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [isLooping, setIsLooping] = useState(true);
-  const [isRotationPaused, setIsRotationPaused] = useState(true);
   const imageTransformRef = useRef<HTMLDivElement>(null);
   const previewRootRef = useRef<HTMLDivElement>(null);
 
@@ -181,19 +178,6 @@ export default function FilePreview({
     setIsLooping((prev) => !prev);
   };
 
-  const handleToggleRotation = () => {
-    setIsRotationPaused((prev) => !prev);
-  };
-
-  // -------------------------------------------------------------------------
-  // 延迟加载 3D 背景，优先保证弹窗快速弹出
-  // -------------------------------------------------------------------------
-  const [mount3D, setMount3D] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setMount3D(true), 150);
-    return () => clearTimeout(t);
-  }, []);
-
   // -------------------------------------------------------------------------
   // 无文件时返回 null
   // -------------------------------------------------------------------------
@@ -220,102 +204,31 @@ export default function FilePreview({
         data-oid="fj47v.w"
       />
 
-      {mount3D && (
-        <Suspense fallback={null} data-oid="3glt49c">
-          <FilePreviewBackground3D
-            isRotationPaused={isRotationPaused}
-            data-oid="9h9imx0"
-          />
-        </Suspense>
-      )}
-
       <div
         className="pointer-events-none absolute inset-0 z-[2]"
         data-oid="svab85m"
       >
         <div
-          className="absolute inset-0 opacity-45 mix-blend-screen"
-          style={{
-            backgroundImage:
-              "linear-gradient(180deg, rgba(var(--preview-green), 0.26), rgba(var(--preview-purple), 0.18) 45%, rgba(var(--preview-ink), 0.55)), radial-gradient(circle at 50% 30%, rgba(var(--preview-green), 0.3), transparent 55%)",
-          }}
-          data-oid="_up3-o:"
+          className="preview-static-bg preview-static-bg-glow absolute inset-0"
+          data-oid="q5r7l8n"
         />
-
         <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(var(--preview-green), 0.25) 1px, transparent 1px)",
-            backgroundSize: "100% 4px",
-          }}
-          data-oid="dyz10uc"
+          className="preview-static-grid preview-static-grid-glow absolute inset-0 opacity-35"
+          data-oid="n13d9xk"
         />
-
         <div
-          className="preview-neon-frame absolute left-[8%] top-[12%] h-10 w-24 rounded-sm"
-          data-oid="0:uwm.s"
+          className="preview-static-vignette preview-static-vignette-glow absolute inset-0"
+          data-oid="v8x9e3t"
         />
-
         <div
-          className="preview-neon-frame alt absolute right-[10%] top-[18%] h-12 w-28 rounded-sm"
-          data-oid="5jowg3c"
+          className="preview-static-scanlines preview-static-scanlines-glow absolute inset-0 opacity-20"
+          data-oid="a6p2d4m"
         />
-
         <div
-          className="preview-neon-frame soft absolute left-[12%] bottom-[18%] h-8 w-20 rounded-sm"
-          data-oid="1f:__x_"
-        />
-
-        <div
-          className="preview-neon-frame alt soft absolute right-[14%] bottom-[12%] h-10 w-24 rounded-sm"
-          data-oid="-vn171l"
-        />
-
-        <div
-          className="preview-neon-ring absolute left-1/2 top-[8%] h-[120px] w-[120px] -translate-x-1/2 rounded-full"
-          data-oid="mp5h9t9"
+          className="preview-static-hud preview-static-hud-glow absolute inset-0"
+          data-oid="x0h7m2w"
         />
       </div>
-
-      {/* ---- 装饰渐变 ---- */}
-      <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        data-oid=":qmfpi6"
-      >
-        <div
-          className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(var(--preview-green), 0.22), transparent 65%)",
-          }}
-          data-oid="_luhfen"
-        />
-
-        <div
-          className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(var(--preview-purple), 0.2), transparent 65%)",
-          }}
-          data-oid="ozlg2_0"
-        />
-
-        <div
-          className="absolute left-1/2 top-1/2 h-1/3 w-1/3 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(var(--preview-magenta), 0.16), transparent 65%)",
-          }}
-          data-oid="dzs1unr"
-        />
-      </div>
-
-      {/* ---- 网格纹理 ---- */}
-      <div
-        className="preview-grid-pattern pointer-events-none absolute inset-0"
-        data-oid="8g09uvy"
-      />
 
       {/* ---- 左侧导航按钮 ---- */}
       {files.length > 1 && (
@@ -431,8 +344,6 @@ export default function FilePreview({
         onResetView={handleResetView}
         onToggleLoop={handleToggleLoop}
         isLooping={isLooping}
-        onToggleRotation={handleToggleRotation}
-        isRotationPaused={isRotationPaused}
         className="absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] bottom-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
         data-oid="raibeex"
       />
@@ -488,8 +399,6 @@ export default function FilePreview({
         onResetView={handleResetView}
         onToggleLoop={handleToggleLoop}
         isLooping={isLooping}
-        onToggleRotation={handleToggleRotation}
-        isRotationPaused={isRotationPaused}
         className="absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
         data-oid="h1nkeo3"
       />

@@ -23,6 +23,8 @@ export function useFiles(query: Omit<FileListQuery, 'page' | 'limit'>) {
       return loadedCount < (lastPage.total ?? 0) ? allPages.length + 1 : undefined;
     },
     initialPageParam: 1,
+    staleTime: 0,
+    refetchOnMount: 'always',
     // 保持旧数据在重新获取时显示，提升 UX
     placeholderData: (previousData) => previousData,
   });

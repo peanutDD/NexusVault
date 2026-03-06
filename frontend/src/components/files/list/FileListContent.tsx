@@ -905,7 +905,7 @@ function GroupSelectCheckboxMixed({
       data-oid="q97dtx-"
     >
       <i
-        className={`bi bi-check-lg block text-[0.625rem] font-bold leading-none ${selectedCount > 0 ? "" : "invisible"}`}
+        className={`block text-[0.625rem] font-bold leading-none ${allSelected ? "bi bi-check-lg" : someSelected ? "bi bi-dash" : "bi bi-check-lg invisible"}`}
         aria-hidden
         data-oid="2tt2iaq"
       />

@@ -12,6 +12,7 @@ import { UPLOAD_QUEUE, LARGE_FILE_UPLOAD } from "../../../constants";
 import { UploadQueue } from "../../../utils/uploadQueue";
 import { cn } from "../../../utils/cn";
 import UploadFileItem, { type UploadFile } from "./UploadFileItem";
+import "./UploadDialog.css";
 
 interface UploadDialogProps {
   open: boolean;
@@ -65,6 +66,20 @@ export default function UploadDialog({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const prevBodyOverflow = body.style.overflow;
+    const prevRootOverflow = root.style.overflow;
+    body.style.overflow = "hidden";
+    root.style.overflow = "hidden";
+    return () => {
+      body.style.overflow = prevBodyOverflow;
+      root.style.overflow = prevRootOverflow;
+    };
+  }, [open]);
 
   const maxBatchCount = getMaxBatchCount();
   const folderId = searchParams.get("folder") || null;
@@ -542,14 +557,14 @@ export default function UploadDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--upload-backdrop)] p-4"
+      className="uploadDialogCyberBackdrop fixed inset-0 z-50 flex items-center justify-center bg-[var(--upload-backdrop)] p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="upload-dialog-title"
       data-oid=".7:8wip"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[var(--upload-surface-bg)] text-[var(--upload-text)] shadow-2xl animate-fade-in"
+        className="uploadDialogCyberSurface flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[var(--upload-surface-bg)] text-[var(--upload-text)] shadow-2xl animate-fade-in"
         data-oid="oz49qwv"
       >
         {/* 头部：固定，不参与滚动 */}
@@ -593,9 +608,9 @@ export default function UploadDialog({
             onDragOver={handleDrag}
             onDrop={handleDrop}
             className={cn(
-              "relative mb-5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition-all duration-200",
+              "uploadDialogCyberDropzone relative mb-5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition-all duration-200",
               dragActive
-                ? "border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]"
+                ? "uploadDialogCyberDropzoneActive border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]"
                 : "border-[var(--upload-drop-border)] bg-[var(--upload-drop-bg)] hover:border-[var(--upload-drop-border-hover)]",
             )}
             data-oid="_z50by4"
@@ -644,7 +659,7 @@ export default function UploadDialog({
                   inputRef.current.click();
                 }
               }}
-              className="font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-secondary-text)] transition-colors hover:bg-[var(--btn-secondary-bg-hover)]"
+              className="uploadDialogCyberPrimaryBtn font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)]"
               data-oid="xdol0-4"
             >
               Select files
@@ -674,9 +689,9 @@ export default function UploadDialog({
                 onChange={(e) => setUrlInput(e.target.value)}
                 placeholder="Add file URL"
                 className={cn(
-                  "font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
+                  "uploadDialogCyberInput font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
                   urlInput.trim()
-                    ? "border-[var(--upload-accent)]"
+                    ? "uploadDialogCyberInputActive border-[var(--upload-accent)]"
                     : "border-[var(--upload-input-border)] focus:border-[var(--upload-accent)]",
                 )}
                 onKeyDown={(e) => {
@@ -689,7 +704,7 @@ export default function UploadDialog({
                 type="button"
                 onClick={handleUrlUpload}
                 disabled={!urlInput.trim() || urlLoading}
-                className="font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="uploadDialogCyberPrimaryBtn font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                 data-oid="dp9.vve"
               >
                 {urlLoading ? "..." : "Upload"}
@@ -793,7 +808,7 @@ export default function UploadDialog({
                 </p>
               </div>
               <div
-                className="max-h-60 space-y-2 overflow-y-auto pr-1"
+                className="uploadDialogCyberList max-h-60 space-y-2 overflow-y-auto pr-1"
                 data-oid="wo3szfd"
               >
                 {uploadFiles.map((file) => (
@@ -817,7 +832,7 @@ export default function UploadDialog({
               type="button"
               onClick={handleClose}
               disabled={isUploading}
-              className="font-brand flex-1 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-normal tracking-widest text-[var(--btn-secondary-text)] transition-colors hover:bg-[var(--btn-secondary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="uploadDialogCyberSecondaryBtn font-brand flex-1 rounded-lg bg-[var(--btn-secondary-bg)] px-4 py-2 text-sm font-normal tracking-widest text-[var(--btn-secondary-text)] transition-colors hover:bg-[var(--btn-secondary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               data-oid="tq87jek"
             >
               Cancel
@@ -828,7 +843,7 @@ export default function UploadDialog({
               disabled={
                 uploadFiles.length === 0 || (isUploading && !hasPending)
               }
-              className="font-brand flex-1 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="uploadDialogCyberPrimaryBtn font-brand flex-1 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               data-oid="-49nfvp"
             >
               {hasPending

@@ -1,5 +1,12 @@
 import api from './api';
 import type { Folder, FolderPathResponse, FolderContentsResponse } from '../types/folders';
+import { getErrorMessage } from '../utils/error';
+
+export interface BatchMoveFilesResult {
+  moved: number;
+  failed: number;
+  errors: string[];
+}
 
 /**
  * 文件夹服务
@@ -125,6 +132,40 @@ export const folderService = {
       }
     );
     return response.data.moved;
+  },
+
+  /**
+   * 批量移动文件（部分成功）：同名冲突不影响其他文件继续移动
+   * @param fileIds 文件 ID 列表
+   * @param folderId 目标文件夹 ID（null 表示根目录）
+   */
+  async moveFilesToFolderPartial(
+    fileIds: string[],
+    folderId: string | null
+  ): Promise<BatchMoveFilesResult> {
+    let moved = 0;
+    const errors: string[] = [];
+
+    for (const fileId of fileIds) {
+      try {
+        const response = await api.post<{ moved: number }>(
+          '/api/folders/move-files',
+          {
+            file_ids: [fileId],
+            folder_id: folderId,
+          }
+        );
+        moved += response.data.moved;
+      } catch (err) {
+        errors.push(getErrorMessage(err, '移动失败'));
+      }
+    }
+
+    return {
+      moved,
+      failed: fileIds.length - moved,
+      errors,
+    };
   },
 
   /**

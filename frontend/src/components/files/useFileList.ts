@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import { fileService } from '../../services/files';
 import type { FileMetadata } from '../../types/files';
@@ -239,6 +240,7 @@ function useTimeGroupingMixed(
 }
 
 export function useFileList() {
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentFolderId = searchParams.get('folder') || null;
 
@@ -372,6 +374,7 @@ export function useFileList() {
   } = useFileSelection(files, folders);
 
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  const lastSelectionScopeRef = useRef<{ sortBy: string; mimeType: string } | null>(null);
 
   // 使用带 icon 的分组 Hook
   const {
@@ -534,6 +537,36 @@ export function useFileList() {
 
   const { timeGroupedItems } = useTimeGroupingMixed(sortedFiles, displayFolders, isGroupByTime);
 
+  const visibleFileIds = useMemo(() => new Set(finalDisplayFiles.map((file) => file.id)), [finalDisplayFiles]);
+  const visibleFolderIds = useMemo(() => new Set(displayFolders.map((folder) => folder.id)), [displayFolders]);
+
+  useEffect(() => {
+    setSelectedFiles((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(Array.from(prev).filter((id) => visibleFileIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+    setSelectedFolders((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(Array.from(prev).filter((id) => visibleFolderIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [visibleFileIds, visibleFolderIds, setSelectedFiles, setSelectedFolders]);
+
+  useEffect(() => {
+    if (lastSelectionScopeRef.current === null) {
+      lastSelectionScopeRef.current = { sortBy, mimeType };
+      return;
+    }
+    if (
+      lastSelectionScopeRef.current.sortBy !== sortBy ||
+      lastSelectionScopeRef.current.mimeType !== mimeType
+    ) {
+      clearSelection();
+      lastSelectionScopeRef.current = { sortBy, mimeType };
+    }
+  }, [sortBy, mimeType, clearSelection]);
+
   const handleSelectFile = useCallback((fileId: string, selected: boolean) => {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
@@ -679,12 +712,24 @@ export function useFileList() {
 
     try {
       await folderService.moveFilesToFolder([fileId], targetFolderId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['files'] }),
+        queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
+      ]);
       refetchFiles();
       refetchFolders();
     } catch (err) {
       setError(getErrorMessage(err, '移动失败'));
     }
-  }, [refetchFiles, refetchFolders]);
+  }, [queryClient, refetchFiles, refetchFolders]);
+
+  const refreshListsAfterMove = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['files'] }),
+      queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
+    ]);
+    await Promise.all([refetchFiles(), refetchFolders()]);
+  }, [queryClient, refetchFiles, refetchFolders]);
 
   const addFolderToList = useCallback(() => {
     refetchFolders();
@@ -741,6 +786,7 @@ export function useFileList() {
     handleDropOnBreadcrumb,
     loadFiles: refetchFiles,
     loadFolders: refetchFolders,
+    refreshListsAfterMove,
     clearSelection,
     addFolderToList,
     previewFile,

@@ -82,8 +82,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     handleShowBatchMove,
     handleShowBatchShare,
     handleDropOnBreadcrumb,
-    loadFiles,
-    loadFolders,
+    refreshListsAfterMove,
     clearSelection,
     addFolderToList,
     previewFile,
@@ -298,8 +297,11 @@ export default function FileList({ onOpenUpload }: FileListProps) {
               setShowBatchMove(false);
               clearSelection();
               clearFileListCache();
-              loadFiles();
-              loadFolders();
+              void refreshListsAfterMove();
+            }}
+            onPartialMoved={() => {
+              clearFileListCache();
+              void refreshListsAfterMove();
             }}
             onApplyOptimistic={getOptimisticMoveRollback}
             data-oid="wijc1j6"

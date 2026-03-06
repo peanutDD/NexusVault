@@ -1,0 +1,186 @@
+.uploadDialogCyberBackdrop {
+    background:
+        radial-gradient(120% 110% at 10% 0%, rgba(254, 178, 146, 0.2), transparent 45%),
+        radial-gradient(110% 90% at 100% 10%, rgba(45, 212, 191, 0.22), transparent 48%),
+        radial-gradient(120% 130% at 50% 100%, rgba(14, 116, 144, 0.28), transparent 54%),
+        rgba(4, 24, 33, 0.82);
+    backdrop-filter: blur(6px);
+}
+
+.uploadDialogCyberSurface {
+    --upload-backdrop: transparent;
+    --upload-surface-bg: linear-gradient(
+        145deg,
+        rgba(18, 50, 63, 0.96),
+        rgba(12, 36, 47, 0.97),
+        rgba(6, 26, 35, 0.98)
+    );
+    --upload-text: rgba(246, 239, 231, 0.96);
+    --upload-text-muted: rgba(182, 217, 224, 0.82);
+    --upload-control-hover: rgba(68, 210, 224, 0.18);
+    --upload-accent: rgba(255, 128, 173, 0.88);
+    --upload-accent-bg: rgba(255, 128, 173, 0.12);
+    --upload-drop-border: rgba(90, 175, 189, 0.68);
+    --upload-drop-border-hover: rgba(120, 215, 227, 0.9);
+    --upload-drop-bg: linear-gradient(
+        150deg,
+        rgba(17, 58, 74, 0.88),
+        rgba(13, 46, 60, 0.9),
+        rgba(8, 33, 45, 0.9)
+    );
+    --upload-input-border: rgba(90, 174, 190, 0.66);
+    --upload-input-text: rgba(240, 247, 249, 0.96);
+    --upload-input-placeholder: rgba(168, 208, 216, 0.72);
+    --upload-stat-bg: linear-gradient(
+        135deg,
+        rgba(11, 57, 73, 0.85),
+        rgba(7, 41, 55, 0.88)
+    );
+    --upload-stat-text: rgba(176, 221, 229, 0.86);
+    --upload-stat-value: rgba(251, 211, 176, 0.96);
+    --upload-warning-bg: rgba(251, 146, 60, 0.14);
+    --upload-warning-text: rgba(254, 215, 170, 0.96);
+    --upload-warning-border: rgba(251, 146, 60, 0.5);
+    --upload-item-bg: linear-gradient(
+        145deg,
+        rgba(12, 59, 77, 0.82),
+        rgba(7, 44, 59, 0.9)
+    );
+    --upload-item-text: rgba(244, 239, 230, 0.96);
+    --upload-item-muted: rgba(173, 214, 222, 0.82);
+    --upload-item-icon-bg: rgba(11, 47, 62, 0.7);
+    --upload-item-icon-border: rgba(124, 205, 217, 0.45);
+    --upload-item-icon-shadow:
+        0 10px 22px rgba(8, 26, 36, 0.45);
+    --upload-item-icon-highlight: linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.2),
+        rgba(255, 255, 255, 0)
+    );
+    --upload-item-icon-ring: rgba(125, 211, 252, 0.34);
+    --upload-item-action-text: rgba(181, 219, 226, 0.82);
+    --upload-item-action-hover-bg: rgba(68, 210, 224, 0.22);
+    --upload-item-action-hover-text: rgba(253, 245, 230, 0.96);
+    --upload-progress-track-bg: linear-gradient(
+        90deg,
+        rgba(8, 34, 46, 0.88),
+        rgba(13, 46, 61, 0.88)
+    );
+    --upload-progress-track-border: rgba(100, 182, 197, 0.4);
+    --upload-progress-track-shadow: inset 0 0 0 1px rgba(108, 190, 204, 0.2);
+    --upload-progress-bar-bg: rgba(11, 48, 64, 0.8);
+    --upload-progress-bar-shadow: inset 0 0 0 1px rgba(108, 190, 204, 0.15);
+    --upload-progress-value-bg: linear-gradient(
+        90deg,
+        rgba(255, 194, 151, 1) 0%,
+        rgba(255, 147, 177, 1) 35%,
+        rgba(125, 211, 252, 1) 70%,
+        rgba(45, 212, 191, 1) 100%
+    );
+    --upload-progress-value-shadow:
+        0 0 10px rgba(255, 162, 168, 0.5),
+        0 0 18px rgba(45, 212, 191, 0.32);
+    --upload-progress-scanline: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.16) 0px,
+        rgba(255, 255, 255, 0.16) 2px,
+        transparent 2px,
+        transparent 8px
+    );
+    --upload-doc-icon-paper: 255, 236, 220;
+    --upload-doc-icon-fold-highlight: 255, 168, 190;
+    --upload-doc-icon-stroke: 255, 218, 191;
+    --upload-doc-icon-drop-shadow:
+        0 0 8px rgba(255, 152, 180, 0.35)
+        drop-shadow(0 0 12px rgba(34, 211, 238, 0.25));
+    --btn-primary-bg: linear-gradient(
+        135deg,
+        rgba(255, 208, 178, 0.98),
+        rgba(255, 182, 158, 0.96)
+    );
+    --btn-primary-bg-hover: linear-gradient(
+        135deg,
+        rgba(255, 224, 194, 1),
+        rgba(255, 194, 171, 1)
+    );
+    --btn-primary-text: rgba(243, 94, 161, 0.98);
+    --btn-secondary-bg: linear-gradient(
+        135deg,
+        rgba(12, 70, 86, 0.94),
+        rgba(9, 49, 63, 0.96)
+    );
+    --btn-secondary-bg-hover: linear-gradient(
+        135deg,
+        rgba(18, 88, 106, 0.96),
+        rgba(11, 62, 78, 0.98)
+    );
+    --btn-secondary-text: rgba(233, 248, 252, 0.95);
+    position: relative;
+    border: 1px solid rgba(255, 161, 186, 0.48);
+    box-shadow:
+        0 24px 60px rgba(3, 14, 20, 0.55),
+        0 0 0 1px rgba(59, 217, 231, 0.25),
+        0 0 28px rgba(255, 132, 165, 0.18);
+}
+
+.uploadDialogCyberSurface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 24%),
+        repeating-linear-gradient(
+            0deg,
+            rgba(255, 255, 255, 0.025) 0px,
+            rgba(255, 255, 255, 0.025) 1px,
+            transparent 1px,
+            transparent 10px
+        );
+}
+
+.uploadDialogCyberDropzone {
+    box-shadow:
+        inset 0 0 0 1px rgba(58, 205, 221, 0.22),
+        0 0 22px rgba(22, 163, 184, 0.12);
+}
+
+.uploadDialogCyberDropzoneActive {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 132, 165, 0.38),
+        0 0 26px rgba(255, 132, 165, 0.2);
+}
+
+.uploadDialogCyberInput {
+    box-shadow:
+        inset 0 0 0 1px rgba(74, 190, 207, 0.2),
+        0 8px 16px rgba(4, 24, 33, 0.35);
+}
+
+.uploadDialogCyberInputActive {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 128, 173, 0.38),
+        0 0 18px rgba(255, 128, 173, 0.16);
+}
+
+.uploadDialogCyberPrimaryBtn {
+    border: 1px solid rgba(255, 152, 178, 0.5);
+    box-shadow:
+        0 8px 18px rgba(255, 137, 166, 0.26),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.uploadDialogCyberSecondaryBtn {
+    border: 1px solid rgba(96, 188, 203, 0.5);
+    box-shadow:
+        0 8px 18px rgba(6, 38, 52, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.uploadDialogCyberList {
+    border: 1px solid rgba(72, 168, 183, 0.38);
+    border-radius: 0.8rem;
+    padding: 0.5rem;
+    background: rgba(5, 29, 40, 0.35);
+}

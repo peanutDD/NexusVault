@@ -203,7 +203,7 @@ const UploadFileItem = memo(function UploadFileItem({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl bg-[var(--upload-item-bg)]"
+      className="uploadFileItemCyber relative overflow-hidden rounded-xl bg-[var(--upload-item-bg)]"
       data-oid="k8dog6k"
     >
       {/* 主内容 */}
@@ -221,26 +221,13 @@ const UploadFileItem = memo(function UploadFileItem({
             data-oid="pr6z4n:"
           />
 
-          <div
-            className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-[var(--upload-item-icon-ring)]"
-            data-oid="qgi1ga0"
-          />
-
-          <div
-            className="pointer-events-none absolute -inset-px rounded-xl opacity-70"
-            style={{
-              boxShadow: `0 0 18px ${mimeTypeInfo.color}66, 0 0 28px ${mimeTypeInfo.color}33`,
-            }}
-            data-oid=":w50qt4"
-          />
-
           <FileIcon color={mimeTypeInfo.color} data-oid="vd5lvr1" />
         </div>
 
         {/* 文件信息 */}
         <div className="min-w-0 flex-1" data-oid="cpn:rfo">
           <p
-            className="truncate text-sm font-medium text-[var(--upload-item-text)]"
+            className="uploadFileItemName truncate text-sm font-medium text-[var(--upload-item-text)]"
             title={file.name}
             data-oid="5epl46k"
           >
@@ -255,7 +242,7 @@ const UploadFileItem = memo(function UploadFileItem({
             <button
               type="button"
               onClick={() => onRetry(file.id)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
+              className="uploadFileItemActionBtn flex h-8 w-8 items-center justify-center rounded-lg text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
               title="重试"
               aria-label="重试上传"
               data-oid="3do2_5d"
@@ -266,7 +253,7 @@ const UploadFileItem = memo(function UploadFileItem({
           <button
             type="button"
             onClick={() => onRemove(file.id)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
+            className="uploadFileItemActionBtn flex h-8 w-8 items-center justify-center rounded-lg text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
             title="删除"
             aria-label="删除文件"
             data-oid="pg.ns.k"
@@ -279,7 +266,7 @@ const UploadFileItem = memo(function UploadFileItem({
       {/* 进度条 - 贯穿底部 */}
       {(file.status === "uploading" || file.status === "success") && (
         <div
-          className="absolute bottom-1 left-3 right-3 h-1"
+          className="absolute bottom-1 left-3 right-3 h-1.5"
           data-oid="vhuyy2p"
         >
           <div

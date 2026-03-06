@@ -760,6 +760,228 @@ html {
     --preview-grid: var(--preview-grid-rgb);
 }
 
+.preview-static-bg {
+    background-image:
+        radial-gradient(
+            120% 80% at 15% 10%,
+            rgba(var(--preview-green), 0.2) 0%,
+            rgba(var(--preview-green), 0.08) 28%,
+            transparent 65%
+        ),
+        radial-gradient(
+            95% 70% at 85% 12%,
+            rgba(var(--preview-purple), 0.22) 0%,
+            rgba(var(--preview-purple), 0.08) 32%,
+            transparent 70%
+        ),
+        radial-gradient(
+            130% 90% at 50% 95%,
+            rgba(var(--preview-magenta), 0.16) 0%,
+            rgba(var(--preview-magenta), 0.06) 40%,
+            transparent 75%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--preview-ink), 0.96) 0%,
+            rgba(var(--preview-ink), 0.9) 42%,
+            rgba(var(--preview-ink), 0.94) 100%
+        );
+}
+
+.preview-static-grid {
+    background-image:
+        linear-gradient(
+            rgba(var(--preview-grid), 0.16) 0.0625rem,
+            transparent 0.0625rem
+        ),
+        linear-gradient(
+            90deg,
+            rgba(var(--preview-grid), 0.16) 0.0625rem,
+            transparent 0.0625rem
+        );
+    background-size: 2.5rem 2.5rem;
+}
+
+.preview-static-vignette {
+    background:
+        radial-gradient(
+            ellipse at center,
+            transparent 36%,
+            rgba(var(--preview-ink), 0.2) 68%,
+            rgba(var(--preview-ink), 0.42) 100%
+        );
+}
+
+.preview-static-scanlines {
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(var(--preview-grid), 0.1) 0px,
+        rgba(var(--preview-grid), 0.1) 1px,
+        transparent 1px,
+        transparent 5px
+    );
+}
+
+.preview-static-hud {
+    background-image:
+        linear-gradient(
+            112deg,
+            transparent 0%,
+            transparent 34%,
+            rgba(var(--preview-green), 0.11) 35%,
+            rgba(var(--preview-green), 0.11) 36%,
+            transparent 37%
+        ),
+        linear-gradient(
+            68deg,
+            transparent 0%,
+            transparent 62%,
+            rgba(var(--preview-purple), 0.12) 63%,
+            rgba(var(--preview-purple), 0.12) 64%,
+            transparent 65%
+        ),
+        linear-gradient(
+            180deg,
+            rgba(var(--preview-magenta), 0.09),
+            transparent 30%,
+            transparent 70%,
+            rgba(var(--preview-green), 0.08)
+        );
+}
+
+.preview-static-bg-glow {
+    background-image:
+        radial-gradient(
+            125% 85% at 12% 8%,
+            rgba(var(--preview-green), 0.36) 0%,
+            rgba(var(--preview-green), 0.14) 26%,
+            transparent 64%
+        ),
+        radial-gradient(
+            100% 72% at 86% 10%,
+            rgba(var(--preview-purple), 0.38) 0%,
+            rgba(var(--preview-purple), 0.16) 30%,
+            transparent 70%
+        ),
+        radial-gradient(
+            120% 90% at 50% 92%,
+            rgba(var(--preview-magenta), 0.3) 0%,
+            rgba(var(--preview-magenta), 0.12) 42%,
+            transparent 76%
+        ),
+        linear-gradient(
+            128deg,
+            rgba(var(--preview-ink), 0.96) 0%,
+            rgba(var(--preview-ink), 0.84) 45%,
+            rgba(var(--preview-ink), 0.94) 100%
+        );
+    filter: saturate(1.18) contrast(1.05);
+}
+
+.preview-static-grid-glow {
+    background-image:
+        linear-gradient(
+            rgba(var(--preview-grid), 0.24) 0.0625rem,
+            transparent 0.0625rem
+        ),
+        linear-gradient(
+            90deg,
+            rgba(var(--preview-grid), 0.24) 0.0625rem,
+            transparent 0.0625rem
+        );
+    background-size: 2rem 2rem;
+}
+
+.preview-static-vignette-glow {
+    background:
+        radial-gradient(
+            ellipse at center,
+            transparent 34%,
+            rgba(var(--preview-ink), 0.18) 66%,
+            rgba(var(--preview-ink), 0.48) 100%
+        );
+}
+
+.preview-static-scanlines-glow {
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(var(--preview-grid), 0.16) 0px,
+        rgba(var(--preview-grid), 0.16) 1px,
+        transparent 1px,
+        transparent 4px
+    );
+}
+
+.preview-static-hud-glow {
+    background-image:
+        linear-gradient(
+            112deg,
+            transparent 0%,
+            transparent 28%,
+            rgba(var(--preview-green), 0.2) 29%,
+            rgba(var(--preview-green), 0.2) 30%,
+            transparent 31%
+        ),
+        linear-gradient(
+            68deg,
+            transparent 0%,
+            transparent 58%,
+            rgba(var(--preview-purple), 0.2) 59%,
+            rgba(var(--preview-purple), 0.2) 60%,
+            transparent 61%
+        ),
+        linear-gradient(
+            180deg,
+            rgba(var(--preview-magenta), 0.16),
+            transparent 26%,
+            transparent 72%,
+            rgba(var(--preview-green), 0.14)
+        );
+}
+
+.preview-rainbow-pedestal {
+    --preview-shell-border: rgba(129, 140, 248, 0.62);
+    --preview-neck-front-border: rgba(244, 114, 182, 0.72);
+    --preview-neck-front-bg: linear-gradient(
+        160deg,
+        rgba(129, 140, 248, 0.52),
+        rgba(34, 211, 238, 0.42),
+        rgba(244, 114, 182, 0.54)
+    );
+    --preview-neck-front-shadow:
+        0 10px 24px rgba(129, 140, 248, 0.32),
+        0 0 22px rgba(244, 114, 182, 0.24);
+    --preview-neck-inner-border: rgba(255, 255, 255, 0.66);
+    --preview-neck-inner-bg: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.62),
+        rgba(34, 211, 238, 0.18),
+        rgba(244, 114, 182, 0.14)
+    );
+    --preview-neck-bottom-bg: rgba(79, 70, 229, 0.42);
+    --preview-base-border: rgba(34, 211, 238, 0.68);
+    --preview-base-bg: linear-gradient(
+        90deg,
+        rgba(129, 140, 248, 0.5),
+        rgba(34, 211, 238, 0.46),
+        rgba(244, 114, 182, 0.52)
+    );
+    --preview-base-shadow:
+        0 12px 26px rgba(34, 211, 238, 0.28),
+        0 0 26px rgba(244, 114, 182, 0.24);
+    --preview-base-inner-border: rgba(255, 255, 255, 0.7);
+    --preview-base-inner-bg: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.52),
+        rgba(34, 211, 238, 0.12),
+        rgba(244, 114, 182, 0.14)
+    );
+    --preview-base-top-glow: rgba(244, 114, 182, 0.4);
+    --preview-base-ambient: rgba(34, 211, 238, 0.36);
+    filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.3))
+        drop-shadow(0 0 22px rgba(244, 114, 182, 0.24));
+}
+
 .preview-neon-frame {
     border: 1px solid rgba(var(--preview-green), 0.45);
     box-shadow: 0 0 28px rgba(var(--preview-green), 0.45);

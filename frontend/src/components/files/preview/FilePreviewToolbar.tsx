@@ -8,8 +8,6 @@ import {
   CloseIcon,
   DownloadIcon,
   LoopIcon,
-  PauseIcon,
-  PlayIcon,
 } from "./FilePreviewIcons";
 
 // =============================================================================
@@ -28,9 +26,7 @@ export interface FilePreviewToolbarProps {
   onRotate: () => void;
   onResetView: () => void;
   onToggleLoop: () => void;
-  onToggleRotation: () => void;
   isLooping: boolean;
-  isRotationPaused: boolean;
 }
 
 // =============================================================================
@@ -49,9 +45,7 @@ export function FilePreviewToolbar({
   onRotate,
   onResetView,
   onToggleLoop,
-  onToggleRotation,
   isLooping,
-  isRotationPaused,
 }: FilePreviewToolbarProps) {
   const showSecondaryControls = section === "upper" && (isVideo || isImage);
   const showPrimaryControls = section === "lower";
@@ -98,34 +92,6 @@ export function FilePreviewToolbar({
                 data-oid="sewksa6"
               >
                 <CloseIcon data-oid="r863tkr" />
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleRotation();
-              }}
-              className={cn(
-                "flex items-center justify-center rounded-full font-semibold w-[clamp(2rem,5vw,2.5rem)] h-[clamp(2rem,5vw,2.5rem)] transition-colors",
-                isRotationPaused
-                  ? "text-[var(--preview-floating-btn-muted)] hover:bg-[var(--preview-floating-btn-hover-bg)]"
-                  : "bg-[var(--preview-floating-btn-active-bg)] text-[var(--preview-floating-btn-text)] shadow-inner",
-              )}
-              aria-label={isRotationPaused ? "开始旋转" : "暂停旋转"}
-              title={isRotationPaused ? "旋转：已暂停" : "旋转：进行中"}
-              data-oid="-qjsv6c"
-            >
-              <span
-                className="flex shrink-0 items-center justify-center w-[clamp(1rem,2.5vw,1.25rem)] h-[clamp(1rem,2.5vw,1.25rem)]"
-                data-oid="t:35f6j"
-              >
-                {isRotationPaused ? (
-                  <PlayIcon data-oid="vwvllxr" />
-                ) : (
-                  <PauseIcon data-oid="kh-.sum" />
-                )}
               </span>
             </button>
 
