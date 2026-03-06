@@ -126,12 +126,9 @@ const FolderCard = memo(function FolderCard({
         </div>
 
         {/* 文件夹名称 + 设置按钮 */}
-        <div
-          className="flex w-full items-center justify-between gap-2"
-          data-oid="ebqewy5"
-        >
+        <div className="relative flex w-full items-center" data-oid="ebqewy5">
           <p
-            className="min-w-0 flex-1 truncate whitespace-nowrap text-center text-[clamp(0.65rem,2.4vw,0.9rem)] font-medium text-[var(--glass-text)]"
+            className="w-full truncate whitespace-nowrap px-[clamp(0.7rem,2vw,1rem)] text-center text-[clamp(0.6rem,2.2vw,0.82rem)] font-medium text-[var(--glass-text)] lg:px-[clamp(0.42rem,1vw,0.62rem)]"
             title={folder.name}
             data-oid="7ndc6ny"
           >
@@ -139,30 +136,32 @@ const FolderCard = memo(function FolderCard({
           </p>
 
           {/* 设置按钮（与文字同一行，右对齐） */}
-          <div className="relative flex-shrink-0" data-oid="b-9cfh-">
-            <button
-              type="button"
-              onClick={handleToggleMenu}
-              className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-[var(--glass-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--glass-text)]"
-              aria-label="更多操作"
-              data-oid="v.ta39e"
-            >
-              <MoreVertical className="scale-50" data-oid="d8iuuo." />
-            </button>
+          <button
+            type="button"
+            onClick={handleToggleMenu}
+            className="absolute right-0 top-1/2 z-10 inline-flex -translate-y-1/2 translate-x-[6px] items-center justify-center rounded-md leading-none text-[var(--glass-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--glass-text)]"
+            aria-label="更多操作"
+            data-oid="v.ta39e"
+          >
+            <MoreVertical
+              className="h-[clamp(0.72rem,1.7vw,0.95rem)] w-[clamp(0.72rem,1.7vw,0.95rem)]"
+              data-oid="d8iuuo."
+            />
+          </button>
 
-            {/* 玻璃拟态菜单 */}
-            {isMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={onCloseMenu}
-                  data-oid="0cciqz9"
-                />
+          {/* 玻璃拟态菜单 */}
+          {isMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={onCloseMenu}
+                data-oid="0cciqz9"
+              />
 
-                <div
-                  className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
-                  data-oid="9xqi6te"
-                >
+              <div
+                className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
+                data-oid="9xqi6te"
+              >
                   <button
                     type="button"
                     className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
@@ -225,10 +224,9 @@ const FolderCard = memo(function FolderCard({
                       删除
                     </span>
                   </button>
-                </div>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

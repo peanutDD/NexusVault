@@ -134,11 +134,11 @@ const FileCard = memo(
           </div>
 
           {/* 文件信息 + 设置按钮 */}
-          <div
-            className="flex w-full items-center justify-between gap-2"
-            data-oid="y5j_0ma"
-          >
-            <div className="min-w-0 flex-1 space-y-0.5" data-oid="4w9i3kj">
+          <div className="relative flex w-full items-start" data-oid="y5j_0ma">
+            <div
+              className="min-w-0 w-full space-y-0.5 pr-[clamp(1rem,2.4vw,1.5rem)]"
+              data-oid="4w9i3kj"
+            >
               <p
                 className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-[var(--file-card-text)]"
                 title={file.original_filename}
@@ -171,30 +171,32 @@ const FileCard = memo(
             </div>
 
             {/* 设置按钮（与文字平行） */}
-            <div className="relative flex-shrink-0" data-oid="7ixpkky">
-              <button
-                type="button"
-                onClick={handleToggleMenu}
-                className="inline-flex items-center justify-center rounded-md p-[clamp(2px,0.6vw,4px)] text-[var(--file-card-text-muted)] hover:bg-[var(--file-card-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
-                aria-label="更多操作"
-                data-oid="npjy::1"
-              >
-                <MoreVertical className="scale-50" data-oid=".q81ma:" />
-              </button>
+            <button
+              type="button"
+              onClick={handleToggleMenu}
+              className="absolute right-0 top-0 z-10 inline-flex translate-x-[7px] items-center justify-center rounded-md leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--file-card-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
+              aria-label="更多操作"
+              data-oid="npjy::1"
+            >
+              <MoreVertical
+                className="h-[clamp(0.68rem,2.2vw,1rem)] w-[clamp(0.68rem,2.2vw,1rem)]"
+                data-oid=".q81ma:"
+              />
+            </button>
 
-              {/* 玻璃拟态下拉菜单 */}
-              {isMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={onCloseMenu}
-                    data-oid="gtgz8t7"
-                  />
+            {/* 玻璃拟态下拉菜单 */}
+            {isMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={onCloseMenu}
+                  data-oid="gtgz8t7"
+                />
 
-                  <div
-                    className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--file-card-menu-border)] bg-[var(--file-card-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
-                    data-oid="qo212qm"
-                  >
+                <div
+                  className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--file-card-menu-border)] bg-[var(--file-card-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
+                  data-oid="qo212qm"
+                >
                     <button
                       type="button"
                       className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
@@ -276,10 +278,9 @@ const FileCard = memo(
                         删除
                       </span>
                     </button>
-                  </div>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </article>
