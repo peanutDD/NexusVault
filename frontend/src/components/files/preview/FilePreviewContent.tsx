@@ -511,7 +511,7 @@ export function FilePreviewContent({
                       data-oid="n_jiwxk"
                     >
                       <div
-                        className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,60rem)] overflow-hidden rounded-none bg-transparent shadow-none"
+                        className="pointer-events-auto h-[min(70vh,42rem)] w-[min(92vw,60rem)] overflow-hidden rounded-md border border-[var(--preview-markdown-container-border)] bg-[var(--preview-markdown-container-bg)] shadow-none"
                         onClick={(e) => e.stopPropagation()}
                         data-oid="7x4qu_t"
                       >

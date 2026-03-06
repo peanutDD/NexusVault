@@ -160,7 +160,7 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
 
         p: ({ ...props }) => (
           <p
-            className="mb-2 text-xs text-[var(--preview-markdown-text)]"
+            className="mb-3 text-[0.78rem] leading-6 text-[var(--preview-markdown-text)]"
             {...props}
             data-oid="7s5:77."
           />
@@ -168,7 +168,7 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
 
         ul: ({ ...props }) => (
           <ul
-            className="mb-2 list-disc pl-5 text-xs text-[var(--preview-markdown-text)]"
+            className="mb-3 list-disc pl-5 text-[0.76rem] leading-6 text-[var(--preview-markdown-list)] marker:text-[var(--preview-markdown-li-marker)]"
             {...props}
             data-oid="mw46glm"
           />
@@ -176,14 +176,14 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
 
         ol: ({ ...props }) => (
           <ol
-            className="mb-2 list-decimal pl-5 text-xs text-[var(--preview-markdown-text)]"
+            className="mb-3 list-decimal pl-5 text-[0.76rem] leading-6 text-[var(--preview-markdown-list)] marker:text-[var(--preview-markdown-li-marker)]"
             {...props}
             data-oid="hcuxo55"
           />
         ),
 
         li: ({ ...props }) => (
-          <li className="mb-1" {...props} data-oid="xu.hz8f" />
+          <li className="mb-1.5" {...props} data-oid="xu.hz8f" />
         ),
 
         code: ({ inline, className, children, ...props }) => {
@@ -244,7 +244,7 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
         },
         blockquote: ({ ...props }) => (
           <blockquote
-            className="mb-2 border-l-2 pl-3 text-xs border-[var(--preview-markdown-blockquote-border)] text-[var(--preview-markdown-blockquote-text)]"
+            className="mb-3 border-l-2 pl-3 text-[0.76rem] leading-6 italic border-[var(--preview-markdown-blockquote-border)] text-[var(--preview-markdown-blockquote-text)]"
             {...props}
             data-oid="fu73plp"
           />
@@ -252,11 +252,35 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
 
         a: ({ ...props }) => (
           <a
-            className="text-xs underline text-[var(--preview-markdown-link)] hover:text-[var(--preview-markdown-link-hover)]"
+            className="text-[0.76rem] font-medium underline decoration-[0.08em] underline-offset-2 text-[var(--preview-markdown-link)] hover:text-[var(--preview-markdown-link-hover)]"
             target="_blank"
             rel="noreferrer"
             {...props}
             data-oid="ofjlok7"
+          />
+        ),
+
+        strong: ({ ...props }) => (
+          <strong
+            className="font-semibold text-[var(--preview-markdown-strong)]"
+            {...props}
+            data-oid="6r5iqh8"
+          />
+        ),
+
+        em: ({ ...props }) => (
+          <em
+            className="text-[var(--preview-markdown-em)]"
+            {...props}
+            data-oid="u4xq5u5"
+          />
+        ),
+
+        del: ({ ...props }) => (
+          <del
+            className="text-[var(--preview-markdown-del)]"
+            {...props}
+            data-oid="1i31qb4"
           />
         ),
 
@@ -302,7 +326,7 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
             data-oid="n:lioa1"
           >
             <table
-              className="min-w-full text-[0.7rem] text-[var(--preview-markdown-table-text)]"
+              className="min-w-full text-[0.72rem] text-[var(--preview-markdown-table-text)]"
               {...props}
               data-oid="nrqnib_"
             />
@@ -311,7 +335,7 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
 
         th: ({ ...props }) => (
           <th
-            className="border-b px-2 py-1 text-left font-semibold border-[var(--preview-markdown-th-border)] bg-[var(--preview-markdown-th-bg)]"
+            className="border-b px-2 py-1 text-left font-semibold border-[var(--preview-markdown-th-border)] bg-[var(--preview-markdown-th-bg)] text-[var(--preview-markdown-table-head-text)]"
             {...props}
             data-oid="oy8m_7e"
           />
@@ -347,7 +371,18 @@ function Heading({
   const id = getHeadingId(text);
   const Tag = `h${level}` as const;
   const sizeClass = level <= 3 ? "text-sm" : "text-xs";
-  const colorClass = "text-[var(--preview-markdown-heading)]";
+  const colorClass =
+    level === 1
+      ? "text-[var(--preview-markdown-h1)]"
+      : level === 2
+        ? "text-[var(--preview-markdown-h2)]"
+        : level === 3
+          ? "text-[var(--preview-markdown-h3)]"
+          : level === 4
+            ? "text-[var(--preview-markdown-h4)]"
+            : level === 5
+              ? "text-[var(--preview-markdown-h5)]"
+              : "text-[var(--preview-markdown-h6)]";
 
   return (
     <Tag
