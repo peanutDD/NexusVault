@@ -399,6 +399,7 @@ code {
 .virtualized-row {
     content-visibility: auto;
     contain-intrinsic-size: auto var(--virtual-row-height, 320px);
+    background: transparent;
 }
 
 /* 深色模式支持 */

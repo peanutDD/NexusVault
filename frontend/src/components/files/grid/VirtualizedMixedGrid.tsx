@@ -248,7 +248,7 @@ export default function VirtualizedMixedGrid({
                 data-oid="jzokoas"
               >
                 <div
-                  className="grid gap-2 [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
+                  className="grid gap-2 bg-transparent [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
                   data-oid="u0k78u0"
                 >
                   {rowItems.map((item) => {

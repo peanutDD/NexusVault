@@ -250,12 +250,8 @@
 .fileListGlassScope .glass-card {
   border-radius: var(--glass-radius);
   border: 1px solid var(--filelist-card-border);
-  background:
-    radial-gradient(120% 100% at 10% 10%, var(--filelist-card-highlight), transparent 55%),
-    linear-gradient(180deg, var(--filelist-card-bg-top), var(--filelist-card-bg-bottom));
-  box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 var(--filelist-card-inset);
+  background: transparent;
+  box-shadow: none;
   /* 性能关键：列表里卡片数量多，去掉 backdrop-filter 避免滚动卡顿 */
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -263,39 +259,10 @@
   position: relative;
 }
 
-/* 卡片科技感边框光晕 */
-.fileListGlassScope .glass-card::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: var(--glass-radius);
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    var(--filelist-tech-glow-purple),
-    var(--filelist-tech-glow-cyan),
-    var(--filelist-tech-glow-green),
-    var(--filelist-tech-glow-purple)
-  );
-  background-size: 200% 200%;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  opacity: 0.18;
-  transition: opacity 180ms ease;
-  pointer-events: none;
-  z-index: 0;
-}
-
 .fileListGlassScope .glass-card:hover {
   transform: translateY(-1px);
   border-color: var(--filelist-card-border-hover);
-  box-shadow: var(--filelist-card-hover-shadow);
-}
-
-.fileListGlassScope .glass-card:hover::after {
-  opacity: 0.45;
+  box-shadow: none;
 }
 
 @keyframes techBorderGlow {
@@ -311,9 +278,7 @@
 .fileListGlassScope .glass-thumb {
   border-radius: var(--glass-radius-sm);
   border: 1px solid var(--filelist-thumb-border);
-  background:
-    radial-gradient(110% 80% at 10% 0%, var(--filelist-thumb-highlight), transparent 62%),
-    linear-gradient(180deg, var(--filelist-thumb-bg-top), var(--filelist-thumb-bg-bottom));
+  background: transparent;
   /* 性能关键：缩略图容器同样数量多，去掉 blur */
   -webkit-backdrop-filter: none;
   backdrop-filter: none;

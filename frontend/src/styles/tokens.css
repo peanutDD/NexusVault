@@ -123,8 +123,8 @@
     --filetype-icon-text: rgba(var(--rgb-slate-400), 1);
     --filetype-icon-default: rgba(var(--rgb-purple-400), 1);
 
-    --thumbnail-container-bg: rgba(var(--rgb-purple-900), 0.35);
-    --thumbnail-placeholder-bg: rgba(var(--rgb-slate-600), 0.9);
+    --thumbnail-container-bg: transparent;
+    --thumbnail-placeholder-bg: transparent;
 
     --file-type-badge-bg: rgba(var(--rgb-white), 0.1);
     --file-type-badge-text: rgba(var(--rgb-white), 0.9);

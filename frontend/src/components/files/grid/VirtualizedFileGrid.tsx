@@ -263,7 +263,7 @@ export default function VirtualizedFileGrid({
                 data-oid="qbzn4v8"
               >
                 <div
-                  className="grid gap-2 [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
+                  className="grid gap-2 bg-transparent [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
                   data-oid="pq_c030"
                 >
                   {rowFiles.map((file) => (
