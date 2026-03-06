@@ -114,7 +114,7 @@ const FolderCard = memo(function FolderCard({
             isSelected={isSelected}
             onClick={handleSelect}
             size="responsive"
-            positionClassName="absolute left-[clamp(0.4rem,0.9vw,0.6rem)] top-[clamp(0.4rem,0.9vw,0.6rem)]"
+            positionClassName="absolute left-[clamp(0.15rem,0.35vw,0.25rem)] top-[clamp(0.15rem,0.35vw,0.25rem)]"
             data-oid="4exa0wc"
           />
 

@@ -97,7 +97,7 @@ const FileCard = memo(
               isSelected={isSelected}
               onClick={() => onSelect(file.id)}
               size="responsive"
-              positionClassName="absolute left-[clamp(0.4rem,0.9vw,0.6rem)] top-[clamp(0.4rem,0.9vw,0.6rem)]"
+              positionClassName="absolute left-[clamp(0.15rem,0.35vw,0.25rem)] top-[clamp(0.15rem,0.35vw,0.25rem)]"
               data-oid="jgxtjef"
             />
 

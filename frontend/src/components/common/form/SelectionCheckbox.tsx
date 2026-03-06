@@ -63,7 +63,7 @@ export function SelectionCheckbox({
       {isSelected ? (
         <span
           className={cn(
-            "card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full border-2 border-[var(--selection-check-ring)] bg-transparent",
+            "card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-[var(--selection-check-surface)] transition-colors duration-150 group-hover:bg-[var(--selection-check-surface-hover)]",
             isResponsive
               ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
               : isSmall
@@ -74,7 +74,7 @@ export function SelectionCheckbox({
         >
           <svg
             className={cn(
-              "text-[var(--selection-check-icon)]",
+              "text-[var(--selection-check-icon)] transition-colors duration-150 group-hover:text-[var(--selection-check-icon-hover)]",
               isResponsive
                 ? "h-[clamp(0.45rem,0.75vw,0.62rem)] w-[clamp(0.45rem,0.75vw,0.62rem)]"
                 : isSmall
@@ -98,7 +98,7 @@ export function SelectionCheckbox({
       ) : (
         <span
           className={cn(
-            "flex items-center justify-center rounded-full bg-transparent",
+            "flex items-center justify-center rounded-full bg-[var(--selection-check-surface)] transition-colors duration-150 group-hover:bg-[var(--selection-check-surface-hover)]",
             isResponsive
               ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
               : isSmall
@@ -109,7 +109,7 @@ export function SelectionCheckbox({
         >
           <span
             className={cn(
-              "rounded-full border-2 border-[var(--selection-check-ring)]",
+              "rounded-full border border-[var(--selection-check-ring)] transition-colors duration-150 group-hover:border-[var(--selection-check-ring-hover)]",
               isResponsive
                 ? "h-[clamp(0.35rem,0.6vw,0.52rem)] w-[clamp(0.35rem,0.6vw,0.52rem)]"
                 : isSmall
