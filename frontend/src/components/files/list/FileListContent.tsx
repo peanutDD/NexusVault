@@ -835,10 +835,10 @@ function GroupSelectCheckbox({
         flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-150
         ${
           allSelected
-            ? "border-[var(--color-border-medium)] bg-[var(--glass-bg-strong)] text-[var(--glass-text)]"
+            ? "border-[var(--filelist-check-border-checked)] bg-[var(--filelist-check-bg-checked)] text-[var(--filelist-check-text-checked)]"
             : someSelected
-              ? "border-[var(--color-border-medium)] bg-[var(--glass-bg-soft)] text-[var(--glass-text)]"
-              : "border-[var(--color-border-soft)] bg-[var(--glass-bg-soft)] text-transparent hover:border-[var(--color-border-medium)] hover:bg-[var(--glass-bg-strong)]"
+              ? "border-[var(--filelist-check-border-checked)] bg-[var(--filelist-check-bg-checked)] text-[var(--filelist-check-text-checked)]"
+              : "border-[var(--filelist-check-border)] bg-[var(--filelist-check-bg)] text-transparent hover:border-[var(--filelist-check-border-hover)] hover:bg-[var(--filelist-check-bg-hover)]"
         }
       `}
       aria-label={allSelected ? "取消全选此分组" : "全选此分组"}
@@ -895,10 +895,10 @@ function GroupSelectCheckboxMixed({
         flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-150
         ${
           allSelected
-            ? "border-[var(--color-border-medium)] bg-[var(--glass-bg-strong)] text-[var(--glass-text)]"
+            ? "border-[var(--filelist-check-border-checked)] bg-[var(--filelist-check-bg-checked)] text-[var(--filelist-check-text-checked)]"
             : someSelected
-              ? "border-[var(--color-border-medium)] bg-[var(--glass-bg-soft)] text-[var(--glass-text)]"
-              : "border-[var(--color-border-soft)] bg-[var(--glass-bg-soft)] text-transparent hover:border-[var(--color-border-medium)] hover:bg-[var(--glass-bg-strong)]"
+              ? "border-[var(--filelist-check-border-checked)] bg-[var(--filelist-check-bg-checked)] text-[var(--filelist-check-text-checked)]"
+              : "border-[var(--filelist-check-border)] bg-[var(--filelist-check-bg)] text-transparent hover:border-[var(--filelist-check-border-hover)] hover:bg-[var(--filelist-check-bg-hover)]"
         }
       `}
       aria-label="Select group"

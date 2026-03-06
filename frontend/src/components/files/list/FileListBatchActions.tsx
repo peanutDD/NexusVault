@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Circle, Download, MoveRight, Share2, Trash2 } from "lucide-react";
+import { Download, MoveRight, Share2, Trash2 } from "lucide-react";
 
 interface FileListBatchActionsProps {
   selectedFileCount: number;
@@ -86,7 +86,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
         >
           <MoveRight
             strokeWidth={2}
-            className="h-[1em] w-[1em] shrink-0 text-white/90"
+            className="h-[1em] w-[1em] shrink-0 text-[var(--filelist-btn-text)] opacity-90"
             aria-hidden
             data-oid=".:4i8.8"
           />
@@ -100,24 +100,12 @@ const FileListBatchActions = memo(function FileListBatchActions({
           className={btnClass}
           data-oid="kpmxorg"
         >
-          <span
-            className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
+          <Share2
+            strokeWidth={2}
+            className="h-[1em] w-[1em] shrink-0 text-[var(--filelist-btn-text)] opacity-90"
             aria-hidden
-            data-oid="fnn9p:r"
-          >
-            <Circle
-              fill="currentColor"
-              strokeWidth={0}
-              className="absolute inset-0 h-full w-full text-white/90"
-              data-oid="v5a:eso"
-            />
-
-            <Share2
-              strokeWidth={2}
-              className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
-              data-oid="hcdh6lw"
-            />
-          </span>
+            data-oid="hcdh6lw"
+          />
           <span className="hidden sm:inline" data-oid="8n9.0-c">
             Batch Share
           </span>
@@ -132,24 +120,12 @@ const FileListBatchActions = memo(function FileListBatchActions({
           title={batchDownloading ? "正在打包 ZIP，请稍候…" : undefined}
           data-oid="m4pbcwk"
         >
-          <span
-            className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
+          <Download
+            strokeWidth={2.5}
+            className="h-[1em] w-[1em] shrink-0 text-[var(--filelist-btn-text)] opacity-90"
             aria-hidden
-            data-oid="z6n5kgd"
-          >
-            <Circle
-              fill="currentColor"
-              strokeWidth={0}
-              className="absolute inset-0 h-full w-full text-white/90"
-              data-oid="1z1g5n0"
-            />
-
-            <Download
-              strokeWidth={2.5}
-              className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
-              data-oid=".x9tmcw"
-            />
-          </span>
+            data-oid=".x9tmcw"
+          />
           <span className="hidden sm:inline" data-oid="w6k92kx">
             {batchDownloading ? "打包中…" : "Batch Download ZIP"}
           </span>
@@ -160,24 +136,12 @@ const FileListBatchActions = memo(function FileListBatchActions({
           className={btnClass}
           data-oid="q64jv5u"
         >
-          <span
-            className="relative inline-flex h-[1em] w-[1em] shrink-0 items-center justify-center"
+          <Trash2
+            strokeWidth={2}
+            className="h-[1em] w-[1em] shrink-0 text-[var(--filelist-btn-text)] opacity-90"
             aria-hidden
-            data-oid="1vo6bll"
-          >
-            <Circle
-              fill="currentColor"
-              strokeWidth={0}
-              className="absolute inset-0 h-full w-full text-white/90"
-              data-oid="c75qi3f"
-            />
-
-            <Trash2
-              strokeWidth={2}
-              className="relative h-[0.65em] w-[0.65em] text-[rgba(var(--rgb-slate-950),0.7)]"
-              data-oid="385v02v"
-            />
-          </span>
+            data-oid="385v02v"
+          />
           <span className="hidden sm:inline" data-oid="uu21om_">
             Batch Delete
           </span>

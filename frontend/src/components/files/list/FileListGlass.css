@@ -531,11 +531,11 @@
 
 /* 卡片勾选框：外圈水晶效果 */
 .fileListGlassScope .card-checkbox-outer-crystal {
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--selection-check-crystal-border);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 var(--selection-check-crystal-inset-top),
+    inset 0 -1px 0 var(--selection-check-crystal-inset-bottom),
+    0 0 0 1px var(--selection-check-crystal-halo),
     0 2px 8px rgba(0, 0, 0, 0.2);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
   -webkit-backdrop-filter: blur(6px);
@@ -546,16 +546,16 @@
 @keyframes card-checkbox-flash {
   0%, 100% {
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.5),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.15),
-      0 0 0 1px rgba(255, 255, 255, 0.12),
+      inset 0 1px 0 var(--selection-check-crystal-inset-top),
+      inset 0 -1px 0 var(--selection-check-crystal-inset-bottom),
+      0 0 0 1px var(--selection-check-crystal-halo),
       0 0 8px rgba(168, 85, 247, 0.35);
   }
   50% {
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.18),
-      0 0 0 1px rgba(255, 255, 255, 0.2),
+      inset 0 1px 0 var(--selection-check-crystal-inset-top),
+      inset 0 -1px 0 var(--selection-check-crystal-inset-bottom),
+      0 0 0 1px var(--selection-check-crystal-border),
       0 0 14px 1px rgba(168, 85, 247, 0.5);
   }
 }
