@@ -46,7 +46,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
         data-oid="ha.a-tv"
       >
         <HomeIcon className="h-3.5 w-3.5 shrink-0" data-oid="dj:zxma" />
-        <span data-oid="1t0:uam">All Files</span>
+        <span data-oid="1t0:uam">Home</span>
       </button>
 
       {/* 路径项 */}

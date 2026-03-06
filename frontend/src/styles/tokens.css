@@ -930,7 +930,8 @@
         rgba(var(--rgb-cyan-400), 1),
         rgba(var(--rgb-purple-500), 1)
     );
-    --preview-label-text-shadow: 0 0 8px rgba(var(--rgb-cyan-400), 0.5);
+    --preview-label-text-solid: rgba(var(--rgb-emerald-300), 0.99);
+    --preview-label-text-shadow: 0 0 10px rgba(var(--rgb-purple-500), 0.65);
     --preview-label-bar: linear-gradient(
         90deg,
         rgba(var(--rgb-emerald-400), 0.8),
@@ -2503,7 +2504,8 @@
         rgba(var(--rgb-slate-600), 0.9),
         rgba(var(--rgb-slate-500), 0.9)
     );
-    --preview-label-text-shadow: 0 0 8px rgba(var(--rgb-slate-500), 0.24);
+    --preview-label-text-solid: rgba(var(--rgb-emerald-300), 0.99);
+    --preview-label-text-shadow: 0 0 10px rgba(var(--rgb-purple-500), 0.65);
     --preview-label-bar: linear-gradient(
         90deg,
         rgba(var(--rgb-slate-500), 0.62),
@@ -3043,7 +3045,8 @@
         rgba(var(--rgb-cyan-300), 1),
         rgba(var(--rgb-purple-400), 1)
     );
-    --preview-label-text-shadow: 0 0 8px rgba(var(--rgb-purple-400), 0.55);
+    --preview-label-text-solid: rgba(var(--rgb-emerald-300), 0.99);
+    --preview-label-text-shadow: 0 0 10px rgba(var(--rgb-purple-500), 0.65);
     --preview-label-bar: linear-gradient(
         90deg,
         rgba(var(--rgb-fuchsia-400), 0.8),

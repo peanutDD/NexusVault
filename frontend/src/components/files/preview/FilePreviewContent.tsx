@@ -292,7 +292,7 @@ export function FilePreviewContent({
                   data-oid="bpc3euq"
                 >
                   <div
-                    className="text-[clamp(0.7rem,1.8vw,1.1rem)] font-semibold uppercase tracking-[0.35em] bg-[var(--preview-label-text)] bg-clip-text text-transparent drop-shadow-[var(--preview-label-text-shadow)]"
+                    className="text-[clamp(0.7rem,1.8vw,1.1rem)] font-semibold uppercase tracking-[0.35em] text-[var(--preview-label-text-solid)] drop-shadow-[var(--preview-label-text-shadow)]"
                     data-oid="o306q7e"
                   >
                     SSTV
