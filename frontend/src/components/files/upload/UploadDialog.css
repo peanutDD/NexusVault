@@ -1,9 +1,21 @@
 .uploadDialogCyberBackdrop {
     background:
-        radial-gradient(120% 110% at 10% 0%, rgba(148, 163, 184, 0.1), transparent 46%),
-        radial-gradient(110% 90% at 100% 10%, rgba(203, 213, 225, 0.08), transparent 50%),
-        radial-gradient(120% 130% at 50% 100%, rgba(71, 85, 105, 0.16), transparent 56%),
-        rgba(2, 6, 12, 0.86);
+        radial-gradient(
+            120% 110% at 10% 0%,
+            var(--upload-backdrop-glow-1),
+            transparent 46%
+        ),
+        radial-gradient(
+            110% 90% at 100% 10%,
+            var(--upload-backdrop-glow-2),
+            transparent 50%
+        ),
+        radial-gradient(
+            120% 130% at 50% 100%,
+            var(--upload-backdrop-glow-3),
+            transparent 56%
+        ),
+        var(--upload-backdrop);
     backdrop-filter: blur(8px);
 }
 

@@ -34,6 +34,7 @@ export default function Files() {
     <PageLayout
       username={user?.username}
       onLogout={handleLogout}
+      useSolidBackground
       data-oid="_.p3.bw"
     >
       {/* 上传对话框 - 懒加载 */}

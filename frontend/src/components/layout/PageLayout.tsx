@@ -9,6 +9,7 @@ interface PageLayoutProps {
   onLogout: () => void;
   navExtra?: React.ReactNode;
   showSettings?: boolean;
+  useSolidBackground?: boolean;
 }
 
 export default function PageLayout({
@@ -19,10 +20,15 @@ export default function PageLayout({
   onLogout,
   navExtra,
   showSettings,
+  useSolidBackground = false,
 }: PageLayoutProps) {
   return (
     <div
-      className="flex min-h-screen flex-col bg-[image:var(--surface-page-gradient)] transition-colors duration-300"
+      className={`flex min-h-screen flex-col transition-colors duration-300 ${
+        useSolidBackground
+          ? "bg-[color:var(--filelist-page-bg)]"
+          : "bg-[image:var(--surface-page-gradient)]"
+      }`}
       data-oid="umkt5hh"
     >
       <NavBar
