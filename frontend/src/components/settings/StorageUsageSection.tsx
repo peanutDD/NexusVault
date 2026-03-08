@@ -2,16 +2,11 @@ import { memo, useRef, useEffect } from "react";
 import { HardDrive } from "lucide-react";
 import { formatBytes } from "../../utils/format";
 import { cn } from "../../utils/cn";
-import type { StorageUsage } from "../../types/files";
 import SettingsCard from "./SettingsCard";
+import { useStorageUsage } from "../../hooks/useStorageUsage";
 
-interface StorageUsageSectionProps {
-  storageUsage: StorageUsage | null;
-}
-
-const StorageUsageSection = memo(function StorageUsageSection({
-  storageUsage,
-}: StorageUsageSectionProps) {
+const StorageUsageSection = memo(function StorageUsageSection() {
+  const { data: storageUsage, isLoading } = useStorageUsage();
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -31,7 +26,7 @@ const StorageUsageSection = memo(function StorageUsageSection({
       }
       data-oid="31jeowi"
     >
-      {storageUsage ? (
+      {!isLoading && storageUsage ? (
         <div className="space-y-4" data-oid="yvquog4">
           <div className="grid gap-3 sm:grid-cols-2" data-oid="ght-we:">
             <div

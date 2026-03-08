@@ -1,46 +1,101 @@
-import { memo } from "react";
+import { memo, useState, useCallback, useMemo } from "react";
 import { KeyRound } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { cn } from "../../utils/cn";
 import ErrorMessage from "../common/feedback/ErrorMessage";
 import SettingsCard from "./SettingsCard";
+import { authService } from "../../services/auth";
+import { getErrorMessage } from "../../utils/error";
 
-interface PasswordForm {
+interface PasswordFormValues {
   current_password: string;
   new_password: string;
   confirm_password: string;
 }
 
-interface PasswordChangeSectionProps {
-  passwordForm: PasswordForm;
-  loading: boolean;
-  error?: string | null;
-  success?: string | null;
-  onCloseError?: () => void;
-  onCloseSuccess?: () => void;
-  fieldErrors?: {
-    current_password?: string;
-    new_password?: string;
-    confirm_password?: string;
-  };
-  onCurrentPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onNewPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onConfirmPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: (e: React.FormEvent) => void;
-}
+const PasswordChangeSection = memo(function PasswordChangeSection() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-const PasswordChangeSection = memo(function PasswordChangeSection({
-  passwordForm,
-  loading,
-  error,
-  success,
-  onCloseError,
-  onCloseSuccess,
-  fieldErrors,
-  onCurrentPasswordChange,
-  onNewPasswordChange,
-  onConfirmPasswordChange,
-  onSubmit,
-}: PasswordChangeSectionProps) {
+  const passwordSchema = useMemo(() => {
+    return z
+      .object({
+        current_password: z.string().min(1, "Current password is required"),
+        new_password: z
+          .string()
+          .min(8, "New password must be between 8 and 64 characters")
+          .max(64, "New password must be between 8 and 64 characters")
+          .refine((v) => /[A-Za-z]/.test(v) && /[0-9]/.test(v), {
+            message:
+              "New password must contain at least one letter and one digit",
+          }),
+        confirm_password: z.string(),
+      })
+      .superRefine((data, ctx) => {
+        if (data.new_password !== data.confirm_password) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "New password and confirmation do not match",
+            path: ["confirm_password"],
+          });
+        }
+      });
+  }, []);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError: setFormError,
+    formState: { errors },
+  } = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    },
+    mode: "onBlur",
+  });
+
+  const onSubmit = useCallback(async (data: PasswordFormValues) => {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      await authService.changePassword({
+        current_password: data.current_password,
+        new_password: data.new_password,
+      });
+      setSuccess("Password changed");
+      reset();
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to change password");
+      if (
+        message.includes("between 8 and 64") ||
+        message.includes("one letter and one digit") ||
+        message.includes("New password must")
+      ) {
+        setFormError("new_password", { message });
+      } else if (
+        message.toLowerCase().includes("password") ||
+        message.includes("密码")
+      ) {
+        setFormError("current_password", { message });
+      } else {
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [reset, setFormError]);
+
+  const handleCloseError = useCallback(() => setError(null), []);
+  const handleCloseSuccess = useCallback(() => setSuccess(null), []);
+
   return (
     <SettingsCard
       id="security"
@@ -54,7 +109,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
       {error && (
         <ErrorMessage
           message={error}
-          onClose={onCloseError}
+          onClose={handleCloseError}
           type="error"
           autoDismissMs={5000}
           className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
@@ -64,7 +119,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
       {success && (
         <ErrorMessage
           message={success}
-          onClose={onCloseSuccess}
+          onClose={handleCloseSuccess}
           type="info"
           autoDismissMs={3000}
           className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
@@ -72,7 +127,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
         />
       )}
       <form
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         noValidate
         className="space-y-4"
         data-oid="be5kts_"
@@ -88,12 +143,11 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
           <input
             id="current-password"
             type="password"
-            value={passwordForm.current_password}
-            onChange={onCurrentPasswordChange}
+            {...register("current_password")}
             required
-            aria-invalid={Boolean(fieldErrors?.current_password)}
+            aria-invalid={Boolean(errors.current_password)}
             aria-describedby={
-              fieldErrors?.current_password
+              errors.current_password
                 ? "current-password-error"
                 : undefined
             }
@@ -102,17 +156,18 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
               "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
               "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
               "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
+              errors.current_password && "border-red-500 focus:ring-red-500"
             )}
             data-oid="8_-nvyf"
           />
 
-          {fieldErrors?.current_password && (
+          {errors.current_password && (
             <p
               id="current-password-error"
               className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
               data-oid="hvyxc0c"
             >
-              {fieldErrors.current_password}
+              {errors.current_password.message}
             </p>
           )}
         </div>
@@ -127,31 +182,31 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
           <input
             id="new-password"
             type="password"
-            value={passwordForm.new_password}
-            onChange={onNewPasswordChange}
+            {...register("new_password")}
             required
             minLength={8}
             maxLength={64}
-            aria-invalid={Boolean(fieldErrors?.new_password)}
+            aria-invalid={Boolean(errors.new_password)}
             aria-describedby={
-              fieldErrors?.new_password ? "new-password-error" : undefined
+              errors.new_password ? "new-password-error" : undefined
             }
             className={cn(
               "w-full rounded-xl px-4 py-2.5",
               "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
               "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
               "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
+              errors.new_password && "border-red-500 focus:ring-red-500"
             )}
             data-oid="bnlj:z1"
           />
 
-          {fieldErrors?.new_password ? (
+          {errors.new_password ? (
             <p
               id="new-password-error"
               className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
               data-oid="6-qjqxf"
             >
-              {fieldErrors.new_password}
+              {errors.new_password.message}
             </p>
           ) : (
             <p
@@ -173,14 +228,13 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
           <input
             id="confirm-password"
             type="password"
-            value={passwordForm.confirm_password}
-            onChange={onConfirmPasswordChange}
+            {...register("confirm_password")}
             required
             minLength={8}
             maxLength={64}
-            aria-invalid={Boolean(fieldErrors?.confirm_password)}
+            aria-invalid={Boolean(errors.confirm_password)}
             aria-describedby={
-              fieldErrors?.confirm_password
+              errors.confirm_password
                 ? "confirm-password-error"
                 : undefined
             }
@@ -189,17 +243,18 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
               "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
               "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
               "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
+              errors.confirm_password && "border-red-500 focus:ring-red-500"
             )}
             data-oid=".8op07u"
           />
 
-          {fieldErrors?.confirm_password && (
+          {errors.confirm_password && (
             <p
               id="confirm-password-error"
               className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
               data-oid="3:cc56f"
             >
-              {fieldErrors.confirm_password}
+              {errors.confirm_password.message}
             </p>
           )}
         </div>
@@ -208,8 +263,8 @@ const PasswordChangeSection = memo(function PasswordChangeSection({
           disabled={loading}
           className={cn(
             "font-brand w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide",
-            "bg-[var(--settings-action-bg)] text-[var(--settings-action-text)]",
-            "hover:bg-[var(--settings-action-bg-hover)]",
+            "border border-[var(--settings-action-border)] bg-[var(--settings-action-bg)] text-[var(--settings-action-text)] shadow-[var(--settings-action-shadow)]",
+            "hover:bg-[image:var(--settings-action-bg-hover)]",
             "disabled:opacity-50 disabled:cursor-not-allowed",
           )}
           data-oid="-zsxz4-"

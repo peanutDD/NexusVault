@@ -474,17 +474,16 @@
     --settings-secondary-bg-hover: rgba(var(--rgb-emerald-500), 0.3);
     --settings-secondary-text: rgba(var(--rgb-emerald-200), 0.95);
 
-    --settings-action-bg: linear-gradient(
-        90deg,
-        rgba(var(--rgb-emerald-500), 0.8),
-        rgba(var(--rgb-cyan-500), 0.8)
-    );
+    --settings-action-bg: var(--cta-primary-bg);
     --settings-action-bg-hover: linear-gradient(
         90deg,
-        rgba(var(--rgb-emerald-500), 1),
-        rgba(var(--rgb-cyan-500), 1)
+        rgba(var(--rgb-malachite-500), 0.7),
+        rgba(var(--rgb-emerald-500), 0.5),
+        rgba(var(--rgb-emerald-400), 0.4)
     );
-    --settings-action-text: rgba(var(--rgb-slate-950), 1);
+    --settings-action-text: rgba(var(--rgb-white), 0.95);
+    --settings-action-border: var(--cta-primary-border);
+    --settings-action-shadow: var(--cta-primary-shadow);
 
     --settings-progress-track-bg: rgba(var(--rgb-slate-900), 0.5);
     --settings-progress-track-ring: rgba(var(--rgb-white), 0.05);
@@ -3308,4 +3307,27 @@
     --dialog-liquid-pink: 240, 180, 255;
     --dialog-liquid-shadow: 20, 16, 40;
     --dialog-liquid-glass: 255, 255, 255;
+}
+
+/* Light Mode Overrides for Action Buttons */
+:root:not(.dark) {
+    /* Solid Green Gradient for visibility on white background */
+    --cta-primary-bg: linear-gradient(
+        90deg,
+        rgb(16, 185, 129), /* Emerald 500 */
+        rgb(5, 150, 105)   /* Emerald 600 */
+    );
+    --cta-primary-border: transparent;
+    --cta-primary-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.4), 0 2px 4px -1px rgba(5, 150, 105, 0.2);
+
+    /* Settings Action Button Specifics */
+    --settings-action-bg: var(--cta-primary-bg);
+    --settings-action-bg-hover: linear-gradient(
+        90deg,
+        rgb(5, 150, 105), /* Emerald 600 */
+        rgb(4, 120, 87)   /* Emerald 700 */
+    );
+    --settings-action-text: #000000;
+    --settings-action-border: transparent;
+    --settings-action-shadow: 0 4px 12px rgba(5, 150, 105, 0.5);
 }

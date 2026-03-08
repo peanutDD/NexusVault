@@ -1,57 +1,109 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useMemo } from "react";
 import { Key, Copy, Trash2, X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { cn } from "../../utils/cn";
 import type { ApiToken } from "../../services/apiTokens";
 import ErrorMessage from "../common/feedback/ErrorMessage";
 import ConfirmDialog from "../common/dialog/ConfirmDialog";
 import SettingsCard from "./SettingsCard";
+import { useApiTokens, useCreateApiToken, useDeleteApiToken } from "../../hooks/useApiTokens";
+import { useClipboard } from "../../hooks/useClipboard";
+import { getErrorMessage } from "../../utils/error";
 
-interface TokenForm {
+interface TokenFormValues {
   name: string;
   expires: number | "";
-  value: string | null;
-  showValue: boolean;
 }
 
-interface ApiTokenSectionProps {
-  apiTokens: ApiToken[];
-  tokenForm: TokenForm;
-  loading: boolean;
-  error?: string | null;
-  success?: string | null;
-  onCloseError?: () => void;
-  onCloseSuccess?: () => void;
-  onTokenNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onTokenExpiresChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onCreateToken: (e: React.FormEvent) => void;
-  onDeleteToken: (tokenId: string) => Promise<void>;
-  onCopyToken: (token: string) => Promise<void>;
-  onCloseTokenValue: () => void;
-}
+const ApiTokenSection = memo(function ApiTokenSection() {
+  const { data: apiTokens = [], isLoading: tokensLoading } = useApiTokens();
+  const createTokenMutation = useCreateApiToken();
+  const deleteTokenMutation = useDeleteApiToken();
+  const { copy: copyToClipboard } = useClipboard();
 
-const ApiTokenSection = memo(function ApiTokenSection({
-  apiTokens,
-  tokenForm,
-  loading,
-  error,
-  success,
-  onCloseError,
-  onCloseSuccess,
-  onTokenNameChange,
-  onTokenExpiresChange,
-  onCreateToken,
-  onDeleteToken,
-  onCopyToken,
-  onCloseTokenValue,
-}: ApiTokenSectionProps) {
-  const [pendingDeleteToken, setPendingDeleteToken] = useState<ApiToken | null>(
-    null,
-  );
-  const handleCopyClick = useCallback(() => {
-    if (tokenForm.value) {
-      onCopyToken(tokenForm.value);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [createdTokenValue, setCreatedTokenValue] = useState<string | null>(null);
+  const [showCreatedTokenValue, setShowCreatedTokenValue] = useState(false);
+  const [pendingDeleteToken, setPendingDeleteToken] = useState<ApiToken | null>(null);
+
+  const tokenSchema = useMemo(() => {
+    return z.object({
+      name: z.string().trim().min(1, "Please enter a token name"),
+      expires: z.union([
+        z.literal(""),
+        z.number().int().min(1, "Expires must be at least 1 day"),
+      ]),
+    });
+  }, []);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<TokenFormValues>({
+    resolver: zodResolver(tokenSchema),
+    defaultValues: { name: "", expires: "" },
+    mode: "onBlur",
+  });
+
+  const handleCreateToken = useCallback((data: TokenFormValues) => {
+    setError(null);
+    setSuccess(null);
+    createTokenMutation.mutate(
+      {
+        name: data.name.trim(),
+        expires_in_days: data.expires === "" ? undefined : Number(data.expires),
+      },
+      {
+        onSuccess: (response) => {
+          setCreatedTokenValue(response.token.token);
+          setShowCreatedTokenValue(true);
+          reset();
+          setSuccess("API Token created. Copy and save it now — it will only be shown once.");
+        },
+        onError: (err) => {
+          setError(getErrorMessage(err, "Failed to create API Token"));
+        },
+      }
+    );
+  }, [createTokenMutation, reset]);
+
+  const handleDeleteToken = useCallback(async () => {
+    if (!pendingDeleteToken) return;
+    deleteTokenMutation.mutate(pendingDeleteToken.id, {
+      onSuccess: () => {
+        setSuccess("API Token deleted");
+        setPendingDeleteToken(null);
+      },
+      onError: (err) => {
+        setError(getErrorMessage(err, "Failed to delete API Token"));
+      },
+    });
+  }, [deleteTokenMutation, pendingDeleteToken]);
+
+  const handleCopyClick = useCallback(async () => {
+    if (createdTokenValue) {
+      const ok = await copyToClipboard(createdTokenValue);
+      if (ok) {
+        setSuccess("Token copied to clipboard");
+      } else {
+        setError("Copy failed. Please select the token and copy manually.");
+      }
     }
-  }, [tokenForm.value, onCopyToken]);
+  }, [createdTokenValue, copyToClipboard]);
+
+  const handleCloseError = useCallback(() => setError(null), []);
+  const handleCloseSuccess = useCallback(() => setSuccess(null), []);
+  const handleCloseTokenValue = useCallback(() => {
+    setShowCreatedTokenValue(false);
+    setCreatedTokenValue(null);
+  }, []);
+
+  const loading = createTokenMutation.isPending || deleteTokenMutation.isPending;
 
   return (
     <SettingsCard
@@ -64,7 +116,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
       {error && (
         <ErrorMessage
           message={error}
-          onClose={onCloseError}
+          onClose={handleCloseError}
           type="error"
           autoDismissMs={5000}
           className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
@@ -74,7 +126,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
       {success && (
         <ErrorMessage
           message={success}
-          onClose={onCloseSuccess}
+          onClose={handleCloseSuccess}
           type="info"
           autoDismissMs={3000}
           className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
@@ -101,12 +153,8 @@ const ApiTokenSection = memo(function ApiTokenSection({
         }
         confirmText="Delete"
         cancelText="Cancel"
-        loading={loading}
-        onConfirm={async () => {
-          if (!pendingDeleteToken) return;
-          await onDeleteToken(pendingDeleteToken.id);
-          setPendingDeleteToken(null);
-        }}
+        loading={deleteTokenMutation.isPending}
+        onConfirm={handleDeleteToken}
         onCancel={() => setPendingDeleteToken(null)}
         data-oid="w:9o6xk"
       />
@@ -130,7 +178,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
           </span>
         </div>
         <form
-          onSubmit={onCreateToken}
+          onSubmit={handleSubmit(handleCreateToken)}
           noValidate
           className="grid gap-4 sm:grid-cols-2"
           data-oid="l01z3qa"
@@ -146,8 +194,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
             <input
               id="new-token-name"
               type="text"
-              value={tokenForm.name}
-              onChange={onTokenNameChange}
+              {...register("name")}
               placeholder="e.g. My script, CI/CD"
               required
               className={cn(
@@ -155,9 +202,13 @@ const ApiTokenSection = memo(function ApiTokenSection({
                 "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
                 "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
                 "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
+                errors.name && "border-red-500 focus:ring-red-500"
               )}
               data-oid="e_5:s9m"
             />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>
+            )}
           </div>
           <div data-oid="332s4jl">
             <label
@@ -170,8 +221,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
             <input
               id="new-token-expires"
               type="number"
-              value={tokenForm.expires}
-              onChange={onTokenExpiresChange}
+              {...register("expires", { valueAsNumber: true })}
               min="1"
               placeholder="Leave empty for never"
               className={cn(
@@ -179,27 +229,31 @@ const ApiTokenSection = memo(function ApiTokenSection({
                 "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
                 "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
                 "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
+                errors.expires && "border-red-500 focus:ring-red-500"
               )}
               data-oid="aziv6r_"
             />
+            {errors.expires && (
+              <p className="mt-1 text-sm text-red-500">{errors.expires.message}</p>
+            )}
           </div>
           <button
             type="submit"
             disabled={loading}
             className={cn(
               "font-brand sm:col-span-2 w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide",
-              "bg-[var(--settings-action-bg)] text-[var(--settings-action-text)]",
-              "hover:bg-[var(--settings-action-bg-hover)]",
+              "border border-[var(--settings-action-border)] bg-[var(--settings-action-bg)] text-[var(--settings-action-text)] shadow-[var(--settings-action-shadow)]",
+              "hover:bg-[image:var(--settings-action-bg-hover)]",
               "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
             data-oid="qabeet7"
           >
-            {loading ? "Creating..." : "Create token"}
+            {createTokenMutation.isPending ? "Creating..." : "Create token"}
           </button>
         </form>
 
         {/* 显示新创建的 Token */}
-        {tokenForm.showValue && tokenForm.value && (
+        {showCreatedTokenValue && createdTokenValue && (
           <div
             className="mt-4 rounded-xl border border-[var(--settings-warning-panel-border)] bg-[var(--settings-warning-panel-bg)] p-4"
             data-oid="denb39z"
@@ -225,7 +279,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
               </div>
               <button
                 type="button"
-                onClick={onCloseTokenValue}
+                onClick={handleCloseTokenValue}
                 className="inline-flex items-center justify-center rounded-lg border border-[var(--settings-warning-close-border)] bg-[var(--settings-warning-close-bg)] p-2 text-[var(--settings-warning-close-text)] hover:bg-[var(--settings-warning-close-bg-hover)]"
                 aria-label="Close token display"
                 data-oid="ao3wc_v"
@@ -241,7 +295,7 @@ const ApiTokenSection = memo(function ApiTokenSection({
                 className="flex-1 rounded-xl border border-[var(--settings-warning-code-border)] bg-[var(--settings-warning-code-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] text-[var(--settings-warning-code-text)] break-all"
                 data-oid="o78yn83"
               >
-                {tokenForm.value}
+                {createdTokenValue}
               </code>
               <button
                 type="button"
@@ -272,7 +326,9 @@ const ApiTokenSection = memo(function ApiTokenSection({
         >
           Existing tokens
         </h3>
-        {apiTokens.length === 0 ? (
+        {tokensLoading ? (
+           <p className="text-[var(--settings-panel-muted)]">Loading tokens...</p>
+        ) : apiTokens.length === 0 ? (
           <p
             className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-panel-muted)]"
             data-oid="g_46r9y"

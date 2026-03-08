@@ -1,19 +1,17 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
-import { fileService } from '../../services/files';
 import type { FileMetadata } from '../../types/files';
 import type { Folder } from '../../types/folders';
-import { folderService } from '../../services/folders';
-import { getErrorMessage } from '../../utils/error';
-import { BATCH_LIMITS, MIME_FILTER_FOLDERS } from '../../constants';
+import { MIME_FILTER_FOLDERS } from '../../constants';
 import { useFileFilters } from '../../hooks/files/useFileFilters';
 import { useFileSelection } from '../../hooks/files/useFileSelection';
 import { FILE_TYPE_LABELS } from './fileTypeLabels';
 import { groupFilesInWorker } from '../../utils/workerPool';
 import { useFiles } from '../../hooks/files/useFiles';
 import { useFolderContents } from '../../hooks/folders/useFolders';
-import { useFileMutations } from '../../hooks/files/useFileMutations';
+import { useFileUI } from '../../hooks/files/useFileUI';
+import { useFileActions } from '../../hooks/files/useFileActions';
 
 // 重新导出 FILE_TYPE_LABELS 以保持向后兼容
 export { FILE_TYPE_LABELS };
@@ -239,6 +237,9 @@ function useTimeGroupingMixed(
   return { timeGroupedItems };
 }
 
+// Need to import useState for useFileGroupingWithIcons
+import { useState } from 'react';
+
 export function useFileList() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -351,15 +352,6 @@ export function useFileList() {
   const folders = useMemo(() => folderContents?.folders ?? [], [folderContents]);
   const folderPath = useMemo(() => folderContents?.path ?? [], [folderContents]);
 
-  // 使用 TanStack Query Mutations
-  const {
-    deleteFile: deleteFileMutation,
-    batchDeleteFiles: batchDeleteMutation,
-    deleteFolder: deleteFolderMutation,
-    renameFolder: renameFolderMutation,
-    renameFile: renameFileMutation,
-  } = useFileMutations();
-
   // 使用抽取的选择状态 Hook
   const {
     selectedFiles,
@@ -373,7 +365,31 @@ export function useFileList() {
     setSelectedFolders,
   } = useFileSelection(files, folders);
 
-  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  // UI State Hook
+  const {
+    previewFile,
+    setPreviewFile,
+    shareFile,
+    setShareFile,
+    showBatchShare,
+    setShowBatchShare,
+    batchShareFileIds,
+    setBatchShareFileIds,
+    showBatchMove,
+    setShowBatchMove,
+    showCreateFolder,
+    setShowCreateFolder,
+    renamingFolder,
+    setRenamingFolder,
+    renamingFile,
+    setRenamingFile,
+    deleteConfirm,
+    setDeleteConfirm,
+    error,
+    setError,
+    clearError,
+  } = useFileUI();
+
   const lastSelectionScopeRef = useRef<{ sortBy: string; mimeType: string } | null>(null);
 
   // 使用带 icon 的分组 Hook
@@ -402,27 +418,34 @@ export function useFileList() {
     return m;
   }, [finalDisplayFiles, previewFile]);
 
-  // 对话框状态
-  const [shareFile, setShareFile] = useState<FileMetadata | null>(null);
-  const [showBatchShare, setShowBatchShare] = useState(false);
-  const [batchShareFileIds, setBatchShareFileIds] = useState<string[]>([]);
-  const [showBatchMove, setShowBatchMove] = useState(false);
-  const [showCreateFolder, setShowCreateFolder] = useState(false);
-  const [renamingFolder, setRenamingFolder] = useState<Folder | null>(null);
-  const [renamingFile, setRenamingFile] = useState<FileMetadata | null>(null);
-
-  const [deleteConfirm, setDeleteConfirm] = useState<{
-    type: 'file' | 'folder' | 'batch';
-    id?: string;
-    name?: string;
-    fileCount?: number;
-    folderCount?: number;
-  } | null>(null);
-  
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [batchDownloading, setBatchDownloading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const clearError = useCallback(() => setError(null), []);
+  // Actions Hook
+  const {
+    deleteLoading,
+    batchDownloading,
+    handleDelete,
+    handleBatchDelete,
+    executeDelete,
+    handleRenameFolderSubmit,
+    handleRenameFileSubmit,
+    handleDownload,
+    handleBatchDownload,
+    handleDropOnBreadcrumb,
+  } = useFileActions({
+    files,
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
+    setSelectedFiles,
+    setSelectedFolders,
+    setError,
+    setDeleteConfirm,
+    deleteConfirm,
+    setRenamingFolder,
+    setRenamingFile,
+    refetchFiles,
+    refetchFolders,
+  });
 
   const getScrollStorageKey = useCallback(
     (folderId: string | null) => {
@@ -567,161 +590,16 @@ export function useFileList() {
     }
   }, [sortBy, mimeType, clearSelection]);
 
-  const handleSelectFile = useCallback((fileId: string, selected: boolean) => {
-    setSelectedFiles((prev) => {
-      const next = new Set(prev);
-      if (selected) {
-        next.add(fileId);
-      } else {
-        next.delete(fileId);
-      }
-      return next;
-    });
-  }, [setSelectedFiles]);
-
-  const handleSelectFolder = useCallback((folderId: string, selected: boolean) => {
-    setSelectedFolders((prev) => {
-      const next = new Set(prev);
-      if (selected) {
-        next.add(folderId);
-      } else {
-        next.delete(folderId);
-      }
-      return next;
-    });
-  }, [setSelectedFolders]);
-
-  const handleDelete = useCallback((fileId: string) => {
-    const file = files.find((f) => f.id === fileId);
-    setDeleteConfirm({
-      type: 'file',
-      id: fileId,
-      name: file?.original_filename || '文件',
-    });
-  }, [files]);
-
-  const handleBatchDelete = useCallback(() => {
-    const fileCount = selectedFiles.size;
-    const folderCount = selectedFolders.size;
-    if (fileCount === 0 && folderCount === 0) return;
-
-    setDeleteConfirm({
-      type: 'batch',
-      fileCount,
-      folderCount,
-    });
-  }, [selectedFiles.size, selectedFolders.size]);
-
-  const executeDelete = useCallback(async () => {
-    if (!deleteConfirm) return;
-
-    setDeleteLoading(true);
-    try {
-      if (deleteConfirm.type === 'file' && deleteConfirm.id) {
-        await deleteFileMutation.mutateAsync(deleteConfirm.id);
-      } else if (deleteConfirm.type === 'folder' && deleteConfirm.id) {
-        await deleteFolderMutation.mutateAsync(deleteConfirm.id);
-      } else if (deleteConfirm.type === 'batch') {
-        if (selectedFiles.size > 0) {
-          await batchDeleteMutation.mutateAsync(selectedFileIds);
-        }
-        if (selectedFolders.size > 0) {
-          await Promise.all(selectedFolderIds.map((id) => deleteFolderMutation.mutateAsync(id)));
-        }
-        setSelectedFiles(new Set());
-        setSelectedFolders(new Set());
-      }
-      setDeleteConfirm(null);
-    } catch (err) {
-      setError(getErrorMessage(err, '删除失败'));
-    } finally {
-      setDeleteLoading(false);
-    }
-  }, [deleteConfirm, deleteFileMutation, deleteFolderMutation, batchDeleteMutation, selectedFiles.size, selectedFolders.size, selectedFileIds, selectedFolderIds, setSelectedFiles, setSelectedFolders]);
-
-  const handleRenameFolderSubmit = useCallback(async (id: string, name: string) => {
-    try {
-      await renameFolderMutation.mutateAsync({ id, name });
-      setRenamingFolder(null);
-    } catch (err) {
-      setError(getErrorMessage(err, '重命名失败'));
-    }
-  }, [renameFolderMutation]);
-
-  const handleRenameFileSubmit = useCallback(async (id: string, name: string) => {
-    try {
-      await renameFileMutation.mutateAsync({ id, name });
-      setRenamingFile(null);
-    } catch (err) {
-      setError(getErrorMessage(err, '重命名失败'));
-    }
-  }, [renameFileMutation]);
-
-  const handleDownload = useCallback(async (file: FileMetadata) => {
-    try {
-      await fileService.downloadFile(file.id, file.original_filename);
-    } catch (err) {
-      setError(getErrorMessage(err, '下载失败'));
-    }
-  }, []);
-
-  const handleBatchDownload = useCallback(async () => {
-    if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
-    setBatchDownloading(true);
-    try {
-      let allFileIds = [...selectedFileIds];
-
-      if (selectedFolders.size > 0) {
-        const folderFileIds = await folderService.getFilesInFolders(selectedFolderIds);
-        allFileIds = [...new Set([...allFileIds, ...folderFileIds])];
-      }
-
-      if (allFileIds.length === 0) {
-        setError('没有可下载的文件');
-        return;
-      }
-
-      if (allFileIds.length > BATCH_LIMITS.MAX_DOWNLOAD_ZIP_FILES) {
-        setError(`一次最多下载 ${BATCH_LIMITS.MAX_DOWNLOAD_ZIP_FILES} 个文件`);
-        return;
-      }
-
-      await fileService.downloadZip(allFileIds);
-    } catch (err) {
-      setError(getErrorMessage(err, '批量下载失败'));
-    } finally {
-      setBatchDownloading(false);
-    }
-  }, [selectedFiles.size, selectedFolders.size, selectedFileIds, selectedFolderIds]);
-
   const handleShowBatchMove = useCallback(() => {
     if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
     setShowBatchMove(true);
-  }, [selectedFiles.size, selectedFolders.size]);
+  }, [selectedFiles.size, selectedFolders.size, setShowBatchMove]);
 
   const handleShowBatchShare = useCallback(() => {
     if (selectedFiles.size === 0) return;
     setBatchShareFileIds(selectedFileIds);
     setShowBatchShare(true);
-  }, [selectedFiles.size, selectedFileIds]);
-
-  const handleDropOnBreadcrumb = useCallback(async (targetFolderId: string | null, e: React.DragEvent) => {
-    e.preventDefault();
-    const fileId = e.dataTransfer.getData('application/file-id');
-    if (!fileId) return;
-
-    try {
-      await folderService.moveFilesToFolder([fileId], targetFolderId);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['files'] }),
-        queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
-      ]);
-      refetchFiles();
-      refetchFolders();
-    } catch (err) {
-      setError(getErrorMessage(err, '移动失败'));
-    }
-  }, [queryClient, refetchFiles, refetchFolders]);
+  }, [selectedFiles.size, selectedFileIds, setBatchShareFileIds, setShowBatchShare]);
 
   const refreshListsAfterMove = useCallback(async () => {
     await Promise.all([
@@ -759,8 +637,8 @@ export function useFileList() {
     displayFolders,
     displayFiles: finalDisplayFiles,
     displayFileIndexById: finalDisplayFileIndexById,
-    totalPages: Math.ceil(totalItems / 50), // 简化处理，假设 limit 为 50
-    page: 1, // 简化处理，无限滚动不需要页码
+    totalPages: Math.ceil(totalItems / 50),
+    page: 1,
     hasMore,
     loadingMore,
     loadMore,
@@ -769,13 +647,25 @@ export function useFileList() {
     handleMimeTypeChange,
     handleSortChange,
     toggleSelectAll,
-    handleSelectFile,
-    handleSelectFolder,
+    handleSelectFile: (fileId: string, selected: boolean) => {
+        setSelectedFiles(prev => {
+            const next = new Set(prev);
+            if (selected) next.add(fileId); else next.delete(fileId);
+            return next;
+        });
+    },
+    handleSelectFolder: (folderId: string, selected: boolean) => {
+        setSelectedFolders(prev => {
+            const next = new Set(prev);
+            if (selected) next.add(folderId); else next.delete(folderId);
+            return next;
+        });
+    },
     handleRenameFolder: setRenamingFolder,
     handleRenameFile: setRenamingFile,
     handleRenameFolderSubmit,
     handleRenameFileSubmit,
-    getOptimisticMoveRollback: () => () => {}, // 简化处理
+    getOptimisticMoveRollback: () => () => {},
     navigateToFolder,
     handleDelete,
     handleDownload,
