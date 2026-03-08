@@ -68,7 +68,7 @@
   /* 玻璃反射高光（顶部更亮，边缘略有色泽）+ 科技感霓虹 */
   background:
     radial-gradient(120% 70% at 15% 0%, var(--glass-hi), transparent 60%),
-    radial-gradient(90% 60% at 90% 10%, rgba(217, 70, 239, 0.10), transparent 62%),
+    radial-gradient(90% 60% at 90% 10%, rgba(217, 70, 239, 0.1), transparent 62%),
     radial-gradient(80% 60% at 10% 95%, rgba(16, 185, 129, 0.08), transparent 60%),
     /* 科技感边缘光晕 */
     linear-gradient(0deg, transparent 0%, rgba(168, 85, 247, 0.08) 50%, transparent 100%),
@@ -133,8 +133,8 @@
   box-shadow: 
     var(--glass-shadow),
     /* 科技感外发光 */
-    0 0 20px rgba(168, 85, 247, 0.15),
-    0 0 40px rgba(34, 211, 238, 0.1);
+    0 0 20px rgba(168, 85, 247, 0.14),
+    0 0 40px rgba(34, 211, 238, 0.09);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   position: relative;
@@ -166,8 +166,8 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(168, 85, 247, 0.6),
-    rgba(34, 211, 238, 0.6),
+    rgba(168, 85, 247, 0.52),
+    rgba(34, 211, 238, 0.48),
     transparent
   );
   animation: techScan 3s ease-in-out infinite;

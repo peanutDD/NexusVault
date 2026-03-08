@@ -1269,85 +1269,103 @@
 
 [data-theme="dark"], .dark {
     --color-text-primary: rgba(var(--rgb-white), 0.94);
-    --color-text-secondary: rgba(var(--rgb-slate-300), 0.82);
-    --color-text-muted: rgba(var(--rgb-slate-400), 0.74);
+    --color-text-secondary: rgba(var(--rgb-slate-300), 0.88);
+    --color-text-muted: rgba(var(--rgb-slate-400), 0.72);
     --color-text-disabled: rgba(var(--rgb-slate-500), 0.62);
 
     --color-border-soft: rgba(var(--rgb-slate-300), 0.14);
-    --color-border-medium: rgba(var(--rgb-slate-300), 0.22);
-    --color-border-strong: rgba(var(--rgb-slate-300), 0.34);
+    --color-border-medium: rgba(var(--rgb-purple-400), 0.26);
+    --color-border-strong: rgba(var(--rgb-purple-400), 0.38);
 
-    --control-input-bg: rgba(var(--rgb-slate-950), 0.78);
-    --control-input-border: rgba(var(--rgb-emerald-300), 0.24);
+    --control-input-bg: rgba(var(--rgb-slate-950), 0.72);
+    --control-input-border: rgba(var(--rgb-purple-400), 0.34);
     --control-input-text: var(--color-text-primary);
     --control-input-placeholder: rgba(var(--rgb-slate-400), 0.58);
-    --control-input-ring: rgba(var(--rgb-emerald-400), 0.38);
+    --control-input-ring: rgba(var(--rgb-purple-500), 0.45);
 
     --control-label-text: rgba(var(--rgb-slate-300), 0.92);
     --control-hint-text: rgba(var(--rgb-slate-400), 0.7);
     --control-error-text: rgba(var(--rgb-rose-400), 0.92);
 
-    --color-focus-ring: rgba(var(--rgb-emerald-400), 0.58);
+    --color-focus-ring: rgba(var(--rgb-purple-500), 0.62);
 
     --surface-page-gradient:
         radial-gradient(
             1200px circle at 14% 8%,
-            rgba(var(--rgb-emerald-400), 0.15),
+            rgba(var(--rgb-purple-500), 0.18),
             transparent 56%
         ),
         radial-gradient(
             860px circle at 84% 18%,
-            rgba(var(--rgb-slate-500), 0.12),
+            rgba(var(--rgb-cyan-400), 0.12),
             transparent 62%
         ),
         radial-gradient(
             720px circle at 16% 86%,
-            rgba(var(--rgb-emerald-300), 0.08),
+            rgba(var(--rgb-fuchsia-500), 0.1),
             transparent 64%
         ),
         linear-gradient(145deg, rgb(var(--rgb-slate-950)), rgb(var(--rgb-slate-900)), rgb(var(--rgb-slate-950)));
     --surface-page-gradient-dark:
         radial-gradient(
             980px circle at 16% 10%,
-            rgba(var(--rgb-emerald-400), 0.1),
+            rgba(var(--rgb-purple-500), 0.14),
             transparent 58%
         ),
         radial-gradient(
             840px circle at 84% 20%,
-            rgba(var(--rgb-slate-500), 0.1),
+            rgba(var(--rgb-cyan-400), 0.1),
             transparent 64%
         ),
         radial-gradient(
             700px circle at 20% 84%,
-            rgba(var(--rgb-emerald-300), 0.06),
+            rgba(var(--rgb-fuchsia-500), 0.08),
             transparent 66%
         ),
         linear-gradient(145deg, rgb(var(--rgb-slate-950)), rgb(var(--rgb-slate-950)), rgb(var(--rgb-slate-900)));
 
-    --glass-bg-strong: rgba(var(--rgb-slate-900), 0.62);
-    --glass-bg-soft: rgba(var(--rgb-slate-900), 0.42);
-    --glass-highlight-strong: rgba(var(--rgb-white), 0.12);
+    --glass-bg-strong: rgba(var(--rgb-slate-900), 0.58);
+    --glass-bg-soft: rgba(var(--rgb-slate-900), 0.38);
+    --glass-highlight-strong: rgba(var(--rgb-white), 0.14);
     --glass-highlight-soft: rgba(var(--rgb-white), 0.08);
     --glass-blur-strong: clamp(16px, 2vw, 24px);
     --glass-blur-medium: clamp(12px, 1.5vw, 18px);
     --glass-blur-soft: clamp(10px, 1.2vw, 14px);
-    --glass-saturate-strong: 112%;
-    --glass-saturate-soft: 105%;
+    --glass-saturate-strong: 128%;
+    --glass-saturate-soft: 116%;
 
-    --filelist-menu-trigger-hover-bg: rgba(var(--rgb-emerald-400), 0.12);
+    --filelist-menu-trigger-hover-bg: rgba(var(--rgb-purple-500), 0.16);
     --filelist-menu-bg: rgba(var(--rgb-slate-950), 0.97);
-    --filelist-menu-border: rgba(var(--rgb-emerald-400), 0.24);
+    --filelist-menu-border: rgba(var(--rgb-purple-400), 0.34);
     --filelist-menu-text: rgba(var(--rgb-white), 0.95);
     --filelist-menu-icon: rgba(var(--rgb-slate-300), 0.92);
-    --filelist-menu-item-hover-bg: rgba(var(--rgb-emerald-400), 0.14);
-    --filelist-menu-divider: rgba(var(--rgb-emerald-400), 0.2);
+    --filelist-menu-item-hover-bg: rgba(var(--rgb-purple-500), 0.18);
+    --filelist-menu-divider: rgba(var(--rgb-purple-400), 0.24);
 
-    --file-card-menu-border: rgba(var(--rgb-emerald-400), 0.24);
+    --file-card-menu-border: rgba(var(--rgb-purple-400), 0.34);
     --file-card-menu-bg: rgba(var(--rgb-slate-950), 0.97);
-    --file-card-menu-item-hover-bg: rgba(var(--rgb-emerald-400), 0.14);
+    --file-card-menu-item-hover-bg: rgba(var(--rgb-purple-500), 0.18);
     --file-card-menu-text: rgba(var(--rgb-white), 0.95);
-    --file-card-menu-trigger-hover-bg: rgba(var(--rgb-emerald-400), 0.12);
-    --file-card-menu-divider: rgba(var(--rgb-emerald-400), 0.2);
+    --file-card-menu-trigger-hover-bg: rgba(var(--rgb-purple-500), 0.16);
+    --file-card-menu-divider: rgba(var(--rgb-purple-400), 0.24);
+
+    --auth-card-bg: rgba(var(--rgb-slate-950), 0.54);
+    --auth-card-border: rgba(var(--rgb-purple-400), 0.3);
+    --auth-input-bg-dark: rgba(var(--rgb-slate-900), 0.66);
+    --auth-input-border-dark: rgba(var(--rgb-purple-400), 0.38);
+    --auth-button-gradient: linear-gradient(
+        to right,
+        rgba(var(--rgb-purple-500), 0.9),
+        rgba(var(--rgb-purple-400), 0.92),
+        rgba(var(--rgb-cyan-400), 0.88)
+    );
+    --auth-button-gradient-hover: linear-gradient(
+        to right,
+        rgba(var(--rgb-purple-500), 1),
+        rgba(var(--rgb-fuchsia-500), 0.95),
+        rgba(var(--rgb-cyan-400), 0.95)
+    );
+    --auth-button-ring: rgba(var(--rgb-purple-400), 0.52);
 
     --shadow-glass-lg:
         0 clamp(14px, 1.8vw, 22px) clamp(48px, 6vw, 78px) rgba(var(--rgb-black), 0.48);
