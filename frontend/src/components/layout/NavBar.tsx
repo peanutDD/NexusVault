@@ -181,7 +181,7 @@ export default function NavBar({
                 </button>
               )}
 
-              <ThemeToggle data-oid="zsuxs6n" />
+              <ThemeToggle showLabel data-oid="zsuxs6n" />
 
               <button
                 type="button"

@@ -23,16 +23,16 @@ export default function ThemeToggle({
   const { effectiveTheme, toggleTheme } = useThemeStore();
   const nextThemeLabel =
     effectiveTheme === "dark"
-      ? "浅色"
+      ? "Light"
       : effectiveTheme === "light"
-        ? "紫色"
-        : "深色";
+        ? "Purple"
+        : "Dark";
   const currentThemeLabel =
     effectiveTheme === "dark"
-      ? "深色"
+      ? "Dark"
       : effectiveTheme === "light"
-        ? "浅色"
-        : "紫色";
+        ? "Light"
+        : "Purple";
 
   return (
     <button
@@ -44,42 +44,36 @@ export default function ThemeToggle({
         "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
         "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
         "active:translate-y-px transition-all duration-200",
-        "focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-2 focus:ring-offset-[var(--nav-surface-bg)]",
         className,
       )}
-      aria-label={`切换主题：当前${currentThemeLabel}，点击切到${nextThemeLabel}`}
-      title={`当前: ${currentThemeLabel}（点击切换）`}
+      aria-label={`Switch theme: current ${currentThemeLabel}, click to switch to ${nextThemeLabel}`}
+      title={`Current: ${currentThemeLabel} (Click to switch)`}
       data-oid="6nbyj70"
     >
-      <div
-        className={cn("flex items-center", showLabel ? "gap-2" : "gap-0")}
-        data-oid="clfwf:n"
-      >
-        {effectiveTheme === "light" ? (
-          <Sun
-            className="h-5 w-5 transition-transform duration-200 hover:rotate-12"
-            aria-hidden="true"
-            data-oid="zeovdrg"
-          />
-        ) : effectiveTheme === "dark" ? (
-          <Moon
-            className="h-5 w-5 transition-transform duration-200 hover:rotate-12"
-            aria-hidden="true"
-            data-oid="m1.w5ph"
-          />
-        ) : (
-          <Sparkles
-            className="h-5 w-5 transition-transform duration-200 hover:rotate-12"
-            aria-hidden="true"
-            data-oid="yk8.6nq"
-          />
-        )}
-        {showLabel && (
-          <span className="text-sm" data-oid="6rqexbj">
-            {currentThemeLabel}
-          </span>
-        )}
-      </div>
+      {effectiveTheme === "light" ? (
+        <Sun
+          className="nav-icon shrink-0 text-[var(--nav-btn-icon)]"
+          aria-hidden="true"
+          data-oid="zeovdrg"
+        />
+      ) : effectiveTheme === "dark" ? (
+        <Moon
+          className="nav-icon shrink-0 text-[var(--nav-btn-icon)]"
+          aria-hidden="true"
+          data-oid="m1.w5ph"
+        />
+      ) : (
+        <Sparkles
+          className="nav-icon shrink-0 text-[var(--nav-btn-icon)]"
+          aria-hidden="true"
+          data-oid="yk8.6nq"
+        />
+      )}
+      {showLabel && (
+        <span className="hidden sm:inline whitespace-nowrap" data-oid="6rqexbj">
+          {currentThemeLabel}
+        </span>
+      )}
     </button>
   );
 }

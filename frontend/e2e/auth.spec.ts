@@ -7,5 +7,5 @@ test('has title', async ({ page }) => {
 
 test('login link', async ({ page }) => {
   await page.goto('/login');
-  await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 });
