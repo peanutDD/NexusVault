@@ -272,7 +272,7 @@ export default function FilePreview({
 
       {/* ---- 顶部工具栏（文件计数器） ---- */}
       <div
-        className="relative z-20 flex shrink-0 items-center justify-between bg-gradient-to-b from-black/70 via-black/40 to-transparent px-4 py-3"
+        className="relative z-20 flex shrink-0 items-center justify-between bg-gradient-to-b from-black/70 via-black/40 to-transparent px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]"
         onClick={(e) => e.stopPropagation()}
         data-oid="0_8_xes"
       >

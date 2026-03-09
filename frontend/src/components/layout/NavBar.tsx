@@ -30,7 +30,7 @@ export default function NavBar({
 
   return (
     <nav
-      className="fixed inset-x-0 top-0 z-50 overflow-hidden bg-[var(--nav-surface-bg)] backdrop-blur-[var(--nav-surface-blur)]"
+      className="fixed inset-x-0 top-0 z-50 overflow-hidden bg-[var(--nav-surface-bg)] pt-[env(safe-area-inset-top)] backdrop-blur-[var(--nav-surface-blur)]"
       onDoubleClick={handleDoubleClick}
       data-oid="2f5wd3k"
     >

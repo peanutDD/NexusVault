@@ -3,7 +3,7 @@
  * 预览主内容区：加载态、错误态、图片/视频/音频/PDF/文本/Ugoira/不支持
  */
 
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { ResponsivePicture } from "../../common/ResponsivePicture";
 import { formatFileSize } from "../../../utils/format";
 import { getMimeTypeLabel, isGifType } from "../../../utils/mimeType";
@@ -81,6 +81,10 @@ export function FilePreviewContent({
   onClose,
   formatDate,
 }: FilePreviewContentProps) {
+  const [videoReady, setVideoReady] = useState(false);
+  useEffect(() => {
+    setVideoReady(false);
+  }, [blobUrl, isVideo, useHls]);
   const isGif = isGifType(file.mime_type);
   const showImagePreview =
     (isImage && (blobUrl || gifFirstFrameUrl)) ||
@@ -446,19 +450,38 @@ export function FilePreviewContent({
                   {/* ----------------------------- */}
                   {isVideo && blobUrl ? (
                     <div
-                      className="flex h-full w-full min-h-0 items-center justify-center"
+                      className="relative flex h-full w-full min-h-0 items-center justify-center"
                       data-oid="9_brskc"
                     >
+                      {!videoReady && (
+                        <div
+                          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-transparent"
+                          data-oid="2j7pt_5"
+                        >
+                          <SpinnerIcon
+                            className="h-10 w-10 text-[var(--preview-spinner)]"
+                            data-oid="u9r97lb"
+                          />
+                        </div>
+                      )}
                       <video
                         ref={videoRef}
                         key={blobUrl}
                         src={useHls ? undefined : blobUrl}
                         loop={loop}
-                        controls
+                        controls={videoReady}
                         autoPlay
                         preload="metadata"
-                        className="pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl object-contain cursor-pointer"
+                        poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3C/svg%3E"
+                        className={cn(
+                          "pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl object-contain cursor-pointer transition-opacity duration-200",
+                          videoReady ? "opacity-100" : "opacity-0",
+                        )}
+                        style={{ backgroundColor: "transparent" }}
                         onClick={(e) => e.stopPropagation()}
+                        onLoadedMetadata={() => setVideoReady(true)}
+                        onLoadedData={() => setVideoReady(true)}
+                        onCanPlay={() => setVideoReady(true)}
                         onError={tryVideoAudioFallback}
                         data-oid=".camnr9"
                       >

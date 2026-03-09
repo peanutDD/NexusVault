@@ -42,7 +42,7 @@ export default function PageLayout({
       />
 
       <main
-        className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-[clamp(1rem,2.4vw,2rem)] pt-[clamp(5.5rem,10vw,8rem)] animate-fade-in text-[var(--color-text-primary)]"
+        className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-[clamp(1rem,2.4vw,2rem)] pt-[calc(clamp(5.5rem,10vw,8rem)+env(safe-area-inset-top))] animate-fade-in text-[var(--color-text-primary)]"
         data-oid="g430w:_"
       >
         {children}
