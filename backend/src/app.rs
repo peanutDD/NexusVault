@@ -115,21 +115,32 @@ where
 
 /// 根据配置创建 CORS 中间件层
 fn create_cors_layer(config: &Config) -> CorsLayer {
-    let cors_origin: AllowOrigin = {
+    let (cors_origin, allow_credentials): (AllowOrigin, bool) = {
         let raw = config.cors_origin.trim();
         if raw == "*" {
-            Any.into()
+            (Any.into(), false)
         } else {
-            let origins: Vec<axum::http::HeaderValue> = raw
+            let mut origins: Vec<axum::http::HeaderValue> = raw
                 .split(',')
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .filter_map(|s| s.parse::<axum::http::HeaderValue>().ok())
                 .collect();
+            for extra in [
+                "tauri://localhost",
+                "http://tauri.localhost",
+                "https://tauri.localhost",
+            ] {
+                if let Ok(v) = extra.parse::<axum::http::HeaderValue>() {
+                    if !origins.iter().any(|o| o == &v) {
+                        origins.push(v);
+                    }
+                }
+            }
             if origins.is_empty() {
-                Any.into()
+                (Any.into(), false)
             } else {
-                AllowOrigin::list(origins)
+                (AllowOrigin::list(origins), true)
             }
         }
     };
@@ -150,5 +161,5 @@ fn create_cors_layer(config: &Config) -> CorsLayer {
             axum::http::header::ORIGIN,
             axum::http::header::RANGE,
         ])
-        .allow_credentials(config.cors_origin.trim() != "*")
+        .allow_credentials(allow_credentials)
 }

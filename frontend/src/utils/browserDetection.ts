@@ -19,6 +19,14 @@ const SUPPORTED_BROWSERS = {
  * @returns 浏览器信息对象
  */
 export function detectBrowser(): BrowserInfo {
+  if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
+    return {
+      name: 'chrome',
+      version: 120,
+      isSupported: true,
+    };
+  }
+
   // 检查 navigator 是否存在（避免在 SSR 环境中出错）
   if (typeof navigator === 'undefined') {
     return {

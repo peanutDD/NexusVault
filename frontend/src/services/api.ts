@@ -168,8 +168,24 @@ function isRetryableError(error: AxiosError): boolean {
  * @param error Axios 错误对象
  * @returns true 如果是 401 错误
  */
-function handle401Error(error: AxiosError): boolean {
+function shouldSkip401Redirect(config: InternalAxiosRequestConfig | undefined): boolean {
+  const url = config?.url ?? '';
+  const onAuthPage =
+    typeof window !== 'undefined' &&
+    (window.location.pathname === '/login' || window.location.pathname === '/register');
+  return (
+    onAuthPage ||
+    url.includes('/api/auth/login') ||
+    url.includes('/api/auth/register') ||
+    url.includes('/api/auth/oauth/github/url')
+  );
+}
+
+function handle401Error(error: AxiosError, config?: InternalAxiosRequestConfig): boolean {
   if (error.response?.status === 401) {
+    if (shouldSkip401Redirect(config)) {
+      return true;
+    }
     useAuthStore.getState().clearAuth();
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
@@ -310,7 +326,7 @@ api.interceptors.response.use(
     }
 
     // 处理 401 错误
-    handle401Error(error);
+    handle401Error(error, config);
 
     return Promise.reject(error);
   }

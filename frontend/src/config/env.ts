@@ -2,6 +2,13 @@
  * Centralized env config. Single source of truth for API/CDN base URLs.
  */
 
+// Extend Window interface for Tauri check
+declare global {
+  interface Window {
+    __TAURI_INTERNALS__?: unknown;
+  }
+}
+
 const rawBase =
   import.meta.env.VITE_CDN_BASE_URL ||
   import.meta.env.VITE_API_BASE_URL ||
@@ -15,6 +22,10 @@ function resolveApiBase(): string {
   let base = import.meta.env.VITE_API_BASE_URL?.trim() || '';
 
   if (typeof window !== 'undefined') {
+    if ('__TAURI_INTERNALS__' in window) {
+      return base;
+    }
+
     const isHttpsPage = window.location.protocol === 'https:';
     if (isHttpsPage && base.startsWith('http://')) {
       // 在 HTTPS 页面下，不再直接请求 HTTP 后端，改用同源 /api。
@@ -35,5 +46,8 @@ export const APP_NAME = 'File Upload Download Server';
 
 export function apiPath(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;
-  return `${ORIGIN.replace(/\/$/, '')}/api${p}`;
+  // 统一使用 API_BASE_URL 而不是 ORIGIN，确保与 axios 行为一致
+  // 如果 API_BASE_URL 为空（同源），则使用当前 origin
+  const baseUrl = API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  return `${baseUrl.replace(/\/$/, '')}/api${p}`;
 }

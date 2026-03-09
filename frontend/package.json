@@ -24,6 +24,8 @@
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@tanstack/react-virtual": "^3.13.18",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-log": "^2.8.0",
     "@zip.js/zip.js": "^2.7.29",
     "autoprefixer": "^10.4.23",
     "axios": "^1.13.2",
@@ -55,6 +57,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.58.2",
+    "@tauri-apps/cli": "^2.10.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
