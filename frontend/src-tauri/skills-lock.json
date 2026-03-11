@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "android-retrofit": {
+      "source": "new-silvermoon/awesome-android-agent-skills",
+      "sourceType": "github",
+      "computedHash": "e3f4fb18f9a62b88db0e85cbbec10cf1c6c03e712a1049fdc7fd9971c27ad64e"
+    }
+  }
+}
