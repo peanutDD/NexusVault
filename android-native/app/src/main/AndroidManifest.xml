@@ -6,6 +6,7 @@
         android:name=".NativeApp"
         android:allowBackup="true"
         android:label="Upload Download Native"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.UploadDownloadNative">
         <activity
