@@ -1044,6 +1044,7 @@ html {
         rgba(var(--rgb-emerald-400), 0.2) 0%,
         transparent 40%,
         transparent 60%,
+        transparent 60%,
         rgba(var(--rgb-malachite-500), 0.18) 100%
     );
     -webkit-mask:
@@ -1128,3 +1129,43 @@ html {
 }
 
 /* rare-cow Loading 动画已移除，恢复为默认的旋转圆形样式（使用 Tailwind 工具类） */
+
+/* macOS 原生窗口效果支持 */
+.platform-macos body {
+    background: transparent;
+}
+
+.platform-macos {
+    /* 
+     * 在 macOS Tauri 环境下，使用半透明背景以透出 Vibrancy (毛玻璃) 效果。
+     * 使用 rgba(..., alpha) 替代纯色 rgb(...)
+     */
+    --filelist-page-bg: rgb(var(--rgb-white)) !important;
+    --surface-page-gradient: linear-gradient(
+        180deg,
+        rgba(var(--rgb-white), 0.85) 0%,
+        rgba(var(--rgb-white), 0.65) 100%
+    ) !important;
+    
+    --macos-titlebar-bg: rgb(var(--rgb-white)) !important;
+    --nav-surface-bg: var(--macos-titlebar-bg) !important;
+    --nav-surface-blur: 0px !important;
+    
+}
+
+.platform-macos.dark {
+    --filelist-page-bg: rgba(var(--rgb-slate-950), 0.6) !important;
+    --surface-page-gradient: linear-gradient(
+        180deg,
+        rgba(var(--rgb-slate-950), 0.75) 0%,
+        rgba(var(--rgb-slate-950), 0.55) 100%
+    ) !important;
+    --surface-page-gradient-dark: var(--surface-page-gradient) !important;
+    --macos-titlebar-bg: rgb(var(--rgb-slate-950)) !important;
+    --nav-surface-bg: var(--macos-titlebar-bg) !important;
+}
+
+.platform-macos.dark.purple {
+    --macos-titlebar-bg: rgb(42, 20, 95) !important;
+    --nav-surface-bg: var(--macos-titlebar-bg) !important;
+}

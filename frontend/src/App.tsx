@@ -174,6 +174,15 @@ function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // 简单检测 macOS 环境 + Tauri 以启用特定样式（如 Vibrancy 透明背景）
+    const isTauri = !!(window as any).__TAURI_INTERNALS__;
+    const isMacOS = navigator.userAgent.includes("Mac OS X");
+
+    if (isTauri && isMacOS) {
+      document.documentElement.classList.add("platform-macos");
+    }
+
     const onResize = () => {
       setDevtoolsPos((pos) => clampPos(pos));
     };

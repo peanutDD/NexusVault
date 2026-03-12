@@ -17,7 +17,11 @@
         "width": 430,
         "height": 932,
         "resizable": false,
-        "fullscreen": false
+        "fullscreen": false,
+        "titleBarStyle": "Transparent",
+        "hiddenTitle": true,
+        "transparent": false,
+        "backgroundColor": "#020617"
       }
     ],
     "security": {

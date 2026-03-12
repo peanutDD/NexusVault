@@ -133,11 +133,11 @@
   padding-block: clamp(0.4rem, 0.6vw, 0.5rem);
 
   border-radius: var(--filters-control-radius);
-  border: 1px solid var(--filters-surface-border);
+  border: 0;
   background:
     radial-gradient(120% 90% at 15% 0%, var(--filters-surface-hi), transparent 62%),
     linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
-  box-shadow: var(--filters-surface-shadow);
+  box-shadow: 0 18px 38px rgba(2, 6, 23, 0.08);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
   position: relative;

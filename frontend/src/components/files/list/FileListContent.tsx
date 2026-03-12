@@ -291,7 +291,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
           {/* 全选栏 + 批量工具栏：有选择时整合为一块玻璃拟态，无选择时独立 */}
           {showBatchActions ? (
             <div
-              className="sticky top-[clamp(4.75rem,7.6vw,6.25rem)] z-40 mb-[var(--bar-gap)]"
+              className="sticky top-[calc(clamp(4.75rem,7.6vw,6.25rem)+env(safe-area-inset-top))] z-40 mb-[var(--bar-gap)]"
               data-oid="b4bdl7r"
             >
               <div
@@ -383,7 +383,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
             </div>
           ) : (
             <div
-              className="sticky top-[clamp(4.75rem,7.6vw,6.25rem)] z-40 flex flex-col mb-[var(--bar-gap)]"
+              className="sticky top-[calc(clamp(4.75rem,7.6vw,6.25rem)+env(safe-area-inset-top))] z-40 flex flex-col mb-[var(--bar-gap)]"
               style={{ gap: "var(--bar-gap)" }}
               data-oid="g94g219"
             >

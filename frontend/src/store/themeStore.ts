@@ -30,6 +30,32 @@ function applyTheme(effectiveTheme: Theme) {
   else root.classList.remove('purple');
 }
 
+function resolveMacOSTitlebarColor(): string | [number, number, number] | null {
+  if (typeof document === 'undefined') return null;
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue('--macos-titlebar-bg')
+    .trim();
+  if (!value) return null;
+  if (value.startsWith('#')) return value;
+  const rgb = value.match(/^rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (!rgb) return null;
+  return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+}
+
+async function applyMacOSWindowBackground() {
+  if (typeof window === 'undefined') return;
+  const isMacOS = navigator.userAgent.includes('Mac OS X');
+  if (!isMacOS) return;
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    const color = resolveMacOSTitlebarColor();
+    if (!color) return;
+    await getCurrentWindow().setBackgroundColor(color);
+  } catch {
+    return;
+  }
+}
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => {
@@ -37,6 +63,7 @@ export const useThemeStore = create<ThemeState>()(
       const initialTheme: Theme = 'dark';
       const initialEffectiveTheme: Theme = initialTheme;
       applyTheme(initialEffectiveTheme);
+      void applyMacOSWindowBackground();
 
       return {
         theme: initialTheme,
@@ -45,6 +72,7 @@ export const useThemeStore = create<ThemeState>()(
           const theme = _theme;
           const effectiveTheme: Theme = theme;
           applyTheme(effectiveTheme);
+          void applyMacOSWindowBackground();
           set({ theme, effectiveTheme });
         },
         toggleTheme: () => {
@@ -52,6 +80,7 @@ export const useThemeStore = create<ThemeState>()(
           const nextTheme: Theme = current === 'dark' ? 'light' : current === 'light' ? 'purple' : 'dark';
           const effectiveTheme: Theme = nextTheme;
           applyTheme(effectiveTheme);
+          void applyMacOSWindowBackground();
           set({ theme: nextTheme, effectiveTheme });
         },
       };
@@ -62,6 +91,7 @@ export const useThemeStore = create<ThemeState>()(
         if (state) {
           const effectiveTheme: Theme = state.theme;
           applyTheme(effectiveTheme);
+          void applyMacOSWindowBackground();
           state.effectiveTheme = effectiveTheme;
         }
       },
