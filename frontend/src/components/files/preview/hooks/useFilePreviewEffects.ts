@@ -111,7 +111,7 @@ export function useFilePreviewEffects({
         const token = useAuthStore.getState().token ?? localStorage.getItem('token');
         let processingRetries = 0;
         hls = new Hls({
-          xhrSetup(xhr) {
+          xhrSetup(xhr: XMLHttpRequest) {
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
           },
           manifestLoadingMaxRetry: 20,
@@ -152,11 +152,16 @@ export function useFilePreviewEffects({
           const isProcessing = code === 503;
           if (isProcessing) {
             if (retryTimer) window.clearTimeout(retryTimer);
-            processingRetries += 1;
-            const delay = Math.min(10000, 1000 + processingRetries * 500);
-            retryTimer = window.setTimeout(() => {
-              hls?.startLoad(-1);
-            }, delay);
+            if (processingRetries < 20) {
+              processingRetries += 1;
+              const delay = Math.min(1000 * 2 ** (processingRetries - 1), 10000);
+              retryTimer = window.setTimeout(() => {
+                if (cancelled) return;
+                hls?.startLoad();
+              }, delay);
+            } else {
+              tryVideoAudioFallbackRef.current();
+            }
             return;
           }
           if (data.fatal) tryVideoAudioFallbackRef.current();

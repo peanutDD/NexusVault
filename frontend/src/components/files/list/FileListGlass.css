@@ -396,16 +396,30 @@
 }
 
 .fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber {
-  border-color: var(--settings-action-border);
-  color: var(--settings-action-text);
-  background: var(--settings-action-bg-hover);
-  box-shadow: var(--settings-action-shadow);
+  border-color: rgba(var(--rgb-emerald-300), 0.45);
+  color: rgba(var(--rgb-white), 0.95);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--rgb-malachite-500), 0.7),
+    rgba(var(--rgb-emerald-500), 0.5),
+    rgba(var(--rgb-emerald-400), 0.4)
+  );
+  box-shadow:
+    0 0 0 1px rgba(var(--rgb-emerald-500), 0.11),
+    0 clamp(8px, 1.2vw, 14px) clamp(24px, 3.2vw, 40px) rgba(var(--rgb-malachite-500), 0.12);
 }
 
 .fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber:hover {
-  border-color: var(--settings-action-border);
-  background: var(--settings-action-bg-hover);
-  box-shadow: var(--settings-action-shadow);
+  border-color: rgba(var(--rgb-emerald-300), 0.45);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--rgb-malachite-500), 0.7),
+    rgba(var(--rgb-emerald-500), 0.5),
+    rgba(var(--rgb-emerald-400), 0.4)
+  );
+  box-shadow:
+    0 0 0 1px rgba(var(--rgb-emerald-500), 0.11),
+    0 clamp(8px, 1.2vw, 14px) clamp(24px, 3.2vw, 40px) rgba(var(--rgb-malachite-500), 0.12);
 }
 
 /* 上传按钮高亮样式：柔和的紫色调 + 保持玻璃质感 */
