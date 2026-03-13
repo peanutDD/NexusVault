@@ -395,6 +395,19 @@
   transform: translateY(-1px);
 }
 
+.fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber {
+  border-color: var(--settings-action-border);
+  color: var(--settings-action-text);
+  background: var(--settings-action-bg-hover);
+  box-shadow: var(--settings-action-shadow);
+}
+
+.fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber:hover {
+  border-color: var(--settings-action-border);
+  background: var(--settings-action-bg-hover);
+  box-shadow: var(--settings-action-shadow);
+}
+
 /* 上传按钮高亮样式：柔和的紫色调 + 保持玻璃质感 */
 .fileListGlassScope .glass-btn.uploadBtnHighlight {
   background:

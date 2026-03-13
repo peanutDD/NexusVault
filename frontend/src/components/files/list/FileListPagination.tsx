@@ -81,7 +81,7 @@ const FileListPagination = memo(function FileListPagination({
             onClick={onLoadMore}
             disabled={!hasMore || loadingMore}
             className={cn(
-              "glass-btn toolbarActionBtn font-brand px-6 py-2 text-sm font-normal tracking-widest disabled:opacity-50",
+              "glass-btn toolbarActionBtn loadMoreCyber font-brand px-6 py-2 text-sm font-normal tracking-widest disabled:opacity-50",
               "scale-[0.8]",
               "flex items-center justify-center gap-2",
             )}
