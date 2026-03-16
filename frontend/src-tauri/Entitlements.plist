@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Sandbox（发布到 Mac App Store 必须开启） -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!-- 允许出站网络连接（访问后端 API） -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- 允许入站网络连接（本地 dev server 等） -->
+	<key>com.apple.security.network.server</key>
+	<true/>
+
+	<!-- ⬇️ 关键：允许 JIT 编译 —— WKWebView 视频硬件解码需要 -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+
+	<!-- ⬇️ 关键：允许加载未签名的可执行内存（视频解码器需要） -->
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<true/>
+
+	<!-- ⬇️ 关键：禁用库验证（允许加载系统视频解码框架） -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

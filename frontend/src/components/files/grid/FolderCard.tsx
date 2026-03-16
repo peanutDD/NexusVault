@@ -102,7 +102,7 @@ const FolderCard = memo(function FolderCard({
       <div className="p-3" data-oid="tw-paus">
         {/* 文件夹图标：使用和视频文件相同的主色（text-purple-400），但缩小尺寸避免过于抢眼 */}
         <div
-          className="relative mb-3 flex aspect-square items-center justify-center rounded-sm bg-[var(--filelist-folder-icon-bg)]"
+          className="relative mb-3 flex aspect-square items-center justify-center rounded-sm bg-[var(--file-card-thumb-bg)]"
           draggable
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}

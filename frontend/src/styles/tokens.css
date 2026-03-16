@@ -627,6 +627,7 @@
     --filelist-tech-glow-cyan: rgba(var(--rgb-emerald-400), 0.35);
     --filelist-tech-glow-green: rgba(var(--rgb-malachite-500), 0.32);
     --filelist-folder-icon-bg: rgba(var(--rgb-black), 0.2);
+    --filelist-folder-icon-border: rgba(var(--rgb-white), 0.18);
     --filelist-folder-icon: rgba(var(--rgb-purple-400), 1);
     --filelist-menu-trigger-hover-bg: rgba(var(--rgb-white), 0.08);
     --filelist-menu-bg: rgba(var(--rgb-purple-950), 0.98);
@@ -2188,7 +2189,8 @@
     --filelist-tech-glow-purple: rgba(var(--rgb-purple-500), 0.12);
     --filelist-tech-glow-cyan: rgba(var(--rgb-emerald-400), 0.14);
     --filelist-tech-glow-green: rgba(var(--rgb-emerald-500), 0.16);
-    --filelist-folder-icon-bg: rgba(var(--rgb-slate-900), 0.06);
+    --filelist-folder-icon-bg: rgba(var(--rgb-slate-900), 0.08);
+    --filelist-folder-icon-border: rgba(var(--rgb-slate-900), 0.22);
     --filelist-folder-icon: rgba(var(--rgb-sky-400), 0.98);
     --filelist-menu-trigger-hover-bg: rgba(var(--rgb-slate-900), 0.06);
     --filelist-menu-bg: rgba(var(--rgb-white), 0.98);
@@ -2905,8 +2907,9 @@
     --filelist-bar-border: rgb(var(--rgb-purple-900));
     --filelist-bar-bg-top: rgb(var(--rgb-purple-900));
     --filelist-bar-bg-bottom: rgb(var(--rgb-purple-950));
-    --filelist-folder-icon-bg: rgba(var(--rgb-purple-950), 0.35);
-    --filelist-folder-icon: rgba(var(--rgb-fuchsia-300), 0.95);
+    --filelist-folder-icon-bg: rgba(var(--rgb-purple-700), 0.38);
+    --filelist-folder-icon-border: rgba(var(--rgb-fuchsia-300), 0.58);
+    --filelist-folder-icon: rgba(var(--rgb-fuchsia-200), 0.98);
     --filelist-menu-trigger-hover-bg: rgba(var(--rgb-white), 0.08);
     --filelist-menu-bg: rgba(var(--rgb-purple-950), 0.95);
     --filelist-menu-border: rgba(var(--rgb-purple-900), 0.9);
@@ -2929,6 +2932,11 @@
     --filelist-toolbar-btn-border-hover: rgba(var(--rgb-white), 0.32);
     --file-type-badge-bg: rgba(var(--rgb-white), 0.14);
     --file-type-badge-text: rgba(var(--rgb-white), 0.95);
+    --preview-icon-file: var(--filelist-folder-icon);
+    --preview-icon-image: var(--filelist-folder-icon);
+    --preview-icon-video: var(--filelist-folder-icon);
+    --preview-icon-pdf: var(--filelist-folder-icon);
+    --preview-icon-audio: var(--filelist-folder-icon);
 
     --btn-primary-bg: rgba(var(--rgb-purple-500), 0.9);
     --btn-primary-bg-hover: rgba(var(--rgb-fuchsia-500), 0.5);
