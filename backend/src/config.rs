@@ -161,7 +161,7 @@ impl Config {
                 .filter(|s| !s.trim().is_empty()),
             jwt_expiry: env::var("JWT_EXPIRY").unwrap_or_else(|_| "24h".to_string()),
             storage_backend: env::var("STORAGE_BACKEND").unwrap_or_else(|_| "local".to_string()),
-            storage_path: env::var("STORAGE_PATH").unwrap_or_else(|_| default_storage_path),
+            storage_path: env::var("STORAGE_PATH").unwrap_or(default_storage_path),
             aws_access_key_id: env::var("AWS_ACCESS_KEY_ID").unwrap_or_default(),
             aws_secret_access_key: env::var("AWS_SECRET_ACCESS_KEY").unwrap_or_default(),
             aws_region: env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
@@ -303,10 +303,10 @@ impl Config {
         }
 
         if self.jwt_secret != primary
-            && !self
+            && self
                 .api_token_hmac_secret_previous
                 .as_ref()
-                .is_some_and(|s| s == &self.jwt_secret)
+                .is_none_or(|s| s != &self.jwt_secret)
         {
             secrets.push(self.jwt_secret.clone());
         }

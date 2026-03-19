@@ -285,7 +285,9 @@ impl AuthService {
 
         // 验证当前密码
         if !verify_password(&current_password, &user.password_hash)? {
-            return Err(AppError::Validation("Current password is incorrect".to_string()));
+            return Err(AppError::Validation(
+                "Current password is incorrect".to_string(),
+            ));
         }
 
         // 哈希新密码

@@ -105,3 +105,6 @@ utoipa-swagger-ui = { version = "8", features = ["axum"] }
 
 # Rate limiting (IP / user 级别限流)
 tower_governor = { version = "0.6", features = ["axum"] }
+
+# Constant-time comparison (security)
+subtle = "2.5"

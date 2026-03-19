@@ -683,7 +683,10 @@ pub async fn run_gif_preview_worker(
         Err(AppError::NotFound) => {
             state
                 .task_queue
-                .mark_failed(task.id, "gif_preview source file not found (deleted or moved)")
+                .mark_failed(
+                    task.id,
+                    "gif_preview source file not found (deleted or moved)",
+                )
                 .await?;
             return Ok(());
         }
@@ -829,7 +832,10 @@ pub async fn run_hls_worker(
         Err(AppError::NotFound) => {
             state
                 .task_queue
-                .mark_failed(task.id, "hls_preview source file not found (deleted or moved)")
+                .mark_failed(
+                    task.id,
+                    "hls_preview source file not found (deleted or moved)",
+                )
                 .await?;
             return Ok(());
         }

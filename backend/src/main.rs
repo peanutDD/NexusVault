@@ -226,9 +226,12 @@ async fn async_main() -> anyhow::Result<()> {
     tracing::info!("Server listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
-        .with_graceful_shutdown(shutdown_signal()) // 收到 SIGINT/SIGTERM 后优雅关闭
-        .await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal()) // 收到 SIGINT/SIGTERM 后优雅关闭
+    .await?;
 
     Ok(())
 }

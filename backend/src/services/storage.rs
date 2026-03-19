@@ -123,10 +123,7 @@ impl LocalStorage {
         let base_name = base.file_name().and_then(|s| s.to_str());
         if let Some(base_name) = base_name {
             if normalized.starts_with(&format!("{}/", base_name)) {
-                return base
-                    .parent()
-                    .unwrap_or(base)
-                    .join(normalized);
+                return base.parent().unwrap_or(base).join(normalized);
             }
         }
         base.join(normalized)

@@ -10,7 +10,9 @@
 //! - `crypto`: 加密和哈希工具
 //! - `time`: 时间处理工具
 //! - `parse`: 参数解析工具
+//! - `constant_time`: 常量时间比较工具
 
+pub mod constant_time;
 pub mod crypto;
 pub mod error;
 pub mod parse;
@@ -41,3 +43,6 @@ pub use response::{
 
 // Validation
 pub use validation::{validate_file_size, validate_mime_type};
+
+// Constant time comparison
+pub use constant_time::{verify, verify_str};

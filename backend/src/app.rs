@@ -132,7 +132,7 @@ fn create_cors_layer(config: &Config) -> CorsLayer {
                 "https://tauri.localhost",
             ] {
                 if let Ok(v) = extra.parse::<axum::http::HeaderValue>() {
-                    if !origins.iter().any(|o| o == &v) {
+                    if !origins.contains(&v) {
                         origins.push(v);
                     }
                 }

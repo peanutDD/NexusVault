@@ -550,7 +550,8 @@ impl FilesRepository for SqlxFilesRepo {
             _ => "created_at", // 非法值回退默认，仅白名单不引入注入
         };
 
-        let use_cursor_pagination = (query.cursor.is_some() || matches!(query.pagination.as_deref(), Some("cursor")))
+        let use_cursor_pagination = (query.cursor.is_some()
+            || matches!(query.pagination.as_deref(), Some("cursor")))
             && sort_by != "type";
 
         // ---- 游标解析（如果使用游标分页） ----

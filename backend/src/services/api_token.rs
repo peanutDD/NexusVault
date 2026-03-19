@@ -56,7 +56,8 @@ impl ApiTokenService {
         if secret.trim().is_empty() {
             return Err(AppError::Internal);
         }
-        let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).map_err(|_| AppError::Internal)?;
+        let mut mac =
+            HmacSha256::new_from_slice(secret.as_bytes()).map_err(|_| AppError::Internal)?;
         mac.update(token.as_bytes());
         let result = mac.finalize();
         Ok(format!("{:x}", result.into_bytes()))
