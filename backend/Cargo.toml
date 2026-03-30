@@ -5,6 +5,25 @@ edition = "2021"
 build = "build.rs"
 default-run = "file-storage-backend"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Release profile - 极致体积优化
+# ──────────────────────────────────────────────────────────────────────────────
+[profile.release]
+panic        = "abort"        # 移除 panic 栈展开（libunwind），节省 ~1-2MB
+codegen-units = 1             # 单编译单元，允许 LLVM 全局内联/消除死代码
+lto          = "fat"          # 全程序 LTO（最彻底，编译慢但体积最小）
+opt-level    = "z"            # 优先体积（"s" 次之，"3" 优先速度）
+strip        = "symbols"      # 剥离符号表（保留 debuginfo 段之外的符号）
+debug        = false          # 不嵌入调试信息
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Docker / CI 用 profile：在 release 基础上进一步 strip debuginfo
+# 用法: cargo build --profile dist
+# ──────────────────────────────────────────────────────────────────────────────
+[profile.dist]
+inherits     = "release"
+strip        = true           # 完全 strip（包含 debuginfo）
+
 [dependencies]
 # Web framework
 axum = { version = "0.7", features = ["multipart", "json"] }
@@ -101,7 +120,8 @@ metrics-exporter-prometheus = "0.16"
 
 # API Documentation
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
-utoipa-swagger-ui = { version = "8", features = ["axum"] }
+utoipa-swagger-ui = { version = "8", features = ["axum", "vendored"] }
+utoipa-swagger-ui-vendored = "0.1"
 
 # Rate limiting (IP / user 级别限流)
 tower_governor = { version = "0.6", features = ["axum"] }
