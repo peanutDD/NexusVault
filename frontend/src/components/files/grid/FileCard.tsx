@@ -140,7 +140,7 @@ const FileCard = memo(
               data-oid="4w9i3kj"
             >
               <p
-                className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-[var(--file-card-text)]"
+                className="min-w-0 line-clamp-2 leading-[1.3] text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-[var(--file-card-text)]"
                 title={file.original_filename}
                 data-oid="b7fv8ct"
               >
