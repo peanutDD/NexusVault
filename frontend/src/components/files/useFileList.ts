@@ -447,7 +447,7 @@ export function useFileList() {
 
   // ── 即时 DOM 隐藏：确认删除时立刻把卡片从页面移除 ─────────────────────────────
   // 不依赖 React Query 缓存更新时机，用本地 state 直接驱动 filter，解决
-  // "第二次删除 DOM 不立刻更新"的 bug。
+  // \"第二次删除 DOM 不立刻更新\"的 bug。
   const [pendingDeleteFileIds, setPendingDeleteFileIds] = useState<Set<string>>(new Set());
   const [pendingDeleteFolderIds, setPendingDeleteFolderIds] = useState<Set<string>>(new Set());
 
@@ -464,23 +464,6 @@ export function useFileList() {
       });
     }
   }, [files, pendingDeleteFileIds]);
-
-  // displayFolders 定义在后面，这里先声明类型供 useEffect 使用
-  let displayFolders: Folder[] = [];
-  const outFoldersRef = { current: displayFolders };
-
-  useEffect(() => {
-    if (pendingDeleteFolderIds.size === 0) return;
-    const currentIds = new Set(outFoldersRef.current.map((f) => f.id));
-    const reappeared = [...pendingDeleteFolderIds].filter((id) => currentIds.has(id));
-    if (reappeared.length > 0) {
-      setPendingDeleteFolderIds((prev) => {
-        const n = new Set(prev);
-        reappeared.forEach((id) => n.delete(id));
-        return n;
-      });
-    }
-  }, [pendingDeleteFolderIds]);
 
   // 包装 executeDelete：先把 ID 加入 pending（立刻触发 re-render 隐藏卡片），再执行删除
   const executeDeleteWithHide = useCallback(async () => {
@@ -505,13 +488,6 @@ export function useFileList() {
         ? files.filter((f) => !pendingDeleteFileIds.has(f.id))
         : files,
     [files, pendingDeleteFileIds],
-  );
-  const outFolders = useMemo(
-    () =>
-      pendingDeleteFolderIds.size > 0
-        ? displayFolders.filter((f) => !pendingDeleteFolderIds.has(f.id))
-        : displayFolders,
-    [displayFolders, pendingDeleteFolderIds],
   );
 
   const getScrollStorageKey = useCallback(
@@ -593,7 +569,7 @@ export function useFileList() {
     });
   }, [currentFolderId, getScrollStorageKey, loadingFiles, loadingFolders, navType, location.key]);
 
-  displayFolders = useMemo(() => {
+  const displayFolders = useMemo(() => {
     if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
     const q = debouncedSearch?.trim().toLowerCase();
     const filtered = q ? folders.filter((f) => f.name.toLowerCase().includes(q)) : folders;
@@ -625,8 +601,31 @@ export function useFileList() {
     return list;
   }, [mimeType, folders, debouncedSearch, sortBy]);
 
-  // 更新 ref 供上面的 useEffect 使用
+  // outFolders 必须在 displayFolders 赋值之后计算，否则 displayFolders 还是初始空数组
+  const outFolders = useMemo(
+    () =>
+      pendingDeleteFolderIds.size > 0
+        ? displayFolders.filter((f) => !pendingDeleteFolderIds.has(f.id))
+        : displayFolders,
+    [displayFolders, pendingDeleteFolderIds],
+  );
+
+  // outFoldersRef 用于 pendingDeleteFolderIds 回滚检测的 useEffect
+  const outFoldersRef = useRef<Folder[]>(displayFolders);
   outFoldersRef.current = displayFolders;
+
+  useEffect(() => {
+    if (pendingDeleteFolderIds.size === 0) return;
+    const currentIds = new Set(outFoldersRef.current.map((f) => f.id));
+    const reappeared = [...pendingDeleteFolderIds].filter((id) => currentIds.has(id));
+    if (reappeared.length > 0) {
+      setPendingDeleteFolderIds((prev) => {
+        const n = new Set(prev);
+        reappeared.forEach((id) => n.delete(id));
+        return n;
+      });
+    }
+  }, [pendingDeleteFolderIds]);
 
   const { timeGroupedItems } = useTimeGroupingMixed(sortedFiles, displayFolders, isGroupByTime);
 

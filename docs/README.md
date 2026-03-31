@@ -9,6 +9,9 @@
   - `BILIBILI_TECH_UPGRADE.md`：对标式技术升级建议（偏架构/规划）
   - `../backend/docs/TOP_TECH.md`：顶级视频平台技术对标与本项目落地映射表
 
+- **变更日志**
+  - `CHANGELOG.md`：项目变更日志，记录 Bug 修复、新功能、性能优化及技术细节
+
 - **代码审查**
   - `CODE_REVIEW_GUIDE.md`：代码审查规范（企业级）
   - `CODE_REVIEW_START.md`：代码审查开始使用清单

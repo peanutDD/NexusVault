@@ -21,8 +21,11 @@ export function useFileMutations() {
   const deleteFile = useMutation({
     mutationFn: (fileId: string) => fileService.deleteFile(fileId),
     onMutate: async (fileId: string) => {
+      // 取消所有进行中的 files 查询，防止 refetch 回滚乐观更新
       await queryClient.cancelQueries({ queryKey: ['files'] });
+      // 保存快照用于回滚
       const previous = queryClient.getQueriesData<InfiniteData<FileListResponse>>({ queryKey: ['files'] });
+      // 立即从缓存中移除该文件（乐观更新）
       queryClient.setQueriesData<InfiniteData<FileListResponse>>(
         { queryKey: ['files'] },
         (old) => {
@@ -40,6 +43,7 @@ export function useFileMutations() {
       return { previous };
     },
     onError: (_err, _fileId, context) => {
+      // 删除失败时回滚到快照
       if (context?.previous) {
         for (const [queryKey, data] of context.previous) {
           queryClient.setQueryData(queryKey, data);
@@ -47,7 +51,10 @@ export function useFileMutations() {
       }
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ['files'] });
+      // 使用 refetchType: 'none' 仅标记 stale 而不立即触发后台 refetch，
+      // 避免"取消进行中的 refetch → React Query 回滚缓存"的竞态问题。
+      // 下次用户切换页面/窗口聚焦时会自动重新获取最新数据。
+      void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
     },
   });
 
@@ -81,7 +88,7 @@ export function useFileMutations() {
       }
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ['files'] });
+      void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
     },
   });
 
@@ -107,19 +114,24 @@ export function useFileMutations() {
       }
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ['folders'] });
-      void queryClient.invalidateQueries({ queryKey: ['files'] });
+      void queryClient.invalidateQueries({ queryKey: ['folders'], refetchType: 'none' });
+      void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
     },
   });
 
   const renameFolder = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => folderService.rename(id, name),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['folders'] }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] });
+    },
   });
 
   const renameFile = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => fileService.renameFile(id, name),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['files'] }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+    },
   });
 
   const batchMove = useMutation({
@@ -133,6 +145,7 @@ export function useFileMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] });
       queryClient.invalidateQueries({ queryKey: ['files'] });
     },
   });

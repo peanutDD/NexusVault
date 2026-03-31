@@ -1,0 +1,233 @@
+# CHANGELOG
+
+本文档记录项目的重要变更，按时间倒序排列。
+
+---
+
+## [未发布] — 2026 年（当前会话）
+
+### 🐛 Bug 修复
+
+#### 1. 修复文件夹列表消失问题（`useFileList.ts`）
+
+**问题描述**
+
+页面上已存在的文件夹全部消失，刷新后才重新显示。
+
+**根本原因**
+
+`useFileList.ts` 中存在经典的 JavaScript 变量提升（hoisting）陷阱。原代码使用 `let` 先声明 `displayFolders` 为空数组，随后在下方才用 `useMemo` 真正赋值，但 `outFolders` 的 `useMemo` 在 `displayFolders` 还是初始空数组时就已经捕获了该引用：
+
+```typescript
+// ❌ 原代码（有问题）
+let displayFolders: Folder[] = [];          // 1. 声明为空数组
+const outFolders = useMemo(
+  () => displayFolders.filter(...),          // 2. 此时 displayFolders 是空数组引用
+  [displayFolders, pendingDeleteFolderIds],  //    依赖数组里的也是空数组，永远不会更新
+);
+// ...（中间有大量其他 Hook）
+displayFolders = useMemo(() => { ... });    // 3. 重新赋值，但 outFolders 感知不到
+```
+
+由于 `outFolders` 的 `useMemo` 依赖数组里的 `displayFolders` 始终是初始空数组的引用，导致 `outFolders` 永远为空数组，最终 `displayFolders: outFolders` 传给渲染层时文件夹全部消失。
+
+**修复方案**
+
+将 `displayFolders` 改为 `const`，并确保 `outFolders` 在 `displayFolders` 赋值之后声明：
+
+```typescript
+// ✅ 修复后
+const displayFolders = useMemo(() => { ... }, [...]);  // 先计算
+
+const outFolders = useMemo(                             // 再过滤
+  () => displayFolders.filter(...),
+  [displayFolders, pendingDeleteFolderIds],
+);
+```
+
+同时将 `outFoldersRef` 改为正规的 `useRef<Folder[]>`，并将回滚检测的 `useEffect` 移到 `displayFolders` 赋值之后，结构更清晰。
+
+**影响范围**
+
+- `frontend/src/components/files/useFileList.ts`
+
+---
+
+#### 2. 修复第二次删除文件后 UI 不立即更新问题（`useFileMutations.ts`）
+
+**问题描述**
+
+删除第一个文件时，文件会立即从页面消失（正常）。但删除第二个文件时，文件不会立即消失，只有刷新页面后才消失。后台数据确实已被正确删除。
+
+**根本原因**
+
+乐观更新（Optimistic Update）与 React Query 的后台 refetch 之间存在竞态条件（Race Condition）：
+
+**第一次删除**（正常）：
+1. `onMutate` → `cancelQueries` 取消所有进行中的请求 → 从缓存移除文件 → UI 立即消失 ✅
+2. `onSettled` → `invalidateQueries` 标记 stale + **立即触发后台 refetch**
+3. refetch 返回（不含已删文件）→ 缓存更新 ✅
+
+**第二次删除**（有问题）：
+1. 第一次删除触发的 refetch **仍在进行中**
+2. `onMutate` → `cancelQueries` → 但此时 refetch 已发出，`cancelQueries` 无法取消已在途的请求
+3. 从缓存移除第二个文件 → UI 立即消失（看起来正常）
+4. **第一次删除的 refetch 返回**，带回包含第二个文件的旧数据 → **覆盖乐观更新** ❌
+5. 第二个文件重新出现在页面上
+
+**修复方案**
+
+将 `onSettled` 中的 `invalidateQueries` 改为 `refetchType: 'none'`，仅标记缓存为 stale 但不立即触发后台 refetch，彻底消除竞态：
+
+```typescript
+// ❌ 原代码：标记 stale 并立即触发后台 refetch（会与乐观更新竞争）
+onSettled: () => {
+  void queryClient.invalidateQueries({ queryKey: ['files'] });
+}
+
+// ✅ 修复后：仅标记 stale，不触发 refetch
+// 下次窗口聚焦/用户导航时才会自动重新获取真实数据
+onSettled: () => {
+  void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
+}
+```
+
+此修复同时应用于 `deleteFile`、`batchDeleteFiles`、`deleteFolder` 三个 mutation。
+
+**影响范围**
+
+- `frontend/src/hooks/files/useFileMutations.ts`
+
+---
+
+### ✨ 新功能 / 性能优化
+
+#### 3. 引入 `@chenglou/pretext` — DOM-free 文本测量，精确虚拟列表行高
+
+**包简介**
+
+`@chenglou/pretext` 是一个**不依赖 DOM 的纯计算文本排版库**，可在不创建任何 DOM 节点的情况下精确计算多行文本的行数和高度。相比传统的"创建隐藏 DOM 节点 → 读取 offsetHeight"方案，它：
+
+- 零 DOM 操作，无布局抖动（Layout Thrashing）
+- 纯同步计算，可在渲染前完成所有高度预测
+- 内部使用字形宽度数据进行精确排版模拟
+- 适合在 Web Worker 或 SSR 环境中使用
+
+**使用场景**
+
+虚拟列表（`VirtualizedFileGrid` / `VirtualizedMixedGrid`）需要在渲染前就知道每一行的精确高度，才能正确计算滚动位置和可见范围。原来使用固定行高（`VIRTUAL_GRID_ROW_HEIGHT = 360px`），导致：
+
+- 文件名较长时卡片被裁剪
+- 文件名较短时行间有大量空白
+- 滚动位置计算不准确，出现跳动
+
+**实现细节**
+
+新增 `frontend/src/utils/pretextMeasure.ts`，封装了以下能力：
+
+| 函数 | 作用 |
+|------|------|
+| `measureLineCount(text, font, maxWidth, lineHeight)` | 计算文本在指定宽度下的实际行数 |
+| `computeFileCardHeight(filename, cardWidth, vw)` | 计算文件卡片的精确高度（含缩略图、文件名、元信息） |
+| `computeFolderCardHeight(name, cardWidth, vw)` | 计算文件夹卡片的精确高度 |
+| `buildRowModel(items, columns, containerWidth, vw)` | 构建整个网格的行高模型，返回 `rowHeights` 和前缀和数组 `prefixSums` |
+| `findStartRow(prefixSums, scrollTop)` | 二分查找当前滚动位置对应的起始行（O(log n)） |
+| `findEndRow(prefixSums, scrollBottom)` | 二分查找当前滚动位置对应的结束行（O(log n)） |
+| `clearPretextMeasureCache()` | 清除内部 LRU 缓存（最大 2000 条） |
+
+字体大小使用 CSS `clamp()` 等价的纯 JS 计算，与实际渲染保持一致：
+
+```typescript
+// 文件名字体大小：clamp(0.38rem, 1.3vw, 0.58rem)
+export function fileNameFontSizePx(vw: number): number {
+  return Math.max(0.38 * 16, Math.min(0.58 * 16, 0.013 * vw));
+}
+```
+
+**对页面的提升效果**
+
+1. **虚拟列表滚动精准**：行高精确计算后，滚动到任意位置都不会出现内容跳动或空白
+2. **卡片不再被裁剪**：长文件名（2行）的卡片高度自动扩展，短文件名（1行）的卡片紧凑排列
+3. **混合网格支持**：文件夹卡片和文件卡片高度不同，`VirtualizedMixedGrid` 可以同时处理两种高度，同一行取最大值
+4. **性能无损**：所有计算同步完成，无 DOM 操作，不触发浏览器重排；内部 LRU 缓存避免重复计算相同文件名
+
+**新增测试**
+
+`frontend/src/utils/pretextMeasure.test.ts` 覆盖了所有核心函数：
+
+- 字体大小 clamp 边界值（min/max/mid）
+- 空字符串、空白字符串、零宽度的边界处理
+- 卡片高度公式验证
+- 行高增长和上限约束
+- `buildRowModel` 的单调性和前缀和正确性
+- `findStartRow` / `findEndRow` 的二分查找正确性
+
+**影响范围**
+
+- `frontend/package.json`（新增依赖 `@chenglou/pretext: ^0.0.3`）
+- `frontend/src/utils/pretextMeasure.ts`（新增）
+- `frontend/src/utils/pretextMeasure.test.ts`（新增）
+- `frontend/src/components/files/grid/VirtualizedMixedGrid.tsx`（接入 pretext 行高计算）
+- `frontend/src/components/files/grid/VirtualizedFileGrid.tsx`（接入 pretext 行高计算）
+
+---
+
+### 📋 变更汇总
+
+| 文件 | 类型 | 说明 |
+|------|------|------|
+| `frontend/src/components/files/useFileList.ts` | 🐛 Bug Fix | 修复 `displayFolders` 变量提升导致文件夹列表消失 |
+| `frontend/src/hooks/files/useFileMutations.ts` | 🐛 Bug Fix | 修复第二次删除文件 UI 不立即更新的竞态问题 |
+| `frontend/src/utils/pretextMeasure.ts` | ✨ New | DOM-free 文本测量工具，为虚拟列表提供精确行高 |
+| `frontend/src/utils/pretextMeasure.test.ts` | ✅ Test | pretextMeasure 单元测试 |
+| `frontend/src/components/files/grid/VirtualizedMixedGrid.tsx` | ✨ Enhance | 接入 pretext 精确行高计算 |
+| `frontend/src/components/files/grid/VirtualizedFileGrid.tsx` | ✨ Enhance | 接入 pretext 精确行高计算 |
+| `frontend/package.json` | 📦 Dep | 新增 `@chenglou/pretext ^0.0.3` |
+
+---
+
+### 🔬 技术细节：React Query 乐观更新最佳实践
+
+本次修复揭示了一个使用 React Query 乐观更新时的常见陷阱，记录如下供参考：
+
+**错误模式**
+
+```typescript
+onMutate: async (id) => {
+  await queryClient.cancelQueries({ queryKey: ['items'] }); // 取消进行中的查询
+  // 乐观更新缓存...
+},
+onSettled: () => {
+  // ❌ 立即触发 refetch，会与乐观更新竞争
+  void queryClient.invalidateQueries({ queryKey: ['items'] });
+}
+```
+
+**问题**：`invalidateQueries` 默认的 `refetchType: 'active'` 会立即触发所有活跃查询的 refetch。如果上一次操作的 refetch 仍在进行中，`cancelQueries` 无法取消它，该 refetch 完成后会用旧数据覆盖乐观更新。
+
+**正确模式（本项目采用）**
+
+```typescript
+onSettled: () => {
+  // ✅ 仅标记 stale，不立即 refetch
+  // 下次窗口聚焦/路由切换时自动同步真实数据
+  void queryClient.invalidateQueries({ queryKey: ['items'], refetchType: 'none' });
+}
+```
+
+**权衡**：使用 `refetchType: 'none'` 后，删除成功但数据同步会延迟到下次自然触发（窗口聚焦、切换路由等）。对于删除操作，这是可接受的，因为乐观更新已经提供了即时的视觉反馈，且真实数据在服务端已经正确删除。
+
+---
+
+## 历史版本
+
+> 更早的变更记录请参阅 Git 提交历史（`git log --oneline`）。
+> 主要里程碑包括：
+>
+> - `fc51472` feat(虚拟化网格): 实现精确行高计算与即时删除隐藏
+> - `611c36c` feat(security): 添加常量时间比较工具防止时序攻击
+> - `ce8852d` fix: 修复 macOS 应用沙盒配置以支持视频硬件解码
+> - `47d7a27` feat(macos): 为 Tauri 应用添加 macOS 原生窗口样式支持
+> - `ac997cd` feat(desktop): 添加 Tauri 桌面应用支持
+> - `f1b6308` feat(frontend): 添加端到端测试支持并重构设置组件
+> - `e533066` feat(theme): 新增紫色主题并重构样式为 CSS 变量
