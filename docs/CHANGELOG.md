@@ -6,6 +6,117 @@
 
 ## [未发布] — 2026 年（当前会话）
 
+### 🧱 架构调整
+
+#### 1. 拆分前端 `App.tsx`，降低入口复杂度
+
+**变更内容**
+
+- 将原先集中在 `frontend/src/App.tsx` 中的 `QueryClient` 配置、React Query Devtools、认证守卫和路由定义拆分到独立模块：
+  - `frontend/src/providers/QueryProvider.tsx`
+  - `frontend/src/providers/AuthProvider.tsx`
+  - `frontend/src/router/AppRouter.tsx`
+- `App.tsx` 现在仅保留应用装配职责：`QueryProvider`、`BrowserCompatibilityWarning`、`ErrorBoundary`、`AuthProvider`、`AppRouter`
+
+**收益**
+
+- 降低单文件复杂度，便于维护
+- 路由、认证、数据层职责边界更清晰
+- 后续继续拆分 Devtools、Bootstrap、PWA 等逻辑更容易
+
+---
+
+#### 2. 拆分前端全局启动逻辑（bootstrap）
+
+**变更内容**
+
+- 将 `frontend/src/main.tsx` 中的启动逻辑拆分为独立模块：
+  - `frontend/src/bootstrap/sentry.ts`
+  - `frontend/src/bootstrap/preconnect.ts`
+  - `frontend/src/bootstrap/errorTracking.ts`
+- `main.tsx` 只保留样式引入、`App` 渲染和基础启动装配
+
+**收益**
+
+- 入口文件职责单一
+- 便于后续继续抽离 `vitals`、PWA、平台初始化逻辑
+
+---
+
+### 🎨 UI / 主题改造
+
+#### 3. 上传弹窗、预览页与列表区域逐步改为主题变量驱动
+
+**变更内容**
+
+- 修复多个文件页面在浅色/深色/紫色三主题下仍使用写死颜色的问题
+- 上传弹窗相关区域逐步改为使用语义化变量，如：
+  - `--upload-surface-bg`
+  - `--upload-text`
+  - `--upload-text-muted`
+  - `--upload-item-*`
+- 预览页相关文字与图标改为使用：
+  - `--preview-text-primary`
+  - `--preview-text-muted`
+  - `--preview-icon`
+- 补充并扩展 `frontend/src/styles/tokens.css` 中的主题变量映射
+
+**收益**
+
+- 三主题切换时颜色不再依赖组件内硬编码
+- 浅色模式可以正确显示深字白底，深色/紫色主题保持独立视觉风格
+- 后续调整主题时优先改 token，而不是逐个修改组件
+
+---
+
+#### 4. 修复上传与预览 UI 的多处主题显示问题
+
+**已处理问题**
+
+- 上传弹窗浅色模式背景仍显示紫色
+- 上传文件项在浅色模式下仍保留深色/紫色块
+- 文件预览页浅色模式下文字和图标显示为黑色/不统一
+- 批量操作栏图标在不同主题下对比度不稳定
+- `All Files` 区域统计文字和若干提示信息颜色不统一
+
+**影响范围**
+
+- `frontend/src/components/files/upload/UploadDialog.tsx`
+- `frontend/src/components/files/upload/UploadFileItem.tsx`
+- `frontend/src/components/files/preview/FilePreview.tsx`
+- `frontend/src/components/files/preview/FilePreviewContent.tsx`
+- `frontend/src/components/files/list/FileListBatchActions.tsx`
+- `frontend/src/components/files/list/FileListContent.tsx`
+
+---
+
+### 🧹 工程治理
+
+#### 5. 调整 ESLint 忽略规则，排除生成目录
+
+**变更内容**
+
+- 在 `frontend/eslint.config.js` 中补充忽略目录：
+  - `dist`
+  - `coverage`
+  - `src-tauri/target`
+  - `src-tauri/gen`
+  - `.vite`
+
+**修复效果**
+
+- `eslint` 不再扫描 Tauri/Rust 生成产物
+- 之前大量由二进制/打包输出引起的 Parsing Error 已消失
+
+**当前状态**
+
+- `npm run build` 通过
+- `npm run lint` 仍存在少量存量问题（非本次拆分引入）：
+  - `frontend/src/components/files/preview/FilePreviewContent.tsx`
+  - `frontend/src/components/files/useFileList.ts`
+
+---
+
 ### 🐛 Bug 修复
 
 #### 1. 修复文件夹列表消失问题（`useFileList.ts`）
@@ -100,9 +211,29 @@ onSettled: () => {
 
 ---
 
+#### 3. 修复文件移动到目标文件夹时的同名冲突导致 500 错误
+
+**问题描述**
+
+当文件移动到另一个文件夹，而目标文件夹已存在同名文件时，接口触发 PostgreSQL 唯一约束（`23505`），最终返回 `500 Internal Server Error`。
+
+**修复方案**
+
+- 在执行移动前，先查询两类冲突：
+  - 待移动文件集合内部是否存在同名文件
+  - 目标文件夹中是否已存在同名文件
+- 命中冲突时直接返回可读的验证错误，而不是让数据库约束抛出 500
+
+**影响范围**
+
+- `backend/src/repositories/folders.rs`
+- `backend/src/services/folder.rs`
+
+---
+
 ### ✨ 新功能 / 性能优化
 
-#### 3. 引入 `@chenglou/pretext` — DOM-free 文本测量，精确虚拟列表行高
+#### 6. 引入 `@chenglou/pretext` — DOM-free 文本测量，精确虚拟列表行高
 
 **包简介**
 

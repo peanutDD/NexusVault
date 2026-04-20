@@ -115,13 +115,6 @@ sha2 = "0.10"
 hmac = "0.12"
 
 # Metrics
-
-# OpenTelemetry Distributed Tracing
-tracing-opentelemetry = "0.28"
-opentelemetry = "0.27"
-opentelemetry-otlp = { version = "0.21", features = ["tonic"] }
-opentelemetry-semantic-conventions = "0.27"
-
 metrics = "0.24"
 metrics-exporter-prometheus = "0.16"
 
