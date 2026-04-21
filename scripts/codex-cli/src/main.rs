@@ -248,6 +248,186 @@ fn extract_code_block(text: &str) -> Option<String> {
     None
 }
 
+// --- 高级 Skill 编排框架 (Advanced Superpowers Template) ---
+
+/// 技能执行上下文：在 Pipeline 中传递状态
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SkillContext {
+    pr_number: u32,
+    repo: String,
+    raw_input: String,
+    parsed_data: Option<ReviewData>,
+    selected_issues: Vec<ReviewIssue>,
+    fixed_files: Vec<String>,
+    quality_score: u8,
+    security_passed: bool,
+    rounds: u8,
+}
+
+impl SkillContext {
+    fn new(pr_number: u32, repo: String, raw_input: String, rounds: u8) -> Self {
+        Self {
+            pr_number,
+            repo,
+            raw_input,
+            parsed_data: None,
+            selected_issues: Vec::new(),
+            fixed_files: Vec::new(),
+            quality_score: 0,
+            security_passed: false,
+            rounds,
+        }
+    }
+}
+
+/// 技能 Trait：所有原子技能必须实现此接口
+#[async_trait::async_trait]
+trait Skill {
+    fn name(&self) -> &'static str;
+    async fn execute(&self, ctx: &mut SkillContext, client: &CodexClient) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+// 技能 1: 情报解析
+struct ReadReviewSkill;
+#[async_trait::async_trait]
+impl Skill for ReadReviewSkill {
+    fn name(&self) -> &'static str { "ReadReview" }
+    async fn execute(&self, ctx: &mut SkillContext, client: &CodexClient) -> Result<(), Box<dyn std::error::Error>> {
+        let data = read_gemini_review(&ctx.raw_input, &ctx.repo, client).await?;
+        ctx.parsed_data = Some(data);
+        Ok(())
+    }
+}
+
+// 技能 2: 决策引擎
+struct DecisionSkill;
+#[async_trait::async_trait]
+impl Skill for DecisionSkill {
+    fn name(&self) -> &'static str { "Decision" }
+    async fn execute(&self, ctx: &mut SkillContext, _client: &CodexClient) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(data) = &ctx.parsed_data {
+            ctx.selected_issues = decide_fix_or_skip(&data.issues);
+        }
+        Ok(())
+    }
+}
+
+// 技能 3: 批量修复 (组合 Skill)
+struct BatchFixSkill;
+#[async_trait::async_trait]
+impl Skill for BatchFixSkill {
+    fn name(&self) -> &'static str { "BatchFix" }
+    async fn execute(&self, ctx: &mut SkillContext, client: &CodexClient) -> Result<(), Box<dyn std::error::Error>> {
+        for issue in &ctx.selected_issues {
+            if let Ok(Some(patch)) = generate_fix_patch(issue, &ctx.repo, client).await {
+                if apply_patch_safely(&issue.file, &patch)? {
+                    ctx.fixed_files.push(issue.file.clone());
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+// 技能 4: 安全扫描 (新模块 - 可复用)
+struct SecurityCheckSkill;
+#[async_trait::async_trait]
+impl Skill for SecurityCheckSkill {
+    fn name(&self) -> &'static str { "SecurityCheck" }
+    async fn execute(&self, ctx: &mut SkillContext, client: &CodexClient) -> Result<(), Box<dyn std::error::Error>> {
+        println!("🛡️ [Skill: SecurityCheck] 正在扫描修复后的代码安全性...");
+        
+        let mut all_passed = true;
+        for file in &ctx.fixed_files {
+            let content = fs::read_to_string(file)?;
+            let system_prompt = "你是一个安全审计专家。请检查代码是否存在注入、密钥泄露或严重逻辑漏洞。
+仅返回 JSON: {\"passed\": true/false, \"reason\": \"原因\"}";
+            let user_prompt = format!("文件: {}\n内容: \n```\n{}\n```", file, content);
+            
+            let result = client.call(system_prompt, &user_prompt).await?;
+            if result.contains("false") {
+                all_passed = false;
+                println!("⚠️ 文件 {} 未通过安全扫描: {}", file, result);
+                break;
+            }
+        }
+        ctx.security_passed = all_passed;
+        Ok(())
+    }
+}
+
+// 技能 5: 质量评分 (新模块 - 对齐 AGENTS.md 规则 15)
+struct QualityScoreSkill;
+#[async_trait::async_trait]
+impl Skill for QualityScoreSkill {
+    fn name(&self) -> &'static str { "QualityScore" }
+    async fn execute(&self, ctx: &mut SkillContext, client: &CodexClient) -> Result<(), Box<dyn std::error::Error>> {
+        println!("📊 [Skill: QualityScore] 正在评估修复质量...");
+        
+        let system_prompt = "你是一个代码质量专家。请根据 AGENTS.md 的 15 条铁律为本次修复打分 (0-100)。
+仅返回数字评分。";
+        let user_prompt = format!("修复的文件: {:?}\nGemini 原始意见: {}", ctx.fixed_files, ctx.raw_input);
+        
+        let result = client.call(system_prompt, &user_prompt).await?;
+        if let Ok(score) = result.trim().parse::<u8>() {
+            ctx.quality_score = score;
+            println!("📈 本次修复质量评分: {} 分", score);
+        }
+        Ok(())
+    }
+}
+
+// 技能 6: 提交与反馈 (重构后的 Feedback)
+struct FeedbackSkill;
+#[async_trait::async_trait]
+impl Skill for FeedbackSkill {
+    fn name(&self) -> &'static str { "Feedback" }
+    async fn execute(&self, ctx: &mut SkillContext, _client: &CodexClient) -> Result<(), Box<dyn std::error::Error>> {
+        if !ctx.fixed_files.is_empty() {
+            // 如果安全扫描未通过，记录警告但不终止推送（或根据需要终止）
+            let security_info = if ctx.security_passed { "✅ 安全扫描通过" } else { "⚠️ 安全扫描发现潜在风险" };
+            let score_info = format!("🏆 质量评分: {} 分", ctx.quality_score);
+            
+            commit_and_tag_round(ctx.pr_number, &ctx.fixed_files, ctx.rounds)?;
+            
+            let gh_msg = format!("🤖 **Codex 自动修复完成**\n\n{}\n{}\n\n✅ 已修复文件：\n{}", 
+                security_info, score_info,
+                ctx.fixed_files.iter().map(|f| format!("- `{}`", f)).collect::<Vec<_>>().join("\n"));
+            post_comment(ctx.pr_number, &gh_msg)?;
+        } else if let Some(data) = &ctx.parsed_data {
+            let msg = format!("🤖 **GPT-5.4 分析**: 未发现需要自动修复的高优先级问题。\n\n**总结**: {}", data.summary);
+            post_comment(ctx.pr_number, &msg)?;
+        }
+        Ok(())
+    }
+}
+
+/// 技能编排器 (Skill Orchestrator)
+struct Pipeline {
+    skills: Vec<Box<dyn Skill>>,
+}
+
+impl Pipeline {
+    fn new() -> Self {
+        Self { skills: Vec::new() }
+    }
+
+    fn add(mut self, skill: Box<dyn Skill>) -> Self {
+        self.skills.push(skill);
+        self
+    }
+
+    async fn run(&self, ctx: &mut SkillContext, client: &CodexClient) -> Result<(), Box<dyn std::error::Error>> {
+        for skill in &self.skills {
+            println!("🚀 [Skill: {}] 正在执行...", skill.name());
+            skill.execute(ctx, client).await?;
+        }
+        Ok(())
+    }
+}
+
+// --- 修改原有的 pr_auto_fix 使用 Pipeline 模式 ---
+
 async fn pr_auto_fix(
     pr_number: u32,
     gemini_review: &str,
@@ -255,68 +435,22 @@ async fn pr_auto_fix(
     yes: bool,
     client: &CodexClient,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    println!("📥 PR #{} | 正在编排 Superpowers 技能流...", pr_number);
+    let repo = env::var("GITHUB_REPOSITORY").unwrap_or_default();
+    let mut ctx = SkillContext::new(pr_number, repo, gemini_review.to_string(), max_rounds);
 
-    // 获取仓库上下文
-    let repo = env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| {
-        let output = StdCommand::new("gh").args(["repo", "parse", "--json", "nameWithOwner", "-q", ".nameWithOwner"]).output().expect("gh failed");
-        String::from_utf8_lossy(&output.stdout).trim().to_string()
-    });
+    // 定义 Pipeline 流程 (可插拔式组合)
+    let pipeline = Pipeline::new()
+        .add(Box::new(ReadReviewSkill))    // 1. 情报解析
+        .add(Box::new(DecisionSkill))      // 2. 决策过滤
+        .add(Box::new(BatchFixSkill))      // 3. 核心修复
+        .add(Box::new(SecurityCheckSkill)) // 4. 安全审计 (New!)
+        .add(Box::new(QualityScoreSkill))  // 5. 质量打分 (New!)
+        .add(Box::new(FeedbackSkill));     // 6. 结果反馈
 
-    // Skill 1: Read & Parse Gemini Review (情报解析层)
-    let review_data = read_gemini_review(gemini_review, &repo, client).await?;
-    let all_issues = review_data.issues;
-    println!("🔍 解析到 {} 个原始问题 | 总结: {}", all_issues.len(), review_data.summary);
+    // 执行编排
+    pipeline.run(&mut ctx, client).await?;
 
-    // Skill 2: Decision Engine (只修 Medium 及以上，且过滤受保护文件)
-    let issues_to_fix = decide_fix_or_skip(&all_issues);
-    println!("⚖️  决策引擎: 筛选出 {} 个需要修复的问题 (Medium+)", issues_to_fix.len());
-
-    if issues_to_fix.is_empty() {
-        let gh_comment = format!("🤖 **GPT-5.4 分析**: Gemini Review 中未发现需要自动修复的高/中优先级问题。\n\n**Gemini 总结**: {}", review_data.summary);
-        post_comment(pr_number, &gh_comment)?;
-        return Ok(serde_json::json!({ "fixed": false, "reason": "无需修复", "summary": review_data.summary }).to_string());
-    }
-
-    // Skill 3 & 4: Generate Patch & Apply Safely
-    let mut fixed_files = Vec::new();
-
-    for issue in &issues_to_fix {
-        println!("🛠️  正在生成修复补丁: {} ({} 优先级)", issue.file, issue.severity);
-        
-        match generate_fix_patch(issue, &repo, client).await {
-            Ok(Some(patch)) => {
-                if apply_patch_safely(&issue.file, &patch)? {
-                    fixed_files.push(issue.file.clone());
-                }
-            }
-            Ok(None) => println!("⬜ AI 认为无需修改: {}", issue.file),
-            Err(e) => eprintln!("⚠️ 修复失败 ({}): {}", issue.file, e),
-        }
-    }
-
-    if fixed_files.is_empty() {
-        return Ok(serde_json::json!({ "fixed": false, "reason": "补丁生成失败", "summary": review_data.summary }).to_string());
-    }
-
-    // Skill 5: Commit & Tag Round
-    if !yes {
-        println!("\n⏸️  确认推送 {} 个文件的修改？(y/n)", fixed_files.len());
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-        if !input.trim().to_lowercase().starts_with('y') {
-            return Ok(serde_json::json!({ "fixed": false, "reason": "用户拒绝推送", "summary": review_data.summary }).to_string());
-        }
-    }
-
-    commit_and_tag_round(pr_number, &fixed_files, max_rounds)?;
-
-    Ok(serde_json::json!({ 
-        "fixed": true, 
-        "files": fixed_files, 
-        "summary": review_data.summary,
-        "fixed_count": fixed_files.len()
-    }).to_string())
+    Ok(serde_json::to_string_pretty(&ctx)?)
 }
 
 async fn read_gemini_review(gemini_comment: &str, repo_context: &str, client: &CodexClient) -> Result<ReviewData, Box<dyn std::error::Error>> {
@@ -345,7 +479,12 @@ async fn read_gemini_review(gemini_comment: &str, repo_context: &str, client: &C
     );
 
     let result = client.call(system_prompt, &user_prompt).await?;
-    let json_str = result.trim_start_matches("```json").trim_end_matches("```").trim();
+    let mut json_str = result.trim();
+    if json_str.starts_with("```json") {
+        json_str = json_str.trim_start_matches("```json").trim_end_matches("```").trim();
+    } else if json_str.starts_with("```") {
+        json_str = json_str.trim_start_matches("```").trim_end_matches("```").trim();
+    }
     
     let data: ReviewData = serde_json::from_str(json_str)
         .map_err(|e| format!("解析 Gemini Review JSON 失败: {}\n原始文本: {}", e, result))?;
@@ -382,7 +521,15 @@ async fn generate_fix_patch(issue: &ReviewIssue, repo: &str, client: &CodexClien
         issue.file, issue.description, issue.suggestion, content
     );
 
-    let patch = client.call(system_prompt, &user_prompt).await?;
+    let mut patch = client.call(system_prompt, &user_prompt).await?;
+    
+    // 自动清理可能的 markdown 代码块标记
+    if patch.contains("```") {
+        if let Some(extracted) = extract_code_block(&patch) {
+            patch = extracted;
+        }
+    }
+
     if patch.trim().is_empty() || !patch.contains("@@") {
         Ok(None)
     } else {

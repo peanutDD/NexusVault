@@ -21,7 +21,7 @@ jobs:
       github.event.issue.pull_request
       && github.event.comment.user.login == 'gemini-code-assist[bot]'
       && contains(github.event.comment.body, '## Gemini Code Assist Review')
-    runs-on: codex-runner
+    runs-on: file-server
 
     steps:
       - name: Checkout PR 分支

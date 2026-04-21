@@ -13,7 +13,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::extractors::AuthenticatedUser;
-use crate::models::file::{AccessShareRequest, BatchShareRequest, CreateShareRequest};
+use crate::models::share::{AccessShareRequest, BatchShareRequest, CreateShareRequest};
 use crate::services::share::ShareService;
 use crate::utils::{file_response, json_response, success_response, AppError};
 use crate::AppState;

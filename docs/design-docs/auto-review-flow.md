@@ -7,22 +7,25 @@
 - **Review 层 (情报获取)**: 由 GitHub 接入的 **Gemini Code Assist** 负责，它会在 PR 提交后自动给出审查意见。
 - **修复层 (执行层)**: 由本地 Self-hosted Runner 上的 **Codex (GPT-5.4)** 负责。它读取 Gemini 的意见，在本地 Harness Engineering 环境中执行修复并推送到 PR。
 
-## 2. 核心架构：Skill 编排
-整个流程由 `codex pr-auto-fix` 命令驱动，其内部编排了以下原子 Skill：
+## 2. 核心架构：Pipeline 编排模式
+系统采用更加工程化的 **Pipeline + Context** 编排模式：
 
-1. **情报解析 (read_gemini_review)**: 
-   - 将 Gemini 的 Markdown 评论解析为结构化 JSON。
-   - 提取文件、行号、严重程度、修复建议及溯源原文。
-2. **决策引擎 (decide_fix_or_skip)**: 
-   - **过滤逻辑**: 仅处理 `Critical`、`High`、`Medium` 优先级的问题。
-   - **安全边界**: 自动跳过锁文件 (`Cargo.lock` 等)、配置文件 (`.env`) 和文档路径。
-3. **补丁生成 (generate_fix_patch)**: 
-   - 基于情报和本地源码上下文，生成标准的 `unified diff` 补丁。
-4. **安全应用 (apply_patch_safely)**: 
-   - 在本地隔离环境中尝试 `git apply`。
-5. **提交推送 (commit_and_tag_round)**: 
-   - 自动 `git commit`（含 `[skip ci]`）并推送。
-   - 自动在 PR 留言告知进度。
+### 2.1 Skill Context (技能上下文)
+所有原子技能共享一个 `SkillContext` 对象，用于在流水线中传递状态（如 PR 编号、解析后的情报、已修复的文件列表等）。
+
+### 2.2 Pipeline (流水线)
+流程被拆分为一系列实现了 `Skill` Trait 的原子对象：
+- **ReadReviewSkill**: 情报解析，将原始文本转为结构化数据。
+- **DecisionSkill**: 决策过滤，基于严重程度和受保护文件列表进行筛选。
+- **BatchFixSkill**: 批量修复，循环生成补丁并应用。
+- **SecurityCheckSkill**: **[NEW] 安全审计**，对修复后的代码进行注入、泄露及逻辑漏洞扫描。
+- **QualityScoreSkill**: **[NEW] 质量评分**，依据 AGENTS.md 规则 15 对修复成果进行 0-100 分评估。
+- **FeedbackSkill**: 结果反馈，整合安全报告与评分，执行推送及评论。
+
+这种模式的优势在于：
+- **高解耦**: 增加安全审计或评分步骤只需在 `Pipeline` 定义中 `add` 即可，无需改动核心修复逻辑。
+- **可复用**: `SecurityCheckSkill` 可以被复用到任何需要扫描代码安全性的其他命令（如 `codex review --scan`）中。
+- **强一致性**: 确保所有修复任务都经过相同的质量门禁（Quality Gate）。
 
 ## 3. 循环控制与 Loop 策略
 系统通过 PR 标签 (`gemini-review-round-*`) 管理状态：

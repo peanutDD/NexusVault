@@ -14,7 +14,8 @@
 
 - **代码审查与 AI 自动化**
   - `CODE_REVIEW_GUIDE.md`：代码审查规范（企业级）
-  - `design-docs/auto-review-flow.md`：**[NEW] 自动化 Review 与修复全流程说明**
+  - `design-docs/auto-review-flow.md`：自动化 Review 与修复全流程说明（技术架构）
+  - `design-docs/auto-review-usage-flow.md`：**[NEW] 自动化 Review 与修复运行手册（使用 SOP）**
   - `CODE_REVIEW_START.md`：代码审查开始使用清单
   - `CODE_REVIEW_USAGE.md`：代码审查使用指南（作者/审查人/团队）
   - `CODE_REVIEW_REPORT.md`：代码审查报告模板
