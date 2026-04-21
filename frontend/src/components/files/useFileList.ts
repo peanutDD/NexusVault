@@ -612,7 +612,10 @@ export function useFileList() {
 
   // outFoldersRef 用于 pendingDeleteFolderIds 回滚检测的 useEffect
   const outFoldersRef = useRef<Folder[]>(displayFolders);
-  outFoldersRef.current = displayFolders;
+
+  useEffect(() => {
+    outFoldersRef.current = displayFolders;
+  }, [displayFolders]);
 
   useEffect(() => {
     if (pendingDeleteFolderIds.size === 0) return;

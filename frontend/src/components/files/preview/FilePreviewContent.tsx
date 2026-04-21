@@ -83,7 +83,14 @@ export function FilePreviewContent({
 }: FilePreviewContentProps) {
   const [videoReady, setVideoReady] = useState(false);
   useEffect(() => {
-    setVideoReady(false);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setVideoReady(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [blobUrl, isVideo, useHls]);
   const isGif = isGifType(file.mime_type);
   const showImagePreview =
