@@ -44,7 +44,14 @@ pub fn init_tracing() {
                 .unwrap_or(0.1);
             sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::TraceIdRatioBased(rate)))
         }
-        _ => sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::TraceIdRatioBased(0.1))),
+        _ => {
+            // 如果没配置且环境不可用，默认关闭以减少报错
+            if std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT").is_err() {
+                sdktrace::Sampler::AlwaysOff
+            } else {
+                sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::TraceIdRatioBased(0.1)))
+            }
+        }
     };
 
     // 构建 OTLP 导出器
@@ -53,9 +60,16 @@ pub fn init_tracing() {
 
     let exporter = SpanExporter::builder()
         .with_tonic()
-        .with_endpoint(otlp_endpoint.clone());
+        .with_endpoint(otlp_endpoint.clone())
+        .with_timeout(std::time::Duration::from_secs(2));
 
-    let exporter = exporter.build().expect("Failed to build OTLP span exporter");
+    let exporter = match exporter.build() {
+        Ok(exp) => exp,
+        Err(e) => {
+            tracing::warn!(error = %e, "Failed to build OTLP span exporter, tracing will be disabled");
+            return;
+        }
+    };
 
     let provider = TracerProvider::builder()
         .with_batch_exporter(exporter, Tokio)
