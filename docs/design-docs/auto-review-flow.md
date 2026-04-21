@@ -20,12 +20,14 @@
 - **BatchFixSkill**: 批量修复，循环生成补丁并应用。
 - **SecurityCheckSkill**: **[NEW] 安全审计**，对修复后的代码进行注入、泄露及逻辑漏洞扫描。
 - **QualityScoreSkill**: **[NEW] 质量评分**，依据 AGENTS.md 规则 15 对修复成果进行 0-100 分评估。
+- **DocumentationSkill**: **[NEW] 变更入档**，将每次自动修复的变更文件、安全结果与评分写入 `docs/CHANGELOG.md`。
 - **FeedbackSkill**: 结果反馈，整合安全报告与评分，执行推送及评论。
 
 这种模式的优势在于：
 - **高解耦**: 增加安全审计或评分步骤只需在 `Pipeline` 定义中 `add` 即可，无需改动核心修复逻辑。
 - **可复用**: `SecurityCheckSkill` 可以被复用到任何需要扫描代码安全性的其他命令（如 `codex review --scan`）中。
 - **强一致性**: 确保所有修复任务都经过相同的质量门禁（Quality Gate）。
+- **可追溯**: 每次自动修复都会在 `docs/CHANGELOG.md` 留下可审计记录，避免“AI 改了什么”无法复盘。
 
 ## 3. 循环控制与 Loop 策略
 系统通过 PR 标签 (`gemini-review-round-*`) 管理状态：

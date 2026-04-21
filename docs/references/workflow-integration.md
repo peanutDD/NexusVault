@@ -40,7 +40,9 @@ codex pr-auto-fix \
 ## 3. 状态回传 (State Feedback)
 CLI 运行结果以 JSON 格式输出，工作流通过 `jq` 解析状态：
 - `fixed`: 布尔值，指示是否应用了修复。
-- `files`: 修复的文件列表。
+- `files`: 修复/写入的文件列表（包含 `docs/CHANGELOG.md` 以保证可追溯）。
+- `security_passed`: 布尔值，指示安全审计是否通过。
+- `quality_score`: 0-100，指示本轮自动修复的质量评分。
 - `summary`: GPT-5.4 对 Gemini 意见的结构化总结。
 
 ## 4. 故障排除 (Troubleshooting)

@@ -6,6 +6,22 @@
 
 ## [未发布] — 2026 年（当前会话）
 
+### 🤖 AI 自动修复
+
+#### 0. codex pr-auto-fix 引入“变更入档”模块化 Skill
+
+**变更内容**
+
+- `codex pr-auto-fix` 的 Pipeline 新增 `DocumentationSkill`：每次自动修复会把 PR 号、轮次、变更文件清单、安全扫描结果、质量评分写入 `docs/CHANGELOG.md`
+- Pipeline 已支持插拔式扩展（如安全审计 `SecurityCheckSkill`、质量评分 `QualityScoreSkill`），并在 PR 评论中展示结果
+
+**收益**
+
+- 修复链路可追溯：任何一次 AI 自动变更都能在同一份 Changelog 中复盘
+- Skill 可复用：文档记录能力可以被复用到其他命令/流水线（例如批量重构、发布前自检）
+
+---
+
 ### 🧱 架构调整
 
 #### 1. 拆分前端 `App.tsx`，降低入口复杂度
