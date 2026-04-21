@@ -84,7 +84,9 @@ jobs:
             --max-rounds ${{ env.MAX_ROUNDS }} \
             --yes)
           
-          echo "skill_result=$RESULT" >> $GITHUB_OUTPUT
+          echo "skill_result<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$RESULT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
           
           # 检查是否真的修复了文件 (从 JSON 结果中提取)
           FIXED=$(echo "$RESULT" | jq -r '.fixed')

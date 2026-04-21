@@ -21,6 +21,7 @@
 - **SecurityCheckSkill**: **[NEW] 安全审计**，对修复后的代码进行注入、泄露及逻辑漏洞扫描。
 - **QualityScoreSkill**: **[NEW] 质量评分**，依据 AGENTS.md 规则 15 对修复成果进行 0-100 分评估。
 - **DocumentationSkill**: **[NEW] 变更入档**，将每次自动修复的变更文件、安全结果与评分写入 `docs/CHANGELOG.md`。
+- **DryRunFeedbackSkill**: **[NEW] Dry-Run 提示**，当未传 `--yes` 时在 PR 留评论说明“已生成但未推送”。
 - **FeedbackSkill**: 结果反馈，整合安全报告与评分，执行推送及评论。
 
 这种模式的优势在于：

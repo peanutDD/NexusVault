@@ -241,7 +241,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_rounds,
             yes,
         } => {
-            println!("🤖 启动 PR Auto-Fix #{}", pr_number);
+            eprintln!("🤖 启动 PR Auto-Fix #{}", pr_number);
             let result = pr_auto_fix(*pr_number, gemini_review, *max_rounds, *yes, &client).await;
             match result {
                 Ok(output) => println!("{}", output),
@@ -292,11 +292,12 @@ struct SkillContext {
     fixed_files: Vec<String>,
     quality_score: u8,
     security_passed: bool,
+    auto_push: bool,
     rounds: u8,
 }
 
 impl SkillContext {
-    fn new(pr_number: u32, repo: String, raw_input: String, rounds: u8) -> Self {
+    fn new(pr_number: u32, repo: String, raw_input: String, rounds: u8, auto_push: bool) -> Self {
         Self {
             pr_number,
             repo,
@@ -306,6 +307,7 @@ impl SkillContext {
             fixed_files: Vec::new(),
             quality_score: 0,
             security_passed: false,
+            auto_push,
             rounds,
         }
     }
@@ -394,7 +396,7 @@ impl Skill for SecurityCheckSkill {
         ctx: &mut SkillContext,
         client: &CodexClient,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🛡️ [Skill: SecurityCheck] 正在扫描修复后的代码安全性...");
+        eprintln!("🛡️ [Skill: SecurityCheck] 正在扫描修复后的代码安全性...");
 
         let mut all_passed = true;
         for file in &ctx.fixed_files {
@@ -428,7 +430,7 @@ impl Skill for QualityScoreSkill {
         ctx: &mut SkillContext,
         client: &CodexClient,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("📊 [Skill: QualityScore] 正在评估修复质量...");
+        eprintln!("📊 [Skill: QualityScore] 正在评估修复质量...");
 
         let system_prompt =
             "你是一个代码质量专家。请根据 AGENTS.md 的 15 条铁律为本次修复打分 (0-100)。
@@ -441,7 +443,7 @@ impl Skill for QualityScoreSkill {
         let result = client.call(system_prompt, &user_prompt).await?;
         if let Ok(score) = result.trim().parse::<u8>() {
             ctx.quality_score = score;
-            println!("📈 本次修复质量评分: {} 分", score);
+            eprintln!("📈 本次修复质量评分: {} 分", score);
         }
         Ok(())
     }
@@ -487,6 +489,54 @@ impl Skill for DocumentationSkill {
 }
 
 // 技能 7: 提交与反馈 (重构后的 Feedback)
+struct DryRunFeedbackSkill;
+#[async_trait::async_trait]
+impl Skill for DryRunFeedbackSkill {
+    fn name(&self) -> &'static str {
+        "DryRunFeedback"
+    }
+    async fn execute(
+        &self,
+        ctx: &mut SkillContext,
+        _client: &CodexClient,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        if ctx.auto_push || ctx.fixed_files.is_empty() {
+            return Ok(());
+        }
+
+        let security_info = if ctx.security_passed {
+            "✅ 安全扫描通过"
+        } else {
+            "⚠️ 安全扫描发现潜在风险"
+        };
+        let score_info = format!("🏆 质量评分: {} 分", ctx.quality_score);
+
+        let mut files = ctx.fixed_files.clone();
+        files.sort();
+        files.dedup();
+
+        let msg = format!(
+            "🤖 **Codex 已在本地生成并应用补丁，但未推送**\n\n原因：未传 `--yes`（auto_push=false），系统已进入 Dry-Run 模式。\n\n{}\n{}\n\n📄 本地变更文件：\n{}\n\n如确认无误，请在同一环境重新运行并加上 `--yes` 以提交并推送。",
+            security_info,
+            score_info,
+            files
+                .iter()
+                .map(|f| format!("- `{}`", f))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+
+        post_comment(ctx.pr_number, &msg).map_err(|e| {
+            format!(
+                "DryRunFeedbackSkill: PR 评论发布失败（pr_number={}）。原始错误: {}",
+                ctx.pr_number, e
+            )
+        })?;
+
+        Ok(())
+    }
+}
+
 struct FeedbackSkill;
 #[async_trait::async_trait]
 impl Skill for FeedbackSkill {
@@ -499,6 +549,10 @@ impl Skill for FeedbackSkill {
         _client: &CodexClient,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if !ctx.fixed_files.is_empty() {
+            if !ctx.auto_push {
+                return Ok(());
+            }
+
             // 如果安全扫描未通过，记录警告但不终止推送（或根据需要终止）
             let security_info = if ctx.security_passed {
                 "✅ 安全扫描通过"
@@ -552,7 +606,7 @@ impl Pipeline {
         client: &CodexClient,
     ) -> Result<(), Box<dyn std::error::Error>> {
         for skill in &self.skills {
-            println!("🚀 [Skill: {}] 正在执行...", skill.name());
+            eprintln!("🚀 [Skill: {}] 正在执行...", skill.name());
             skill.execute(ctx, client).await?;
         }
         Ok(())
@@ -565,11 +619,11 @@ async fn pr_auto_fix(
     pr_number: u32,
     gemini_review: &str,
     max_rounds: u8,
-    _yes: bool,
+    yes: bool,
     client: &CodexClient,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let repo = env::var("GITHUB_REPOSITORY").unwrap_or_default();
-    let mut ctx = SkillContext::new(pr_number, repo, gemini_review.to_string(), max_rounds);
+    let mut ctx = SkillContext::new(pr_number, repo, gemini_review.to_string(), max_rounds, yes);
 
     // 定义 Pipeline 流程 (可插拔式组合)
     let pipeline = Pipeline::new()
@@ -579,7 +633,8 @@ async fn pr_auto_fix(
         .add(Box::new(SecurityCheckSkill)) // 4. 安全审计 (New!)
         .add(Box::new(QualityScoreSkill)) // 5. 质量打分 (New!)
         .add(Box::new(DocumentationSkill)) // 6. 变更记录 (New!)
-        .add(Box::new(FeedbackSkill)); // 7. 结果反馈
+        .add(Box::new(DryRunFeedbackSkill)) // 7. Dry-Run 提示（仅 auto_push=false 生效）
+        .add(Box::new(FeedbackSkill)); // 8. 结果反馈（push + 评论）
 
     // 执行编排
     pipeline.run(&mut ctx, client).await?;
@@ -606,7 +661,7 @@ async fn pr_auto_fix(
         summary,
     };
 
-    Ok(serde_json::to_string_pretty(&output)?)
+    Ok(serde_json::to_string(&output)?)
 }
 
 fn git_repo_root() -> Result<String, Box<dyn std::error::Error>> {
@@ -678,7 +733,7 @@ mod tests {
 
     #[test]
     fn build_changelog_entry_includes_files_and_scores() {
-        let mut ctx = SkillContext::new(123, "owner/repo".to_string(), "raw".to_string(), 1);
+        let mut ctx = SkillContext::new(123, "owner/repo".to_string(), "raw".to_string(), 1, false);
         ctx.fixed_files = vec![
             "src/a.rs".to_string(),
             "src/b.rs".to_string(),
