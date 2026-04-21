@@ -2,11 +2,11 @@ use opentelemetry::global;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::{SpanExporter, WithExportConfig};
-use opentelemetry_semantic_conventions as semconv;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::runtime::Tokio;
 use opentelemetry_sdk::trace::{self as sdktrace, TracerProvider};
 use opentelemetry_sdk::Resource;
+use opentelemetry_semantic_conventions as semconv;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -20,8 +20,8 @@ use tracing_subscriber::EnvFilter;
 /// - `OTEL_TRACES_SAMPLER`: 采样策略（always_on/always_off/parentbased_traceidbased，默认: parentbased_traceidbased）
 /// - `OTEL_TRACES_SAMPLER_ARG`: 采样率（0.0-1.0，默认: 0.1）
 pub fn init_tracing() {
-    let service_name = std::env::var("OTEL_SERVICE_NAME")
-        .unwrap_or_else(|_| "file-storage-backend".to_string());
+    let service_name =
+        std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "file-storage-backend".to_string());
 
     // 构建资源（服务名称 + 版本 + OS 信息）
     let resource = Resource::new(vec![
@@ -35,8 +35,12 @@ pub fn init_tracing() {
     let sampler = match std::env::var("OTEL_TRACES_SAMPLER").as_deref() {
         Ok("always_on") => sdktrace::Sampler::AlwaysOn,
         Ok("always_off") => sdktrace::Sampler::AlwaysOff,
-        Ok("parentbased_always_on") => sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::AlwaysOn)),
-        Ok("parentbased_always_off") => sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::AlwaysOff)),
+        Ok("parentbased_always_on") => {
+            sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::AlwaysOn))
+        }
+        Ok("parentbased_always_off") => {
+            sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::AlwaysOff))
+        }
         Ok("parentbased_traceidbased") => {
             let rate: f64 = std::env::var("OTEL_TRACES_SAMPLER_ARG")
                 .ok()

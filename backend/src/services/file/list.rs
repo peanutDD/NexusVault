@@ -1,13 +1,13 @@
 //! 文件列表查询（分页/过滤/搜索）
 
-use uuid::Uuid;
 use deadpool_redis::{redis::cmd, Pool};
 use serde_json::json;
+use uuid::Uuid;
 
 use crate::config::CacheConfig;
+use crate::models::file::{FileListQuery, FileResponse};
 use crate::services::redis::RedisService;
 use crate::utils::crypto::sha256_hex;
-use crate::models::file::{FileListQuery, FileResponse};
 use crate::utils::AppError;
 
 use super::FileService;
@@ -44,7 +44,11 @@ impl FileService {
         let is_cursor_pagination =
             query.cursor.is_some() || matches!(query.pagination.as_deref(), Some("cursor"));
 
-        if cache_config.enabled && page == 1 && !is_cursor_pagination && query.include_total.unwrap_or(true) {
+        if cache_config.enabled
+            && page == 1
+            && !is_cursor_pagination
+            && query.include_total.unwrap_or(true)
+        {
             if let Some(pool) = redis_pool {
                 let fingerprint = format!(
                     "page={:?}&limit={:?}&pagination={:?}&cursor={:?}&search={:?}&mime_type={:?}&category={:?}&folder_id={:?}&date_from={:?}&date_to={:?}&size_min={:?}&size_max={:?}&sort_by={:?}&sort_order={:?}&include_total={:?}",
@@ -73,7 +77,8 @@ impl FileService {
                     let cached: Result<Option<String>, _> =
                         cmd("GET").arg(&cache_key).query_async(&mut conn).await;
                     if let Ok(Some(s)) = cached {
-                        if let Ok(cached_response) = serde_json::from_str::<CachedFileListResponse>(&s)
+                        if let Ok(cached_response) =
+                            serde_json::from_str::<CachedFileListResponse>(&s)
                         {
                             return Ok((
                                 cached_response.files,

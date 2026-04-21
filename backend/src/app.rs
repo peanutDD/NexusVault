@@ -95,8 +95,8 @@ where
         .route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             move |axum::extract::State(app_state_for_mw): axum::extract::State<AppState>,
-                    req,
-                    next| {
+                  req,
+                  next| {
                 let limit_state = rate_limit_state.clone();
                 middleware::rate_limit::rate_limit_middleware(
                     app_state_for_mw,

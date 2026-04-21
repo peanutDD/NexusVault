@@ -336,7 +336,9 @@ impl AuthService {
         }
 
         // SMTP 已配置则发送邮件，否则写入日志（开发环境）
-        if let (Some(host), Some(from)) = (&self.config.server.smtp_host, &self.config.server.smtp_from) {
+        if let (Some(host), Some(from)) =
+            (&self.config.server.smtp_host, &self.config.server.smtp_from)
+        {
             let to_addr = req
                 .email
                 .parse()
@@ -356,7 +358,10 @@ impl AuthService {
             let mut builder = AsyncSmtpTransport::<Tokio1Executor>::relay(host)
                 .map_err(|e| AppError::Validation(format!("SMTP 配置失败: {}", e)))?;
 
-            if let (Some(u), Some(p)) = (&self.config.server.smtp_username, &self.config.server.smtp_password) {
+            if let (Some(u), Some(p)) = (
+                &self.config.server.smtp_username,
+                &self.config.server.smtp_password,
+            ) {
                 builder = builder.credentials(Credentials::new(u.clone(), p.clone()));
             }
             if let Some(port) = self.config.server.smtp_port {

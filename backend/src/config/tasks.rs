@@ -13,7 +13,7 @@ pub struct TasksConfig {
     pub transcode_max_concurrent: usize,
     #[serde(default)]
     pub task_type_concurrency: HashMap<String, usize>,
-    
+
     // ZIP tasks
     pub zip_cache_enabled: bool,
     pub zip_cache_backend: String,
