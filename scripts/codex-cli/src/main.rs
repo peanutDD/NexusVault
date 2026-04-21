@@ -462,11 +462,21 @@ impl Skill for DocumentationSkill {
             return Ok(());
         }
 
-        let root = git_repo_root()?;
+        let root = git_repo_root().map_err(|e| {
+            format!(
+                "DocumentationSkill: 获取 git 仓库根目录失败（需要在 git 仓库内运行）。原始错误: {}",
+                e
+            )
+        })?;
         let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         let entry = build_changelog_entry(ctx, now);
         let changelog_path = format!("{}/docs/CHANGELOG.md", root);
-        update_changelog(&changelog_path, &entry)?;
+        update_changelog(&changelog_path, &entry).map_err(|e| {
+            format!(
+                "DocumentationSkill: 写入 docs/CHANGELOG.md 失败（path={}）。原始错误: {}",
+                changelog_path, e
+            )
+        })?;
 
         if !ctx.fixed_files.iter().any(|f| f == "docs/CHANGELOG.md") {
             ctx.fixed_files.push("docs/CHANGELOG.md".to_string());
