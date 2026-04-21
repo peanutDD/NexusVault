@@ -42,10 +42,10 @@ where
     let cors = create_cors_layer(config);
     // 全局 IP 级限流 + 已登录用户写操作 user 级限流（可通过 IP_RATE_LIMIT、USER_RATE_LIMIT 等环境变量调整）
     let rate_limit_state = middleware::rate_limit::create_rate_limit_middleware(
-        config.ip_rate_limit,
-        config.user_rate_limit,
-        config.rate_limit_window_secs,
-        config.rate_limit_max_keys,
+        config.rate_limit.ip_rate_limit,
+        config.rate_limit.user_rate_limit,
+        config.rate_limit.rate_limit_window_secs,
+        config.rate_limit.rate_limit_max_keys,
         app_state.redis.clone(),
     );
 
@@ -88,15 +88,15 @@ where
         .route("/health", get(health::health_check))
         .route("/livez", get(health::liveness_check))
         .route("/metrics", get(metrics_handler))
-        .route("/readyz", get(health::health_check))
+        .route("/readyz", get(health::readiness_check))
         .merge(api::openapi::create_openapi_router())
         .nest("/api/v1", api::create_api_routes())
         .nest("/api", api::create_api_routes())
         .route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             move |axum::extract::State(app_state_for_mw): axum::extract::State<AppState>,
-                  req,
-                  next| {
+                    req,
+                    next| {
                 let limit_state = rate_limit_state.clone();
                 middleware::rate_limit::rate_limit_middleware(
                     app_state_for_mw,
@@ -119,7 +119,7 @@ where
 /// 根据配置创建 CORS 中间件层
 fn create_cors_layer(config: &Config) -> CorsLayer {
     let (cors_origin, allow_credentials): (AllowOrigin, bool) = {
-        let raw = config.cors_origin.trim();
+        let raw = config.server.cors_origin.trim();
         if raw == "*" {
             (Any.into(), false)
         } else {

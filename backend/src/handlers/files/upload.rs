@@ -131,11 +131,11 @@ pub async fn upload_file_handler(
                 file_size = file_size.saturating_add(chunk.len() as u64);
 
                 // 早期熔断：超过配置最大值立刻停止（避免继续读入/写盘）
-                if file_size > state.config.max_file_size {
+                if file_size > state.config.storage.max_file_size {
                     let _ = tokio::fs::remove_file(&tmp_path).await;
                     return Err(AppError::PayloadTooLarge(format!(
                         "文件大小超过限制（{} bytes）",
-                        state.config.max_file_size
+                        state.config.storage.max_file_size
                     )));
                 }
 

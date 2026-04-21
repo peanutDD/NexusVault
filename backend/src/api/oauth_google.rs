@@ -19,10 +19,11 @@ pub async fn google_oauth_url_handler(State(state): State<AppState>) -> Result<R
     let config = &state.config;
 
     let client_id = config
+        .oauth
         .google_client_id
         .clone()
         .ok_or_else(|| AppError::Validation("Google OAuth is not configured".to_string()))?;
-    let redirect_uri = config.google_oauth_redirect_uri.clone().ok_or_else(|| {
+    let redirect_uri = config.oauth.google_oauth_redirect_uri.clone().ok_or_else(|| {
         AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string())
     })?;
 
@@ -77,21 +78,24 @@ pub async fn google_oauth_callback_handler(
 
     let config = &state.config;
     let client_id = config
+        .oauth
         .google_client_id
         .clone()
         .ok_or_else(|| AppError::Validation("Google OAuth is not configured".to_string()))?;
-    let client_secret = config.google_client_secret.clone().ok_or_else(|| {
+    let client_secret = config.oauth.google_client_secret.clone().ok_or_else(|| {
         AppError::Validation("GOOGLE_CLIENT_SECRET is not configured".to_string())
     })?;
-    let redirect_uri = config.google_oauth_redirect_uri.clone().ok_or_else(|| {
+    let redirect_uri = config.oauth.google_oauth_redirect_uri.clone().ok_or_else(|| {
         AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string())
     })?;
 
     let frontend_base = config
+        .server
         .frontend_base_url
         .clone()
         .or_else(|| {
             let first = config
+                .server
                 .cors_origin
                 .split(',')
                 .next()

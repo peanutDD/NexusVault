@@ -286,13 +286,13 @@ impl FileService {
         user_id: Uuid,
         zip_build_permit: Option<OwnedSemaphorePermit>,
     ) -> Result<ZipArtifact, AppError> {
-        if !self.config.zip_cache_enabled {
+        if !self.config.tasks.zip_cache_enabled {
             return Err(AppError::Validation("ZIP 缓存未启用".to_string()));
         }
 
         let mut zip_build_permit = zip_build_permit;
         let key = zip_cache_key(user_id, &entries);
-        let base_dir = Path::new(&self.config.storage_path)
+        let base_dir = Path::new(&self.config.storage.path)
             .join(".zip_cache")
             .join(user_id.to_string());
         tokio::fs::create_dir_all(&base_dir)
@@ -304,7 +304,7 @@ impl FileService {
         if tokio::fs::try_exists(&zip_path).await.unwrap_or(false)
             && tokio::task::spawn_blocking({
                 let zip_path = zip_path.clone();
-                let ttl = self.config.zip_cache_ttl_secs;
+                let ttl = self.config.tasks.zip_cache_ttl_secs;
                 move || is_zip_cache_fresh(&zip_path, ttl)
             })
             .await
@@ -370,7 +370,7 @@ impl FileService {
             if tokio::fs::try_exists(&zip_path).await.unwrap_or(false)
                 && tokio::task::spawn_blocking({
                     let zip_path = zip_path.clone();
-                    let ttl = self.config.zip_cache_ttl_secs;
+                    let ttl = self.config.tasks.zip_cache_ttl_secs;
                     move || is_zip_cache_fresh(&zip_path, ttl)
                 })
                 .await

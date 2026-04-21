@@ -59,7 +59,7 @@ pub async fn list_files_handler(
     let is_cursor_pagination =
         query.cursor.is_some() || matches!(query.pagination.as_deref(), Some("cursor"));
 
-    if state.config.cache_enabled
+    if state.config.cache.enabled
         && page == 1
         && !is_cursor_pagination
         && query.include_total.unwrap_or(true)
@@ -113,11 +113,11 @@ pub async fn list_files_handler(
                 if let Ok(body) = serde_json::to_string(&response) {
                     // 仅缓存成功的 JSON 响应体；错误不缓存，避免把瞬时故障固化成“稳定失败”。
                     let _: Result<(), _> = cmd("SETEX")
-                        .arg(&cache_key)
-                        .arg(state.config.list_cache_ttl_secs)
-                        .arg(body)
-                        .query_async(&mut conn)
-                        .await;
+                            .arg(&cache_key)
+                            .arg(state.config.cache.list_ttl_secs)
+                            .arg(body)
+                            .query_async(&mut conn)
+                            .await;
                 }
             }
 

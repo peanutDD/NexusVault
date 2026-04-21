@@ -74,8 +74,8 @@ async fn async_main() -> anyhow::Result<()> {
     tracing::info!("Prometheus metrics initialized");
 
     let config = Arc::new(Config::from_env()?);
-    let pool = create_pool(&config.database_url).await?;
-    let read_pool = match config.read_replica_database_url.as_deref() {
+    let pool = create_pool(&config.database.url).await?;
+    let read_pool = match config.database.read_replica_url.as_deref() {
         Some(url) => create_pool(url).await?,
         None => pool.clone(),
     };
@@ -120,13 +120,13 @@ async fn async_main() -> anyhow::Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("Failed to create storage backend: {}", e))?;
 
-    let redis = match config.redis_url.as_deref() {
+    let redis = match config.database.redis_url.as_deref() {
         Some(url) => Some(create_redis_pool(url)?),
         None => None,
     };
 
     if std::env::var("RUN_ORPHAN_CLEANUP_ONCE").as_deref() == Ok("1") {
-        let n = run_orphan_cleanup_once(&pool, &config.storage_path, config.orphan_cleanup_batch_limit).await?;
+        let n = run_orphan_cleanup_once(&pool, &config.storage.path, config.tasks.orphan_cleanup_batch_limit).await?;
         tracing::info!("orphan cleanup once done, removed {} file(s), exiting", n);
         return Ok(());
     }
@@ -135,33 +135,33 @@ async fn async_main() -> anyhow::Result<()> {
 
     spawn_upload_session_cleanup(
         app_state.pool.clone(),
-        Duration::from_secs(config.upload_session_cleanup_interval_secs),
-        config.upload_session_cleanup_batch_size,
+        Duration::from_secs(config.tasks.upload_session_cleanup_interval_secs),
+        config.tasks.upload_session_cleanup_batch_size,
     );
     spawn_files_consistency_checker(
         app_state.pool.clone(),
         app_state.storage.clone(),
-        Duration::from_secs(config.files_consistency_check_interval_secs),
-        config.files_consistency_check_batch_size,
+        Duration::from_secs(config.tasks.files_consistency_check_interval_secs),
+        config.tasks.files_consistency_check_batch_size,
     );
 
-    if config.storage_backend == "local" {
+    if config.storage.backend == "local" {
         spawn_orphan_storage_files_cleanup(
             app_state.pool.clone(),
-            config.storage_path.clone(),
-            Duration::from_secs(config.orphan_cleanup_interval_secs),
-            config.orphan_cleanup_batch_limit,
+            config.storage.path.clone(),
+            Duration::from_secs(config.tasks.orphan_cleanup_interval_secs),
+            config.tasks.orphan_cleanup_batch_limit,
         );
-        tracing::info!("orphan storage files cleanup started (interval={}s, batch_limit={})", config.orphan_cleanup_interval_secs, config.orphan_cleanup_batch_limit);
+        tracing::info!("orphan storage files cleanup started (interval={}s, batch_limit={})", config.tasks.orphan_cleanup_interval_secs, config.tasks.orphan_cleanup_batch_limit);
     }
 
-    if config.zip_cache_enabled && config.zip_cache_backend == "local" {
-        let base_dir = std::path::Path::new(&config.storage_path).join(".zip_cache");
-        spawn_zip_cache_cleanup(base_dir, Duration::from_secs(300), config.zip_cache_ttl_secs);
+    if config.tasks.zip_cache_enabled && config.tasks.zip_cache_backend == "local" {
+        let base_dir = std::path::Path::new(&config.storage.path).join(".zip_cache");
+        spawn_zip_cache_cleanup(base_dir, Duration::from_secs(300), config.tasks.zip_cache_ttl_secs);
     }
 
     let app = file_storage_backend::app::create_app(app_state, &config, metrics_renderer).await;
-    let addr = format!("0.0.0.0:{}", config.port);
+    let addr = format!("0.0.0.0:{}", config.server.port);
     tracing::info!("Server listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;

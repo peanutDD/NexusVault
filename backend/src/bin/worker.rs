@@ -24,8 +24,8 @@ async fn main() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to install Prometheus recorder: {}", e))?;
 
     let config = Arc::new(Config::from_env()?);
-    let pool = create_pool(&config.database_url).await?;
-    let read_pool = match config.read_replica_database_url.as_deref() {
+    let pool = create_pool(&config.database.url).await?;
+    let read_pool = match config.database.read_replica_url.as_deref() {
         Some(url) => create_pool(url).await?,
         None => pool.clone(),
     };
@@ -37,10 +37,11 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|v| v.parse().ok())
         .unwrap_or(2);
 
-    let transcode_semaphore = Arc::new(Semaphore::new(config.transcode_max_concurrent));
+    let transcode_semaphore = Arc::new(Semaphore::new(config.tasks.transcode_max_concurrent));
 
     // ---------- GIF preview worker ----------
     let gif_preview_semaphore = config
+        .tasks
         .task_type_concurrency
         .get("gif_preview")
         .copied()
@@ -69,6 +70,7 @@ async fn main() -> anyhow::Result<()> {
     // ---------- HLS preview worker ----------
     // 与 gif_preview 完全对称：并发配额 + 指数退避重试 + Prometheus 指标
     let hls_preview_semaphore = config
+        .tasks
         .task_type_concurrency
         .get("hls_preview")
         .copied()

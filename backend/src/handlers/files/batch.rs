@@ -37,7 +37,7 @@ pub async fn batch_get_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     axum::Json(req): axum::Json<BatchGetRequest>,
 ) -> Result<Response, AppError> {
-    if state.config.cache_enabled {
+    if state.config.cache.enabled {
         if let Some(pool) = &state.redis {
             use crate::models::file::FileResponse;
 
@@ -86,7 +86,7 @@ pub async fn batch_get_handler(
                             let cache_key = format!("cache:files:meta:{}:{}:{}", user_id, ver, id);
                             let _: Result<(), _> = cmd("SETEX")
                                 .arg(cache_key)
-                                .arg(state.config.cache_default_ttl_secs)
+                                .arg(state.config.cache.default_ttl_secs)
                                 .arg(body)
                                 .query_async(&mut conn)
                                 .await;
@@ -193,7 +193,7 @@ pub async fn batch_download_zip_post_handler(
         .prepare_batch_zip_entries(&req.ids, user_id)
         .await?;
 
-    if state.config.zip_cache_enabled {
+    if state.config.tasks.zip_cache_enabled {
         use tokio::io::{AsyncReadExt, AsyncSeekExt};
         use tokio_util::io::ReaderStream;
 

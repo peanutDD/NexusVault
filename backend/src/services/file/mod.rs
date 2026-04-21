@@ -130,8 +130,8 @@ impl FileService {
         mime_type: &str,
         file_size: u64,
     ) -> Result<(), AppError> {
-        crate::utils::validate_file_size(file_size, self.config.max_file_size)?;
-        crate::utils::validate_mime_type(mime_type, &self.config.allowed_mime_types)?;
+        crate::utils::validate_file_size(file_size, self.config.storage.max_file_size)?;
+        crate::utils::validate_mime_type(mime_type, &self.config.storage.allowed_mime_types)?;
 
         let (current_usage, _) = self.get_storage_usage(user_id).await?;
         if let Some(quota) = self.get_storage_quota(user_id).await? {
@@ -154,8 +154,8 @@ impl FileService {
         mime_type: &str,
         file_size: u64,
     ) -> Result<(), AppError> {
-        crate::utils::validate_file_size(file_size, self.config.max_file_size)?;
-        crate::utils::validate_mime_type(mime_type, &self.config.allowed_mime_types)?;
+        crate::utils::validate_file_size(file_size, self.config.storage.max_file_size)?;
+        crate::utils::validate_mime_type(mime_type, &self.config.storage.allowed_mime_types)?;
 
         let (current_usage, _) = self.get_storage_usage(user_id).await?;
         if let Some(quota) = self.get_storage_quota(user_id).await? {
@@ -167,7 +167,7 @@ impl FileService {
     }
 
     pub(super) fn chunked_temp_dir(&self, upload_id: Uuid) -> std::path::PathBuf {
-        Path::new(&self.config.storage_path)
+        Path::new(&self.config.storage.path)
             .join(".chunked")
             .join(upload_id.to_string())
     }

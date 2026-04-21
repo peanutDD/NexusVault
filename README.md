@@ -51,6 +51,9 @@
 - ✅ 管理员任务管理 API（可选）
   - 通过 `ADMIN_TOKEN` 启用 `/api/admin/*`
   - 提供任务列表与手动重试（最小实现）
+- ✅ 可观测性与健康检查
+  - **分布式追踪**：集成 OpenTelemetry (OTLP)，支持导出到 Jaeger/Tempo
+  - **深度健康探测**：区分 `/livez`（进程存活）与 `/readyz`（依赖就绪：DB/Redis/Storage）
 - ✅ 安全特性（文件类型验证、大小限制、路径清理）
 - ✅ 响应式 UI 设计（桌面 / 移动端统一样式，包含下拉筛选与分组栏优化）
 
@@ -102,15 +105,15 @@
 - macOS（如需本机编译/运行后端）：
   - 需安装 Xcode 或 Command Line Tools，并同意 Xcode License（`sudo xcodebuild -license`），否则会在链接阶段报 `xcrun ... MacOSX.sdk` 找不到 / license 未同意
 
-### 1. 启动数据库
+### 1. 启动基础服务（数据库、缓存、追踪）
 
-使用 Docker Compose：
+使用 Docker Compose 启动 PostgreSQL, Redis 和 Jaeger：
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-或手动启动 PostgreSQL 并创建数据库。
+> 💡 **提示**：我们使用了 `docker.m.daocloud.io` 镜像源以优化国内拉取速度。Jaeger UI 可在 `http://localhost:16686` 访问。
 
 ### 2. 配置后端
 
@@ -138,8 +141,9 @@ cargo run --bin worker
 
 Worker 默认监听 `http://localhost:3001`（可用 `WORKER_PORT` 修改），并暴露：
 
-- `GET /health`
-- `GET /metrics`
+- `GET /livez` (存活检查)
+- `GET /readyz` (就绪检查)
+- `GET /metrics` (Prometheus 指标)
 
 ### 4. 配置前端
 
