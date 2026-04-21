@@ -12,6 +12,13 @@ use crate::utils::AppError;
 
 use super::FileService;
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct CachedFileListResponse {
+    files: Vec<FileResponse>,
+    total: Option<u64>,
+    next_cursor: Option<String>,
+}
+
 impl FileService {
     pub async fn list_files(
         &self,
@@ -66,13 +73,12 @@ impl FileService {
                     let cached: Result<Option<String>, _> =
                         cmd("GET").arg(&cache_key).query_async(&mut conn).await;
                     if let Ok(Some(s)) = cached {
-                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
-                            // 从缓存中恢复 FileListResult
-                            let files_result: crate::models::file::FileListResult = serde_json::from_value(v)?;
+                        if let Ok(cached_response) = serde_json::from_str::<CachedFileListResponse>(&s)
+                        {
                             return Ok((
-                                files_result.files.into_iter().map(FileResponse::from).collect(),
-                                files_result.total.map(|t| t as u64),
-                                files_result.next_cursor,
+                                cached_response.files,
+                                cached_response.total,
+                                cached_response.next_cursor,
                             ));
                         }
                     }
@@ -83,8 +89,6 @@ impl FileService {
                     "files": files,
                     "total": total,
                     "next_cursor": next_cursor,
-                    "page": query.page.unwrap_or(1),
-                    "limit": query.limit.unwrap_or(20),
                 });
 
                 if let Ok(mut conn) = pool.get().await {
@@ -102,5 +106,36 @@ impl FileService {
         }
 
         self.list_files(user_id, query).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CachedFileListResponse;
+
+    #[test]
+    fn cached_file_list_response_deserializes_from_response_shape() {
+        let file = crate::models::file::FileResponse {
+            id: uuid::Uuid::new_v4(),
+            filename: "a.txt".to_string(),
+            original_filename: "a.txt".to_string(),
+            file_size: 1,
+            mime_type: "text/plain".to_string(),
+            category: None,
+            folder_id: None,
+            created_at: chrono::Utc::now(),
+        };
+
+        let body = serde_json::json!({
+            "files": [file],
+            "total": 1u64,
+            "next_cursor": null,
+        })
+        .to_string();
+
+        let parsed = serde_json::from_str::<CachedFileListResponse>(&body).unwrap();
+        assert_eq!(parsed.files.len(), 1);
+        assert_eq!(parsed.total, Some(1));
+        assert!(parsed.next_cursor.is_none());
     }
 }

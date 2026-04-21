@@ -56,6 +56,7 @@ impl Config {
             // 默认值设置
             .set_default("server.port", "3000")?
             .set_default("server.cors_origin", "*")?
+            .set_default("server.trust_proxy_headers", "false")?
             .set_default("storage.backend", "local")?
             .set_default("storage.download_mode", "proxy")?
             .set_default("storage.max_file_size", "2147483648")?

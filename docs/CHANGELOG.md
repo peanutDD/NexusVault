@@ -43,6 +43,26 @@
 
 ---
 
+#### 3. Tauri（Rust 侧）引入 Repository + Service 分层骨架
+
+**变更内容**
+
+- 为 `frontend/src-tauri/src/lib.rs` 补齐“装配层”职责：初始化后端 base url、构建 HTTP client、注入 `AppState`、注册 `invoke_handler`
+- 增加最小纵切（以 health 为例）：
+  - `commands/health.rs`：Tauri command `backend_health`
+  - `services/backend_service.rs`：业务层入口
+  - `repositories/backend_repository.rs`：对 backend 的 HTTP 调用封装（`GET /health`）
+  - `models/error.rs`：`AppError`（支持 `Result<T, AppError>` 返回给前端）
+- 后端地址支持通过环境变量覆盖：
+  - `UPLOAD_DOWNLOAD_UTIL_API_BASE_URL`（默认 `http://localhost:3000`）
+
+**收益**
+
+- `lib.rs` 不再承担业务/IO 细节，职责稳定为“Runtime 装配”
+- 与 backend 的 Types → Repo → Service → Runtime 分层理念对齐，便于继续扩展文件上传/下载等命令
+
+---
+
 ### 🎨 UI / 主题改造
 
 #### 3. 全面实现前端界面的动态主题（Light/Dark/Purple）
@@ -152,6 +172,24 @@
 ---
 
 ### 🐛 Bug 修复
+
+#### 0. 修复文件列表缓存反序列化类型不匹配
+
+**问题描述**
+
+- Redis 缓存写入时存的是 `Vec<FileResponse>` 形状，但读取时按 `FileListResult(Vec<File>)` 反序列化，导致命中缓存时反序列化失败（等价于“缓存永远不生效”）
+- 缓存 JSON 曾包含 `page` / `limit` 等额外字段，读取侧若按精确结构反序列化会失败
+
+**修复方案**
+
+- 读取缓存时改为反序列化为与响应一致的结构（`CachedFileListResponse { files: Vec<FileResponse>, ... }`）
+- 写入缓存时仅保存缓存所需字段（`files/total/next_cursor`），避免结构漂移
+
+**影响范围**
+
+- `backend/src/services/file/list.rs`
+
+---
 
 #### 1. 修复文件夹列表消失问题（`useFileList.ts`）
 
