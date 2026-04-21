@@ -1,5 +1,6 @@
-use crate::types::ChangelogEntryInput;
+use crate::types::{ChangelogEntryInput, SkillPackResolvedSkill, SkillPackSkillMeta};
 use std::fs;
+use std::path::Path;
 use std::process::Command as StdCommand;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -34,7 +35,12 @@ pub fn extract_code_block(text: &str) -> Option<String> {
 ///
 /// 作为多数 repo 相关操作的前置条件（例如读取 `AGENTS.md`、写入 `docs/CHANGELOG.md`）。
 pub fn git_repo_root() -> Result<String, Box<dyn std::error::Error>> {
+    git_repo_root_from(None)
+}
+
+pub fn git_repo_root_from(cwd: Option<&str>) -> Result<String, Box<dyn std::error::Error>> {
     let output = StdCommand::new("git")
+        .args(cwd.into_iter().flat_map(|p| ["-C", p]))
         .args(["rev-parse", "--show-toplevel"])
         .output()?;
     if !output.status.success() {
@@ -48,12 +54,23 @@ pub fn git_repo_root() -> Result<String, Box<dyn std::error::Error>> {
 /// 读取失败时使用一个最小兜底规则，避免 CLI 直接崩溃影响可用性。
 pub fn read_agents_rules() -> String {
     let root = git_repo_root().ok();
-    if let Some(root) = root {
+    read_rules(root.as_deref(), None)
+}
+
+pub fn read_rules(repo_root: Option<&str>, rules_file: Option<&str>) -> String {
+    if let Some(p) = rules_file
+        && let Ok(content) = fs::read_to_string(p)
+    {
+        return content;
+    }
+
+    if let Some(root) = repo_root {
         let path = format!("{}/AGENTS.md", root);
         if let Ok(content) = fs::read_to_string(path) {
             return content;
         }
     }
+
     "严格遵循项目架构铁律和 TDD 铁律。".to_string()
 }
 
@@ -151,9 +168,62 @@ pub fn append_ai_changelog(
     Ok(())
 }
 
+pub fn resolve_changelog_path(repo_root: &str, changelog_path: Option<&str>) -> Option<String> {
+    if let Some(p) = changelog_path {
+        if Path::new(p).is_absolute() {
+            return Some(p.to_string());
+        }
+        return Some(Path::new(repo_root).join(p).to_string_lossy().to_string());
+    }
+
+    let default_path = format!("{}/docs/CHANGELOG.md", repo_root);
+    if Path::new(&default_path).exists() {
+        Some(default_path)
+    } else {
+        None
+    }
+}
+
+pub fn append_ai_changelog_in(
+    repo_root: &str,
+    fixed_files: &mut Vec<String>,
+    input: &ChangelogEntryInput,
+    changelog_path: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let Some(changelog_path) = resolve_changelog_path(repo_root, changelog_path) else {
+        return Ok(());
+    };
+
+    let entry = build_changelog_entry(input);
+    update_changelog(&changelog_path, &entry)?;
+
+    let rel = if Path::new(&changelog_path).is_absolute() {
+        Path::new(&changelog_path)
+            .strip_prefix(repo_root)
+            .ok()
+            .and_then(|p| p.to_str())
+            .map(|s| s.trim_start_matches('/').to_string())
+    } else {
+        Some(changelog_path.clone())
+    };
+
+    if let Some(rel) = rel
+        && !fixed_files.iter().any(|f| f == &rel)
+    {
+        fixed_files.push(rel);
+    }
+
+    Ok(())
+}
+
 /// 获取当前 Unix 时间戳（秒）。
 pub fn now_unix_ts() -> Result<u64, Box<dyn std::error::Error>> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
+}
+
+pub fn read_repo_file(repo_root: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let abs = Path::new(repo_root).join(path);
+    Ok(fs::read_to_string(abs)?)
 }
 
 /// 通过 GitHub CLI 以 raw 形式读取仓库文件内容。
@@ -185,10 +255,19 @@ pub fn apply_patch_safely(
     file_path: &str,
     patch: &str,
 ) -> Result<bool, Box<dyn std::error::Error>> {
+    apply_patch_safely_in(".", file_path, patch)
+}
+
+pub fn apply_patch_safely_in(
+    repo_root: &str,
+    file_path: &str,
+    patch: &str,
+) -> Result<bool, Box<dyn std::error::Error>> {
     let tmp = std::env::temp_dir().join(format!("codex-cli-{}.patch", file_path.replace('/', "_")));
     fs::write(&tmp, patch)?;
 
     let status = StdCommand::new("git")
+        .args(["-C", repo_root])
         .args(["apply", "--whitespace=fix"])
         .arg(&tmp)
         .status()?;
@@ -201,21 +280,34 @@ pub fn apply_patch_safely(
 ///
 /// 注意：message 带 `[skip ci]`，避免自触发 CI/循环修复。
 pub fn commit_and_push(fixed_files: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    commit_and_push_in(".", fixed_files, true)
+}
+
+pub fn commit_and_push_in(
+    repo_root: &str,
+    fixed_files: &[String],
+    push: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let msg = format!(
         "[skip ci] 🤖 codex auto-fix: 修复 {} 个文件 (基于 Gemini Review)",
         fixed_files.len()
     );
 
     StdCommand::new("git")
+        .args(["-C", repo_root])
         .args(["add"])
         .args(fixed_files)
         .status()?;
     StdCommand::new("git")
+        .args(["-C", repo_root])
         .args(["commit", "-m", &msg])
         .status()?;
-    StdCommand::new("git")
-        .args(["push", "origin", "HEAD"])
-        .status()?;
+    if push {
+        StdCommand::new("git")
+            .args(["-C", repo_root])
+            .args(["push", "origin", "HEAD"])
+            .status()?;
+    }
 
     Ok(())
 }
@@ -228,9 +320,223 @@ pub fn post_comment(pr_number: u32, body: &str) -> Result<(), Box<dyn std::error
     Ok(())
 }
 
+pub fn discover_skill_pack_skills(
+    plugin_root: &str,
+) -> Result<Vec<SkillPackSkillMeta>, Box<dyn std::error::Error>> {
+    let skills_dir = Path::new(plugin_root).join("skills");
+    if !skills_dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut out = Vec::new();
+    for entry in fs::read_dir(skills_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let id = entry.file_name().to_string_lossy().to_string();
+        let skill_md = path.join("SKILL.md");
+        if !skill_md.exists() {
+            continue;
+        }
+        let text = fs::read_to_string(&skill_md)?;
+        let (name, description, version, _body) = parse_skill_md(&text);
+        out.push(SkillPackSkillMeta {
+            id,
+            name,
+            description,
+            version,
+            skill_md_path: skill_md.to_string_lossy().to_string(),
+        });
+    }
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(out)
+}
+
+pub fn resolve_skill_pack_skill(
+    plugin_root: &str,
+    skill: &str,
+) -> Result<SkillPackResolvedSkill, Box<dyn std::error::Error>> {
+    let candidates = discover_skill_pack_skills(plugin_root)?;
+    let Some(meta) = candidates.into_iter().find(|m| {
+        if m.id == skill {
+            return true;
+        }
+        if let Some(name) = &m.name {
+            return name == skill;
+        }
+        false
+    }) else {
+        return Err(format!("未找到 skill: {}", skill).into());
+    };
+
+    let skill_md = Path::new(&meta.skill_md_path);
+    let text = fs::read_to_string(skill_md)?;
+    let (_name, _description, _version, body) = parse_skill_md(&text);
+    Ok(SkillPackResolvedSkill { meta, body })
+}
+
+pub fn read_skill_pack_agents_rules(plugin_root: &str) -> String {
+    read_rules(Some(plugin_root), None)
+}
+
+pub fn find_skill_pack_root_from(start: &str) -> Option<String> {
+    let mut cur = Path::new(start);
+    loop {
+        let marker = cur.join(".claude-plugin").join("plugin.json");
+        if marker.exists() {
+            return Some(cur.to_string_lossy().to_string());
+        }
+        cur = cur.parent()?;
+    }
+}
+
+fn parse_skill_md(text: &str) -> (Option<String>, Option<String>, Option<String>, String) {
+    let trimmed = text.trim_start();
+    if !trimmed.starts_with("---\n") && trimmed != "---" && !trimmed.starts_with("---\r\n") {
+        return (None, None, None, text.to_string());
+    }
+
+    let normalized = text.replace("\r\n", "\n");
+    let mut lines = normalized.lines();
+    let first = lines.next();
+    if first != Some("---") {
+        return (None, None, None, text.to_string());
+    }
+
+    let mut frontmatter = Vec::new();
+    for line in &mut lines {
+        if line == "---" {
+            break;
+        }
+        frontmatter.push(line.to_string());
+    }
+
+    let mut name: Option<String> = None;
+    let mut version: Option<String> = None;
+    let mut description: Option<String> = None;
+
+    let mut i = 0usize;
+    while i < frontmatter.len() {
+        let line = frontmatter[i].as_str();
+        if let Some(rest) = line.strip_prefix("name:") {
+            name = Some(rest.trim().trim_matches('"').to_string());
+            i += 1;
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("version:") {
+            version = Some(rest.trim().trim_matches('"').to_string());
+            i += 1;
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("description:") {
+            let rest = rest.trim();
+            if rest == "|" {
+                let mut buf = Vec::new();
+                i += 1;
+                while i < frontmatter.len() {
+                    let l = frontmatter[i].as_str();
+                    if l.starts_with(' ') || l.starts_with('\t') {
+                        buf.push(l.trim().to_string());
+                        i += 1;
+                        continue;
+                    }
+                    break;
+                }
+                let joined = buf.join("\n").trim().to_string();
+                if !joined.is_empty() {
+                    description = Some(joined);
+                }
+                continue;
+            }
+            let single = rest.trim_matches('"').to_string();
+            if !single.is_empty() {
+                description = Some(single);
+            }
+            i += 1;
+            continue;
+        }
+        i += 1;
+    }
+
+    let body = lines
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim_start()
+        .to_string();
+    (name, description, version, body)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_skill_md_supports_frontmatter_and_body() {
+        let text = r#"---
+name: demo-skill
+description: |
+  line1
+  line2
+version: "1.2.3"
+---
+
+BODY
+"#;
+        let (name, description, version, body) = parse_skill_md(text);
+        assert_eq!(name.as_deref(), Some("demo-skill"));
+        assert_eq!(description.as_deref(), Some("line1\nline2"));
+        assert_eq!(version.as_deref(), Some("1.2.3"));
+        assert!(body.starts_with("BODY"));
+    }
+
+    #[test]
+    fn discover_skill_pack_skills_finds_skills_dir() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-skill-pack-{}", now));
+        let skills = dir.join("skills");
+        fs::create_dir_all(skills.join("a-skill")).unwrap();
+        fs::create_dir_all(skills.join("b-skill")).unwrap();
+        fs::write(
+            skills.join("a-skill").join("SKILL.md"),
+            "---\nname: a-skill\n---\n\nA\n",
+        )
+        .unwrap();
+        fs::write(
+            skills.join("b-skill").join("SKILL.md"),
+            "---\nname: b\n---\n\nB\n",
+        )
+        .unwrap();
+
+        let found = discover_skill_pack_skills(dir.to_str().unwrap()).unwrap();
+        let _ = fs::remove_dir_all(&dir);
+
+        assert_eq!(found.len(), 2);
+        assert_eq!(found[0].id, "a-skill");
+        assert_eq!(found[1].id, "b-skill");
+    }
+
+    #[test]
+    fn find_skill_pack_root_from_walks_up_to_plugin_json() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-find-pack-{}", now));
+        let plugin_root = dir.join("pack");
+        let nested = plugin_root.join("a").join("b");
+        fs::create_dir_all(nested.join("c")).unwrap();
+        fs::create_dir_all(plugin_root.join(".claude-plugin")).unwrap();
+        fs::write(plugin_root.join(".claude-plugin").join("plugin.json"), "{}").unwrap();
+
+        let found = find_skill_pack_root_from(nested.to_str().unwrap()).unwrap();
+        let _ = fs::remove_dir_all(&dir);
+
+        assert!(found.ends_with("/pack"));
+    }
 
     #[test]
     fn build_changelog_entry_includes_files_and_scores() {
@@ -270,5 +576,52 @@ mod tests {
         let _ = fs::remove_file(&path);
         assert!(out.contains("### 🤖 AI 自动修复"));
         assert!(out.contains("#### entry"));
+    }
+
+    #[test]
+    fn resolve_changelog_path_returns_none_when_default_missing() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-no-changelog-{}", now));
+        fs::create_dir_all(&dir).unwrap();
+
+        let resolved = resolve_changelog_path(dir.to_str().unwrap(), None);
+        let _ = fs::remove_dir_all(&dir);
+
+        assert!(resolved.is_none());
+    }
+
+    #[test]
+    fn resolve_changelog_path_returns_default_when_present() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-with-changelog-{}", now));
+        let docs = dir.join("docs");
+        fs::create_dir_all(&docs).unwrap();
+        fs::write(docs.join("CHANGELOG.md"), "# CHANGELOG\n").unwrap();
+
+        let resolved = resolve_changelog_path(dir.to_str().unwrap(), None).unwrap();
+        let _ = fs::remove_dir_all(&dir);
+
+        assert!(resolved.ends_with("/docs/CHANGELOG.md"));
+    }
+
+    #[test]
+    fn resolve_changelog_path_joins_relative_override() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-rel-changelog-{}", now));
+        fs::create_dir_all(&dir).unwrap();
+
+        let resolved = resolve_changelog_path(dir.to_str().unwrap(), Some("CHANGELOG.md")).unwrap();
+        let _ = fs::remove_dir_all(&dir);
+
+        assert!(resolved.ends_with("/CHANGELOG.md"));
     }
 }
