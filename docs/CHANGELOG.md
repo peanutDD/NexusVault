@@ -14,6 +14,7 @@
 
 - `codex pr-auto-fix` 的 Pipeline 新增 `DocumentationSkill`：每次自动修复会把 PR 号、轮次、变更文件清单、安全扫描结果、质量评分写入 `docs/CHANGELOG.md`
 - 增加 `DryRunFeedbackSkill`：本地未传 `--yes` 时，自动在 PR 留评论说明“已生成但未推送”，避免静默停留在本地
+- `scripts/codex-cli` 代码完成模块化解耦：从单文件实现拆分为 `src/lib.rs + config/llm/repo/skills/pipeline/runtime`，二进制入口迁移至 `src/bin/codex.rs`
 - Pipeline 已支持插拔式扩展（如安全审计 `SecurityCheckSkill`、质量评分 `QualityScoreSkill`），并在 PR 评论中展示结果
 
 **收益**

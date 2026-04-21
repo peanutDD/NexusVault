@@ -2,7 +2,7 @@
 * **影响程度:** [高] - 本次更新为项目引入了一套完整的「AI 自动化代码审查与修复」闭环系统。深度整合了 GitHub Actions、Gemini Code Assist 和基于本地的 Codex 执行引擎，大幅提升了 PR Review 和修复的自动化水平。
 * **核心变更:**
   * ✨ **新增自动化流水线:** 创建了 `.github/workflows/ai-auto-fix.yml`，能够监听 PR 中 Gemini 机器人的评论，并自动触发本地修复任务。
-  * ✨ **引入 Codex CLI 工具:** 使用 Rust 开发了 `scripts/codex-cli` (`sp` CLI)，用于解析 Gemini 建议、利用 GPT-5.4 智能生成代码补丁并安全应用提交。
+  * ✨ **引入 Codex CLI 工具:** 使用 Rust 开发了 `scripts/codex-cli`（可执行命令为 `codex`），用于解析 Gemini 建议、利用 GPT-5.4 智能生成代码补丁并安全应用提交。
   * ✨ **制定 AI 约束规范:** 新增了自动化工作流的设计文档 (`auto-review-flow.md`) 及永久性安全约束 (`ai-auto-fix-rules.md`)，严禁修改敏感配置文件和锁文件。
   * ✨ **文档更新:** 更新了 `CHANGELOG.md`（记录了后端模块化等历史修改）及 `README.md`。
 
@@ -20,13 +20,11 @@ graph TD
         C --> D["触发 codex pr-auto-fix"]:::action
     end
 
-    subgraph CLI ["Codex CLI 引擎 (scripts/codex-cli/src/main.rs)"]
-        D --> E["pr_auto_fix()"]:::script
-        E --> F["read_gemini_review()"]:::script
-        F --> G["decide_fix_or_skip()"]:::script
-        G --> H["generate_fix_patch()"]:::script
-        H --> I["apply_patch_safely()"]:::script
-        I --> J["commit_and_tag_round()"]:::script
+    subgraph CLI ["Codex CLI 引擎 (scripts/codex-cli/src/*)"]
+        D --> E["runtime::pr_auto_fix()"]:::script
+        E --> F["pipeline.run()"]:::script
+        F --> G["skills::* (Read/Decide/Fix/Security/Score/Doc/Feedback)"]:::script
+        G --> H["repo::* (gh/git/changelog/comment)"]:::script
     end
 
     subgraph Docs ["设计规范 (docs/)"]
@@ -39,10 +37,10 @@ graph TD
 
 ### ⚙️ 核心自动化引擎 (Codex CLI)
 * **What Changed:** 
-  * 新增基于 Rust 的 `codex-cli`（可执行命令为 `sp`）。该 CLI 包含了 `Review`, `Refactor`, `Doc`, 和核心的 `PrAutoFix` 子命令。
+  * 新增基于 Rust 的 `codex-cli`（可执行命令为 `codex`）。该 CLI 包含了 `Review`, `Refactor`, `Doc`, 和核心的 `PrAutoFix` 子命令。
   * **情报解析**: `read_gemini_review()` 通过调用大模型 API 将非结构化的 Markdown 评论转为包含 `severity`、`file`、`suggestion` 的结构化 JSON。
   * **安全决策**: `decide_fix_or_skip()` 实现了硬过滤规则，仅允许修复 `Medium`、`High`、`Critical` 级别问题，并自动忽略锁文件（如 `Cargo.lock`）和配置文件（如 `.env`）。
-  * **补丁应用**: `generate_fix_patch()` 通过 GitHub API 抓取源文件并生成 `unified diff` 格式补丁；随后 `apply_patch_safely()` 利用 `git apply` 在本地隔离环境进行安全注入，并最终由 `commit_and_tag_round()` 提交推送。
+  * **补丁应用**: `generate_fix_patch()` 通过 GitHub API 抓取源文件并生成 `unified diff` 格式补丁；随后 `apply_patch_safely()` 利用 `git apply` 在本地隔离环境进行安全注入，并最终由 `commit_and_push()` 提交推送。
 
 * **依赖项变更 (Cargo.toml):**
 | Package | Version | Description |

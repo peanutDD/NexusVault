@@ -37,6 +37,8 @@ codex pr-auto-fix \
   --yes
 ```
 
+> 说明：本地手动执行时若不传 `--yes`，CLI 会进入 Dry-Run 模式：仅在 PR 留评论说明“已生成但未推送”，不执行提交与推送。
+
 ## 3. 状态回传 (State Feedback)
 CLI 运行结果以 JSON 格式输出，工作流通过 `jq` 解析状态：
 - `fixed`: 布尔值，指示是否应用了修复。

@@ -6,7 +6,8 @@ autobins = false
 
 [[bin]]
 name = "codex"
-path = "src/main.rs"
+# 二进制入口迁移至 src/bin/：与 Rust 标准项目结构对齐，并把可复用逻辑下沉到 src/lib.rs（便于技能编排模块化与测试）
+path = "src/bin/codex.rs"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }

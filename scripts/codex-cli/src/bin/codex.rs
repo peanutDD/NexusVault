@@ -1,0 +1,133 @@
+use clap::{Parser, Subcommand};
+use codex_cli::llm::CodexClient;
+use codex_cli::repo;
+use codex_cli::runtime;
+use std::fs;
+use std::path::PathBuf;
+
+#[derive(Parser)]
+#[command(name = "codex")]
+#[command(about = "Codex Superpowers CLI - 让 Agent 规则在命令行起飞", long_about = None)]
+#[command(version = "1.0")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Review {
+        #[arg(short, long)]
+        path: PathBuf,
+        #[arg(short, long)]
+        fix: bool,
+    },
+    Refactor {
+        #[arg(short, long)]
+        path: PathBuf,
+        #[arg(short, long, default_value = "modularize")]
+        strategy: String,
+    },
+    Doc {
+        #[arg(short, long)]
+        path: PathBuf,
+        #[arg(short, long, default_value = "api")]
+        kind: String,
+    },
+    PrAutoFix {
+        #[arg(long)]
+        pr_number: u32,
+        #[arg(long)]
+        gemini_review: String,
+        #[arg(long, default_value = "2")]
+        max_rounds: u8,
+        #[arg(long, default_value = "false")]
+        yes: bool,
+    },
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cli = Cli::parse();
+    let client = CodexClient::new()?;
+    let agents_rules = repo::read_agents_rules();
+
+    match &cli.command {
+        Commands::Review { path, fix } => {
+            println!("🕵️  正在启动 Superpowers 审查: {:?}", path);
+            let code = fs::read_to_string(path)?;
+
+            let system_prompt = format!(
+                "你是一个资深架构师，请根据以下 AGENTS.md 规则审查代码：\n\n{}",
+                agents_rules
+            );
+            let user_prompt = format!(
+                "请审查以下代码，并指出不符合规则的地方。如果 fix 模式开启，请直接返回修复后的完整代码，并放在代码块中：\n\n```rust\n{}\n```",
+                code
+            );
+
+            let result = client.call(&system_prompt, &user_prompt).await?;
+
+            if *fix {
+                if let Some(fixed_code) = repo::extract_code_block(&result) {
+                    fs::write(path, fixed_code)?;
+                    println!("✅ 代码已根据 AI 建议自动修复。");
+                } else {
+                    println!("⚠️ AI 未返回可自动修复的代码块，请查看建议：\n\n{}", result);
+                }
+            } else {
+                println!("🔍 审查报告：\n\n{}", result);
+            }
+        }
+        Commands::Refactor { path, strategy } => {
+            println!("🔨 正在执行重构 [{}]: {:?}", strategy, path);
+            let code = fs::read_to_string(path)?;
+
+            let system_prompt = format!("你是一个重构专家，规则如下：\n\n{}", agents_rules);
+            let user_prompt = format!(
+                "请按照 '{}' 策略重构以下代码，返回重构后的代码块：\n\n```rust\n{}\n```",
+                strategy, code
+            );
+
+            let result = client.call(&system_prompt, &user_prompt).await?;
+            if let Some(new_code) = repo::extract_code_block(&result) {
+                fs::write(path, new_code)?;
+                println!("✨ 重构完成。");
+            } else {
+                println!("⚠️ 未能提取重构后的代码。");
+            }
+        }
+        Commands::Doc { path, kind } => {
+            println!("📝 正在生成 {} 文档: {:?}", kind, path);
+            let code = fs::read_to_string(path)?;
+
+            let system_prompt = "你是一个技术文档专家，请根据代码生成简洁的 Markdown 文档。";
+            let user_prompt = format!(
+                "请为以下代码生成 {} 类型的文档：\n\n```rust\n{}\n```",
+                kind, code
+            );
+
+            let result = client.call(system_prompt, &user_prompt).await?;
+            println!("📄 生成的文档内容：\n\n{}", result);
+        }
+        Commands::PrAutoFix {
+            pr_number,
+            gemini_review,
+            max_rounds,
+            yes,
+        } => {
+            eprintln!("🤖 启动 PR Auto-Fix #{}", pr_number);
+            let result =
+                runtime::pr_auto_fix(*pr_number, gemini_review, *max_rounds, *yes, &client).await;
+            match result {
+                Ok(output) => println!("{}", output),
+                Err(e) => {
+                    eprintln!("❌ PR Auto-Fix 失败: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
