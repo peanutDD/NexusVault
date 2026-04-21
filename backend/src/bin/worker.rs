@@ -13,14 +13,16 @@ use file_storage_backend::services::file::create_storage;
 use file_storage_backend::services::task_queue::{run_gif_preview_worker, run_hls_worker};
 use file_storage_backend::AppState;
 
+use file_storage_backend::tracing::init_tracing;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
     init_tracing();
 
     let metrics_renderer = init_metrics()
         .map_err(|e| anyhow::anyhow!("Failed to install Prometheus recorder: {}", e))?;
 
-    dotenv::dotenv().ok();
     let config = Arc::new(Config::from_env()?);
     let pool = create_pool(&config.database_url).await?;
     let read_pool = match config.read_replica_database_url.as_deref() {
@@ -161,11 +163,4 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
-}
-
-fn init_tracing() {
-    use tracing_subscriber::fmt;
-    use tracing_subscriber::EnvFilter;
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    fmt().with_env_filter(filter).init();
 }

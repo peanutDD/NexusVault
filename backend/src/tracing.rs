@@ -1,1 +1,103 @@
-// =============================================================================\n// 依赖：标准库\n// =============================================================================\nuse std::sync::Arc;\n\n// =============================================================================\n// 依赖：三方库\n// =============================================================================\nuse opentelemetry::global;\nuse opentelemetry::sdk::propagation::TraceContextPropagator;\nuse opentelemetry::sdk::trace::Tracer;\nuse opentelemetry::sdk::{trace, Resource};\nuse opentelemetry::{Key, Value};\nuse opentelemetry_otlp::{WithExportConfig, OtlpPipeline};\nuse opentelemetry_semantic_conventions as semconv;\nuse tracing_subscriber::fmt::format::FmtSpan;\nuse tracing_subscriber::EnvFilter;\n\n// =============================================================================\n// OpenTelemetry 初始化\n// =============================================================================\n\n/// 初始化 OpenTelemetry 分布式追踪系统。\n///\n/// 支持以下环境变量配置：\n/// - `OTEL_EXPORTER_OTLP_ENDPOINT`: OTLP gRPC 端点（默认: http://localhost:4317）\n/// - `OTEL_SERVICE_NAME`: 服务名称（默认: file-storage-backend）\n/// - `OTEL_TRACES_SAMPLER`: 采样策略（default/always_on/always_off，默认: default）\n/// - `OTEL_TRACES_SAMPLER_ARG`: 采样率（0.0-1.0，仅 `parentbased_traceidbased` 需要）\npub fn init_tracing() {\n    let service_name = std::env::var(\"OTEL_SERVICE_NAME\")\n        .unwrap_or_else(|_| \"file-storage-backend\".to_string());\n\n    // 构建资源（服务名称 + 版本 + OS 信息）\n    let resource = Resource::new(vec![\n        Key::from_static_str(semconv::attribute::SERVICE_NAME).string(service_name),\n        Key::from_static_str(\"service.version\").string(env!(\"CARGO_PKG_VERSION\")),\n        Key::from_static_str(\"os.name\").string(std::env::consts::OS),\n        Key::from_static_str(\"os.version\").string(std::env::consts::ARCH),\n    ]);\n\n    // 读取采样配置\n    let sampler = match std::env::var(\"OTEL_TRACES_SAMPLER\").as_deref() {\n        Ok(\"always_on\") => trace::Sampler::AlwaysOn,\n        Ok(\"always_off\") => trace::Sampler::AlwaysOff,\n        Ok(\"parentbased_always_on\") => trace::Sampler::ParentBased(Box::new(trace::Sampler::AlwaysOn)),\n        Ok(\"parentbased_always_off\") => trace::Sampler::ParentBased(Box::new(trace::Sampler::AlwaysOff)),\n        Ok(\"parentbased_traceidbased\") => {\n            let rate: f64 = std::env::var(\"OTEL_TRACES_SAMPLER_ARG\")\n                .ok()\n                .and_then(|s| s.parse().ok())\n                .unwrap_or(0.1); // 默认 10% 采样率\n            trace::Sampler::ParentBased(Box::new(trace::Sampler::TraceIdRatioBased(rate)))\n        }\n        _ => trace::Sampler::ParentBased(Box::new(trace::Sampler::TraceIdRatioBased(0.1))),\n    };\n\n    // 构建 OTLP 导出器（支持 gRPC 和 HTTP/JSON）\n    let otlp_endpoint = std::env::var(\"OTEL_EXPORTER_OTLP_ENDPOINT\")\n        .unwrap_or_else(|_| \"http://localhost:4317\".to_string());\n\n    let exporter = opentelemetry_otlp::new_exporter()\n        .tonic()\n        .with_endpoint(otlp_endpoint);\n\n    // 构建 Tracer\n    let tracer = opentelemetry_otlp::new_pipeline()\n        .tracing()\n        .with_exporter(exporter)\n        .with_trace_config(\n            trace::config()\n                .with_resource(resource)\n                .with_sampler(sampler),\n        )\n        .install_batch(opentelemetry::runtime::Tokio)\n        .expect(\"Failed to install OpenTelemetry tracer\");\n\n    // 设置全局 TraceContextPropagator（W3C Trace Context）\n    global::set_text_map_propagator(TraceContextPropagator::new());\n\n    // 替换 tracing_subscriber 的格式化器，注入 trace_id/span_id\n    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {\n        EnvFilter::new(\"file_storage_backend=debug,axum=info,opentelemetry=info,tonic=info\")\n    });\n\n    tracing_subscriber::fmt()\n        .with_env_filter(env_filter)\n        .with_span_events(FmtSpan::FULL)\n        .with_target(true)\n        .with_thread_names(true)\n        .with_line_number(true)\n        .with_file(true)\n        .fmt_span(tracing_subscriber::fmt::format::FmtSpan::FULL)\n        .with_writer(std::io::stderr)\n        .init();\n\n    // 注册 OpenTelemetry 兼容层\n    tracing::info!(\n        service.name = %service_name,\n        otel.endpoint = %otlp_endpoint,\n        sampler = ?sampler,\n        \"OpenTelemetry tracing initialized\"\n    );\n}\n\n/// 获取当前 Tracer 实例（用于手动创建 Span）\npub fn get_tracer() -> Tracer {\n    global::tracer(\"file-storage-backend\")\n}\n\n/// 创建带上下文的 Span（简化版）\npub fn span<T: AsRef<str>>(name: T) -> tracing::Span {\n    tracing::info_span!(\n        \"opentelemetry_span\",\n        otel.name = name.as_ref(),\n        otel.kind = \"internal\",\n        otel.status_code = \"unset\"\n    )\n}\n\n
+use opentelemetry::global;
+use opentelemetry::trace::TracerProvider as _;
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::{SpanExporter, WithExportConfig};
+use opentelemetry_semantic_conventions as semconv;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
+use opentelemetry_sdk::runtime::Tokio;
+use opentelemetry_sdk::trace::{self as sdktrace, TracerProvider};
+use opentelemetry_sdk::Resource;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
+
+/// 初始化 OpenTelemetry 分布式追踪系统。
+///
+/// 支持以下环境变量配置：
+/// - `OTEL_EXPORTER_OTLP_ENDPOINT`: OTLP gRPC 端点（默认: http://localhost:4317）
+/// - `OTEL_SERVICE_NAME`: 服务名称（默认: file-storage-backend）
+/// - `OTEL_TRACES_SAMPLER`: 采样策略（always_on/always_off/parentbased_traceidbased，默认: parentbased_traceidbased）
+/// - `OTEL_TRACES_SAMPLER_ARG`: 采样率（0.0-1.0，默认: 0.1）
+pub fn init_tracing() {
+    let service_name = std::env::var("OTEL_SERVICE_NAME")
+        .unwrap_or_else(|_| "file-storage-backend".to_string());
+
+    // 构建资源（服务名称 + 版本 + OS 信息）
+    let resource = Resource::new(vec![
+        KeyValue::new(semconv::resource::SERVICE_NAME, service_name.clone()),
+        KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+        KeyValue::new("os.name", std::env::consts::OS),
+        KeyValue::new("os.version", std::env::consts::ARCH),
+    ]);
+
+    // 读取采样配置
+    let sampler = match std::env::var("OTEL_TRACES_SAMPLER").as_deref() {
+        Ok("always_on") => sdktrace::Sampler::AlwaysOn,
+        Ok("always_off") => sdktrace::Sampler::AlwaysOff,
+        Ok("parentbased_always_on") => sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::AlwaysOn)),
+        Ok("parentbased_always_off") => sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::AlwaysOff)),
+        Ok("parentbased_traceidbased") => {
+            let rate: f64 = std::env::var("OTEL_TRACES_SAMPLER_ARG")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0.1);
+            sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::TraceIdRatioBased(rate)))
+        }
+        _ => sdktrace::Sampler::ParentBased(Box::new(sdktrace::Sampler::TraceIdRatioBased(0.1))),
+    };
+
+    // 构建 OTLP 导出器
+    let otlp_endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:4317".to_string());
+
+    let exporter = SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(otlp_endpoint.clone());
+
+    let exporter = exporter.build().expect("Failed to build OTLP span exporter");
+
+    let provider = TracerProvider::builder()
+        .with_batch_exporter(exporter, Tokio)
+        .with_resource(resource)
+        .with_sampler(sampler.clone())
+        .build();
+
+    global::set_tracer_provider(provider.clone());
+    let tracer = provider.tracer("file-storage-backend");
+
+    // 设置全局 TraceContextPropagator（W3C Trace Context）
+    global::set_text_map_propagator(TraceContextPropagator::new());
+
+    // 构建 tracing 层
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::new("file_storage_backend=debug,axum=info,opentelemetry=info,tonic=info")
+    });
+
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_span_events(FmtSpan::CLOSE)
+        .with_thread_names(true)
+        .with_line_number(true)
+        .with_file(true);
+
+    // 注册所有层
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt_layer)
+        .with(telemetry)
+        .init();
+
+    tracing::info!(
+        service.name = %service_name,
+        otel.endpoint = %otlp_endpoint,
+        sampler = ?sampler,
+        "OpenTelemetry tracing initialized"
+    );
+}
+
+/// 获取当前 Tracer 实例（用于手动创建 Span）
+pub fn get_tracer() -> global::BoxedTracer {
+    global::tracer_provider().tracer("file-storage-backend")
+}

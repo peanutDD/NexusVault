@@ -45,27 +45,22 @@
 
 ### 🎨 UI / 主题改造
 
-#### 3. 上传弹窗、预览页与列表区域逐步改为主题变量驱动
+#### 3. 全面实现前端界面的动态主题（Light/Dark/Purple）
 
 **变更内容**
 
-- 修复多个文件页面在浅色/深色/紫色三主题下仍使用写死颜色的问题
-- 上传弹窗相关区域逐步改为使用语义化变量，如：
-  - `--upload-surface-bg`
-  - `--upload-text`
-  - `--upload-text-muted`
-  - `--upload-item-*`
-- 预览页相关文字与图标改为使用：
-  - `--preview-text-primary`
-  - `--preview-text-muted`
-  - `--preview-icon`
-- 补充并扩展 `frontend/src/styles/tokens.css` 中的主题变量映射
+- 彻底移除了前端代码中大量硬编码的颜色类名（如 `text-slate-900`、`bg-emerald-500` 等），替换为语义化的 CSS 变量（如 `var(--settings-title)`、`var(--upload-text)` 等）。
+- **上传模块**：上传弹窗（`UploadDialog`）、拖拽区（`UploadDropzone`）、URL 上传表单及文件列表项（`UploadFileItem`）全面适配三种主题，进度条和错误气泡颜色均动态化。
+- **设置模块**：设置页（`Settings`）及其各个子区块（如用户信息、存储空间、修改密码、API Token 等）的背景、边框、文字、按钮全部改用 `--settings-*` 变量驱动。
+- **预览模块**：文件预览页（`FilePreviewContent`）的加载态、错误态、不支持状态的 UI 以及 Markdown 预览（`MarkdownPreview`）的样式去除了明暗硬编码，统一由 `--preview-*` 主题变量控制。
+- **文件网格**：文件夹卡片（`FolderCard`）与下拉菜单配色接入了文件列表相关的玻璃态主题变量。
+- **样式定义**：在 `frontend/src/styles/tokens.css` 和 `index.css` 中补齐并扩展了针对 `light`、`dark` 和 `purple` 主题的上传、设置、预览及文件列表语义变量映射。
 
 **收益**
 
-- 三主题切换时颜色不再依赖组件内硬编码
-- 浅色模式可以正确显示深字白底，深色/紫色主题保持独立视觉风格
-- 后续调整主题时优先改 token，而不是逐个修改组件
+- 三种主题（浅色、深色、紫色）切换时，颜色不再依赖组件内的 Tailwind 颜色硬编码，视觉表现完全一致且准确。
+- 浅色模式可以正确显示深字白底，深色/紫色主题保持独立且协调的视觉风格。
+- 后续调整主题视觉时只需修改 CSS token，无需再逐个排查修改 React 组件。
 
 ---
 
@@ -303,7 +298,32 @@ export function fileNameFontSizePx(vw: number): number {
 
 ---
 
-### 📋 变更汇总
+### � 后端改进与可观测性
+
+#### 7. 引入 OpenTelemetry 分布式追踪（tracing-opentelemetry）
+
+**问题描述**
+
+随着异步任务（如 HLS 视频转码、GIF 预览生成、ZIP 大文件打包）逻辑变复杂，单机日志无法有效跨任务/跨进程追踪耗时瓶颈和请求上下文，难以进行性能排查。
+
+**解决方案**
+
+引入 `tracing-opentelemetry`，基于 W3C Trace Context 为请求和后台 Worker 建立全链路分布式追踪：
+- 在 `backend/src/tracing.rs` 中初始化 OpenTelemetry OTLP 导出器（gRPC）。
+- 升级依赖并解决版本冲突：`opentelemetry` (0.27) / `opentelemetry-otlp` (0.27) / `tracing-opentelemetry` (0.28)。
+- 统一 `main.rs` 和 `worker.rs` 的追踪初始化流程。
+- 为核心后台任务 `run_hls_worker`、`run_gif_preview_worker`、`batch_download_zip` 等函数加上 `#[tracing::instrument]` 宏，注入 `trace_id`、`user_id`、`file_id` 和 `task_id`。
+- 支持环境变量配置 `OTEL_EXPORTER_OTLP_ENDPOINT` 与 `OTEL_TRACES_SAMPLER`（动态采样策略）。
+
+**收益**
+
+- 在可观测性平台（如 Jaeger / Zipkin）中能清晰呈现每个 HTTP 请求或异步转码任务的瀑布流。
+- 排查高并发情况下的资源争用或失败链路变得极其直观。
+- 完善了项目 `docs/TOP_TECH.md`、`docs/OPTIMIZATION_SUMMARY.md` 中的可观测性说明文档。
+
+---
+
+### �📋 变更汇总
 
 | 文件 | 类型 | 说明 |
 |------|------|------|

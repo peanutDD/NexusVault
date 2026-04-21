@@ -67,7 +67,10 @@ where
         .layer(CatchPanicLayer::custom(middleware::panic::JsonPanicHandler))
         .layer(TraceLayer::new_for_http())
         .layer(middleware::request_log::RequestLogLayer)
-        .layer(TimeoutLayer::new(Duration::from_secs(120)))
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(120),
+        ))
         .layer(cors)
         .into_inner();
 

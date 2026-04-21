@@ -66,13 +66,13 @@ fn build_runtime() -> anyhow::Result<tokio::runtime::Runtime> {
 }
 
 async fn async_main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
     otel_init_tracing();
 
     let metrics_renderer = file_storage_backend::middleware::metrics::init_metrics()
         .map_err(|e| anyhow::anyhow!("Failed to install Prometheus recorder: {}", e))?;
     tracing::info!("Prometheus metrics initialized");
 
-    dotenv::dotenv().ok();
     let config = Arc::new(Config::from_env()?);
     let pool = create_pool(&config.database_url).await?;
     let read_pool = match config.read_replica_database_url.as_deref() {

@@ -131,6 +131,7 @@ fn is_zip_cache_fresh(path: &Path, ttl_secs: u64) -> bool {
 }
 
 impl FileService {
+    #[tracing::instrument(skip(self, ids), fields(user_id = %user_id, files_count = ids.len()))]
     pub async fn batch_download_zip(
         &self,
         ids: &[Uuid],
@@ -278,6 +279,7 @@ impl FileService {
         Ok(entries)
     }
 
+    #[tracing::instrument(skip(self, entries, zip_build_permit), fields(user_id = %user_id, entries_count = entries.len()))]
     pub async fn get_or_create_cached_batch_zip(
         self: std::sync::Arc<Self>,
         entries: Vec<(File, String)>,

@@ -644,6 +644,7 @@ pub struct GifPreviewPayload {
 }
 
 /// 简单的 GIF 预览 Worker：从队列中取出 `gif_preview` 任务并执行转码。
+#[tracing::instrument(skip(state, transcode_semaphore, task_type_semaphore), fields(task_id))]
 pub async fn run_gif_preview_worker(
     state: &crate::AppState,
     transcode_semaphore: std::sync::Arc<tokio::sync::Semaphore>,
@@ -654,6 +655,8 @@ pub async fn run_gif_preview_worker(
         Some(t) => t,
         None => return Ok(()),
     };
+
+    tracing::Span::current().record("task_id", &tracing::field::display(task.id));
 
     // 解析 payload
     let payload: GifPreviewPayload = serde_json::from_value(task.payload.clone())
@@ -793,6 +796,7 @@ pub struct HlsPreviewPayload {
 /// - 任务类型级并发配额（`task_type_semaphore`，对应 `TASK_TYPE_CONCURRENCY_hls_preview`）
 /// - 指数退避重试（`mark_pending_with_error`）直至 `MAX_ATTEMPTS` 后死信
 /// - Prometheus 指标（`transcode_jobs_total` / `transcode_duration_seconds`）
+#[tracing::instrument(skip(state, transcode_semaphore, task_type_semaphore), fields(task_id))]
 pub async fn run_hls_worker(
     state: &crate::AppState,
     transcode_semaphore: std::sync::Arc<tokio::sync::Semaphore>,
@@ -803,6 +807,8 @@ pub async fn run_hls_worker(
         Some(t) => t,
         None => return Ok(()),
     };
+
+    tracing::Span::current().record("task_id", &tracing::field::display(task.id));
 
     // 解析 payload
     let payload: HlsPreviewPayload = serde_json::from_value(task.payload.clone())

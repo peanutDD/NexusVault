@@ -40,10 +40,10 @@ impl ApiTokenService {
     /// 生成安全的随机 token
     fn generate_token() -> String {
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         (0..64)
             .map(|_| {
-                let idx = rng.gen_range(0..API_TOKEN_CHARSET.len());
+                let idx = rng.random_range(0..API_TOKEN_CHARSET.len());
                 API_TOKEN_CHARSET[idx] as char
             })
             .collect()

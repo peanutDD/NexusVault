@@ -319,9 +319,12 @@ impl AuthService {
             }
         }
 
-        let code: String = (0..6)
-            .map(|_| rand::thread_rng().gen_range(0..10).to_string())
-            .collect();
+        let code = {
+            let mut rng = rand::rng();
+            (0..6)
+                .map(|_| rng.random_range(0..10).to_string())
+                .collect::<String>()
+        };
         if let Some(redis) = &self.redis {
             redis
                 .set_email_verification_code(user_id, &req.email, &code)

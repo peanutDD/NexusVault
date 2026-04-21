@@ -132,6 +132,7 @@
 | Prometheus metrics + 路径简化 | ✅ | `GET /metrics` 暴露 Prometheus 指标 | 无 | [middleware/metrics.rs](file:///Users/tyone/github/upload-download-util/backend/src/middleware/metrics.rs) |
 | 转码相关指标（gif + hls） | ✅ | `transcode_jobs_total` / `transcode_duration_seconds` / `background_tasks_*` 队列深度 | 无 | [task_queue.rs](file:///Users/tyone/github/upload-download-util/backend/src/services/task_queue.rs) / [worker.rs](file:///Users/tyone/github/upload-download-util/backend/src/bin/worker.rs) |
 | 前端遥测事件上报 | ✅ | `POST /api/telemetry/events`；接收 event_type/action/status/duration_ms/error_message/file_id 等；打结构化日志到 `frontend_telemetry` target | 无独立开关 | [telemetry.rs](file:///Users/tyone/github/upload-download-util/backend/src/api/telemetry.rs) |
+| OpenTelemetry 分布式追踪 | ✅ | 接入 `tracing-opentelemetry`；支持 OTLP 导出（gRPC）；覆盖 API 请求、Worker 异步任务（HLS/GIF）、ZIP 打包等关键路径 | `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_TRACES_SAMPLER` | [tracing.rs](file:///Users/tyone/github/upload-download-util/backend/src/tracing.rs) |
 | 维护后台任务 | ✅ | 启动时自动运行：① ZIP 缓存 TTL 清理；② 过期分块上传会话清理（DB + 临时目录）；③ 文件一致性检查（DB→Storage）；④ 孤儿文件清理（Storage→DB，栈迭代 + 批量查库） | `ORPHAN_CLEANUP_INTERVAL_SECS` / `UPLOAD_SESSION_CLEANUP_INTERVAL_SECS` / `FILES_CONSISTENCY_CHECK_INTERVAL_SECS` 等 | [maintenance.rs](file:///Users/tyone/github/upload-download-util/backend/src/services/maintenance.rs) |
 | 全局过载保护（LoadShed + ConcurrencyLimit） | ✅ | 全局并发 512；上传/分块/列表各有独立并发上限；过载时返回 503 | `UPLOAD_CONCURRENCY` / `LIST_CONCURRENCY` / `CHUNK_CONCURRENCY` 等常量 | [app.rs](file:///Users/tyone/github/upload-download-util/backend/src/app.rs) |
 | DB 查询 / 文件操作 / 认证成功率指标 | 🟡 | `record_db_query` / `record_file_operation` / `record_auth_attempt` 已定义，尚未全部接入关键路径 | 无 | [middleware/metrics.rs](file:///Users/tyone/github/upload-download-util/backend/src/middleware/metrics.rs) |
@@ -228,6 +229,7 @@
   - ✅ Prometheus metrics 与路径简化：[middleware/metrics.rs](file:///Users/tyone/github/upload-download-util/backend/src/middleware/metrics.rs)
   - ✅ 转码相关指标（gif_preview + hls_preview）：`transcode_jobs_total` / `transcode_duration_seconds` / `background_tasks_*` 队列深度，[task_queue.rs](file:///Users/tyone/github/upload-download-util/backend/src/services/task_queue.rs) / [worker.rs](file:///Users/tyone/github/upload-download-util/backend/src/bin/worker.rs)
   - ✅ 前端遥测事件上报（event_type/action/status/duration_ms/file_size）：`POST /api/telemetry/events`，[telemetry.rs](file:///Users/tyone/github/upload-download-util/backend/src/api/telemetry.rs)
+  - ✅ OpenTelemetry 分布式追踪（tracing-opentelemetry）：覆盖 API 请求、Worker 异步任务（HLS/GIF）、ZIP 打包等全链路，支持 W3C Trace Context 传播，[tracing.rs](file:///Users/tyone/github/upload-download-util/backend/src/tracing.rs)
   - ✅ 请求日志中间件（RequestLogLayer）：结构化记录每条请求的 method/path/status/latency
   - 🟡 DB 查询 / 文件操作 / 认证成功率指标：`record_db_query` / `record_file_operation` / `record_auth_attempt` 已定义，尚未在关键路径统一调用；接入后可在 Grafana 看到逐表 QPS 与平均耗时
   - 🟡 队列深度→自动弹性伸缩：已具备指标，是否接 HPA/KEDA 属于部署侧

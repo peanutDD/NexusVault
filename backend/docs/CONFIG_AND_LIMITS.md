@@ -46,6 +46,10 @@
 | `SMTP_USERNAME` | SMTP 认证用户名（一般为发件邮箱） | 可选 |
 | `SMTP_PASSWORD` | SMTP 认证密码（Gmail 需用应用专用密码） | 可选 |
 | `SMTP_FROM` | 发件人地址 | 可选 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry OTLP 导出端点（gRPC） | `http://localhost:4317` |
+| `OTEL_SERVICE_NAME` | 遥测服务名称 | `file-storage-backend` |
+| `OTEL_TRACES_SAMPLER` | 追踪采样策略（`always_on`/`always_off`/`parentbased_traceidbased`） | `parentbased_traceidbased` |
+| `OTEL_TRACES_SAMPLER_ARG` | 追踪采样率（0.0-1.0） | `0.1` |
 
 ## 请求体/业务上限（常量 → constants.rs）
 
