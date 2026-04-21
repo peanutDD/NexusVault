@@ -98,6 +98,45 @@
   - `src-tauri/gen`
   - `.vite`
 
+---
+
+### ⚙️ 后端重构与工程优化
+
+#### 6. 后端配置模块化重构
+
+**变更内容**
+
+- **配置拆分**：将巨大的 `backend/src/config.rs`（23KB+）拆分为 `backend/src/config/` 目录下的多个子模块：
+  - `auth.rs`, `database.rs`, `redis.rs`, `oauth.rs`, `server.rs`, `storage.rs`, `tasks.rs`, `cache.rs`, `search.rs`, `rate_limit.rs`
+- **嵌套结构**：引入了基于 `config` crate 的嵌套 Struct 支持，配置路径更清晰（如 `config.auth.jwt_secret`）。
+- **向后兼容**：通过 `Environment` 别名映射，确保原有的平铺环境变量（如 `DATABASE_URL`, `REDIS_URL`）在不修改 `.env` 的情况下依然有效。
+- **Redis 纠偏**：纠正了 Redis 配置路径，将其从 `database.redis_url` 移至顶级的 `redis.url`。
+
+**收益**
+
+- 极大提升了配置代码的可维护性和可读性。
+- 职责分离，不同功能的配置互不干扰。
+
+---
+
+#### 7. 健康检查与稳定性增强
+
+**变更内容**
+
+- **超时控制**：在 `backend/src/handlers/health.rs` 的 `readiness_check` 端点中，为数据库、Redis 和存储后端的检查添加了显式的超时控制（`tokio::time::timeout`）。
+- **超时设置**：数据库(2s)、Redis(2s)、存储后端(5s)，避免因依赖项挂起导致探测阻塞。
+- **详细日志**：增强了健康检查失败时的日志记录，能够区分是连接错误还是响应超时。
+
+---
+
+#### 8. Docker 与部署优化
+
+**变更内容**
+
+- **镜像升级**：将后端 `Dockerfile` 的 Rust 基础镜像从 `1.75` 升级至 `1.80-slim`。
+- **构建优化**：改用 `slim` 变体显著减小镜像体积，并手动补齐了必要的构建依赖（`pkg-config`, `libssl-dev`）。
+- **忽略文件更新**：更新了 `.gitignore`、`.dockerignore` 和 `.vercelignore`，将 `actions-runner/` 目录纳入忽略范围，防止敏感或无关文件上传。
+
 **修复效果**
 
 - `eslint` 不再扫描 Tauri/Rust 生成产物

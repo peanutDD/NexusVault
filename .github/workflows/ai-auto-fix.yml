@@ -1,0 +1,128 @@
+name: Codex Auto Fix (本地 Runner)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  statuses: read
+
+env:
+  MAX_ROUNDS: 2
+  GEMINI_BOT: gemini-code-assist[bot]
+  GEMINI_TRIGGER_MARKER: "## Gemini Code Assist Review"
+
+jobs:
+  codex-fix:
+    if: >
+      github.event.issue.pull_request
+      && github.event.comment.user.login == 'gemini-code-assist[bot]'
+      && contains(github.event.comment.body, '## Gemini Code Assist Review')
+    runs-on: codex-runner
+
+    steps:
+      - name: Checkout PR 分支
+        run: |
+          gh pr checkout ${{ github.event.issue.number }}
+          # 配置 Git 用户以防提交失败
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 获取当前轮次标签
+        id: round
+        run: |
+          # 获取 PR 标签列表
+          LABELS=$(gh pr view ${{ github.event.issue.number }} --json labels -q '.labels[].name')
+          
+          ROUND_LABEL="gemini-review-round-1"
+          for label in $LABELS; do
+            if [[ "$label" == gemini-review-round-* ]]; then
+              ROUND_LABEL="$label"
+              break
+            fi
+          done
+          echo "current_round=$ROUND_LABEL" >> $GITHUB_OUTPUT
+          echo "Current detected round: $ROUND_LABEL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 轮次上限保护（Round-Max 则停止）
+        if: steps.round.outputs.current_round == 'gemini-review-round-max'
+        run: |
+          echo "已达到最大轮次（2 轮并已完成），停止自动化修复"
+          gh pr comment ${{ github.event.issue.number }} \
+            --body "🤖 **Codex 自动修复已完成 2 轮任务。** 建议人工进行最终 Review。如需再次触发自动修复，请手动将 PR 标签重置为 gemini-review-round-1 并回复 /gemini review。"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 提取 Gemini Review 完整内容
+        id: gemini
+        if: steps.round.outputs.current_round != 'gemini-review-round-max'
+        env:
+          RAW_COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          # 使用中间 env 变量安全注入多行内容
+          echo "REVIEW_BODY<<EOF" >> $GITHUB_ENV
+          echo "$RAW_COMMENT_BODY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: 调用 codex pr-auto-fix (模块化 Skill 编排)
+        if: steps.round.outputs.current_round != 'gemini-review-round-max'
+        id: codex
+        run: |
+          # 1. 直接调用编排好的组合 Skill
+          # 它会自动完成: Parse -> Decide -> Generate -> Apply -> Commit & Tag Round
+          # 注意：我们在 Rust 内部已经处理了 Git 操作和推送，所以这里只需要捕获结果
+          RESULT=$(codex pr-auto-fix \
+            --pr-number ${{ github.event.issue.number }} \
+            --gemini-review "$REVIEW_BODY" \
+            --max-rounds ${{ env.MAX_ROUNDS }} \
+            --yes)
+          
+          echo "skill_result=$RESULT" >> $GITHUB_OUTPUT
+          
+          # 检查是否真的修复了文件 (从 JSON 结果中提取)
+          FIXED=$(echo "$RESULT" | jq -r '.fixed')
+          echo "fixed=$FIXED" >> $GITHUB_OUTPUT
+
+      - name: 升级轮次标签 (基于 Skill 返回结果)
+        if: steps.round.outputs.current_round != 'gemini-review-round-max' && steps.codex.outputs.fixed == 'true'
+        run: |
+          # 确定下一轮标签
+          CURRENT="${{ steps.round.outputs.current_round }}"
+          NEXT="gemini-review-round-max"
+          
+          if [[ "$CURRENT" == "gemini-review-round-1" ]]; then
+            NEXT="gemini-review-round-2"
+          elif [[ "$CURRENT" == "gemini-review-round-2" ]]; then
+            NEXT="gemini-review-round-max"
+          fi
+          
+          # 升级标签
+          gh pr edit ${{ github.event.issue.number }} --remove-label "$CURRENT"
+          gh pr edit ${{ github.event.issue.number }} --add-label "$NEXT"
+          echo "🏷️ 标签升级: $CURRENT -> $NEXT"
+
+          # 触发下一轮或结束
+          if [[ "$NEXT" != "gemini-review-round-max" ]]; then
+            gh pr comment ${{ github.event.issue.number }} --body "/gemini review"
+            echo "🚀 已请求 Gemini 下一轮 Review"
+          else
+            # 这里的 comment 在 Rust 内部 commit_and_tag_round 已经发过一部分了，这里做个收尾
+            echo "✅ 所有自动修复轮次已完成"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 无需修复时通知
+        if: steps.round.outputs.current_round != 'gemini-review-round-max' && steps.codex.outputs.fixed == 'false'
+        run: |
+          gh pr comment ${{ github.event.issue.number }} \
+            --body "🤖 **Codex 分析：此轮无需代码修复。** Gemini 提出的建议可能已手动处理或不适用。建议人工 Review 或直接合并。"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
