@@ -120,8 +120,8 @@ async fn async_main() -> anyhow::Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("Failed to create storage backend: {}", e))?;
 
-    let redis = match config.database.redis_url.as_deref() {
-        Some(url) => Some(create_redis_pool(url)?),
+    let redis = match &config.redis {
+        Some(redis_cfg) => Some(create_redis_pool(&redis_cfg.url)?),
         None => None,
     };
 

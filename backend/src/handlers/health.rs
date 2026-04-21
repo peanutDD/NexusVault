@@ -7,6 +7,8 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use serde_json::json;
+use std::time::Duration;
+use tokio::time::timeout;
 
 use crate::AppState;
 
@@ -29,13 +31,13 @@ pub async fn readiness_check(
     let mut status = "healthy";
     let mut checks = serde_json::Map::new();
 
-    // 1. 数据库检查
-    let db_ok = match sqlx::query("SELECT 1").execute(&state.pool).await {
-        Ok(_) => {
+    // 1. 数据库检查 (超时设置为 2 秒)
+    let db_ok = match timeout(Duration::from_secs(2), sqlx::query("SELECT 1").execute(&state.pool)).await {
+        Ok(Ok(_)) => {
             checks.insert("database".to_string(), json!({ "status": "up" }));
             true
         }
-        Err(e) => {
+        Ok(Err(e)) => {
             tracing::error!("Readiness check: database connection failed: {}", e);
             checks.insert(
                 "database".to_string(),
@@ -44,21 +46,32 @@ pub async fn readiness_check(
             status = "unhealthy";
             false
         }
+        Err(_) => {
+            tracing::error!("Readiness check: database check timed out after 2s");
+            checks.insert(
+                "database".to_string(),
+                json!({ "status": "down", "error": "check timed out" }),
+            );
+            status = "unhealthy";
+            false
+        }
     };
 
-    // 2. Redis 检查 (如果配置了)
+    // 2. Redis 检查 (如果配置了，超时设置为 2 秒)
     let redis_ok = if let Some(pool) = &state.redis {
-        match pool.get().await {
-            Ok(mut conn) => {
-                match deadpool_redis::redis::cmd("PING")
-                    .query_async::<_, String>(&mut conn)
-                    .await
+        match timeout(Duration::from_secs(2), pool.get()).await {
+            Ok(Ok(mut conn)) => {
+                match timeout(
+                    Duration::from_secs(2),
+                    deadpool_redis::redis::cmd("PING").query_async::<_, String>(&mut conn),
+                )
+                .await
                 {
-                    Ok(_) => {
+                    Ok(Ok(_)) => {
                         checks.insert("redis".to_string(), json!({ "status": "up" }));
                         true
                     }
-                    Err(e) => {
+                    Ok(Err(e)) => {
                         tracing::error!("Readiness check: redis ping failed: {}", e);
                         checks.insert(
                             "redis".to_string(),
@@ -67,13 +80,31 @@ pub async fn readiness_check(
                         status = "unhealthy";
                         false
                     }
+                    Err(_) => {
+                        tracing::error!("Readiness check: redis ping timed out after 2s");
+                        checks.insert(
+                            "redis".to_string(),
+                            json!({ "status": "down", "error": "ping timed out" }),
+                        );
+                        status = "unhealthy";
+                        false
+                    }
                 }
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 tracing::error!("Readiness check: redis connection pool failed: {}", e);
                 checks.insert(
                     "redis".to_string(),
                     json!({ "status": "down", "error": "pool exhaustion" }),
+                );
+                status = "unhealthy";
+                false
+            }
+            Err(_) => {
+                tracing::error!("Readiness check: redis pool get timed out after 2s");
+                checks.insert(
+                    "redis".to_string(),
+                    json!({ "status": "down", "error": "connection timed out" }),
                 );
                 status = "unhealthy";
                 false
@@ -84,17 +115,26 @@ pub async fn readiness_check(
         true
     };
 
-    // 3. 存储检查
-    let storage_ok = match state.storage.health_check().await {
-        Ok(_) => {
+    // 3. 存储检查 (超时设置为 5 秒，存储操作可能稍慢)
+    let storage_ok = match timeout(Duration::from_secs(5), state.storage.health_check()).await {
+        Ok(Ok(_)) => {
             checks.insert("storage".to_string(), json!({ "status": "up" }));
             true
         }
-        Err(e) => {
+        Ok(Err(e)) => {
             tracing::error!("Readiness check: storage backend failed: {}", e);
             checks.insert(
                 "storage".to_string(),
                 json!({ "status": "down", "error": format!("{}", e) }),
+            );
+            status = "unhealthy";
+            false
+        }
+        Err(_) => {
+            tracing::error!("Readiness check: storage check timed out after 5s");
+            checks.insert(
+                "storage".to_string(),
+                json!({ "status": "down", "error": "check timed out" }),
             );
             status = "unhealthy";
             false

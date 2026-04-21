@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 pub mod auth;
 pub mod database;
+pub mod redis;
 pub mod oauth;
 pub mod rate_limit;
 pub mod server;
@@ -15,6 +16,7 @@ pub mod cache;
 
 pub use auth::AuthConfig;
 pub use database::DatabaseConfig;
+pub use redis::RedisConfig;
 pub use oauth::OAuthConfig;
 pub use rate_limit::RateLimitConfig;
 pub use server::ServerConfig;
@@ -26,6 +28,7 @@ pub use cache::CacheConfig;
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub database: DatabaseConfig,
+    pub redis: Option<RedisConfig>,
     pub auth: AuthConfig,
     pub storage: StorageConfig,
     pub server: ServerConfig,
@@ -88,7 +91,7 @@ impl Config {
         let aliases = [
             ("DATABASE_URL", "database.url"),
             ("READ_REPLICA_DATABASE_URL", "database.read_replica_url"),
-            ("REDIS_URL", "database.redis_url"),
+            ("REDIS_URL", "redis.url"),
             ("JWT_SECRET", "auth.jwt_secret"),
             ("JWT_EXPIRY", "auth.jwt_expiry"),
             ("API_TOKEN_HMAC_SECRET", "auth.api_token_hmac_secret"),

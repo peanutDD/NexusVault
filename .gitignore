@@ -75,5 +75,8 @@ coverage/
 *.temp
 .cache/
 
+# GitHub Actions Runner
+actions-runner/
+
 # Mobile client
 /mobile/

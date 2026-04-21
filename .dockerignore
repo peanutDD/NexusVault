@@ -30,6 +30,9 @@ Cargo.lock
 .env.local
 .env.*.local
 
+# GitHub Actions Runner
+actions-runner
+
 # Build artifacts
 dist
 build

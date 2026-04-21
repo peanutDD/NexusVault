@@ -1,7 +1,6 @@
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct DatabaseConfig {
+pub struct RedisConfig {
     pub url: String,
-    pub read_replica_url: Option<String>,
 }
