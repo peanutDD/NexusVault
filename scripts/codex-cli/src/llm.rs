@@ -3,6 +3,11 @@ use crate::types::{ChatRequest, ChatResponse, Message};
 use dotenvy::dotenv;
 use std::env;
 
+/// 负责与 OpenAI 兼容 Chat Completions API 通信的轻量客户端。
+///
+/// 设计要点：
+/// - API Key 仅保存在内存字段中，不落盘、不打印
+/// - base/model 从环境变量读取，便于在 GitHub Runner 与本地切换
 pub struct CodexClient {
     api_key: String,
     api_base: String,
@@ -10,6 +15,10 @@ pub struct CodexClient {
 }
 
 impl CodexClient {
+    /// 初始化客户端。
+    ///
+    /// - 先尝试加载 `.env`（允许本地开发便捷配置）
+    /// - 缺少 `OPENAI_API_KEY` 直接失败：这是硬依赖，避免“静默空跑”
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         dotenv().ok();
         let api_key = env::var("OPENAI_API_KEY").map_err(|_| "请在 .env 中设置 OPENAI_API_KEY")?;
@@ -22,6 +31,11 @@ impl CodexClient {
         })
     }
 
+    /// 执行一次对话调用并返回模型输出的文本。
+    ///
+    /// 约定：
+    /// - 仅返回 `choices[0].message.content`
+    /// - 非 2xx 响应会返回带 body 的错误，便于排障（但不包含密钥）
     pub async fn call(
         &self,
         system_prompt: &str,

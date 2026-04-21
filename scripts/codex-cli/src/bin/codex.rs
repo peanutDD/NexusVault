@@ -5,6 +5,11 @@ use codex_cli::runtime;
 use std::fs;
 use std::path::PathBuf;
 
+/// CLI 参数入口。
+///
+/// 说明：
+/// - `Review/Refactor/Doc` 是面向本地单文件的辅助命令（主要用于快速试验 prompt）
+/// - `PrAutoFix` 是工作流入口：stdout 输出 JSON 给 GitHub Actions 解析，日志走 stderr
 #[derive(Parser)]
 #[command(name = "codex")]
 #[command(about = "Codex Superpowers CLI - 让 Agent 规则在命令行起飞", long_about = None)]
@@ -14,26 +19,31 @@ struct Cli {
     command: Commands,
 }
 
+/// 子命令集合。
 #[derive(Subcommand)]
 enum Commands {
+    /// 审查单个文件；可选 `--fix` 直接把模型返回的代码块写回文件。
     Review {
         #[arg(short, long)]
         path: PathBuf,
         #[arg(short, long)]
         fix: bool,
     },
+    /// 按指定策略对单个文件重构；策略由 prompt 控制（例如 "modularize"）。
     Refactor {
         #[arg(short, long)]
         path: PathBuf,
         #[arg(short, long, default_value = "modularize")]
         strategy: String,
     },
+    /// 基于单个文件生成文档（输出到 stdout，不写入文件）。
     Doc {
         #[arg(short, long)]
         path: PathBuf,
         #[arg(short, long, default_value = "api")]
         kind: String,
     },
+    /// 针对 PR 的 Gemini Review 执行自动修复（供 GitHub Actions 调用）。
     PrAutoFix {
         #[arg(long)]
         pr_number: u32,
@@ -57,6 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("🕵️  正在启动 Superpowers 审查: {:?}", path);
             let code = fs::read_to_string(path)?;
 
+            // 把仓库的 AGENTS 规则注入 system prompt，减少“误改/越界”概率。
             let system_prompt = format!(
                 "你是一个资深架构师，请根据以下 AGENTS.md 规则审查代码：\n\n{}",
                 agents_rules
@@ -116,6 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_rounds,
             yes,
         } => {
+            // 日志走 stderr；stdout 只输出 JSON 结果（供 workflow 解析）。
             eprintln!("🤖 启动 PR Auto-Fix #{}", pr_number);
             let result =
                 runtime::pr_auto_fix(*pr_number, gemini_review, *max_rounds, *yes, &client).await;

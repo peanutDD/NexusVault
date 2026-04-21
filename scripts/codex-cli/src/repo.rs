@@ -3,6 +3,11 @@ use std::fs;
 use std::process::Command as StdCommand;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// 从大模型输出中提取第一个代码块内容。
+///
+/// 为什么需要：
+/// - `Review/Refactor/Doc` 等子命令要求模型返回代码块
+/// - 模型有时会用 ```rust 或 ``` 包裹，这里做一次“尽量提取”
 pub fn extract_code_block(text: &str) -> Option<String> {
     let start_tag = "```rust";
     let end_tag = "```";
@@ -25,6 +30,9 @@ pub fn extract_code_block(text: &str) -> Option<String> {
     None
 }
 
+/// 获取当前 git 仓库根目录。
+///
+/// 作为多数 repo 相关操作的前置条件（例如读取 `AGENTS.md`、写入 `docs/CHANGELOG.md`）。
 pub fn git_repo_root() -> Result<String, Box<dyn std::error::Error>> {
     let output = StdCommand::new("git")
         .args(["rev-parse", "--show-toplevel"])
@@ -35,6 +43,9 @@ pub fn git_repo_root() -> Result<String, Box<dyn std::error::Error>> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+/// 读取仓库根目录下的 `AGENTS.md` 规则文本（用于注入到模型 system prompt）。
+///
+/// 读取失败时使用一个最小兜底规则，避免 CLI 直接崩溃影响可用性。
 pub fn read_agents_rules() -> String {
     let root = git_repo_root().ok();
     if let Some(root) = root {
@@ -46,6 +57,7 @@ pub fn read_agents_rules() -> String {
     "严格遵循项目架构铁律和 TDD 铁律。".to_string()
 }
 
+/// 构建写入 CHANGELOG 的条目文本（稳定格式，便于后续检索/复盘）。
 pub fn build_changelog_entry(input: &ChangelogEntryInput) -> String {
     let mut files = input.files.clone();
     files.sort();
@@ -74,6 +86,12 @@ pub fn build_changelog_entry(input: &ChangelogEntryInput) -> String {
     header + &body
 }
 
+/// 将条目插入到 `docs/CHANGELOG.md` 中 `### 🤖 AI 自动修复` 区块下。
+///
+/// 插入策略：
+/// - 若已存在该小节：插入到小节标题之后（最靠前，倒序）
+/// - 若不存在但存在 `[未发布]`：在其下创建小节并插入
+/// - 否则：追加到文末（兜底）
 pub fn update_changelog(
     changelog_path: &str,
     entry: &str,
@@ -103,6 +121,9 @@ pub fn update_changelog(
     Ok(())
 }
 
+/// 在 repo 根目录下的 `docs/CHANGELOG.md` 追加一次 “AI 自动修复” 记录。
+///
+/// 该函数会把 `docs/CHANGELOG.md` 加入 `fixed_files`，以确保后续提交/推送包含变更记录。
 pub fn append_ai_changelog(
     fixed_files: &mut Vec<String>,
     input: &ChangelogEntryInput,
@@ -130,10 +151,15 @@ pub fn append_ai_changelog(
     Ok(())
 }
 
+/// 获取当前 Unix 时间戳（秒）。
 pub fn now_unix_ts() -> Result<u64, Box<dyn std::error::Error>> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
 }
 
+/// 通过 GitHub CLI 以 raw 形式读取仓库文件内容。
+///
+/// 选择 `gh api ... Accept: raw` 的原因：
+/// - 避免 base64/JSON 包装层，拿到直接文本用于 diff 生成
 pub fn gh_get_file_raw(repo: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
     let output = StdCommand::new("gh")
         .args([
@@ -150,6 +176,11 @@ pub fn gh_get_file_raw(repo: &str, path: &str) -> Result<String, Box<dyn std::er
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+/// 将 unified diff 补丁以“临时文件 + git apply”方式安全应用到工作区。
+///
+/// 这样做的原因：
+/// - `git apply` 能做上下文匹配与失败回滚（比直接写文件更安全）
+/// - 临时文件放在系统 temp 目录，避免污染仓库
 pub fn apply_patch_safely(
     file_path: &str,
     patch: &str,
@@ -166,6 +197,9 @@ pub fn apply_patch_safely(
     Ok(status.success())
 }
 
+/// 提交并推送本轮修复。
+///
+/// 注意：message 带 `[skip ci]`，避免自触发 CI/循环修复。
 pub fn commit_and_push(fixed_files: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let msg = format!(
         "[skip ci] 🤖 codex auto-fix: 修复 {} 个文件 (基于 Gemini Review)",
@@ -186,6 +220,7 @@ pub fn commit_and_push(fixed_files: &[String]) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+/// 在指定 PR 下发布评论（用于 Dry-Run 提示与修复结果回传）。
 pub fn post_comment(pr_number: u32, body: &str) -> Result<(), Box<dyn std::error::Error>> {
     StdCommand::new("gh")
         .args(["pr", "comment", &format!("{}", pr_number), "--body", body])

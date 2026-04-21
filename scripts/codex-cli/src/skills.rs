@@ -3,6 +3,11 @@ use crate::repo;
 use crate::types::{ChangelogEntryInput, ReviewData, ReviewIssue};
 use serde::{Deserialize, Serialize};
 
+/// Pipeline 运行期共享上下文。
+///
+/// 设计原则：
+/// - Skill 只读/只写自己负责的字段，避免“全局脚本”式的隐式耦合
+/// - `auto_push` 用于区分 CI/Runner 与本地 Dry-Run：是否允许提交/推送
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillContext {
     pub pr_number: u32,
@@ -18,6 +23,9 @@ pub struct SkillContext {
 }
 
 impl SkillContext {
+    /// 构建一个新的上下文。
+    ///
+    /// 注意：`rounds` 是“上限/轮次配置”，不是“已执行轮次计数”。
     pub fn new(
         pr_number: u32,
         repo: String,
@@ -40,6 +48,11 @@ impl SkillContext {
     }
 }
 
+/// Skill 抽象：每个 Skill 负责一个原子步骤。
+///
+/// 约定：
+/// - 进度/诊断日志应写 stderr
+/// - `execute` 失败即终止 pipeline（让 workflow 看到明确失败）
 #[async_trait::async_trait]
 pub trait Skill {
     fn name(&self) -> &'static str;
@@ -50,6 +63,7 @@ pub trait Skill {
     ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
+/// 解析 Gemini Review（Markdown）为结构化 `ReviewData`。
 pub struct ReadReviewSkill;
 #[async_trait::async_trait]
 impl Skill for ReadReviewSkill {
@@ -67,6 +81,7 @@ impl Skill for ReadReviewSkill {
     }
 }
 
+/// 根据规则过滤/选择需要修复的问题（硬过滤：严重级别、受保护文件、文档路径等）。
 pub struct DecisionSkill;
 #[async_trait::async_trait]
 impl Skill for DecisionSkill {
@@ -85,6 +100,9 @@ impl Skill for DecisionSkill {
     }
 }
 
+/// 对筛选后的问题逐个生成补丁并尝试应用到工作区。
+///
+/// 失败策略：单个 issue 的补丁生成或应用失败不会中断整个流程（跳过该条）。
 pub struct BatchFixSkill;
 #[async_trait::async_trait]
 impl Skill for BatchFixSkill {
@@ -107,6 +125,9 @@ impl Skill for BatchFixSkill {
     }
 }
 
+/// 对已修改文件做安全检查（prompt-based）。
+///
+/// 这是“软审计”：结果来自模型判断，因此用于提示/拦截高风险，而不是替代真实安全扫描。
 pub struct SecurityCheckSkill;
 #[async_trait::async_trait]
 impl Skill for SecurityCheckSkill {
@@ -138,6 +159,7 @@ impl Skill for SecurityCheckSkill {
     }
 }
 
+/// 对本轮修改给出质量评分（0-100），用于在 PR 评论中回传结果。
 pub struct QualityScoreSkill;
 #[async_trait::async_trait]
 impl Skill for QualityScoreSkill {
@@ -166,6 +188,7 @@ impl Skill for QualityScoreSkill {
     }
 }
 
+/// 将本轮修复信息写入 `docs/CHANGELOG.md`（可追溯性要求）。
 pub struct DocumentationSkill;
 #[async_trait::async_trait]
 impl Skill for DocumentationSkill {
@@ -195,6 +218,7 @@ impl Skill for DocumentationSkill {
     }
 }
 
+/// Dry-Run 模式反馈：当 `auto_push=false` 时，不推送，但仍在 PR 留评论说明当前状态。
 pub struct DryRunFeedbackSkill;
 #[async_trait::async_trait]
 impl Skill for DryRunFeedbackSkill {
@@ -221,6 +245,9 @@ impl Skill for DryRunFeedbackSkill {
     }
 }
 
+/// 推送与反馈：提交/推送变更，并在 PR 下发布“修复完成”评论。
+///
+/// 若本轮没有产生修改，则发布“无需修复”的总结。
 pub struct FeedbackSkill;
 #[async_trait::async_trait]
 impl Skill for FeedbackSkill {
@@ -268,6 +295,7 @@ impl Skill for FeedbackSkill {
     }
 }
 
+/// 生成 Dry-Run 的 PR 评论正文（稳定格式，便于人类快速判断是否需要 `--yes` 推送）。
 fn build_dry_run_comment(ctx: &SkillContext) -> String {
     let security_info = if ctx.security_passed {
         "✅ 安全扫描通过"
@@ -292,6 +320,9 @@ fn build_dry_run_comment(ctx: &SkillContext) -> String {
     )
 }
 
+/// 把 Gemini Review 的 Markdown 文本转成严格 JSON（Schema 由 system prompt 指定）。
+///
+/// 由于模型可能用 ```json/``` 包裹输出，这里做一次提取/清理再反序列化。
 async fn read_gemini_review(
     gemini_comment: &str,
     repo_context: &str,
@@ -323,6 +354,11 @@ async fn read_gemini_review(
     Ok(data)
 }
 
+/// “硬过滤”规则：决定哪些问题允许进入自动修复。
+///
+/// - 仅处理 High/Medium（避免低优先级噪声）
+/// - 排除锁文件/配置文件等高风险路径
+/// - 排除 docs/*.md（避免自动改文档造成 review 噪声与误改）
 fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
     let protected = [
         "Cargo.lock",
@@ -343,6 +379,9 @@ fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
         .collect()
 }
 
+/// 针对单条 issue 生成 unified diff 补丁。
+///
+/// 返回 `None` 表示无需修复或模型未生成有效补丁（例如缺少 @@ hunk）。
 async fn generate_fix_patch(
     issue: &ReviewIssue,
     repo_name: &str,

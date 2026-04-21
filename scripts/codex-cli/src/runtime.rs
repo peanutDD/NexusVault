@@ -7,6 +7,11 @@ use crate::skills::{
 use crate::types::PrAutoFixOutput;
 use std::env;
 
+/// GitHub Actions 的主入口：对指定 PR 的 Gemini Review 进行解析并尝试自动修复。
+///
+/// 输出约定：
+/// - 返回值为 JSON 字符串（供 workflow 用 `jq` 解析）
+/// - 运行过程中的日志应由各 Skill 输出到 stderr，避免污染 JSON
 pub async fn pr_auto_fix(
     pr_number: u32,
     gemini_review: &str,
@@ -17,6 +22,7 @@ pub async fn pr_auto_fix(
     let repo = env::var("GITHUB_REPOSITORY").unwrap_or_default();
     let mut ctx = SkillContext::new(pr_number, repo, gemini_review.to_string(), max_rounds, yes);
 
+    // Pipeline 负责顺序编排；每个 Skill 只做一件事（解析/决策/修复/审计/入档/反馈）。
     let pipeline = Pipeline::new()
         .with_skill(Box::new(ReadReviewSkill))
         .with_skill(Box::new(DecisionSkill))
@@ -34,6 +40,7 @@ pub async fn pr_auto_fix(
     files.sort();
     files.dedup();
 
+    // 统一输出结构，便于 workflow 稳定解析并进行后续动作（打标签、写输出、发通知等）。
     let output = PrAutoFixOutput {
         fixed: !files.is_empty(),
         files,
