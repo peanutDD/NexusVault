@@ -5,7 +5,12 @@ import type { Folder } from "../../../types/folders";
 import FileCard from "./FileCard";
 import FolderCard from "./FolderCard";
 import type { MixedGridItem } from "./MixedGrid";
-import { FILE_LIST } from "../../../constants";
+import {
+  buildRowModel,
+  findStartRow,
+  findEndRow,
+  type GridItemDescriptor,
+} from "../../../utils/pretextMeasure";
 
 function getColumnsFromWidth(width: number): number {
   if (width >= 1280) return 10;
@@ -152,64 +157,37 @@ export default function VirtualizedMixedGrid({
     updateViewport();
   }, [items.length, columns, updateViewport]);
 
-  const rowHeight = useMemo(() => {
-    if (!containerWidth || columns <= 0)
-      return FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
-    const gap = 8;
-    const cardWidth = Math.max(
-      0,
-      (containerWidth - gap * (columns - 1)) / columns,
-    );
-    const extraHeight = 92;
-    return Math.max(
-      FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT,
-      Math.round(cardWidth + extraHeight),
-    );
-  }, [containerWidth, columns]);
-
+// ── Pretext-based per-row heights ──────────────────────────────────────────
+  const itemDescriptors = useMemo<GridItemDescriptor[]>(
+    () => items.map((item) => item.type === "folder" ? { kind: "folder" as const, name: item.folder.name } : { kind: "file" as const, filename: item.file.original_filename }),
+    [items],
+  );
+  const { prefixSums } = useMemo(
+    () => buildRowModel(itemDescriptors, columns, containerWidth, typeof window !== "undefined" ? window.innerWidth : 1280),
+    [itemDescriptors, columns, containerWidth],
+  );
   const rowCount = Math.ceil(items.length / columns);
   const overscan = 2;
   const scrollTopInContainer = Math.max(0, -containerTop);
-
   const visibleRange = useMemo(() => {
     if (rowCount === 0) return { startRow: 0, endRow: -1 };
-    const viewportHeight =
-      typeof window !== "undefined" ? window.innerHeight : 800;
+    const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
     if (visibleHeight <= 0 || containerTop > viewportHeight) {
       return { startRow: 0, endRow: Math.min(rowCount - 1, overscan * 2) };
     }
-    const startRow = Math.max(
-      0,
-      Math.floor(scrollTopInContainer / rowHeight) - overscan,
-    );
-    const endRow = Math.min(
-      rowCount - 1,
-      Math.ceil((scrollTopInContainer + visibleHeight) / rowHeight) + overscan,
-    );
+    const scrollBottom = scrollTopInContainer + visibleHeight;
+    const startRow = Math.max(0, findStartRow(prefixSums, scrollTopInContainer) - overscan);
+    const endRow = Math.min(rowCount - 1, findEndRow(prefixSums, scrollBottom) + overscan);
     return { startRow, endRow };
-  }, [
-    scrollTopInContainer,
-    visibleHeight,
-    rowHeight,
-    rowCount,
-    overscan,
-    containerTop,
-  ]);
-
-  const topSpacerHeight = Math.max(0, visibleRange.startRow * rowHeight);
-  const bottomSpacerHeight = Math.max(
-    0,
-    (rowCount - visibleRange.endRow - 1) * rowHeight,
-  );
+  }, [scrollTopInContainer, visibleHeight, prefixSums, rowCount, containerTop]);
+  const topSpacerHeight = prefixSums[visibleRange.startRow] ?? 0;
+  const totalHeight = prefixSums[rowCount] ?? 0;
+  const bottomSpacerHeight = Math.max(0, totalHeight - (prefixSums[visibleRange.endRow + 1] ?? totalHeight));
 
   useEffect(() => {
     const el = containerRef.current;
     if (el) el.style.setProperty("--grid-cols", String(columns));
   }, [columns]);
-  useEffect(() => {
-    const el = containerRef.current;
-    if (el) el.style.setProperty("--virtual-row-height", `${rowHeight}px`);
-  }, [rowHeight]);
   useEffect(() => {
     const el = topSpacerRef.current;
     if (el) el.style.setProperty("height", `${topSpacerHeight}px`);

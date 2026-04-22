@@ -97,7 +97,7 @@ impl FileService {
                 &file_path,
                 file_size,
                 &mime_type,
-                &self.config.storage_backend,
+                &self.config.storage.backend,
                 None,
                 None,
             )
@@ -260,7 +260,7 @@ impl FileService {
                     &file_path,
                     file_size,
                     &mime_type,
-                    &self.config.storage_backend,
+                    &self.config.storage.backend,
                     content_sha256,
                     folder_id,
                 )

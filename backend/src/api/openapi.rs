@@ -20,6 +20,10 @@ pub struct ErrorResponse {
 /// API 文档定义
 #[derive(OpenApi)]
 #[openapi(
+    paths(
+        crate::handlers::health::readiness_check,
+        crate::handlers::health::liveness_check,
+    ),
     info(
         title = "File Storage Backend API",
         version = "1.0.0",
@@ -40,7 +44,8 @@ pub struct ErrorResponse {
         (name = "files", description = "文件管理相关接口"),
         (name = "folders", description = "文件夹管理相关接口"),
         (name = "shares", description = "文件分享相关接口"),
-        (name = "tokens", description = "API Token 管理接口")
+        (name = "tokens", description = "API Token 管理接口"),
+        (name = "health", description = "健康检查与监控接口")
     ),
     components(
         schemas(ErrorResponse)

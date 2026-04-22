@@ -2,7 +2,12 @@ import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import type { FileMetadata } from "../../../types/files";
 import type { Folder } from "../../../types/folders";
 import FileCard from "./FileCard";
-import { FILE_LIST } from "../../../constants";
+import {
+  buildRowModel,
+  findStartRow,
+  findEndRow,
+  type GridItemDescriptor,
+} from "../../../utils/pretextMeasure";
 
 /** 根据窗口宽度估算网格列数（与 FileGrid/FolderGrid 保持一致） */
 function getColumnsFromWidth(width: number): number {
@@ -161,69 +166,38 @@ export default function VirtualizedFileGrid({
     updateViewport();
   }, [files.length, columns, updateViewport]);
 
-  const rowHeight = useMemo(() => {
-    if (!containerWidth || columns <= 0)
-      return FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT;
-    const gap = 8; // tailwind gap-2 = 0.5rem
-    const cardWidth = Math.max(
-      0,
-      (containerWidth - gap * (columns - 1)) / columns,
-    );
-    const extraHeight = 92; // p-3 + meta 区 + 间距（经验值，避免明显过高导致底部空白）
-    return Math.max(
-      FILE_LIST.VIRTUAL_GRID_ROW_HEIGHT,
-      Math.round(cardWidth + extraHeight),
-    );
-  }, [containerWidth, columns]);
+// ── Pretext-based per-row heights ──────────────────────────────────────────
+  const itemDescriptors = useMemo<GridItemDescriptor[]>(
+    () => files.map((f) => ({ kind: "file" as const, filename: f.original_filename })),
+    [files],
+  );
+  const { prefixSums } = useMemo(
+    () => buildRowModel(itemDescriptors, columns, containerWidth, typeof window !== "undefined" ? window.innerWidth : 1280),
+    [itemDescriptors, columns, containerWidth],
+  );
   const rowCount = Math.ceil(files.length / columns);
   const overscan = 2;
-
-  // 视口内可见的「滚动偏移」（容器顶部被滚过多少）
   const scrollTopInContainer = Math.max(0, -containerTop);
-
   const visibleRange = useMemo(() => {
     if (rowCount === 0) return { startRow: 0, endRow: -1 };
-
-    // 如果列表不在视口内或可见高度为 0，至少渲染前几行
-    const viewportHeight =
-      typeof window !== "undefined" ? window.innerHeight : 800;
+    const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
     if (visibleHeight <= 0 || containerTop > viewportHeight) {
       return { startRow: 0, endRow: Math.min(rowCount - 1, overscan * 2) };
     }
-
-    const startRow = Math.max(
-      0,
-      Math.floor(scrollTopInContainer / rowHeight) - overscan,
-    );
-    const endRow = Math.min(
-      rowCount - 1,
-      Math.ceil((scrollTopInContainer + visibleHeight) / rowHeight) + overscan,
-    );
+    const scrollBottom = scrollTopInContainer + visibleHeight;
+    const startRow = Math.max(0, findStartRow(prefixSums, scrollTopInContainer) - overscan);
+    const endRow = Math.min(rowCount - 1, findEndRow(prefixSums, scrollBottom) + overscan);
     return { startRow, endRow };
-  }, [
-    scrollTopInContainer,
-    visibleHeight,
-    rowHeight,
-    rowCount,
-    overscan,
-    containerTop,
-  ]);
-
-  const topSpacerHeight = Math.max(0, visibleRange.startRow * rowHeight);
-  const bottomSpacerHeight = Math.max(
-    0,
-    (rowCount - visibleRange.endRow - 1) * rowHeight,
-  );
+  }, [scrollTopInContainer, visibleHeight, prefixSums, rowCount, containerTop]);
+  const topSpacerHeight = prefixSums[visibleRange.startRow] ?? 0;
+  const totalHeight = prefixSums[rowCount] ?? 0;
+  const bottomSpacerHeight = Math.max(0, totalHeight - (prefixSums[visibleRange.endRow + 1] ?? totalHeight));
 
   // 将 columns / spacer 高度同步到 DOM，避免内联 style 触发 lint
   useEffect(() => {
     const el = containerRef.current;
     if (el) el.style.setProperty("--grid-cols", String(columns));
   }, [columns]);
-  useEffect(() => {
-    const el = containerRef.current;
-    if (el) el.style.setProperty("--virtual-row-height", `${rowHeight}px`);
-  }, [rowHeight]);
   useEffect(() => {
     const el = topSpacerRef.current;
     if (el) el.style.setProperty("height", `${topSpacerHeight}px`);

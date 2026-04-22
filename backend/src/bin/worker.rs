@@ -13,17 +13,19 @@ use file_storage_backend::services::file::create_storage;
 use file_storage_backend::services::task_queue::{run_gif_preview_worker, run_hls_worker};
 use file_storage_backend::AppState;
 
+use file_storage_backend::tracing::init_tracing;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
     init_tracing();
 
     let metrics_renderer = init_metrics()
         .map_err(|e| anyhow::anyhow!("Failed to install Prometheus recorder: {}", e))?;
 
-    dotenv::dotenv().ok();
     let config = Arc::new(Config::from_env()?);
-    let pool = create_pool(&config.database_url).await?;
-    let read_pool = match config.read_replica_database_url.as_deref() {
+    let pool = create_pool(&config.database.url).await?;
+    let read_pool = match config.database.read_replica_url.as_deref() {
         Some(url) => create_pool(url).await?,
         None => pool.clone(),
     };
@@ -35,10 +37,11 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|v| v.parse().ok())
         .unwrap_or(2);
 
-    let transcode_semaphore = Arc::new(Semaphore::new(config.transcode_max_concurrent));
+    let transcode_semaphore = Arc::new(Semaphore::new(config.tasks.transcode_max_concurrent));
 
     // ---------- GIF preview worker ----------
     let gif_preview_semaphore = config
+        .tasks
         .task_type_concurrency
         .get("gif_preview")
         .copied()
@@ -67,6 +70,7 @@ async fn main() -> anyhow::Result<()> {
     // ---------- HLS preview worker ----------
     // 与 gif_preview 完全对称：并发配额 + 指数退避重试 + Prometheus 指标
     let hls_preview_semaphore = config
+        .tasks
         .task_type_concurrency
         .get("hls_preview")
         .copied()
@@ -161,11 +165,4 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
-}
-
-fn init_tracing() {
-    use tracing_subscriber::fmt;
-    use tracing_subscriber::EnvFilter;
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    fmt().with_env_filter(filter).init();
 }

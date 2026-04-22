@@ -74,7 +74,7 @@ async fn file_get_or_head_response(
 
     let file = state.file_service.get_file(file_id, user_id).await?;
 
-    if state.config.download_mode != "proxy" {
+    if state.config.storage.download_mode != "proxy" {
         let cd_type = if inline { "inline" } else { "attachment" };
         let filename = file.original_filename.replace('"', "");
         let content_disposition = format!("{}; filename=\"{}\"", cd_type, filename);
@@ -82,7 +82,7 @@ async fn file_get_or_head_response(
             .storage
             .presign_download_url(
                 &file.file_path,
-                state.config.presign_ttl_secs,
+                state.config.storage.presign_ttl_secs,
                 Some(&file.mime_type),
                 Some(&content_disposition),
             )

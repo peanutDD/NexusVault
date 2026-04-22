@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import type { FileMetadata } from '../../types/files';
@@ -70,6 +70,7 @@ function useFileGroupingWithIcons(
       .then((result) => {
         if (requestIdRef.current === currentRequestId) {
           setWorkerGrouped(result as Array<{ key: string; order: number; files: FileMetadata[] }>);
+
         }
       })
       .catch(() => {
@@ -236,9 +237,6 @@ function useTimeGroupingMixed(
 
   return { timeGroupedItems };
 }
-
-// Need to import useState for useFileGroupingWithIcons
-import { useState } from 'react';
 
 export function useFileList() {
   const queryClient = useQueryClient();
@@ -424,7 +422,7 @@ export function useFileList() {
     batchDownloading,
     handleDelete,
     handleBatchDelete,
-    executeDelete,
+    executeDelete: wrappedExecuteDelete,
     handleRenameFolderSubmit,
     handleRenameFileSubmit,
     handleDownload,
@@ -446,6 +444,59 @@ export function useFileList() {
     refetchFiles,
     refetchFolders,
   });
+
+  // ── 即时 DOM 隐藏：确认删除时立刻把卡片从页面移除 ─────────────────────────────
+  // 不依赖 React Query 缓存更新时机，用本地 state 直接驱动 filter，解决
+  // \"第二次删除 DOM 不立刻更新\"的 bug。
+  const [pendingDeleteFileIds, setPendingDeleteFileIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteFolderIds, setPendingDeleteFolderIds] = useState<Set<string>>(new Set());
+
+  // 若删除后文件重新出现在 files 里（代表删除失败/被回滚），从 pending 中移除，让卡片还原
+  useEffect(() => {
+    if (pendingDeleteFileIds.size === 0) return;
+    const currentIds = new Set(files.map((f) => f.id));
+    const reappeared = [...pendingDeleteFileIds].filter((id) => currentIds.has(id));
+    if (reappeared.length === 0) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setPendingDeleteFileIds((prev) => {
+        const n = new Set(prev);
+        reappeared.forEach((id) => n.delete(id));
+        return n;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [files, pendingDeleteFileIds]);
+
+  // 包装 executeDelete：先把 ID 加入 pending（立刻触发 re-render 隐藏卡片），再执行删除
+  const executeDeleteWithHide = useCallback(async () => {
+    const snap = deleteConfirm;
+    if (snap?.type === 'file' && snap.id) {
+      setPendingDeleteFileIds((prev) => new Set([...prev, snap.id!]));
+    } else if (snap?.type === 'folder' && snap.id) {
+      setPendingDeleteFolderIds((prev) => new Set([...prev, snap.id!]));
+    } else if (snap?.type === 'batch') {
+      if (selectedFileIds.length > 0)
+        setPendingDeleteFileIds((prev) => new Set([...prev, ...selectedFileIds]));
+      if (selectedFolderIds.length > 0)
+        setPendingDeleteFolderIds((prev) => new Set([...prev, ...selectedFolderIds]));
+    }
+    await wrappedExecuteDelete();
+  }, [deleteConfirm, wrappedExecuteDelete, selectedFileIds, selectedFolderIds]);
+
+  // 应用 pending 过滤，给渲染层用的输出变量
+  const outFiles = useMemo(
+    () =>
+      pendingDeleteFileIds.size > 0
+        ? files.filter((f) => !pendingDeleteFileIds.has(f.id))
+        : files,
+    [files, pendingDeleteFileIds],
+  );
 
   const getScrollStorageKey = useCallback(
     (folderId: string | null) => {
@@ -558,6 +609,43 @@ export function useFileList() {
     return list;
   }, [mimeType, folders, debouncedSearch, sortBy]);
 
+  // outFolders 必须在 displayFolders 赋值之后计算，否则 displayFolders 还是初始空数组
+  const outFolders = useMemo(
+    () =>
+      pendingDeleteFolderIds.size > 0
+        ? displayFolders.filter((f) => !pendingDeleteFolderIds.has(f.id))
+        : displayFolders,
+    [displayFolders, pendingDeleteFolderIds],
+  );
+
+  // outFoldersRef 用于 pendingDeleteFolderIds 回滚检测的 useEffect
+  const outFoldersRef = useRef<Folder[]>(displayFolders);
+
+  useEffect(() => {
+    outFoldersRef.current = displayFolders;
+  }, [displayFolders]);
+
+  useEffect(() => {
+    if (pendingDeleteFolderIds.size === 0) return;
+    const currentIds = new Set(outFoldersRef.current.map((f) => f.id));
+    const reappeared = [...pendingDeleteFolderIds].filter((id) => currentIds.has(id));
+    if (reappeared.length === 0) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setPendingDeleteFolderIds((prev) => {
+        const n = new Set(prev);
+        reappeared.forEach((id) => n.delete(id));
+        return n;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingDeleteFolderIds]);
+
   const { timeGroupedItems } = useTimeGroupingMixed(sortedFiles, displayFolders, isGroupByTime);
 
   const visibleFileIds = useMemo(() => new Set(finalDisplayFiles.map((file) => file.id)), [finalDisplayFiles]);
@@ -614,7 +702,7 @@ export function useFileList() {
   }, [refetchFolders]);
 
   return {
-    files,
+    files: outFiles,
     folderPath,
     search,
     mimeType,
@@ -634,7 +722,7 @@ export function useFileList() {
     groupedFiles,
     timeGroupedFiles,
     timeGroupedItems,
-    displayFolders,
+    displayFolders: outFolders,
     displayFiles: finalDisplayFiles,
     displayFileIndexById: finalDisplayFileIndexById,
     totalPages: Math.ceil(totalItems / 50),
@@ -697,7 +785,7 @@ export function useFileList() {
     setRenamingFile,
     deleteConfirm,
     deleteLoading,
-    executeDelete,
+    executeDelete: executeDeleteWithHide,
     setDeleteConfirm,
     batchDownloading,
   };

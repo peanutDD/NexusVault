@@ -1,0 +1,7 @@
+## Gemini Code Assist Review
+- file: src/main.rs
+- severity: High
+- description: 变量命名不符合规范
+- suggestion: ```rust
+let user_name = "admin";
+```

@@ -18,7 +18,7 @@ const MASTER_PLAYLIST_NAME: &str = "master.m3u8";
 impl FileService {
     /// HLS 输出目录：`{storage_path}/.hls/{file_id}/`
     pub fn hls_output_dir(&self, file_id: Uuid) -> PathBuf {
-        Path::new(&self.config.storage_path)
+        Path::new(&self.config.storage.path)
             .join(HLS_DIR)
             .join(file_id.to_string())
     }
@@ -26,7 +26,7 @@ impl FileService {
     pub async fn should_use_hls(&self, file: &File) -> bool {
         let is_video = file.mime_type.starts_with("video/");
         let is_gif = self.is_gif_file(file).await;
-        (is_video && (file.file_size as u64) >= self.config.hls_threshold_bytes) || is_gif
+        (is_video && (file.file_size as u64) >= self.config.storage.hls_threshold_bytes) || is_gif
     }
 
     async fn hls_source_path(&self, file: &File) -> Result<PathBuf, AppError> {
@@ -44,7 +44,7 @@ impl FileService {
         if !is_video && !is_gif {
             return Err(AppError::Validation("仅视频或 GIF 支持 HLS".to_string()));
         }
-        if is_video && (file.file_size as u64) < self.config.hls_threshold_bytes {
+        if is_video && (file.file_size as u64) < self.config.storage.hls_threshold_bytes {
             return Err(AppError::Validation(
                 "文件未超过 HLS 阈值，请使用普通预览".to_string(),
             ));
@@ -81,15 +81,19 @@ impl FileService {
             .map_err(|e| AppError::Storage(format!("创建 HLS 目录失败: {}", e)))?;
 
         let out_dir_str = out_dir.to_string_lossy().replace('\\', "/");
-        let use_abr = self.config.hls_abr_max_variants > 1;
+        let use_abr = self.config.storage.hls_abr_max_variants > 1;
         let abr_variants: Vec<(u32, u32)> = self
             .config
+            .storage
             .hls_abr_variants
             .iter()
             .map(|v| (v.height, v.video_bitrate_kbps))
             .collect();
         let abr_n = if use_abr {
-            self.config.hls_abr_max_variants.min(abr_variants.len())
+            self.config
+                .storage
+                .hls_abr_max_variants
+                .min(abr_variants.len())
         } else {
             1
         };

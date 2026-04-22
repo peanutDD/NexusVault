@@ -1,0 +1,130 @@
+[package]
+name = "file-storage-backend"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+default-run = "file-storage-backend"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Release profile - 极致体积优化
+# ──────────────────────────────────────────────────────────────────────────────
+[profile.release]
+panic        = "abort"        # 移除 panic 栈展开（libunwind），节省 ~1-2MB
+codegen-units = 1             # 单编译单元，允许 LLVM 全局内联/消除死代码
+lto          = "fat"          # 全程序 LTO（最彻底，编译慢但体积最小）
+opt-level    = "z"            # 优先体积（"s" 次之，"3" 优先速度）
+strip        = "symbols"      # 剥离符号表（保留 debuginfo 段之外的符号）
+debug        = false          # 不嵌入调试信息
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Docker / CI 用 profile：在 release 基础上进一步 strip debuginfo
+# 用法: cargo build --profile dist
+# ──────────────────────────────────────────────────────────────────────────────
+[profile.dist]
+inherits     = "release"
+strip        = true           # 完全 strip（包含 debuginfo）
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["multipart", "json"] }
+bytes = "1.0"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
+tokio-stream = "0.1"
+async-stream = "0.3"
+tower = { version = "0.4", features = ["limit", "load-shed"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "timeout", "limit", "catch-panic"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Authentication
+jsonwebtoken = "9.2"
+bcrypt = "0.15"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Configuration
+dotenv = "0.15"
+config = "0.14"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# File handling
+mime = "0.3"
+mime_guess = "2.0"
+# 缩略图解码：启用默认格式以支持 jpeg/png/gif/webp/bmp/ico/tiff/tga/pnm 等
+image = "0.25"
+gif = "0.13"
+
+# AWS S3
+aws-sdk-s3 = "1.0"
+aws-config = "1.0"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+validator = { version = "0.18", features = ["derive"] }
+
+# Cache (bounded in-memory rate limit, etc.)
+moka = { version = "0.12", features = ["sync"] }
+
+# Redis
+deadpool-redis = { version = "0.15", features = ["rt_tokio_1"] }
+
+# Filesystem space checks (prevent disk exhaustion)
+fs2 = "0.4"
+httpdate = "1.0"
+percent-encoding = "2.3"
+reqwest = { version = "0.12", features = ["json", "stream", "gzip", "brotli", "deflate", "rustls-tls"] }
+url = "2.5"
+urlencoding = "2.1"
+
+# Rate limiting - implemented as custom middleware
+
+# Async traits
+async-trait = "0.1"
+
+# ZIP for batch download
+zip = "2.2"
+
+# File content extraction for semantic search
+# PDF text extraction
+pdf-extract = "0.10"
+# Word document parsing (docx) - lightweight text extraction
+docx-lite = "0.1"
+# Text encoding detection
+encoding_rs = "0.8"
+
+# Random token generation
+rand = "0.8"
+
+# Email
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-native-tls"] }
+
+# Hashing for API tokens
+sha2 = "0.10"
+hmac = "0.12"
+
+# Metrics
+metrics = "0.24"
+metrics-exporter-prometheus = "0.16"
+
+# API Documentation
+utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-swagger-ui = { version = "8", features = ["axum", "vendored"] }
+utoipa-swagger-ui-vendored = "0.1"
+
+# Rate limiting (IP / user 级别限流)
+tower_governor = { version = "0.6", features = ["axum"] }
+
+# Constant-time comparison (security)
+subtle = "2.5"

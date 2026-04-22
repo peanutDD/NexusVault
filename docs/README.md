@@ -9,11 +9,17 @@
   - `BILIBILI_TECH_UPGRADE.md`：对标式技术升级建议（偏架构/规划）
   - `../backend/docs/TOP_TECH.md`：顶级视频平台技术对标与本项目落地映射表
 
-- **代码审查**
+- **变更日志**
+  - `CHANGELOG.md`：项目变更日志，记录 Bug 修复、新功能、性能优化及技术细节
+
+- **代码审查与 AI 自动化**
   - `CODE_REVIEW_GUIDE.md`：代码审查规范（企业级）
+  - `design-docs/auto-review-flow.md`：自动化 Review 与修复全流程说明（技术架构）
+  - `design-docs/auto-review-usage-flow.md`：**[NEW] 自动化 Review 与修复运行手册（使用 SOP）**
   - `CODE_REVIEW_START.md`：代码审查开始使用清单
   - `CODE_REVIEW_USAGE.md`：代码审查使用指南（作者/审查人/团队）
   - `CODE_REVIEW_REPORT.md`：代码审查报告模板
+  - `constraints/ai-auto-fix-rules.md`：AI 自动修复永久约束规则
 
 - **开发流程**
   - `NEXT_STEPS.md`：后续改进建议和 roadmap

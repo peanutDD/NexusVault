@@ -48,7 +48,7 @@ fn verify_token_simple(config: &Config, token: &str) -> Result<Uuid, AppError> {
 
     let token_data = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(config.jwt_secret.as_ref()),
+        &DecodingKey::from_secret(config.auth.jwt_secret.as_ref()),
         &Validation::default(),
     )
     .map_err(|_| AppError::Unauthorized)?;

@@ -147,7 +147,7 @@ pub(crate) async fn extract_user_id_from_token(
     // 如果 JWT 失败，尝试 API token
     let token_service = crate::services::api_token::ApiTokenService::new(
         pool.clone(),
-        config.api_token_hmac_secrets(),
+        config.auth.api_token_hmac_secrets(),
     );
     let user_id = token_service.verify_token(token).await?;
     tracing::debug!(user_id = %user_id, "Authenticated via API token");
@@ -200,7 +200,7 @@ fn extract_user_id_from_jwt_token(config: &Config, token: &str) -> Result<Uuid, 
     // 解码并验证 token
     let token_data = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(config.jwt_secret.as_ref()),
+        &DecodingKey::from_secret(config.auth.jwt_secret.as_ref()),
         &validation,
     )
     .map_err(|e| {

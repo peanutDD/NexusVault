@@ -84,7 +84,7 @@ impl AppState {
         let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(pool.clone()));
 
         // 如果配置了 Hugging Face API Token，创建嵌入服务
-        let embedding_service = if config.huggingface_api_token.is_some() {
+        let embedding_service = if config.search.huggingface_api_token.is_some() {
             Some(Arc::new(EmbeddingService::new(&config)))
         } else {
             None
@@ -101,7 +101,7 @@ impl AppState {
         ));
 
         let task_queue: DynTaskQueue = Arc::new(TaskQueue::new(Arc::new(pool.clone())));
-        let zip_build_semaphore = Arc::new(Semaphore::new(config.zip_build_max_concurrent));
+        let zip_build_semaphore = Arc::new(Semaphore::new(config.tasks.zip_build_max_concurrent));
 
         Self {
             config,

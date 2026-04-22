@@ -19,12 +19,17 @@ pub async fn github_oauth_url_handler(State(state): State<AppState>) -> Result<R
     let config = &state.config;
 
     let client_id = config
+        .oauth
         .github_client_id
         .clone()
         .ok_or_else(|| AppError::Validation("GitHub OAuth is not configured".to_string()))?;
-    let redirect_uri = config.github_oauth_redirect_uri.clone().ok_or_else(|| {
-        AppError::Validation("GITHUB_OAUTH_REDIRECT_URI is not configured".to_string())
-    })?;
+    let redirect_uri = config
+        .oauth
+        .github_oauth_redirect_uri
+        .clone()
+        .ok_or_else(|| {
+            AppError::Validation("GITHUB_OAUTH_REDIRECT_URI is not configured".to_string())
+        })?;
 
     // 生成随机 state，并缓存起来用于回调时校验，防止 CSRF
     let state_str = Uuid::new_v4().to_string();
@@ -77,22 +82,29 @@ pub async fn github_oauth_callback_handler(
 
     let config = &state.config;
     let client_id = config
+        .oauth
         .github_client_id
         .clone()
         .ok_or_else(|| AppError::Validation("GitHub OAuth is not configured".to_string()))?;
-    let client_secret = config.github_client_secret.clone().ok_or_else(|| {
+    let client_secret = config.oauth.github_client_secret.clone().ok_or_else(|| {
         AppError::Validation("GITHUB_CLIENT_SECRET is not configured".to_string())
     })?;
-    let redirect_uri = config.github_oauth_redirect_uri.clone().ok_or_else(|| {
-        AppError::Validation("GITHUB_OAUTH_REDIRECT_URI is not configured".to_string())
-    })?;
+    let redirect_uri = config
+        .oauth
+        .github_oauth_redirect_uri
+        .clone()
+        .ok_or_else(|| {
+            AppError::Validation("GITHUB_OAUTH_REDIRECT_URI is not configured".to_string())
+        })?;
 
     let frontend_base = config
+        .server
         .frontend_base_url
         .clone()
         .or_else(|| {
             // 尝试从 CORS_ORIGIN 中取第一个作为前端地址（逗号分隔）
             let first = config
+                .server
                 .cors_origin
                 .split(',')
                 .next()

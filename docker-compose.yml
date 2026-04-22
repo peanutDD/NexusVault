@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -67,6 +65,19 @@ services:
       - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
+
+  # OpenTelemetry Collector + Jaeger (Tracing)
+  jaeger:
+    image: docker.m.daocloud.io/jaegertracing/all-in-one:1.60
+    container_name: file_storage_jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Jaeger thrift
     restart: unless-stopped
 
 volumes:

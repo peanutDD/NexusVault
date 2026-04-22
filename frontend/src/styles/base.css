@@ -1,0 +1,71 @@
+/* ==========================================================================
+   Base Layer — 全局重置、字体声明、流体字号
+   ========================================================================== */
+
+@layer base {
+    @font-face {
+        font-display: swap;
+        font-family: "bootstrap-icons";
+        src:
+            url("/fonts/bootstrap-icons.woff2") format("woff2"),
+            url("/fonts/bootstrap-icons.woff") format("woff");
+    }
+
+    body {
+        margin: 0;
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        transition:
+            background-color 0.3s ease,
+            color 0.3s ease;
+    }
+
+    code {
+        font-family:
+            source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+    }
+
+    /* 平滑滚动 */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* 全局流体字号基准（随视口连续变化，不是固定断点跳变） */
+    html {
+        font-size: clamp(0.875rem, 1.1vw + 0.5625rem, 1.25rem);
+    }
+
+    /* 深色模式支持 */
+    .dark {
+        color-scheme: dark;
+    }
+
+    /* 焦点可见性改进 */
+    *:focus-visible {
+        outline: 0.125rem solid var(--color-focus-ring);
+        outline-offset: 0.125rem;
+    }
+
+    /* 移动端触摸优化 */
+    @media (hover: none) and (pointer: coarse) {
+        button,
+        a {
+            min-height: 1.25rem;
+            min-width: 1.25rem;
+        }
+    }
+
+    /* 字体工具类 */
+    .font-display {
+        font-family: var(--font-display);
+    }
+
+    .font-brand {
+        font-family: var(--font-brand);
+    }
+
+    .font-footer {
+        font-family: var(--font-footer);
+    }
+}

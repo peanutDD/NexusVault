@@ -110,11 +110,11 @@ pub fn generate_random_token(length: usize) -> String {
     use crate::constants::RANDOM_TOKEN_CHARSET;
     use rand::Rng;
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     (0..length)
         .map(|_| {
-            let idx = rng.gen_range(0..RANDOM_TOKEN_CHARSET.len());
+            let idx = rng.random_range(0..RANDOM_TOKEN_CHARSET.len());
             RANDOM_TOKEN_CHARSET[idx] as char
         })
         .collect()

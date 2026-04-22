@@ -1,7 +1,13 @@
 # Backend Dockerfile
-FROM rust:1.75 as builder
+FROM rust:1.80-slim as builder
 
 WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files
 COPY Cargo.toml Cargo.lock ./

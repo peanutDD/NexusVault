@@ -34,16 +34,19 @@ impl ApiTokenService {
 
     /// 从 AppState 创建 ApiTokenService（工厂方法）
     pub fn from_state(state: &crate::AppState) -> Self {
-        Self::new(state.pool.clone(), state.config.api_token_hmac_secrets())
+        Self::new(
+            state.pool.clone(),
+            state.config.auth.api_token_hmac_secrets(),
+        )
     }
 
     /// 生成安全的随机 token
     fn generate_token() -> String {
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         (0..64)
             .map(|_| {
-                let idx = rng.gen_range(0..API_TOKEN_CHARSET.len());
+                let idx = rng.random_range(0..API_TOKEN_CHARSET.len());
                 API_TOKEN_CHARSET[idx] as char
             })
             .collect()

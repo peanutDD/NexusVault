@@ -1,5 +1,149 @@
 # 前端重构计划与实施记录
 
+## 2026-04-20 最新实施记录（主题治理 / 入口拆分 / 工程清理）
+
+### 1. 主题治理：从组件硬编码颜色迁移到语义化 Token
+
+本轮调整的核心目标是解决“三主题已经存在，但大量页面仍按单一主题写死颜色”的问题。
+
+#### 已实施内容
+
+1. 在 `tokens.css` 中补充上传和预览相关语义变量，减少组件内直接写死 `bg-*`、`text-*`：
+   - `--upload-surface-bg`
+   - `--upload-text`
+   - `--upload-text-muted`
+   - `--upload-drop-*`
+   - `--upload-item-*`
+   - `--preview-text-primary`
+   - `--preview-text-muted`
+   - `--preview-icon`
+   - `--preview-divider`
+
+2. 上传弹窗相关组件逐步改为依赖 Token：
+   - `UploadDialog.tsx`
+   - `UploadFileItem.tsx`
+
+3. 文件预览页相关组件逐步改为依赖 Token：
+   - `FilePreview.tsx`
+   - `FilePreviewContent.tsx`
+
+4. 列表页的局部主题问题做了同步修正：
+   - `FileListBatchActions.tsx`
+   - `FileListContent.tsx`
+
+#### 结果
+
+- 浅色模式优先表现为“白底 + 深色文字”
+- 深色与紫色主题不再依赖组件内散落的条件样式
+- 后续调色优先改 `tokens.css`，而不是逐个改页面
+
+#### 后续要求
+
+- 新增组件时，优先使用语义变量，不直接写死品牌色或主题底色
+- 只有在视觉特效、临时态、第三方组件覆盖时才允许局部硬编码，并需说明原因
+
+---
+
+### 2. 入口治理：`App.tsx` 拆分为 Provider / Router / Bootstrap
+
+重构前，`App.tsx` 同时包含：
+
+- React Query 配置
+- React Query Devtools 漂浮按钮与拖拽逻辑
+- 认证守卫
+- 路由定义
+- 懒加载 fallback
+
+这导致入口文件职责过重，不利于继续扩展。
+
+#### 已实施拆分
+
+1. `App.tsx`
+   - 仅保留应用装配
+   - 当前装配链路：
+     - `QueryProvider`
+     - `BrowserCompatibilityWarning`
+     - `ErrorBoundary`
+     - `AuthProvider`
+     - `AppRouter`
+
+2. `providers/QueryProvider.tsx`
+   - 管理 `QueryClient`
+   - 管理 React Query Devtools 面板、悬浮按钮、拖拽与位置持久化
+
+3. `providers/AuthProvider.tsx`
+   - 管理 hydration 状态聚合
+   - 提供 `RequireAuth` 作为受保护路由守卫
+
+4. `router/AppRouter.tsx`
+   - 承载所有页面路由
+   - 统一懒加载 fallback
+
+#### 结果
+
+- `App.tsx` 降为装配层
+- Query、Auth、Router 职责清晰
+- 后续新增 Provider 或调整路由时，不会继续膨胀入口文件
+
+---
+
+### 3. 启动流程治理：`main.tsx` Bootstrap 化
+
+重构前，`main.tsx` 中混杂了启动渲染、Sentry 初始化、API 预连接、全局错误监听等逻辑。
+
+#### 已实施拆分
+
+新增 `src/bootstrap/`：
+
+- `sentry.ts`
+  - 生产环境按需初始化 Sentry
+- `preconnect.ts`
+  - 对跨域 API 做 `preconnect`
+- `errorTracking.ts`
+  - 注册 `window.error` 与 `unhandledrejection`
+
+#### 当前 `main.tsx` 职责
+
+- 引入样式
+- 调用 bootstrap 初始化
+- 渲染 `App`
+- 保留 vitals 按需加载
+
+#### 建议
+
+- 下一步可继续把 vitals 独立到 `bootstrap/vitals.ts`
+- 若未来恢复 PWA，也建议独立为 `bootstrap/pwa.ts`
+
+---
+
+### 4. ESLint 工程治理：忽略生成目录
+
+之前执行 `npm run lint` 时，`src-tauri/target` 等生成目录被 ESLint 扫描，导致大量 Parsing Error，掩盖真实代码问题。
+
+#### 已实施内容
+
+在 `frontend/eslint.config.js` 中补充忽略：
+
+- `dist`
+- `coverage`
+- `src-tauri/target`
+- `src-tauri/gen`
+- `.vite`
+
+#### 当前效果
+
+- 生成目录报错已被清除
+- `lint` 输出已收敛为真实业务代码问题
+
+#### 当前仍存在的存量问题
+
+- `src/components/files/preview/FilePreviewContent.tsx`
+  - `react-hooks/set-state-in-effect`
+- `src/components/files/useFileList.ts`
+  - `react-hooks/refs`
+
+这些问题属于后续治理项，不是本次目录拆分引入的问题。
+
 ## 2026-03-01 最新约定（状态层/表单/请求）
 
 1. **状态分层**：

@@ -24,7 +24,7 @@ const DERIVED_VIDEO_DIR: &str = ".derived_videos";
 impl FileService {
     /// 派生 GIF 视频预览的输出路径：`{storage_path}/.derived_videos/{file_id}.mp4`
     pub fn derived_video_output_path(&self, file_id: Uuid) -> PathBuf {
-        Path::new(&self.config.storage_path)
+        Path::new(&self.config.storage.path)
             .join(DERIVED_VIDEO_DIR)
             .join(format!("{}.mp4", file_id))
     }

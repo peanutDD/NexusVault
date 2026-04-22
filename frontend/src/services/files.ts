@@ -218,7 +218,6 @@ export const fileService = {
         });
       }
       if (result === null) {
-        console.info('[秒传] 服务器暂无相同文件，将走普通/分片上传');
         onProgress?.(0, '秒传未命中，正在上传…');
         const progressOnly = (p: number) => onProgress?.(p);
         const uploaded = await (useChunked

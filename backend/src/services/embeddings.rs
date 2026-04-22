@@ -40,9 +40,9 @@ impl EmbeddingService {
 
         Self {
             client,
-            api_url: config.huggingface_api_url.clone(),
-            model_id: config.huggingface_model_id.clone(),
-            api_token: config.huggingface_api_token.clone(),
+            api_url: config.search.huggingface_api_url.clone(),
+            model_id: config.search.huggingface_model_id.clone(),
+            api_token: config.search.huggingface_api_token.clone(),
         }
     }
 

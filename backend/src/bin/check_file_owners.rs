@@ -25,7 +25,7 @@ use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
     let args: Vec<String> = std::env::args().collect();
     let delete_with_file = args.get(1).map(|s| s.as_str()) == Some("--delete-with-file");
     let delete_only = args.get(1).map(|s| s.as_str()) == Some("--delete");

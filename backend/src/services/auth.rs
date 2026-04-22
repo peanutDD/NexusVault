@@ -136,7 +136,7 @@ impl AuthService {
     /// 生成 JWT token
     pub fn generate_token(&self, user_id: &Uuid) -> Result<String, AppError> {
         let now = now_timestamp();
-        let exp = parse_jwt_expiry(&self.config.jwt_expiry);
+        let exp = parse_jwt_expiry(&self.config.auth.jwt_expiry);
 
         let claims = Claims {
             sub: user_id.to_string(),
@@ -147,7 +147,7 @@ impl AuthService {
         let token = encode(
             &Header::default(),
             &claims,
-            &EncodingKey::from_secret(self.config.jwt_secret.as_ref()),
+            &EncodingKey::from_secret(self.config.auth.jwt_secret.as_ref()),
         )
         .map_err(|e| AppError::Auth(format!("Failed to generate token: {}", e)))?;
 
@@ -162,7 +162,7 @@ impl AuthService {
 
         let token_data = decode::<Claims>(
             token,
-            &DecodingKey::from_secret(self.config.jwt_secret.as_ref()),
+            &DecodingKey::from_secret(self.config.auth.jwt_secret.as_ref()),
             &validation,
         )
         .map_err(|_| AppError::Unauthorized)?;
@@ -319,9 +319,12 @@ impl AuthService {
             }
         }
 
-        let code: String = (0..6)
-            .map(|_| rand::thread_rng().gen_range(0..10).to_string())
-            .collect();
+        let code = {
+            let mut rng = rand::rng();
+            (0..6)
+                .map(|_| rng.random_range(0..10).to_string())
+                .collect::<String>()
+        };
         if let Some(redis) = &self.redis {
             redis
                 .set_email_verification_code(user_id, &req.email, &code)
@@ -333,7 +336,9 @@ impl AuthService {
         }
 
         // SMTP 已配置则发送邮件，否则写入日志（开发环境）
-        if let (Some(host), Some(from)) = (&self.config.smtp_host, &self.config.smtp_from) {
+        if let (Some(host), Some(from)) =
+            (&self.config.server.smtp_host, &self.config.server.smtp_from)
+        {
             let to_addr = req
                 .email
                 .parse()
@@ -353,10 +358,13 @@ impl AuthService {
             let mut builder = AsyncSmtpTransport::<Tokio1Executor>::relay(host)
                 .map_err(|e| AppError::Validation(format!("SMTP 配置失败: {}", e)))?;
 
-            if let (Some(u), Some(p)) = (&self.config.smtp_username, &self.config.smtp_password) {
+            if let (Some(u), Some(p)) = (
+                &self.config.server.smtp_username,
+                &self.config.server.smtp_password,
+            ) {
                 builder = builder.credentials(Credentials::new(u.clone(), p.clone()));
             }
-            if let Some(port) = self.config.smtp_port {
+            if let Some(port) = self.config.server.smtp_port {
                 builder = builder.port(port);
             }
 

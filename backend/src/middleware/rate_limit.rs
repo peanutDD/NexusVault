@@ -293,7 +293,7 @@ pub async fn rate_limit_middleware(
         .map(|v| v.0);
     let ip_key = get_client_ip(
         req.headers(),
-        app_state.config.trust_proxy_headers,
+        app_state.config.server.trust_proxy_headers,
         peer_addr,
     );
 

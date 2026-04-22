@@ -1,15 +1,26 @@
-//! # 数据模型模块
+//! # 数据模型模块（兼容层）
 //!
-//! 定义应用的数据模型，包括数据库实体和 API DTO。
+//! ⚠️ **已废弃**：请使用 [`crate::entities`]（DB 实体）和 [`crate::types`]（API DTO）
 //!
-//! ## 子模块
+//! 本模块作为**兼容转发层**，所有 item 均从 `entities/` 和 `types/` 重新导出。
+//! 现有代码中的 `use models::...` import 保持兼容，无需修改。
 //!
-//! - `api_token`: API Token 模型
-//! - `file`: 文件模型
-//! - `folder`: 文件夹模型
-//! - `share`: 分享模型
-//! - `upload_session`: 分块上传会话模型
-//! - `user`: 用户模型
+//! ## 迁移状态
+//!
+//! | 原位置 | 新位置 | 状态 |
+//! |--------|--------|------|
+//! | `models::User` | `entities::user::User` | ✅ 已迁移 |
+//! | `models::File` | `entities::file::File` | ✅ 已迁移 |
+//! | `models::FileVersion` | `entities::file::FileVersion` | ✅ 已迁移 |
+//! | `models::Folder` | `entities::folder::Folder` | ✅ 已迁移 |
+//! | `models::FileShare` | `entities::share::FileShare` | ✅ 已迁移 |
+//! | `models::ApiToken` | `entities::api_token::ApiToken` | ✅ 已迁移 |
+//! | `models::UploadSession` | `entities::upload_session::UploadSession` | ✅ 已迁移 |
+//! | `models::Organization*` | `entities::organization::*` | ✅ 已迁移 |
+//! | `models::UserResponse` | `types::user::UserResponse` | ✅ 已迁移 |
+//! | `models::FileListQuery` | `types::file::FileListQuery` | ✅ 已迁移 |
+//! | `models::FileResponse` | `types::file::FileResponse` | ✅ 已迁移 |
+//! | 其余 DTO | `types::` | ✅ 已迁移 |
 
 pub mod api_token;
 pub mod file;

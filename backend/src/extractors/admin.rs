@@ -50,7 +50,7 @@ impl FromRequestParts<AppState> for AdminToken {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let Some(expected) = state.config.admin_token.as_deref() else {
+        let Some(expected) = state.config.auth.admin_token.as_deref() else {
             return Err(AppError::Unauthorized);
         };
         let Some(provided) = extract_admin_token(parts) else {

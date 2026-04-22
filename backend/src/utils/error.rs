@@ -31,6 +31,12 @@ pub enum AppError {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
+    /// JSON 序列化/反序列化错误
+    ///
+    /// 由 serde_json 错误自动转换，返回 500 状态码。
+    #[error("JSON error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
+
     /// 认证错误
     ///
     /// 用于登录失败、密码错误等场景，返回 401 状态码。
@@ -333,6 +339,21 @@ impl IntoResponse for AppError {
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "INTERNAL_ERROR",
                     "服务器内部错误，请稍后重试".to_string(),
+                )
+            }
+
+            // JSON 序列化/反序列化错误 - 500
+            AppError::SerdeJson(e) => {
+                tracing::error!(
+                    error_id = %error_id,
+                    error_type = "serde_json",
+                    details = %e,
+                    "JSON serialization/deserialization error"
+                );
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "JSON_ERROR",
+                    "数据处理失败，请稍后重试".to_string(),
                 )
             }
         };

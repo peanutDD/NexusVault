@@ -1,0 +1,121 @@
+/* ==========================================================================
+   confirm-dialog.css — 删除确认弹窗（科幻风玻璃拟态）
+   ========================================================================== */
+
+@layer components {
+    /* 删除确认弹窗 - 科幻风玻璃拟态 */
+    .confirm-dialog-sci-fi-backdrop {
+        background-image: linear-gradient(
+            135deg,
+            var(--confirm-danger-sci-fi-b) 0%,
+            transparent 50%,
+            var(--confirm-danger-sci-fi-a) 100%
+        );
+        background-size: 100% 100%;
+    }
+
+    .confirm-dialog-sci-fi-panel {
+        border-color: var(--confirm-danger-glass-border);
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 24px rgba(var(--rgb-malachite-500), 0.1),
+            0 0 48px rgba(var(--rgb-emerald-400), 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .confirm-dialog-sci-fi .confirm-dialog-sci-fi-panel.glass-panel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(
+            135deg,
+            rgba(var(--rgb-emerald-400), 0.2) 0%,
+            transparent 40%,
+            transparent 60%,
+            transparent 60%,
+            rgba(var(--rgb-malachite-500), 0.18) 100%
+        );
+        -webkit-mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        opacity: 0.9;
+    }
+
+    .confirm-dialog-sci-fi-icon {
+        box-shadow:
+            0 0 0 1px rgba(var(--rgb-malachite-500), 0.35),
+            0 0 16px rgba(var(--rgb-malachite-500), 0.22);
+    }
+
+    .confirm-dialog-sci-fi-confirm {
+        box-shadow:
+            0 0 0 1px rgba(var(--rgb-malachite-500), 0.35),
+            0 0 20px rgba(var(--rgb-malachite-500), 0.2);
+    }
+
+    .confirm-dialog-sci-fi-confirm:hover:not(:disabled) {
+        box-shadow:
+            0 0 0 1px rgba(var(--rgb-malachite-500), 0.44),
+            0 0 24px rgba(var(--rgb-malachite-500), 0.3),
+            0 0 32px rgba(var(--rgb-emerald-400), 0.1);
+    }
+
+    .confirm-dialog-sci-fi-panel .confirm-dialog-sci-fi-gradient {
+        background: linear-gradient(
+            to bottom,
+            rgba(var(--rgb-malachite-500), 0.12),
+            rgba(var(--rgb-emerald-400), 0.06),
+            transparent
+        );
+    }
+
+    .confirm-dialog-sci-fi-grid {
+        background-image:
+            linear-gradient(rgba(var(--rgb-emerald-400), 0.6) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(var(--rgb-emerald-400), 0.6) 1px, transparent 1px);
+        background-size: 12px 12px;
+        opacity: 0.04;
+    }
+
+    /* 凹槽头部：内凹设计 */
+    .confirm-dialog-groove {
+        position: relative;
+    }
+
+    .confirm-dialog-groove-sci-fi {
+        background: linear-gradient(
+            180deg,
+            rgba(0, 0, 0, 0.35) 0%,
+            rgba(var(--rgb-malachite-500), 0.06) 50%,
+            rgba(0, 0, 0, 0.3) 100%
+        );
+        box-shadow:
+            inset 0 2px 12px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .confirm-dialog-groove-sci-fi::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(var(--rgb-malachite-500), 0.26) 20%,
+            rgba(var(--rgb-emerald-400), 0.18) 80%,
+            transparent 100%
+        );
+        pointer-events: none;
+    }
+}

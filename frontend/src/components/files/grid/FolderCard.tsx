@@ -128,7 +128,7 @@ const FolderCard = memo(function FolderCard({
         {/* 文件夹名称 + 设置按钮 */}
         <div className="relative flex w-full items-center" data-oid="ebqewy5">
           <p
-            className="w-full truncate whitespace-nowrap px-[clamp(0.7rem,2vw,1rem)] text-center text-[clamp(0.6rem,2.2vw,0.82rem)] font-medium text-[var(--glass-text)] lg:px-[clamp(0.42rem,1vw,0.62rem)]"
+            className="w-full line-clamp-2 leading-[1.3] px-[clamp(0.7rem,2vw,1rem)] text-center text-[clamp(0.6rem,2.2vw,0.82rem)] font-medium text-[var(--glass-text)] lg:px-[clamp(0.42rem,1vw,0.62rem)]"
             title={folder.name}
             data-oid="7ndc6ny"
           >
