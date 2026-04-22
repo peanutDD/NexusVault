@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, configDefaults } from "vitest/config";
 import { loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import compression from "vite-plugin-compression";
@@ -229,6 +229,7 @@ export default defineConfig(({ mode }) => {
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setupTests.ts"],
+    exclude: [...configDefaults.exclude, "e2e/**"],
   },
   };
 });
