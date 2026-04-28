@@ -2,12 +2,17 @@ use deadpool_redis::redis::cmd;
 use deadpool_redis::{Pool, Runtime};
 use uuid::Uuid;
 
+use crate::utils::AppError;
+
 // =============================================================================
 // 连接池
 // =============================================================================
-pub fn create_pool(redis_url: &str) -> anyhow::Result<Pool> {
+pub fn create_pool(redis_url: &str) -> Result<Pool, AppError> {
     let cfg = deadpool_redis::Config::from_url(redis_url);
-    Ok(cfg.create_pool(Some(Runtime::Tokio1))?)
+    cfg.create_pool(Some(Runtime::Tokio1)).map_err(|e| {
+        tracing::error!(error = %e, "Failed to create Redis pool");
+        AppError::Internal
+    })
 }
 
 // =============================================================================
@@ -38,15 +43,22 @@ impl RedisService {
         user_id: Uuid,
         email: &str,
         code: &str,
-    ) -> anyhow::Result<()> {
-        let mut conn = self.pool.get().await?;
+    ) -> Result<(), AppError> {
+        let mut conn = self.pool.get().await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis connection failed");
+            AppError::Internal
+        })?;
         let key = format!("email_verify:{}:{}", user_id, email);
         cmd("SETEX")
             .arg(key)
             .arg(600)
             .arg(code)
             .query_async::<_, ()>(&mut conn)
-            .await?;
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Redis SETEX failed for email verification");
+                AppError::Internal
+            })?;
         Ok(())
     }
 
@@ -56,8 +68,11 @@ impl RedisService {
         user_id: Uuid,
         email: &str,
         code: &str,
-    ) -> anyhow::Result<bool> {
-        let mut conn = self.pool.get().await?;
+    ) -> Result<bool, AppError> {
+        let mut conn = self.pool.get().await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis connection failed");
+            AppError::Internal
+        })?;
         let key = format!("email_verify:{}:{}", user_id, email);
         let script = "local v = redis.call('GET', KEYS[1]); \
                       if v and v == ARGV[1] then \
@@ -71,7 +86,11 @@ impl RedisService {
             .arg(&key)
             .arg(code)
             .query_async(&mut conn)
-            .await?;
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Redis EVAL failed for email verification");
+                AppError::Internal
+            })?;
         Ok(ok == 1)
     }
 
@@ -80,15 +99,22 @@ impl RedisService {
     // -------------------------------------------------------------------------
     //
     // state 必须是一次性、短期有效的随机串；回调时校验通过后立刻消费掉。
-    pub async fn set_oauth_state(&self, provider: &str, state: &str) -> anyhow::Result<()> {
-        let mut conn = self.pool.get().await?;
+    pub async fn set_oauth_state(&self, provider: &str, state: &str) -> Result<(), AppError> {
+        let mut conn = self.pool.get().await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis connection failed");
+            AppError::Internal
+        })?;
         let key = format!("oauth_state:{}:{}", provider, state);
         cmd("SETEX")
             .arg(key)
             .arg(300)
             .arg("1")
             .query_async::<_, ()>(&mut conn)
-            .await?;
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Redis SETEX failed for OAuth state");
+                AppError::Internal
+            })?;
         Ok(())
     }
 
@@ -97,10 +123,16 @@ impl RedisService {
         &self,
         provider: &str,
         state: &str,
-    ) -> anyhow::Result<bool> {
-        let mut conn = self.pool.get().await?;
+    ) -> Result<bool, AppError> {
+        let mut conn = self.pool.get().await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis connection failed");
+            AppError::Internal
+        })?;
         let key = format!("oauth_state:{}:{}", provider, state);
-        let deleted: i32 = cmd("DEL").arg(key).query_async(&mut conn).await?;
+        let deleted: i32 = cmd("DEL").arg(key).query_async(&mut conn).await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis DEL failed for OAuth state");
+            AppError::Internal
+        })?;
         Ok(deleted == 1)
     }
 
@@ -111,18 +143,30 @@ impl RedisService {
     // 采用“版本号”失效的原因：
     // - 避免用 SCAN/KEYS 做模式删除（成本高且可能阻塞）
     // - 一次 INCR 即可使该用户所有派生 key 自动失效（key 中带版本号）
-    pub async fn get_user_cache_version(&self, user_id: Uuid) -> anyhow::Result<i64> {
-        let mut conn = self.pool.get().await?;
+    pub async fn get_user_cache_version(&self, user_id: Uuid) -> Result<i64, AppError> {
+        let mut conn = self.pool.get().await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis connection failed");
+            AppError::Internal
+        })?;
         let key = format!("cachever:user:{}", user_id);
-        let v: Option<i64> = cmd("GET").arg(key).query_async(&mut conn).await?;
+        let v: Option<i64> = cmd("GET").arg(key).query_async(&mut conn).await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis GET failed for cache version");
+            AppError::Internal
+        })?;
         Ok(v.unwrap_or(1))
     }
 
     // 写路径调用：用于使读缓存（文件列表/分类/配额等）整体失效。
-    pub async fn bump_user_cache_version(&self, user_id: Uuid) -> anyhow::Result<i64> {
-        let mut conn = self.pool.get().await?;
+    pub async fn bump_user_cache_version(&self, user_id: Uuid) -> Result<i64, AppError> {
+        let mut conn = self.pool.get().await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis connection failed");
+            AppError::Internal
+        })?;
         let key = format!("cachever:user:{}", user_id);
-        let v: i64 = cmd("INCR").arg(key).query_async(&mut conn).await?;
+        let v: i64 = cmd("INCR").arg(key).query_async(&mut conn).await.map_err(|e| {
+            tracing::warn!(error = %e, "Redis INCR failed for cache version");
+            AppError::Internal
+        })?;
         Ok(v)
     }
 }

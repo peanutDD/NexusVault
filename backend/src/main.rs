@@ -3,7 +3,6 @@
 //! 基于 Axum、SQLx 和 Tokio 的文件存储后端服务。
 //!
 //! ## 架构
-//!
 //! - api/: 路由定义
 //! - app.rs: 应用构建（CORS、中间件、路由挂载）
 //! - handlers/: HTTP 请求处理

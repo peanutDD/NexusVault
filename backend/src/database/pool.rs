@@ -1,6 +1,8 @@
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
 
+use crate::utils::AppError;
+
 fn env_u32(key: &str, default: u32) -> u32 {
     std::env::var(key)
         .ok()
@@ -8,7 +10,7 @@ fn env_u32(key: &str, default: u32) -> u32 {
         .unwrap_or(default)
 }
 
-pub async fn create_pool(database_url: &str) -> anyhow::Result<PgPool> {
+pub async fn create_pool(database_url: &str) -> Result<PgPool, AppError> {
     let max_connections = env_u32("DB_POOL_MAX_CONNECTIONS", 40);
     let acquire_timeout_secs = env_u32("DB_POOL_ACQUIRE_TIMEOUT_SECS", 15);
     tracing::info!(
@@ -21,13 +23,11 @@ pub async fn create_pool(database_url: &str) -> anyhow::Result<PgPool> {
         .max_connections(max_connections)
         .min_connections(5)
         .acquire_timeout(Duration::from_secs(acquire_timeout_secs as u64))
-        .idle_timeout(Some(Duration::from_secs(600))) // 空闲连接超时（10分钟）
-        .max_lifetime(Some(Duration::from_secs(1800))) // 连接最大生命周期（30分钟）
-        .test_before_acquire(true) // 获取连接前测试连接是否有效
+        .idle_timeout(Some(Duration::from_secs(600)))
+        .max_lifetime(Some(Duration::from_secs(1800)))
+        .test_before_acquire(true)
         .after_connect(|conn, _meta| {
             Box::pin(async move {
-                // 防止慢查询长时间占用连接导致“雪崩”
-                // 说明：可按接口粒度（list vs upload）进一步用 SET LOCAL 调整
                 sqlx::query("SET statement_timeout = '20s'")
                     .execute(conn)
                     .await?;
@@ -35,12 +35,16 @@ pub async fn create_pool(database_url: &str) -> anyhow::Result<PgPool> {
             })
         })
         .connect(database_url)
-        .await?;
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to create database pool");
+            AppError::Internal
+        })?;
 
     Ok(pool)
 }
 
-pub async fn pre_migration_repairs(pool: &PgPool) -> anyhow::Result<()> {
+pub async fn pre_migration_repairs(pool: &PgPool) -> Result<(), AppError> {
     let needs_dedupe: bool = sqlx::query_scalar(
         "SELECT to_regclass('public.background_tasks') IS NOT NULL
              AND to_regclass('public.uq_background_tasks_active_dedupe') IS NULL",
@@ -72,17 +76,31 @@ pub async fn pre_migration_repairs(pool: &PgPool) -> anyhow::Result<()> {
                AND r.rn > 1",
         )
         .execute(pool)
-        .await?;
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to dedupe background tasks");
+            AppError::Database(e)
+        })?;
     }
 
     Ok(())
 }
 
-pub async fn reset_public_schema(pool: &PgPool) -> anyhow::Result<()> {
+pub async fn reset_public_schema(pool: &PgPool) -> Result<(), AppError> {
     sqlx::query("DROP SCHEMA IF EXISTS public CASCADE")
         .execute(pool)
-        .await?;
-    sqlx::query("CREATE SCHEMA public").execute(pool).await?;
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to reset public schema");
+            AppError::Database(e)
+        })?;
+    sqlx::query("CREATE SCHEMA public")
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to create public schema");
+            AppError::Database(e)
+        })?;
     Ok(())
 }
 
@@ -90,7 +108,7 @@ pub async fn repair_migration_checksum(
     pool: &PgPool,
     migrator: &sqlx::migrate::Migrator,
     version: i64,
-) -> anyhow::Result<bool> {
+) -> Result<bool, AppError> {
     let Some(migration) = migrator.iter().find(|m| m.version == version) else {
         return Ok(false);
     };
@@ -99,7 +117,11 @@ pub async fn repair_migration_checksum(
         .bind(version)
         .bind(migration.checksum.as_ref())
         .execute(pool)
-        .await?;
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to repair migration checksum");
+            AppError::Database(e)
+        })?;
 
     Ok(res.rows_affected() > 0)
 }

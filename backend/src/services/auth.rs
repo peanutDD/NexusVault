@@ -14,6 +14,9 @@
 //! - JWT token 有过期时间
 //! - 所有认证失败返回统一错误，防止信息泄露
 
+#[path = "auth/error.rs"]
+mod error;
+
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -27,12 +30,14 @@ use crate::{
     },
     repositories::{DynUsersRepo, SqlxUsersRepo},
     services::cache::CacheService,
-    utils::{hash_password, now_timestamp, parse_jwt_expiry, verify_password, AppError},
+    utils::{hash_password, now_timestamp, parse_jwt_expiry, verify_password},
 };
 use lettre::message::header::ContentType;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use rand::Rng;
+
+pub use error::AuthServiceError;
 
 /// JWT Claims 结构
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,7 +93,7 @@ impl AuthService {
     }
 
     /// 用户注册
-    pub async fn register(&self, req: RegisterRequest) -> Result<UserResponse, AppError> {
+    pub async fn register(&self, req: RegisterRequest) -> Result<UserResponse, AuthServiceError> {
         // 验证输入
         Self::validate_register_input(&req)?;
 
@@ -98,7 +103,7 @@ impl AuthService {
             .exists_by_email_or_username(&req.email, &req.username)
             .await?
         {
-            return Err(AppError::Validation(
+            return Err(AuthServiceError::Validation(
                 "Email or username already exists".to_string(),
             ));
         }
@@ -116,17 +121,17 @@ impl AuthService {
     }
 
     /// 用户登录
-    pub async fn login(&self, req: LoginRequest) -> Result<String, AppError> {
+    pub async fn login(&self, req: LoginRequest) -> Result<String, AuthServiceError> {
         // 查找用户
         let user = self
             .users_repo
             .find_by_email(&req.email)
             .await?
-            .ok_or_else(|| AppError::Auth("Invalid email or password".to_string()))?;
+            .ok_or(AuthServiceError::InvalidCredentials)?;
 
         // 验证密码
         if !verify_password(&req.password, &user.password_hash)? {
-            return Err(AppError::Auth("Invalid email or password".to_string()));
+            return Err(AuthServiceError::InvalidCredentials);
         }
 
         // 生成 token
@@ -134,7 +139,7 @@ impl AuthService {
     }
 
     /// 生成 JWT token
-    pub fn generate_token(&self, user_id: &Uuid) -> Result<String, AppError> {
+    pub fn generate_token(&self, user_id: &Uuid) -> Result<String, AuthServiceError> {
         let now = now_timestamp();
         let exp = parse_jwt_expiry(&self.config.auth.jwt_expiry);
 
@@ -149,13 +154,13 @@ impl AuthService {
             &claims,
             &EncodingKey::from_secret(self.config.auth.jwt_secret.as_ref()),
         )
-        .map_err(|e| AppError::Auth(format!("Failed to generate token: {}", e)))?;
+        .map_err(AuthServiceError::TokenGeneration)?;
 
         Ok(token)
     }
 
     /// 验证 JWT token
-    pub fn verify_token(&self, token: &str) -> Result<Uuid, AppError> {
+    pub fn verify_token(&self, token: &str) -> Result<Uuid, AuthServiceError> {
         // 明确指定 HS256 算法，防止算法混淆攻击
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = true;
@@ -165,10 +170,10 @@ impl AuthService {
             &DecodingKey::from_secret(self.config.auth.jwt_secret.as_ref()),
             &validation,
         )
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| AuthServiceError::Unauthorized)?;
 
         let user_id =
-            Uuid::parse_str(&token_data.claims.sub).map_err(|_| AppError::Unauthorized)?;
+            Uuid::parse_str(&token_data.claims.sub).map_err(|_| AuthServiceError::Unauthorized)?;
 
         Ok(user_id)
     }
@@ -181,7 +186,7 @@ impl AuthService {
         &self,
         username_hint: &str,
         email: &str,
-    ) -> Result<UserResponse, AppError> {
+    ) -> Result<UserResponse, AuthServiceError> {
         // 1. 先尝试按邮箱查找已存在用户
         if let Some(user) = self.users_repo.find_by_email(email).await? {
             tracing::info!(
@@ -244,12 +249,12 @@ impl AuthService {
     }
 
     /// 获取用户信息
-    pub async fn get_user(&self, user_id: Uuid) -> Result<UserResponse, AppError> {
+    pub async fn get_user(&self, user_id: Uuid) -> Result<UserResponse, AuthServiceError> {
         let user = self
             .users_repo
             .find_by_id(user_id)
             .await?
-            .ok_or(AppError::NotFound)?;
+            .ok_or(AuthServiceError::NotFound)?;
 
         Ok(UserResponse::from(user))
     }
@@ -260,18 +265,18 @@ impl AuthService {
         user_id: Uuid,
         current_password: String,
         new_password: String,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AuthServiceError> {
         // 验证新密码：与注册规则一致（长度 8–64，且至少包含 1 个字母和 1 个数字）
         let len = new_password.len();
         if !(8..=64).contains(&len) {
-            return Err(AppError::Validation(
+            return Err(AuthServiceError::Validation(
                 "New password must be between 8 and 64 characters".to_string(),
             ));
         }
         let has_letter = new_password.chars().any(|c| c.is_ascii_alphabetic());
         let has_digit = new_password.chars().any(|c| c.is_ascii_digit());
         if !has_letter || !has_digit {
-            return Err(AppError::Validation(
+            return Err(AuthServiceError::Validation(
                 "New password must contain at least one letter and one digit".to_string(),
             ));
         }
@@ -281,11 +286,11 @@ impl AuthService {
             .users_repo
             .find_by_id(user_id)
             .await?
-            .ok_or(AppError::NotFound)?;
+            .ok_or(AuthServiceError::NotFound)?;
 
         // 验证当前密码
         if !verify_password(&current_password, &user.password_hash)? {
-            return Err(AppError::Validation(
+            return Err(AuthServiceError::Validation(
                 "Current password is incorrect".to_string(),
             ));
         }
@@ -308,14 +313,16 @@ impl AuthService {
         &self,
         user_id: Uuid,
         req: SendEmailVerificationRequest,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AuthServiceError> {
         validator::Validate::validate(&req)
-            .map_err(|e| AppError::Validation(format!("邮箱格式无效: {}", e)))?;
+            .map_err(|e| AuthServiceError::Validation(format!("邮箱格式无效: {}", e)))?;
 
         // 检查邮箱是否被其他用户占用
         if let Some(other) = self.users_repo.find_by_email(&req.email).await? {
             if other.id != user_id {
-                return Err(AppError::Conflict("该邮箱已被其他用户使用".to_string()));
+                return Err(AuthServiceError::Conflict(
+                    "该邮箱已被其他用户使用".to_string(),
+                ));
             }
         }
 
@@ -329,21 +336,23 @@ impl AuthService {
             redis
                 .set_email_verification_code(user_id, &req.email, &code)
                 .await
-                .map_err(|_| AppError::Internal)?;
+                .map_err(|_| AuthServiceError::Internal)?;
         } else {
             self.cache
                 .set_email_verification_code(user_id, &req.email, &code);
         }
 
         // SMTP 已配置则发送邮件，否则写入日志（开发环境）
-        if let (Some(host), Some(from)) = (&self.config.server.smtp_host, &self.config.server.smtp_from) {
+        if let (Some(host), Some(from)) =
+            (&self.config.server.smtp_host, &self.config.server.smtp_from)
+        {
             let to_addr = req
                 .email
                 .parse()
-                .map_err(|_| AppError::Validation("无效的收件人邮箱".to_string()))?;
+                .map_err(|_| AuthServiceError::Validation("无效的收件人邮箱".to_string()))?;
             let from_addr = from
                 .parse()
-                .map_err(|_| AppError::Validation("无效的发件人邮箱配置".to_string()))?;
+                .map_err(|_| AuthServiceError::Validation("无效的发件人邮箱配置".to_string()))?;
 
             let email = Message::builder()
                 .from(from_addr)
@@ -351,12 +360,15 @@ impl AuthService {
                 .subject("邮箱验证码")
                 .header(ContentType::TEXT_PLAIN)
                 .body(format!("您的验证码是：{}，10 分钟内有效。", code))
-                .map_err(|e| AppError::Validation(format!("构建邮件失败: {}", e)))?;
+                .map_err(|e| AuthServiceError::Validation(format!("构建邮件失败: {}", e)))?;
 
             let mut builder = AsyncSmtpTransport::<Tokio1Executor>::relay(host)
-                .map_err(|e| AppError::Validation(format!("SMTP 配置失败: {}", e)))?;
+                .map_err(|e| AuthServiceError::Validation(format!("SMTP 配置失败: {}", e)))?;
 
-            if let (Some(u), Some(p)) = (&self.config.server.smtp_username, &self.config.server.smtp_password) {
+            if let (Some(u), Some(p)) = (
+                &self.config.server.smtp_username,
+                &self.config.server.smtp_password,
+            ) {
                 builder = builder.credentials(Credentials::new(u.clone(), p.clone()));
             }
             if let Some(port) = self.config.server.smtp_port {
@@ -366,9 +378,7 @@ impl AuthService {
             let mailer = builder.build();
             if let Err(e) = mailer.send(email).await {
                 tracing::warn!("发送邮箱验证码失败: {}", e);
-                return Err(AppError::Validation(
-                    "发送验证码失败，请稍后重试".to_string(),
-                ));
+                return Err(AuthServiceError::EmailDelivery);
             }
         } else {
             tracing::info!(
@@ -386,15 +396,15 @@ impl AuthService {
         &self,
         user_id: Uuid,
         req: UpdateProfileRequest,
-    ) -> Result<UserResponse, AppError> {
+    ) -> Result<UserResponse, AuthServiceError> {
         validator::Validate::validate(&req)
-            .map_err(|e| AppError::Validation(format!("Validation error: {}", e)))?;
+            .map_err(|e| AuthServiceError::Validation(format!("Validation error: {}", e)))?;
 
         let current = self
             .users_repo
             .find_by_id(user_id)
             .await?
-            .ok_or(AppError::NotFound)?;
+            .ok_or(AuthServiceError::NotFound)?;
 
         // 修改邮箱时必须提供验证码
         if req.email != current.email {
@@ -403,20 +413,22 @@ impl AuthService {
                 .as_deref()
                 .filter(|s| !s.trim().is_empty())
                 .ok_or_else(|| {
-                    AppError::Validation("修改邮箱需要先获取并填写验证码".to_string())
+                    AuthServiceError::Validation("修改邮箱需要先获取并填写验证码".to_string())
                 })?;
 
             let ok = if let Some(redis) = &self.redis {
                 redis
                     .verify_and_consume_email_code(user_id, &req.email, code)
                     .await
-                    .map_err(|_| AppError::Internal)?
+                    .map_err(|_| AuthServiceError::Internal)?
             } else {
                 self.cache
                     .verify_and_consume_email_code(user_id, &req.email, code)
             };
             if !ok {
-                return Err(AppError::Validation("验证码错误或已过期".to_string()));
+                return Err(AuthServiceError::Validation(
+                    "验证码错误或已过期".to_string(),
+                ));
             }
         }
 
@@ -430,7 +442,7 @@ impl AuthService {
                 other.id != user_id
             );
             if other.id != user_id {
-                return Err(AppError::Conflict("用户名已被占用".to_string()));
+                return Err(AuthServiceError::Conflict("用户名已被占用".to_string()));
             }
         } else {
             tracing::info!(
@@ -448,7 +460,7 @@ impl AuthService {
                 other.id != user_id
             );
             if other.id != user_id {
-                return Err(AppError::Conflict("邮箱已被占用".to_string()));
+                return Err(AuthServiceError::Conflict("邮箱已被占用".to_string()));
             }
         } else {
             tracing::info!("update_profile 邮箱检查: email={} 未被占用", req.email);
@@ -468,7 +480,7 @@ impl AuthService {
         user_id: Uuid,
         username: &str,
         email: &str,
-    ) -> Result<(bool, bool), AppError> {
+    ) -> Result<(bool, bool), AuthServiceError> {
         let username_available = match self.users_repo.find_by_username(username).await? {
             Some(other) => {
                 tracing::info!(
@@ -509,25 +521,27 @@ impl AuthService {
     // ========================================================================
 
     /// 验证注册输入
-    fn validate_register_input(req: &RegisterRequest) -> Result<(), AppError> {
+    fn validate_register_input(req: &RegisterRequest) -> Result<(), AuthServiceError> {
         if req.username.len() < 3 || req.username.len() > 50 {
-            return Err(AppError::Validation(
+            return Err(AuthServiceError::Validation(
                 "Username must be between 3 and 50 characters".to_string(),
             ));
         }
         if !req.email.contains('@') {
-            return Err(AppError::Validation("Invalid email format".to_string()));
+            return Err(AuthServiceError::Validation(
+                "Invalid email format".to_string(),
+            ));
         }
         let len = req.password.len();
         if !(8..=64).contains(&len) {
-            return Err(AppError::Validation(
+            return Err(AuthServiceError::Validation(
                 "Password must be between 8 and 64 characters".to_string(),
             ));
         }
         let has_letter = req.password.chars().any(|c| c.is_ascii_alphabetic());
         let has_digit = req.password.chars().any(|c| c.is_ascii_digit());
         if !has_letter || !has_digit {
-            return Err(AppError::Validation(
+            return Err(AuthServiceError::Validation(
                 "Password must contain at least one letter and one digit".to_string(),
             ));
         }

@@ -20,6 +20,7 @@ pub(crate) use batch_zip::{run_zip_writer_thread, write_zip_to_file};
 mod categories;
 mod chunked_upload;
 mod delete;
+pub mod error;
 mod hls;
 mod instant_upload;
 mod list;
@@ -47,6 +48,7 @@ use crate::services::embeddings::EmbeddingService;
 use crate::services::storage::StorageBackend;
 use crate::utils::AppError;
 
+pub use error::FileServiceError;
 pub use semantic_search::SemanticSearchService;
 pub use storage_factory::create_storage;
 pub(crate) use upload::{CreateFileFromPathInput, EmbeddingTaskInput};

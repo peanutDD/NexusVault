@@ -1,27 +1,23 @@
 //! # Maintenance / Housekeeping
-//!
 //! 后台维护任务：清理过期分块上传会话、临时文件、孤儿文件等。
 
 // =============================================================================
 // 依赖与常量
 // =============================================================================
 
-use std::collections::HashSet; // 批量查库后用于 O(1) 判存在
-use std::path::{Path, PathBuf}; // Path 判断存在/类型，PathBuf 栈迭代入栈
-use std::sync::Arc; // StorageBackend、DynFilesRepo 用 Arc 共享
-use std::time::Duration; // 轮询间隔
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
 
-use sqlx::PgPool; // 查 upload_sessions、files，删记录
-use uuid::Uuid; // user_id、file_id 解析与查库
+use sqlx::PgPool;
+use uuid::Uuid;
 
-use crate::repositories::{DynFilesRepo, SqlxFilesRepo}; // 查 files 表、删记录
-use crate::services::storage::StorageBackend; // 打开读流校验文件是否存在
-use crate::utils::AppError; // File/Storage 错误表示文件缺失
+use crate::repositories::{DynFilesRepo, SqlxFilesRepo};
+use crate::services::storage::StorageBackend;
+use crate::utils::AppError;
 
-/// 本地存储下需跳过的顶层目录（非用户文件目录，扫描孤儿时不解为 user_id）
 const SKIP_DIRS: &[&str] = &[".thumbnails", ".hls", ".chunked", ".derived_videos"];
-
-/// 孤儿扫描时每批用 `find_by_ids` 一次查库的 file_id 数量，减少 DB 往返
 const ORPHAN_DB_BATCH_SIZE: usize = 64;
 
 pub fn spawn_zip_cache_cleanup(base_dir: PathBuf, interval: Duration, ttl_secs: u64) {
@@ -34,19 +30,25 @@ pub fn spawn_zip_cache_cleanup(base_dir: PathBuf, interval: Duration, ttl_secs: 
     });
 }
 
-async fn cleanup_zip_cache_once(base_dir: &Path, ttl_secs: u64) -> anyhow::Result<u32> {
+async fn cleanup_zip_cache_once(base_dir: &Path, ttl_secs: u64) -> Result<u32, AppError> {
     if !base_dir.exists() || !base_dir.is_dir() {
         return Ok(0);
     }
 
     let mut deleted = 0u32;
-    let mut user_dirs = tokio::fs::read_dir(base_dir).await?;
+    let mut user_dirs = tokio::fs::read_dir(base_dir).await.map_err(|e| {
+        tracing::error!(error = %e, "Failed to read zip cache dir");
+        AppError::Internal
+    })?;
     while let Ok(Some(user_entry)) = user_dirs.next_entry().await {
         let user_path = user_entry.path();
         if !user_path.is_dir() {
             continue;
         }
-        let mut files = tokio::fs::read_dir(&user_path).await?;
+        let mut files = tokio::fs::read_dir(&user_path).await.map_err(|e| {
+            tracing::error!(error = %e, "Failed to read user cache dir");
+            AppError::Internal
+        })?;
         while let Ok(Some(entry)) = files.next_entry().await {
             let p = entry.path();
             if !p.is_file() {
@@ -84,73 +86,59 @@ async fn cleanup_zip_cache_once(base_dir: &Path, ttl_secs: u64) -> anyhow::Resul
 }
 
 // =============================================================================
-// 过期分块上传会话清理（释放临时目录与 DB）
+// 过期分块上传会话清理
 // =============================================================================
 
-/// 启动"过期分块上传会话"清理任务。
-///
-/// - 周期性查询 `upload_sessions.expires_at < NOW()` 的记录
-/// - best-effort 删除 `temp_path` 目录
-/// - 删除 DB 记录
-///
-/// 参数建议：
-/// - `interval`: 例如 5 分钟
-/// - `batch_size`: 例如 200（避免单次清理占用过多 DB/IO）
 pub fn spawn_upload_session_cleanup(pool: PgPool, interval: Duration, batch_size: i64) {
     tokio::spawn(async move {
-        let mut tick = tokio::time::interval(interval); // 首次 tick 立即就绪，之后按 interval
+        let mut tick = tokio::time::interval(interval);
         loop {
-            tick.tick().await; // 等待下一轮
+            tick.tick().await;
             if let Err(e) = cleanup_expired_upload_sessions_once(&pool, batch_size).await {
-                tracing::warn!("upload session cleanup failed: {}", e); // 单轮失败不退出任务
+                tracing::warn!(error = %e, "upload session cleanup failed");
             }
         }
     });
 }
 
-/// 单轮：查出过期会话，删临时目录与 DB 记录。
 async fn cleanup_expired_upload_sessions_once(
     pool: &PgPool,
     batch_size: i64,
-) -> anyhow::Result<()> {
+) -> Result<(), AppError> {
     let rows: Vec<(Uuid, String)> = sqlx::query_as(
         "SELECT id, temp_path FROM upload_sessions WHERE expires_at < NOW() ORDER BY expires_at ASC LIMIT $1",
     )
     .bind(batch_size)
     .fetch_all(pool)
-    .await?;
+    .await
+    .map_err(|e| {
+        tracing::error!(error = %e, "Failed to query expired upload sessions");
+        AppError::Database(e)
+    })?;
 
     if rows.is_empty() {
         return Ok(());
     }
 
     for (id, temp_path) in rows {
-        let _ = tokio::fs::remove_dir_all(&temp_path).await; // 忽略错误（可能已被删）
+        let _ = tokio::fs::remove_dir_all(&temp_path).await;
         let _ = sqlx::query("DELETE FROM upload_sessions WHERE id = $1")
             .bind(id)
             .execute(pool)
-            .await; // 忽略错误（可能并发已删）
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Failed to delete expired upload session");
+                AppError::Database(e)
+            });
     }
 
     Ok(())
 }
 
 // =============================================================================
-// 文件一致性检查（DB → 存储：记录在但文件丢则删记录）
+// 文件一致性检查
 // =============================================================================
 
-/// 周期性检查 `files` 表中记录是否仍然有对应的物理文件；若文件已不存在，则删除对应 DB 记录。
-///
-/// 设计目标：
-/// - **保护读路径**：避免下载/预览时因为底层文件丢失导致反复报错
-/// - **仅从 DB → 存储方向校验**：不会去扫描整个存储目录删除"孤儿文件"，避免大规模 I/O
-///
-/// 行为：
-/// - 每次从 `files` 表中按 `updated_at DESC` 取一批记录（最近被操作的更容易出问题）
-/// - 尝试通过 `StorageBackend::open_read_stream` 打开文件
-///   - 若成功：认为文件存在，跳过
-///   - 若返回 `AppError::File` / `AppError::Storage`：视为文件已不存在，best-effort 删除 DB 记录
-///   - 若返回其他错误：直接返回错误，避免误删
 pub fn spawn_files_consistency_checker(
     pool: PgPool,
     storage: Arc<dyn StorageBackend>,
@@ -164,24 +152,27 @@ pub fn spawn_files_consistency_checker(
             if let Err(e) =
                 cleanup_missing_storage_files_once(&pool, storage.clone(), batch_size).await
             {
-                tracing::warn!("files consistency check failed: {}", e);
+                tracing::warn!(error = %e, "files consistency check failed");
             }
         }
     });
 }
 
-/// 单轮：取一批文件记录，逐条尝试打开读流；打开失败且为 File/Storage 错误则删 DB 记录。
 async fn cleanup_missing_storage_files_once(
     pool: &PgPool,
     storage: Arc<dyn StorageBackend>,
     batch_size: i64,
-) -> anyhow::Result<()> {
+) -> Result<(), AppError> {
     let rows: Vec<(Uuid, Uuid, String)> = sqlx::query_as(
         "SELECT id, user_id, file_path FROM files ORDER BY updated_at DESC LIMIT $1",
     )
     .bind(batch_size)
     .fetch_all(pool)
-    .await?;
+    .await
+    .map_err(|e| {
+        tracing::error!(error = %e, "Failed to query files for consistency check");
+        AppError::Database(e)
+    })?;
 
     if rows.is_empty() {
         return Ok(());
@@ -191,14 +182,14 @@ async fn cleanup_missing_storage_files_once(
 
     for (id, user_id, file_path) in rows {
         match storage.open_read_stream(&file_path).await {
-            Ok(_) => {} // 能打开则认为文件存在，不删
+            Ok(_) => {}
             Err(AppError::File(_)) | Err(AppError::Storage(_)) => {
                 if let Err(e) = files_repo.delete(id, user_id).await {
                     tracing::warn!(
-                        "failed to delete orphan file record id={} user_id={}: {}",
+                        error = %e,
+                        "failed to delete orphan file record id={} user_id={}",
                         id,
-                        user_id,
-                        e
+                        user_id
                     );
                 } else {
                     tracing::info!(
@@ -210,7 +201,7 @@ async fn cleanup_missing_storage_files_once(
                 }
             }
             Err(e) => {
-                return Err(anyhow::anyhow!(format!(
+                return Err(AppError::Storage(format!(
                     "storage.open_read_stream failed for {}: {}",
                     file_path, e
                 )));
@@ -222,20 +213,17 @@ async fn cleanup_missing_storage_files_once(
 }
 
 // =============================================================================
-// 孤儿存储文件清理（存储 → DB：磁盘有、DB 无则删文件）
+// 孤儿存储文件清理
 // =============================================================================
 
-/// 单次执行孤儿文件清理（如 RUN_ORPHAN_CLEANUP_ONCE=1），返回本轮删除的文件数。
 pub async fn run_orphan_cleanup_once(
     pool: &PgPool,
     storage_path: &str,
     batch_limit: u32,
-) -> anyhow::Result<u32> {
+) -> Result<u32, AppError> {
     delete_orphan_storage_files_once(pool, storage_path, batch_limit).await
 }
 
-/// 启动周期性孤儿文件清理任务；仅当 `storage_backend == "local"` 时在 main 中调用。
-/// 目录结构：`{storage_path}/{user_id}/[任意层嵌套]/<file_id>/<文件名>`，栈迭代扫描。
 pub fn spawn_orphan_storage_files_cleanup(
     pool: PgPool,
     storage_path: String,
@@ -249,40 +237,42 @@ pub fn spawn_orphan_storage_files_cleanup(
             if let Err(e) =
                 delete_orphan_storage_files_once(&pool, &storage_path, batch_limit).await
             {
-                tracing::warn!("orphan storage files cleanup failed: {}", e);
+                tracing::warn!(error = %e, "orphan storage files cleanup failed");
             }
         }
     });
 }
 
-/// 单轮孤儿清理：遍历 storage_path 下第一层目录（视为 user_id），跳过 SKIP_DIRS，对每个 user_id 调用 scan_user_dir_for_orphans；达到 batch_limit 即返回。
 async fn delete_orphan_storage_files_once(
     pool: &PgPool,
     storage_path: &str,
     batch_limit: u32,
-) -> anyhow::Result<u32> {
+) -> Result<u32, AppError> {
     let base = Path::new(storage_path);
     if !base.exists() || !base.is_dir() {
-        return Ok(0); // 目录不存在或非目录则直接返回
+        return Ok(0);
     }
 
     let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new(pool.clone()));
     let mut deleted = 0u32;
-    tracing::info!("orphan cleanup cycle started (base={})", base.display());
+    tracing::info!(base = %base.display(), "orphan cleanup cycle started");
 
-    let mut user_dirs = tokio::fs::read_dir(base).await?;
+    let mut user_dirs = tokio::fs::read_dir(base).await.map_err(|e| {
+        tracing::error!(error = %e, "Failed to read storage path");
+        AppError::Internal
+    })?;
     while let Ok(Some(user_entry)) = user_dirs.next_entry().await {
         let user_path = user_entry.path();
         if !user_path.is_dir() {
-            continue; // 只处理子目录（用户目录）
+            continue;
         }
         let user_name = user_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if SKIP_DIRS.contains(&user_name) {
-            continue; // .thumbnails、.hls、.chunked 不当作 user_id
+            continue;
         }
         let user_id: Uuid = match user_name.parse() {
             Ok(u) => u,
-            Err(_) => continue, // 非 UUID 目录名跳过
+            Err(_) => continue,
         };
 
         let _ = scan_user_dir_for_orphans(
@@ -294,31 +284,24 @@ async fn delete_orphan_storage_files_once(
         )
         .await?;
         if deleted >= batch_limit {
-            tracing::info!("orphan cleanup cycle finished, removed {} file(s)", deleted);
+            tracing::info!(deleted, "orphan cleanup cycle finished");
             return Ok(deleted);
         }
     }
 
-    tracing::info!("orphan cleanup cycle finished, removed {} file(s)", deleted);
+    tracing::info!(deleted, "orphan cleanup cycle finished");
     Ok(deleted)
 }
 
-// -----------------------------------------------------------------------------
-// 孤儿扫描：栈迭代（无递归 async）+ 按 file_id 批量查库（find_by_ids）减少 DB 往返
-// -----------------------------------------------------------------------------
-
-/// 扫描某 user_id 下目录（栈迭代，支持多层嵌套）：目录名为 UUID 则视为 file_id 目录，先收集到 pending，
-/// 满 ORPHAN_DB_BATCH_SIZE 或扫描结束后一次性 find_by_ids，再对「DB 无记录」的目录删文件并尝试删空目录。
 async fn scan_user_dir_for_orphans(
     files_repo: &DynFilesRepo,
     root: PathBuf,
     user_id: Uuid,
     deleted: &mut u32,
     batch_limit: u32,
-) -> anyhow::Result<u32> {
+) -> Result<u32, AppError> {
     let mut total = 0u32;
     let mut stack = vec![root];
-    // (file_id, 目录路径, 该目录下待删文件路径列表)，攒满一批后 find_by_ids 一次查库
     let mut pending: Vec<(Uuid, PathBuf, Vec<PathBuf>)> = Vec::new();
 
     while let Some(dir) = stack.pop() {
@@ -329,7 +312,10 @@ async fn scan_user_dir_for_orphans(
         let file_id: Uuid = match dir_name.parse() {
             Ok(u) => u,
             Err(_) => {
-                let mut entries = tokio::fs::read_dir(&dir).await?;
+                let mut entries = tokio::fs::read_dir(&dir).await.map_err(|e| {
+                    tracing::error!(error = %e, "Failed to read directory");
+                    AppError::Internal
+                })?;
                 while let Ok(Some(entry)) = entries.next_entry().await {
                     let path = entry.path();
                     if path.is_dir() {
@@ -340,8 +326,10 @@ async fn scan_user_dir_for_orphans(
             }
         };
 
-        // UUID 目录：收集该目录下所有文件路径与子目录，加入 pending，子目录入栈
-        let mut entries = tokio::fs::read_dir(&dir).await?;
+        let mut entries = tokio::fs::read_dir(&dir).await.map_err(|e| {
+            tracing::error!(error = %e, "Failed to read file directory");
+            AppError::Internal
+        })?;
         let mut file_paths = Vec::new();
         let mut subdirs = Vec::new();
         while let Ok(Some(entry)) = entries.next_entry().await {
@@ -357,7 +345,6 @@ async fn scan_user_dir_for_orphans(
         }
         pending.push((file_id, dir, file_paths));
 
-        // 攒够一批则一次性查库并删除孤儿
         if pending.len() >= ORPHAN_DB_BATCH_SIZE {
             flush_orphan_batch(
                 files_repo,
@@ -371,7 +358,6 @@ async fn scan_user_dir_for_orphans(
         }
     }
 
-    // 处理剩余 pending
     flush_orphan_batch(
         files_repo,
         user_id,
@@ -384,7 +370,6 @@ async fn scan_user_dir_for_orphans(
     Ok(total)
 }
 
-/// 对 pending 中的 (file_id, dir_path, file_paths) 做一次 find_by_ids，删除 DB 中不存在的目录下所有文件并尝试删空目录。
 async fn flush_orphan_batch(
     files_repo: &DynFilesRepo,
     user_id: Uuid,
@@ -392,15 +377,15 @@ async fn flush_orphan_batch(
     batch_limit: u32,
     pending: &mut Vec<(Uuid, PathBuf, Vec<PathBuf>)>,
     total: &mut u32,
-) -> anyhow::Result<()> {
+) -> Result<(), AppError> {
     if pending.is_empty() {
         return Ok(());
     }
     let ids: Vec<Uuid> = pending.iter().map(|(id, _, _)| *id).collect();
-    let existing = files_repo
-        .find_by_ids(user_id, &ids)
-        .await
-        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+    let existing = files_repo.find_by_ids(user_id, &ids).await.map_err(|e| {
+        tracing::error!(error = %e, "Failed to find files by ids");
+        e
+    })?;
     let exists_set: HashSet<Uuid> = existing.into_iter().map(|f| f.id).collect();
 
     for (file_id, dir_path, file_paths) in pending.drain(..) {
@@ -419,9 +404,9 @@ async fn flush_orphan_batch(
                 *deleted += 1;
                 removed_here += 1;
                 *total += 1;
-                tracing::info!("removed orphan file (no DB record): {}", path.display());
+                tracing::info!(path = %path.display(), "removed orphan file");
             } else {
-                tracing::warn!("failed to remove orphan file {}", path.display());
+                tracing::warn!(path = %path.display(), "failed to remove orphan file");
             }
         }
         if removed_here > 0 {

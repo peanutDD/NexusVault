@@ -13,9 +13,8 @@ use crate::models::file::FileResponse;
 use crate::models::upload_session::{
     CompleteChunkedUploadRequest, InitChunkedUploadRequest, UploadSession,
 };
-use crate::utils::AppError;
 
-use super::FileService;
+use super::{FileService, FileServiceError};
 
 impl FileService {
     // =============================================================================
@@ -25,7 +24,7 @@ impl FileService {
         &self,
         user_id: Uuid,
         req: InitChunkedUploadRequest,
-    ) -> Result<(Uuid, u32, u32), AppError> {
+    ) -> Result<(Uuid, u32, u32), FileServiceError> {
         // 先做配额/类型校验，避免创建一个“无论如何都无法完成”的会话，徒增清理成本。
         // 复用统一校验逻辑，但保持原先错误信息（更短、更贴近该场景）
         self.ensure_can_store_quota_simple(user_id, &req.mime_type, req.total_size)
@@ -56,10 +55,9 @@ impl FileService {
         }
 
         if active_count >= MAX_CONCURRENT_CHUNKED_UPLOADS {
-            return Err(AppError::Validation(format!(
-                "同时进行的分片上传不能超过 {} 个，请先完成或取消其他大文件上传",
-                MAX_CONCURRENT_CHUNKED_UPLOADS
-            )));
+            return Err(FileServiceError::TooManyConcurrentUploads {
+                limit: MAX_CONCURRENT_CHUNKED_UPLOADS,
+            });
         }
 
         let upload_id = Uuid::new_v4();
@@ -68,7 +66,7 @@ impl FileService {
         let temp_path = self.chunked_temp_dir(upload_id);
         tokio::fs::create_dir_all(&temp_path)
             .await
-            .map_err(|e| AppError::Storage(format!("Failed to create temp dir: {}", e)))?;
+            .map_err(|source| FileServiceError::CreateChunkTempDir { source })?;
 
         let path_str = temp_path.to_string_lossy().to_string();
         let expires = Utc::now() + chrono::Duration::hours(24);
@@ -104,16 +102,16 @@ impl FileService {
         &self,
         upload_id: Uuid,
         user_id: Uuid,
-    ) -> Result<UploadSession, AppError> {
+    ) -> Result<UploadSession, FileServiceError> {
         let s = crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
             .get_session(upload_id, user_id)
             .await?
-            .ok_or(AppError::NotFound)?;
+            .ok_or(FileServiceError::NotFound)?;
 
         // 访问到过期会话时立即清理，避免临时目录长期堆积占用磁盘空间。
         if s.expires_at < Utc::now() {
             self.abort_chunked_upload(upload_id, user_id).await?;
-            return Err(AppError::Validation("上传会话已过期".to_string()));
+            return Err(FileServiceError::UploadSessionExpired);
         }
         Ok(s)
     }
@@ -128,7 +126,7 @@ impl FileService {
         part_index: u32,
         data: Bytes,
         part_sha256: Option<&str>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), FileServiceError> {
         let s = self.get_upload_session(upload_id, user_id).await?;
         let part = part_index as i32;
         if s.uploaded_parts.contains(&part) {
@@ -141,10 +139,7 @@ impl FileService {
         }
         let total_parts = (s.total_size as u64).div_ceil(CHUNK_SIZE as u64) as i32;
         if part < 1 || part > total_parts {
-            return Err(AppError::Validation(format!(
-                "无效的分块索引: {}",
-                part_index
-            )));
+            return Err(FileServiceError::InvalidChunkIndex { part_index });
         }
 
         // 可选完整性校验：客户端通过 X-Part-SHA256 提供分块摘要，服务端校验通过才写入，
@@ -152,15 +147,10 @@ impl FileService {
         if let Some(expected_hex) = part_sha256 {
             let actual = crate::utils::sha256_hex(&data);
             if expected_hex.len() != 64 || !expected_hex.chars().all(|c| c.is_ascii_hexdigit()) {
-                return Err(AppError::Validation(
-                    "X-Part-SHA256 须为 64 位十六进制".to_string(),
-                ));
+                return Err(FileServiceError::InvalidPartSha256Header);
             }
             if !expected_hex.eq_ignore_ascii_case(&actual) {
-                return Err(AppError::Validation(format!(
-                    "分块 {} 校验失败: SHA-256 不匹配",
-                    part_index
-                )));
+                return Err(FileServiceError::ChunkChecksumMismatch { part_index });
             }
         }
 
@@ -168,7 +158,7 @@ impl FileService {
         if let Ok(free) = fs2::available_space(&s.temp_path) {
             let need = data.len() as u64;
             if free < need.saturating_add(DISK_RESERVE_CHUNK) {
-                return Err(AppError::Storage("磁盘空间不足，请稍后重试".to_string()));
+                return Err(FileServiceError::InsufficientDiskSpaceForChunk);
             }
         }
 
@@ -176,7 +166,7 @@ impl FileService {
         let path = Path::new(&s.temp_path).join(format!("part_{}", part - 1));
         tokio::fs::write(&path, &data)
             .await
-            .map_err(|e| AppError::Storage(format!("Failed to write chunk: {}", e)))?;
+            .map_err(|source| FileServiceError::WriteChunk { source })?;
 
         // 上传进度写入 DB：断线/刷新后可继续断点续传。
         crate::repositories::upload_sessions::UploadSessionsRepo::new(&self.pool)
@@ -199,7 +189,7 @@ impl FileService {
         &self,
         upload_id: Uuid,
         user_id: Uuid,
-    ) -> Result<(Vec<i32>, u32), AppError> {
+    ) -> Result<(Vec<i32>, u32), FileServiceError> {
         let s = self.get_upload_session(upload_id, user_id).await?;
         let total_parts = (s.total_size as u64).div_ceil(CHUNK_SIZE as u64) as u32;
         tracing::debug!(
@@ -219,24 +209,23 @@ impl FileService {
         upload_id: Uuid,
         user_id: Uuid,
         req: CompleteChunkedUploadRequest,
-    ) -> Result<FileResponse, AppError> {
+    ) -> Result<FileResponse, FileServiceError> {
         use tokio::io::{copy, AsyncWriteExt};
 
         let s = self.get_upload_session(upload_id, user_id).await?;
         let total_parts = (s.total_size as u64).div_ceil(CHUNK_SIZE as u64) as u32;
         if s.uploaded_parts.len() != total_parts as usize {
-            return Err(AppError::Validation(format!(
-                "缺少分块: 已上传 {}/{}",
-                s.uploaded_parts.len(),
-                total_parts
-            )));
+            return Err(FileServiceError::MissingUploadedChunks {
+                uploaded: s.uploaded_parts.len(),
+                total: total_parts,
+            });
         }
 
         // 磁盘空间保护（best-effort）：合并前检查剩余空间是否足够容纳最终文件
         if let Ok(free) = fs2::available_space(&s.temp_path) {
             let need = s.total_size.max(0) as u64;
             if free < need.saturating_add(DISK_RESERVE_MERGE) {
-                return Err(AppError::Storage("磁盘空间不足，无法完成合并".to_string()));
+                return Err(FileServiceError::InsufficientDiskSpaceForMerge);
             }
         }
 
@@ -255,29 +244,32 @@ impl FileService {
 
         let mut out = tokio::fs::File::create(&merged_path)
             .await
-            .map_err(|e| AppError::Storage(format!("Failed to create merged file: {}", e)))?;
+            .map_err(|source| FileServiceError::CreateMergedFile { source })?;
 
         for part_idx in 0..total_parts {
             let chunk_path = base_path.join(format!("part_{}", part_idx));
-            let mut input = tokio::fs::File::open(&chunk_path)
-                .await
-                .map_err(|e| AppError::File(format!("读取分块 {} 失败: {}", part_idx, e)))?;
+            let mut input = tokio::fs::File::open(&chunk_path).await.map_err(|source| {
+                FileServiceError::ReadChunk {
+                    part_index: part_idx,
+                    source,
+                }
+            })?;
             copy(&mut input, &mut out)
                 .await
-                .map_err(|e| AppError::Storage(format!("Failed to merge chunks: {}", e)))?;
+                .map_err(|source| FileServiceError::MergeChunks { source })?;
         }
         out.flush()
             .await
-            .map_err(|e| AppError::Storage(format!("Failed to flush merged file: {}", e)))?;
+            .map_err(|source| FileServiceError::FlushMergedFile { source })?;
 
         tracing::info!(upload_id = %upload_id, "merge done, verifying size");
 
         let merged_size = tokio::fs::metadata(&merged_path)
             .await
-            .map_err(|e| AppError::Storage(format!("Failed to stat merged file: {}", e)))?
+            .map_err(|source| FileServiceError::StatMergedFile { source })?
             .len();
         if merged_size != s.total_size as u64 {
-            return Err(AppError::Validation("文件大小不匹配".to_string()));
+            return Err(FileServiceError::MergedFileSizeMismatch);
         }
 
         // 整文件 SHA-256 用于秒传/内容匹配等逻辑（同时作为内容指纹便于后续优化）。
@@ -288,8 +280,8 @@ impl FileService {
         .await
         {
             Ok(Ok(h)) => Some(h),
-            Ok(Err(e)) => return Err(e),
-            Err(_) => return Err(AppError::Internal),
+            Ok(Err(e)) => return Err(e.into()),
+            Err(_) => return Err(FileServiceError::BackgroundHashTask),
         };
         let content_sha256 = content_sha256.as_deref();
         tracing::info!(
@@ -326,7 +318,7 @@ impl FileService {
         &self,
         upload_id: Uuid,
         user_id: Uuid,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), FileServiceError> {
         // 磁盘清理 best-effort；DB 记录删除是“事实来源”，不能因为磁盘问题阻塞取消流程。
         let temp_path = self.chunked_temp_dir(upload_id);
         let existed = temp_path.exists();

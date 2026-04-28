@@ -90,7 +90,10 @@ impl FileService {
             .map(|v| (v.height, v.video_bitrate_kbps))
             .collect();
         let abr_n = if use_abr {
-            self.config.storage.hls_abr_max_variants.min(abr_variants.len())
+            self.config
+                .storage
+                .hls_abr_max_variants
+                .min(abr_variants.len())
         } else {
             1
         };
