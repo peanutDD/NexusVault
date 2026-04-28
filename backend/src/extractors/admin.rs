@@ -1,5 +1,5 @@
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
-
+use axum::extract::FromRequestParts;
+use axum::http::request::Parts;
 use crate::{utils::AppError, AppState};
 
 #[derive(Debug, Clone, Copy)]
@@ -42,7 +42,6 @@ fn extract_admin_token(parts: &Parts) -> Option<String> {
     None
 }
 
-#[async_trait]
 impl FromRequestParts<AppState> for AdminToken {
     type Rejection = AppError;
 

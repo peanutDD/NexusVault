@@ -38,9 +38,9 @@ use crate::AppState;
 /// ## 文件操作
 /// - `GET /`: 获取文件列表（支持分页、搜索、过滤）
 /// - `POST /upload`: 上传文件（普通上传）
-/// - `GET /:id/download`: 下载文件
-/// - `GET /:id/preview`: 预览文件（浏览器内显示）
-/// - `DELETE /:id`: 删除文件
+/// - `GET /{id}/download`: 下载文件
+/// - `GET /{id}/preview`: 预览文件（浏览器内显示）
+/// - `DELETE /{id}`: 删除文件
 ///
 /// ## 批量操作
 /// - `POST /batch-delete`: 批量删除文件
@@ -49,10 +49,10 @@ use crate::AppState;
 ///
 /// ## 分块上传（可恢复上传）
 /// - `POST /upload/chunked/init`: 初始化分块上传
-/// - `PUT /upload/chunked/:id/chunk`: 上传分块
-/// - `GET /upload/chunked/:id/status`: 查询上传状态
-/// - `POST /upload/chunked/:id/complete`: 完成上传
-/// - `DELETE /upload/chunked/:id/abort`: 取消上传
+/// - `PUT /upload/chunked/{id}/chunk`: 上传分块
+/// - `GET /upload/chunked/{id}/status`: 查询上传状态
+/// - `POST /upload/chunked/{id}/complete`: 完成上传
+/// - `DELETE /upload/chunked/{id}/abort`: 取消上传
 ///
 /// ## 秒传（文件指纹）
 /// - `POST /upload/instant`: 按 content_sha256 + file_size 秒传，已有则复用存储
@@ -126,7 +126,7 @@ pub fn create_router() -> Router<AppState> {
         )
         // Chunk 用 Bytes extractor，须 DefaultBodyLimit 否则默认 2MB 拒收 5MB 块
         .route(
-            "/upload/chunked/:id/chunk",
+            "/upload/chunked/{id}/chunk",
             put(chunked_upload_chunk_handler).layer(
                 ServiceBuilder::new()
                     .layer(DefaultBodyLimit::max(MAX_CHUNK_BODY))
@@ -146,11 +146,11 @@ pub fn create_router() -> Router<AppState> {
             ),
         )
         .route(
-            "/upload/chunked/:id/status",
+            "/upload/chunked/{id}/status",
             get(chunked_upload_status_handler),
         )
         .route(
-            "/upload/chunked/:id/complete",
+            "/upload/chunked/{id}/complete",
             post(chunked_upload_complete_handler).layer(
                 ServiceBuilder::new()
                     .layer(HandleErrorLayer::new(|err: BoxError| async move {
@@ -169,7 +169,7 @@ pub fn create_router() -> Router<AppState> {
             ),
         )
         .route(
-            "/upload/chunked/:id/abort",
+            "/upload/chunked/{id}/abort",
             delete(chunked_upload_abort_handler),
         )
         .route("/storage-usage", get(storage_usage_handler))
@@ -183,43 +183,43 @@ pub fn create_router() -> Router<AppState> {
             get(batch_download_zip_handler).post(batch_download_zip_post_handler),
         )
         .route(
-            "/:id/download",
+            "/{id}/download",
             get(download_file_handler).head(download_file_handler),
         )
         // GIF → 视频预览（按需转码为 mp4，前端用 <video> 播放）
         .route(
-            "/:id/preview/video",
+            "/{id}/preview/video",
             get(gif_video_preview_handler).head(gif_video_preview_handler),
         )
         .route(
-            "/:id/preview/video/prepare",
+            "/{id}/preview/video/prepare",
             post(video_preview_prepare_handler),
         )
         .route(
-            "/:id/preview/video/status",
+            "/{id}/preview/video/status",
             get(video_preview_status_handler),
         )
         .route(
-            "/:id/preview",
+            "/{id}/preview",
             get(preview_file_handler).head(preview_file_handler),
         )
-        .route("/:id/thumbnail", get(thumbnail_file_handler))
-        .route("/:id/hls/prepare", post(hls_prepare_handler))
-        .route("/:id/hls/status", get(hls_status_handler))
-        .route("/:id/hls", get(hls_playlist_handler))
-        .route("/:id/hls/*path", get(hls_asset_handler))
+        .route("/{id}/thumbnail", get(thumbnail_file_handler))
+        .route("/{id}/hls/prepare", post(hls_prepare_handler))
+        .route("/{id}/hls/status", get(hls_status_handler))
+        .route("/{id}/hls", get(hls_playlist_handler))
+        .route("/{id}/hls/{*path}", get(hls_asset_handler))
         // 文件版本管理
-        .route("/:id/versions", get(list_file_versions_handler))
-        .route("/versions/:version_id", get(get_file_version_handler))
+        .route("/{id}/versions", get(list_file_versions_handler))
+        .route("/versions/{version_id}", get(get_file_version_handler))
         .route(
-            "/versions/:version_id/label",
+            "/versions/{version_id}/label",
             put(update_version_label_handler),
         )
         .route(
-            "/:id/versions/:version_id/restore",
+            "/{id}/versions/{version_id}/restore",
             post(restore_version_handler),
         )
-        .route("/versions/:version_id", delete(delete_version_handler))
-        .route("/:id", put(rename_file_handler))
-        .route("/:id", delete(delete_file_handler))
+        .route("/versions/{version_id}", delete(delete_version_handler))
+        .route("/{id}", put(rename_file_handler))
+        .route("/{id}", delete(delete_file_handler))
 }

@@ -3,11 +3,11 @@
 //! 提供基础的组织管理与权限相关接口：
 //! - `GET /api/orgs`：列出当前用户所属组织
 //! - `POST /api/orgs`：创建组织（当前用户为 Owner）
-//! - `GET /api/orgs/:org_id/members`：列出组织成员（成员可见）
-//! - `POST /api/orgs/:org_id/members`：按邮箱添加成员，仅 Owner/Admin 可用
-//! - `GET /api/orgs/:org_id/files`：列出组织下共享文件
-//! - `POST /api/orgs/:org_id/files/:file_id/link`：将个人文件共享到组织
-//! - `DELETE /api/orgs/:org_id/files/:file_id/link`：取消文件与组织的关联
+//! - `GET /api/orgs/{org_id}/members`：列出组织成员（成员可见）
+//! - `POST /api/orgs/{org_id}/members`：按邮箱添加成员，仅 Owner/Admin 可用
+//! - `GET /api/orgs/{org_id}/files`：列出组织下共享文件
+//! - `POST /api/orgs/{org_id}/files/{file_id}/link`：将个人文件共享到组织
+//! - `DELETE /api/orgs/{org_id}/files/{file_id}/link`：取消文件与组织的关联
 
 use axum::{
     extract::{Path, State},
@@ -30,13 +30,13 @@ pub fn create_router() -> Router<AppState> {
             get(list_my_organizations).post(create_organization),
         )
         .route(
-            "/orgs/:org_id/members",
+            "/orgs/{org_id}/members",
             get(list_members).post(add_member_by_email),
         )
-        .route("/orgs/:org_id/files", get(list_org_files))
-        .route("/orgs/:org_id/files/:file_id/link", post(link_file_to_org))
+        .route("/orgs/{org_id}/files", get(list_org_files))
+        .route("/orgs/{org_id}/files/{file_id}/link", post(link_file_to_org))
         .route(
-            "/orgs/:org_id/files/:file_id/link",
+            "/orgs/{org_id}/files/{file_id}/link",
             axum::routing::delete(unlink_file_from_org),
         )
 }

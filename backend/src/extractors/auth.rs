@@ -1,28 +1,4 @@
-//! # Authentication Extractor
-//!
-//! 提供统一的用户认证提取器，支持 JWT token 和 API token。
-//!
-//! ## 使用示例
-//!
-//! ```rust
-//! use axum::extract::State;
-//! use axum::response::Response;
-//! use file_storage_backend::extractors::AuthenticatedUser;
-//! use file_storage_backend::utils::AppError;
-//! use file_storage_backend::AppState;
-//!
-//! pub async fn handler(
-//!     State(_state): State<AppState>,
-//!     AuthenticatedUser(_user_id): AuthenticatedUser,
-//!     // ...
-//! ) -> Result<Response, AppError> {
-//!     // user_id 已经验证，可以直接使用
-//!     unimplemented!()
-//! }
-//! ```
-
 use axum::{
-    async_trait,
     extract::FromRequestParts,
     http::{request::Parts, HeaderMap, Method},
 };
@@ -43,7 +19,6 @@ use crate::{config::Config, utils::AppError, AppState};
 #[derive(Debug, Clone, Copy)]
 pub struct AuthenticatedUser(pub Uuid);
 
-#[async_trait]
 impl FromRequestParts<AppState> for AuthenticatedUser {
     type Rejection = AppError;
 
@@ -66,7 +41,6 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
 #[derive(Debug, Clone, Copy)]
 pub struct AuthenticatedUserQuery(pub Uuid);
 
-#[async_trait]
 impl FromRequestParts<AppState> for AuthenticatedUserQuery {
     type Rejection = AppError;
 
