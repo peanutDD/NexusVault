@@ -6,6 +6,65 @@
 
 ## [未发布] — 2026 年（当前会话）
 
+### 🚀 后端依赖升级与 OpenTelemetry 追踪集成（2026-04-28）
+
+#### 依赖版本升级
+
+| Crate | 当前版本 | 升级后版本 | Rust 版本要求 | 说明 |
+|-------|---------|-----------|--------------|------|
+| axum | 0.7 | 0.8 | 1.75+ | 改进 extractor、error handling |
+| aws-sdk-s3 | 1.0 | 1.82+ | 1.70+ | 大量 bug 修复和性能改进 |
+| aws-config | 1.0 | 1.6+ | 1.70+ | 同上 |
+| jsonwebtoken | 9.2 | 9.3 | 1.65+ | 安全补丁 |
+| moka | 0.12 | 0.12.10+ | 1.65+ | 内存管理改进 |
+| image | 0.25 | 0.25.6+ | 1.65+ | CVE 修复 |
+
+#### OpenTelemetry 分布式追踪
+
+- 更新到 opentelemetry 0.28 版本
+- 配置 OTLP 导出器（默认端点：`http://localhost:4317`）
+- 支持多种采样策略（always_on、always_off、parentbased、traceidbased）
+- trace_id 在请求间传播
+- 集成 Jaeger（已在 docker-compose.yml 中定义）
+
+#### axum 0.8 兼容性修复
+
+**移除 async_trait 宏**
+- axum 0.8 原生支持 async trait，移除了 `axum::async_trait` 导出
+- 修改文件：`src/extractors/admin.rs`、`src/extractors/auth.rs`
+
+**路由语法变更**
+- 参数路由：`/:id` → `/{id}`（21 处）
+- 通配符路由：`/*path` → `{*path}`（1 处）
+- 修改文件：`src/api/admin.rs`、`src/api/files.rs`、`src/api/folders.rs`、`src/api/organizations.rs`、`src/api/api_token.rs`、`src/api/share.rs`
+
+#### 验收结果
+
+| 验收项 | 状态 |
+|--------|------|
+| `cargo check` | ✅ 通过 |
+| `cargo clippy --all-targets --all-features -- -D warnings` | ✅ 无警告 |
+| `cargo test` | ✅ 全部通过（30+ 测试） |
+| `cargo build --profile dist` | ✅ 成功（21MB 二进制） |
+
+#### 运行说明
+
+启动 Jaeger 后，可通过以下环境变量启用追踪：
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+export OTEL_SERVICE_NAME=file-storage-backend
+cargo run
+```
+
+Jaeger UI 访问地址：http://localhost:16686
+
+#### 详细文档
+
+完整的技术细节和实施步骤请参考：[docs/BACKEND_UPGRADE_2026-04-28.md](./BACKEND_UPGRADE_2026-04-28.md)
+
+---
+
 ### 🤖 AI 自动修复
 
 #### 0. codex pr-auto-fix 引入“变更入档”模块化 Skill
