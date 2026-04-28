@@ -6,10 +6,10 @@
 //! 2. **无业务逻辑**：仅包含字段和 `FromRow` derive
 //! 3. **禁止 API 序列化**：不用 `#[serde]`（由 `types/` 的 DTO 控制序列化）
 
+pub mod api_token;
 pub mod file;
 pub mod folder;
 pub mod organization;
 pub mod share;
-pub mod api_token;
 pub mod upload_session;
 pub mod user;

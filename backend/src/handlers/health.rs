@@ -32,7 +32,12 @@ pub async fn readiness_check(
     let mut checks = serde_json::Map::new();
 
     // 1. 数据库检查 (超时设置为 2 秒)
-    let db_ok = match timeout(Duration::from_secs(2), sqlx::query("SELECT 1").execute(&state.pool)).await {
+    let db_ok = match timeout(
+        Duration::from_secs(2),
+        sqlx::query("SELECT 1").execute(&state.pool),
+    )
+    .await
+    {
         Ok(Ok(_)) => {
             checks.insert("database".to_string(), json!({ "status": "up" }));
             true

@@ -6,8 +6,7 @@
 pub use crate::entities::organization::{Organization, OrganizationMember, OrganizationRole};
 
 pub use crate::types::organization::{
-    AddMemberRequest, CreateOrganizationRequest, OrganizationMemberResponse,
-    OrganizationResponse,
+    AddMemberRequest, CreateOrganizationRequest, OrganizationMemberResponse, OrganizationResponse,
 };
 
 impl From<crate::entities::organization::Organization> for OrganizationResponse {

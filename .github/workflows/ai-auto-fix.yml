@@ -3,6 +3,8 @@ name: Codex Auto Fix (本地 Runner)
 on:
   issue_comment:
     types: [created]
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
 
 permissions:
   contents: write
@@ -16,6 +18,45 @@ env:
   GEMINI_TRIGGER_MARKER: "## Gemini Code Assist Review"
 
 jobs:
+  gemini-kickoff:
+    if: >
+      github.event_name == 'pull_request'
+      && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: 自动触发 Gemini Review（首轮/更新）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          
+          LAST_COMMIT_AT="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.committer.date')"
+          
+          LAST_REQUEST_AT="$(
+            gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate --jq '
+              [
+                .[]
+                | select(.body | startswith("/gemini review"))
+                | select(.user.login == "github-actions[bot]")
+                | .created_at
+              ]
+              | sort
+              | last
+              // ""
+            '
+          )"
+          
+          if [[ -n "${LAST_REQUEST_AT}" && "${LAST_REQUEST_AT}" > "${LAST_COMMIT_AT}" ]]; then
+            echo "Skip: already requested after latest commit. last_request_at=${LAST_REQUEST_AT} last_commit_at=${LAST_COMMIT_AT}"
+            exit 0
+          fi
+          
+          echo "Requesting Gemini review. last_request_at=${LAST_REQUEST_AT:-none} last_commit_at=${LAST_COMMIT_AT}"
+          gh pr comment "${PR_NUMBER}" --body "/gemini review"
+
   codex-fix:
     if: >
       github.event.issue.pull_request
@@ -24,6 +65,9 @@ jobs:
     runs-on: file-server
 
     steps:
+      - name: Checkout 仓库
+        uses: actions/checkout@v4
+
       - name: Checkout PR 分支
         run: |
           gh pr checkout ${{ github.event.issue.number }}
@@ -74,6 +118,12 @@ jobs:
       - name: 调用 codex pr-auto-fix (模块化 Skill 编排)
         if: steps.round.outputs.current_round != 'gemini-review-round-max'
         id: codex
+        env:
+          CODEX_SKILL_PACK_ROOT: ${{ github.workspace }}/scripts/codex-cli
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
+          CODEX_MODEL: ${{ secrets.CODEX_MODEL }}
         run: |
           # 1. 直接调用编排好的组合 Skill
           # 它会自动完成: Parse -> Decide -> Generate -> Apply -> Commit & Tag Round
@@ -81,6 +131,7 @@ jobs:
           RESULT=$(codex pr-auto-fix \
             --pr-number ${{ github.event.issue.number }} \
             --gemini-review "$REVIEW_BODY" \
+            --pre-skill codex-cli-workflow \
             --max-rounds ${{ env.MAX_ROUNDS }} \
             --yes)
           
@@ -106,7 +157,7 @@ jobs:
           fi
           
           # 升级标签
-          gh pr edit ${{ github.event.issue.number }} --remove-label "$CURRENT"
+          gh pr edit ${{ github.event.issue.number }} --remove-label "$CURRENT" || true
           gh pr edit ${{ github.event.issue.number }} --add-label "$NEXT"
           echo "🏷️ 标签升级: $CURRENT -> $NEXT"
 

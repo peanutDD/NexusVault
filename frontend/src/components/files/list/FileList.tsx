@@ -154,15 +154,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     // 由于 FileListContent 期望 folderId、fileIds 和 folderIds，而 handleDropOnFolder 需要 e 和 folder 对象
     // 这里简化处理，只处理单个文件的情况
     if (fileIds.length > 0 || folderIds.length > 0) {
-      // 这里需要实际的 folder 对象，暂时跳过
-      console.log(
-        "Drop on folder:",
-        _folderId,
-        "Files:",
-        fileIds,
-        "Folders:",
-        folderIds,
-      );
+      void _folderId;
     }
   };
 

@@ -656,7 +656,7 @@ pub async fn run_gif_preview_worker(
         None => return Ok(()),
     };
 
-    tracing::Span::current().record("task_id", &tracing::field::display(task.id));
+    tracing::Span::current().record("task_id", tracing::field::display(task.id));
 
     // 解析 payload
     let payload: GifPreviewPayload = serde_json::from_value(task.payload.clone())
@@ -808,7 +808,7 @@ pub async fn run_hls_worker(
         None => return Ok(()),
     };
 
-    tracing::Span::current().record("task_id", &tracing::field::display(task.id));
+    tracing::Span::current().record("task_id", tracing::field::display(task.id));
 
     // 解析 payload
     let payload: HlsPreviewPayload = serde_json::from_value(task.payload.clone())

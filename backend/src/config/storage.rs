@@ -32,7 +32,11 @@ where
             if s.starts_with('[') {
                 return serde_json::from_str::<Vec<String>>(s).map_err(E::custom);
             }
-            Ok(s.split(',').map(|t| t.trim()).filter(|t| !t.is_empty()).map(|t| t.to_string()).collect())
+            Ok(s.split(',')
+                .map(|t| t.trim())
+                .filter(|t| !t.is_empty())
+                .map(|t| t.to_string())
+                .collect())
         }
 
         fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -66,7 +70,7 @@ pub struct StorageConfig {
     pub hls_abr_max_variants: usize,
     #[serde(default)]
     pub hls_abr_variants: Vec<HlsAbrVariant>,
-    
+
     // AWS S3 settings
     pub aws_access_key_id: Option<String>,
     pub aws_secret_access_key: Option<String>,

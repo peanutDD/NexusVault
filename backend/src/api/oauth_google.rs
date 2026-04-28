@@ -23,9 +23,13 @@ pub async fn google_oauth_url_handler(State(state): State<AppState>) -> Result<R
         .google_client_id
         .clone()
         .ok_or_else(|| AppError::Validation("Google OAuth is not configured".to_string()))?;
-    let redirect_uri = config.oauth.google_oauth_redirect_uri.clone().ok_or_else(|| {
-        AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string())
-    })?;
+    let redirect_uri = config
+        .oauth
+        .google_oauth_redirect_uri
+        .clone()
+        .ok_or_else(|| {
+            AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string())
+        })?;
 
     // 生成随机 state，并缓存起来用于回调时校验，防止 CSRF
     let state_str = uuid::Uuid::new_v4().to_string();
@@ -85,9 +89,13 @@ pub async fn google_oauth_callback_handler(
     let client_secret = config.oauth.google_client_secret.clone().ok_or_else(|| {
         AppError::Validation("GOOGLE_CLIENT_SECRET is not configured".to_string())
     })?;
-    let redirect_uri = config.oauth.google_oauth_redirect_uri.clone().ok_or_else(|| {
-        AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string())
-    })?;
+    let redirect_uri = config
+        .oauth
+        .google_oauth_redirect_uri
+        .clone()
+        .ok_or_else(|| {
+            AppError::Validation("GOOGLE_OAUTH_REDIRECT_URI is not configured".to_string())
+        })?;
 
     let frontend_base = config
         .server

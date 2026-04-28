@@ -94,7 +94,7 @@ pub async fn batch_get_handler(
                     }
                 }
 
-                for (id, item) in miss_ids.into_iter().zip(fetched.into_iter()) {
+                for (id, item) in miss_ids.into_iter().zip(fetched) {
                     if let Some(file) = item {
                         cached_by_id.insert(id, file);
                     }

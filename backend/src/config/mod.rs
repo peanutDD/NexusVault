@@ -1,29 +1,29 @@
 use serde::Deserialize;
-use thiserror::Error;
 use std::env;
 use std::path::PathBuf;
+use thiserror::Error;
 
 pub mod auth;
+pub mod cache;
 pub mod database;
-pub mod redis;
 pub mod oauth;
 pub mod rate_limit;
+pub mod redis;
+pub mod search;
 pub mod server;
 pub mod storage;
 pub mod tasks;
-pub mod search;
-pub mod cache;
 
 pub use auth::AuthConfig;
+pub use cache::CacheConfig;
 pub use database::DatabaseConfig;
-pub use redis::RedisConfig;
 pub use oauth::OAuthConfig;
 pub use rate_limit::RateLimitConfig;
-pub use server::ServerConfig;
-pub use storage::{StorageConfig, HlsAbrVariant};
-pub use tasks::TasksConfig;
+pub use redis::RedisConfig;
 pub use search::SearchConfig;
-pub use cache::CacheConfig;
+pub use server::ServerConfig;
+pub use storage::{HlsAbrVariant, StorageConfig};
+pub use tasks::TasksConfig;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -80,8 +80,14 @@ impl Config {
             .set_default("rate_limit.user_rate_limit", "600")?
             .set_default("rate_limit.rate_limit_window_secs", "60")?
             .set_default("rate_limit.rate_limit_max_keys", "20000")?
-            .set_default("search.huggingface_model_id", "sentence-transformers/all-MiniLM-L6-v2")?
-            .set_default("search.huggingface_api_url", "https://api-inference.huggingface.co")?
+            .set_default(
+                "search.huggingface_model_id",
+                "sentence-transformers/all-MiniLM-L6-v2",
+            )?
+            .set_default(
+                "search.huggingface_api_url",
+                "https://api-inference.huggingface.co",
+            )?
             .set_default("cache.enabled", "true")?
             .set_default("cache.default_ttl_secs", "60")?
             .set_default("cache.list_ttl_secs", "20")?
@@ -96,7 +102,10 @@ impl Config {
             ("JWT_SECRET", "auth.jwt_secret"),
             ("JWT_EXPIRY", "auth.jwt_expiry"),
             ("API_TOKEN_HMAC_SECRET", "auth.api_token_hmac_secret"),
-            ("API_TOKEN_HMAC_SECRET_PREVIOUS", "auth.api_token_hmac_secret_previous"),
+            (
+                "API_TOKEN_HMAC_SECRET_PREVIOUS",
+                "auth.api_token_hmac_secret_previous",
+            ),
             ("ADMIN_TOKEN", "auth.admin_token"),
             ("PORT", "server.port"),
             ("CORS_ORIGIN", "server.cors_origin"),
@@ -115,12 +124,30 @@ impl Config {
             ("HLS_THRESHOLD_BYTES", "storage.hls_threshold_bytes"),
             ("HLS_ABR_MAX_VARIANTS", "storage.hls_abr_max_variants"),
             ("TASK_QUEUE_BACKEND", "tasks.queue_backend"),
-            ("UPLOAD_SESSION_CLEANUP_INTERVAL_SECS", "tasks.upload_session_cleanup_interval_secs"),
-            ("UPLOAD_SESSION_CLEANUP_BATCH_SIZE", "tasks.upload_session_cleanup_batch_size"),
-            ("FILES_CONSISTENCY_CHECK_INTERVAL_SECS", "tasks.files_consistency_check_interval_secs"),
-            ("FILES_CONSISTENCY_CHECK_BATCH_SIZE", "tasks.files_consistency_check_batch_size"),
-            ("ORPHAN_CLEANUP_INTERVAL_SECS", "tasks.orphan_cleanup_interval_secs"),
-            ("ORPHAN_CLEANUP_BATCH_LIMIT", "tasks.orphan_cleanup_batch_limit"),
+            (
+                "UPLOAD_SESSION_CLEANUP_INTERVAL_SECS",
+                "tasks.upload_session_cleanup_interval_secs",
+            ),
+            (
+                "UPLOAD_SESSION_CLEANUP_BATCH_SIZE",
+                "tasks.upload_session_cleanup_batch_size",
+            ),
+            (
+                "FILES_CONSISTENCY_CHECK_INTERVAL_SECS",
+                "tasks.files_consistency_check_interval_secs",
+            ),
+            (
+                "FILES_CONSISTENCY_CHECK_BATCH_SIZE",
+                "tasks.files_consistency_check_batch_size",
+            ),
+            (
+                "ORPHAN_CLEANUP_INTERVAL_SECS",
+                "tasks.orphan_cleanup_interval_secs",
+            ),
+            (
+                "ORPHAN_CLEANUP_BATCH_LIMIT",
+                "tasks.orphan_cleanup_batch_limit",
+            ),
             ("TRANSCODE_MAX_CONCURRENT", "tasks.transcode_max_concurrent"),
             ("ZIP_CACHE_ENABLED", "tasks.zip_cache_enabled"),
             ("ZIP_CACHE_BACKEND", "tasks.zip_cache_backend"),
@@ -128,14 +155,23 @@ impl Config {
             ("ZIP_BUILD_MAX_CONCURRENT", "tasks.zip_build_max_concurrent"),
             ("IP_RATE_LIMIT", "rate_limit.ip_rate_limit"),
             ("USER_RATE_LIMIT", "rate_limit.user_rate_limit"),
-            ("RATE_LIMIT_WINDOW_SECS", "rate_limit.rate_limit_window_secs"),
+            (
+                "RATE_LIMIT_WINDOW_SECS",
+                "rate_limit.rate_limit_window_secs",
+            ),
             ("RATE_LIMIT_MAX_KEYS", "rate_limit.rate_limit_max_keys"),
             ("GITHUB_CLIENT_ID", "oauth.github_client_id"),
             ("GITHUB_CLIENT_SECRET", "oauth.github_client_secret"),
-            ("GITHUB_OAUTH_REDIRECT_URI", "oauth.github_oauth_redirect_uri"),
+            (
+                "GITHUB_OAUTH_REDIRECT_URI",
+                "oauth.github_oauth_redirect_uri",
+            ),
             ("GOOGLE_CLIENT_ID", "oauth.google_client_id"),
             ("GOOGLE_CLIENT_SECRET", "oauth.google_client_secret"),
-            ("GOOGLE_OAUTH_REDIRECT_URI", "oauth.google_oauth_redirect_uri"),
+            (
+                "GOOGLE_OAUTH_REDIRECT_URI",
+                "oauth.google_oauth_redirect_uri",
+            ),
             ("HUGGINGFACE_API_TOKEN", "search.huggingface_api_token"),
             ("HUGGINGFACE_MODEL_ID", "search.huggingface_model_id"),
             ("HUGGINGFACE_API_URL", "search.huggingface_api_url"),
@@ -157,7 +193,7 @@ impl Config {
 
         let s = builder.build()?;
         let mut config: Config = s.try_deserialize()?;
-        
+
         // 特殊处理：默认存储路径
         if config.storage.path.is_empty() {
             let default_storage_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -173,9 +209,10 @@ impl Config {
         // 但 config crate 默认不支持从字符串解析为 Vec<Struct>，除非是 JSON)
         // 这里为了简化，如果 HLS_ABR_VARIANTS 存在，我们手动补齐
         if let Ok(raw) = env::var("HLS_ABR_VARIANTS") {
-             config.storage.hls_abr_variants = parse_hls_abr_variants_from_str(&raw)?;
+            config.storage.hls_abr_variants = parse_hls_abr_variants_from_str(&raw)?;
         } else if config.storage.hls_abr_variants.is_empty() {
-             config.storage.hls_abr_variants = parse_hls_abr_variants_from_str("240:350,360:700,480:1200,720:2500")?;
+            config.storage.hls_abr_variants =
+                parse_hls_abr_variants_from_str("240:350,360:700,480:1200,720:2500")?;
         }
 
         config.validate()?;
@@ -184,7 +221,7 @@ impl Config {
 
     fn validate(&self) -> Result<(), ConfigError> {
         if self.server.port == 0 {
-             return Err(ConfigError::InvalidConfig("PORT must be > 0".into()));
+            return Err(ConfigError::InvalidConfig("PORT must be > 0".into()));
         }
         if self.database.url.is_empty() {
             return Err(ConfigError::MissingEnvVar("DATABASE_URL".into()));
@@ -201,13 +238,23 @@ fn parse_hls_abr_variants_from_str(raw: &str) -> Result<Vec<HlsAbrVariant>, Conf
     let mut out = Vec::new();
     for part in raw.split(',') {
         let t = part.trim();
-        if t.is_empty() { continue; }
+        if t.is_empty() {
+            continue;
+        }
         let Some((h, br)) = t.split_once(':') else {
-            return Err(ConfigError::InvalidConfig("HLS_ABR_VARIANTS must be height:bitrate".into()));
+            return Err(ConfigError::InvalidConfig(
+                "HLS_ABR_VARIANTS must be height:bitrate".into(),
+            ));
         };
         out.push(HlsAbrVariant {
-            height: h.trim().parse().map_err(|_| ConfigError::InvalidConfig("Invalid height".into()))?,
-            video_bitrate_kbps: br.trim().parse().map_err(|_| ConfigError::InvalidConfig("Invalid bitrate".into()))?,
+            height: h
+                .trim()
+                .parse()
+                .map_err(|_| ConfigError::InvalidConfig("Invalid height".into()))?,
+            video_bitrate_kbps: br
+                .trim()
+                .parse()
+                .map_err(|_| ConfigError::InvalidConfig("Invalid bitrate".into()))?,
         });
     }
     Ok(out)

@@ -1,7 +1,7 @@
 import type { Metric } from 'web-vitals';
 
 function logMetric(metric: Metric) {
-  console.log('[vitals]', {
+  console.warn('[vitals]', {
     name: metric.name,
     value: metric.value,
     rating: metric.rating,
@@ -26,4 +26,3 @@ export async function reportVitals() {
   onFCP(logMetric);
   onTTFB(logMetric);
 }
-

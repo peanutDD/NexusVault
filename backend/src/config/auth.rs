@@ -27,10 +27,7 @@ impl AuthConfig {
         }
 
         if self.jwt_secret != primary
-            && self
-                .api_token_hmac_secret_previous
-                .as_ref()
-                .is_none_or(|s| s != &self.jwt_secret)
+            && (self.api_token_hmac_secret_previous.as_ref() != Some(&self.jwt_secret))
         {
             secrets.push(self.jwt_secret.clone());
         }

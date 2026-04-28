@@ -6,6 +6,5 @@
 pub use crate::entities::share::FileShare;
 
 pub use crate::types::share::{
-    AccessShareRequest, BatchShareRequest, BatchShareResponse, CreateShareRequest,
-    ShareResponse,
+    AccessShareRequest, BatchShareRequest, BatchShareResponse, CreateShareRequest, ShareResponse,
 };

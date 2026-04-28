@@ -34,7 +34,10 @@ impl ApiTokenService {
 
     /// 从 AppState 创建 ApiTokenService（工厂方法）
     pub fn from_state(state: &crate::AppState) -> Self {
-        Self::new(state.pool.clone(), state.config.auth.api_token_hmac_secrets())
+        Self::new(
+            state.pool.clone(),
+            state.config.auth.api_token_hmac_secrets(),
+        )
     }
 
     /// 生成安全的随机 token

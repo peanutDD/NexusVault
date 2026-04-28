@@ -1,0 +1,5 @@
+{
+  "name": "codex-cli-pack",
+  "version": "0.1.0",
+  "description": "Self-contained skill pack for codex-cli (skills + AGENTS.md)"
+}

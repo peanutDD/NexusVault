@@ -69,3 +69,18 @@ pub struct PrAutoFixOutput {
     pub security_passed: bool,
     pub summary: Option<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct SkillPackSkillMeta {
+    pub id: String,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub version: Option<String>,
+    pub skill_md_path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct SkillPackResolvedSkill {
+    pub meta: SkillPackSkillMeta,
+    pub body: String,
+}

@@ -2,6 +2,8 @@ use crate::llm::CodexClient;
 use crate::repo;
 use crate::types::{ChangelogEntryInput, ReviewData, ReviewIssue};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::env;
 
 /// Pipeline 运行期共享上下文。
 ///
@@ -12,6 +14,8 @@ use serde::{Deserialize, Serialize};
 pub struct SkillContext {
     pub pr_number: u32,
     pub repo: String,
+    pub repo_root: String,
+    pub rules_text: String,
     pub raw_input: String,
     pub parsed_data: Option<ReviewData>,
     pub selected_issues: Vec<ReviewIssue>,
@@ -19,31 +23,47 @@ pub struct SkillContext {
     pub quality_score: u8,
     pub security_passed: bool,
     pub auto_push: bool,
+    pub enable_pr_comments: bool,
+    pub changelog_path: Option<String>,
+    pub disable_changelog: bool,
     pub rounds: u8,
+}
+
+#[derive(Debug, Clone)]
+pub struct SkillContextInit {
+    pub pr_number: u32,
+    pub repo: String,
+    pub repo_root: String,
+    pub rules_text: String,
+    pub raw_input: String,
+    pub rounds: u8,
+    pub auto_push: bool,
+    pub enable_pr_comments: bool,
+    pub changelog_path: Option<String>,
+    pub disable_changelog: bool,
 }
 
 impl SkillContext {
     /// 构建一个新的上下文。
     ///
     /// 注意：`rounds` 是“上限/轮次配置”，不是“已执行轮次计数”。
-    pub fn new(
-        pr_number: u32,
-        repo: String,
-        raw_input: String,
-        rounds: u8,
-        auto_push: bool,
-    ) -> Self {
+    pub fn new(init: SkillContextInit) -> Self {
         Self {
-            pr_number,
-            repo,
-            raw_input,
+            pr_number: init.pr_number,
+            repo: init.repo,
+            repo_root: init.repo_root,
+            rules_text: init.rules_text,
+            raw_input: init.raw_input,
             parsed_data: None,
             selected_issues: Vec::new(),
             fixed_files: Vec::new(),
             quality_score: 0,
             security_passed: false,
-            auto_push,
-            rounds,
+            auto_push: init.auto_push,
+            enable_pr_comments: init.enable_pr_comments,
+            changelog_path: init.changelog_path,
+            disable_changelog: init.disable_changelog,
+            rounds: init.rounds,
         }
     }
 }
@@ -115,8 +135,8 @@ impl Skill for BatchFixSkill {
         client: &CodexClient,
     ) -> Result<(), Box<dyn std::error::Error>> {
         for issue in &ctx.selected_issues {
-            if let Ok(Some(patch)) = generate_fix_patch(issue, &ctx.repo, client).await
-                && repo::apply_patch_safely(&issue.file, &patch)?
+            if let Ok(Some(patch)) = generate_fix_patch(issue, ctx, client).await
+                && repo::apply_patch_safely_in(&ctx.repo_root, &issue.file, &patch)?
             {
                 ctx.fixed_files.push(issue.file.clone());
             }
@@ -143,7 +163,7 @@ impl Skill for SecurityCheckSkill {
 
         let mut all_passed = true;
         for file in &ctx.fixed_files {
-            let content = std::fs::read_to_string(file)?;
+            let content = repo::read_repo_file(&ctx.repo_root, file)?;
             let system_prompt = "你是一个安全审计专家。请检查代码是否存在注入、密钥泄露或严重逻辑漏洞。\n仅返回 JSON: {\"passed\": true/false, \"reason\": \"原因\"}";
             let user_prompt = format!("文件: {}\n内容: \n```\n{}\n```", file, content);
 
@@ -200,7 +220,7 @@ impl Skill for DocumentationSkill {
         ctx: &mut SkillContext,
         _client: &CodexClient,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        if ctx.fixed_files.is_empty() {
+        if ctx.disable_changelog || ctx.fixed_files.is_empty() {
             return Ok(());
         }
 
@@ -213,7 +233,12 @@ impl Skill for DocumentationSkill {
             quality_score: ctx.quality_score,
         };
 
-        repo::append_ai_changelog(&mut ctx.fixed_files, &input)?;
+        repo::append_ai_changelog_in(
+            &ctx.repo_root,
+            &mut ctx.fixed_files,
+            &input,
+            ctx.changelog_path.as_deref(),
+        )?;
         Ok(())
     }
 }
@@ -230,7 +255,7 @@ impl Skill for DryRunFeedbackSkill {
         ctx: &mut SkillContext,
         _client: &CodexClient,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        if ctx.auto_push || ctx.fixed_files.is_empty() {
+        if ctx.auto_push || ctx.fixed_files.is_empty() || !ctx.enable_pr_comments {
             return Ok(());
         }
 
@@ -271,7 +296,7 @@ impl Skill for FeedbackSkill {
             };
             let score_info = format!("🏆 质量评分: {} 分", ctx.quality_score);
 
-            repo::commit_and_push(&ctx.fixed_files)?;
+            repo::commit_and_push_in(&ctx.repo_root, &ctx.fixed_files, true)?;
 
             let gh_msg = format!(
                 "🤖 **Codex 自动修复完成**\n\n{}\n{}\n\n✅ 已修复文件：\n{}",
@@ -283,13 +308,21 @@ impl Skill for FeedbackSkill {
                     .collect::<Vec<_>>()
                     .join("\n")
             );
-            repo::post_comment(ctx.pr_number, &gh_msg)?;
+            if ctx.enable_pr_comments {
+                repo::post_comment(ctx.pr_number, &gh_msg)?;
+            } else {
+                eprintln!("{}", gh_msg);
+            }
         } else if let Some(data) = &ctx.parsed_data {
             let msg = format!(
                 "🤖 **GPT-5.4 分析**: 未发现需要自动修复的高优先级问题。\n\n**总结**: {}",
                 data.summary
             );
-            repo::post_comment(ctx.pr_number, &msg)?;
+            if ctx.enable_pr_comments {
+                repo::post_comment(ctx.pr_number, &msg)?;
+            } else {
+                eprintln!("{}", msg);
+            }
         }
         Ok(())
     }
@@ -360,21 +393,49 @@ async fn read_gemini_review(
 /// - 排除锁文件/配置文件等高风险路径
 /// - 排除 docs/*.md（避免自动改文档造成 review 噪声与误改）
 fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
-    let protected = [
-        "Cargo.lock",
-        "package-lock.json",
-        "bun.lock",
-        "Cargo.toml",
-        "package.json",
-        "pyproject.toml",
-        ".env",
+    let mut protected = vec![
+        "Cargo.lock".to_string(),
+        "package-lock.json".to_string(),
+        "bun.lock".to_string(),
+        "Cargo.toml".to_string(),
+        "package.json".to_string(),
+        "pyproject.toml".to_string(),
+        ".env".to_string(),
     ];
+    if let Ok(extra) = env::var("CODEX_PROTECTED_FILES") {
+        protected.extend(
+            extra
+                .split(',')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string()),
+        );
+    }
+
+    let allowed =
+        env::var("CODEX_ALLOWED_SEVERITIES").unwrap_or_else(|_| "Critical,High,Medium".to_string());
+    let allowed: HashSet<String> = allowed
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+
+    let exclude_docs = env::var("CODEX_EXCLUDE_DOCS")
+        .map(|v| v != "0" && v.to_lowercase() != "false")
+        .unwrap_or(true);
 
     issues
         .iter()
-        .filter(|i| i.severity == "High" || i.severity == "Medium")
+        .filter(|i| allowed.contains(&i.severity))
         .filter(|i| !protected.iter().any(|p| i.file.contains(p)))
-        .filter(|i| !i.file.starts_with("docs/") && !i.file.ends_with(".md"))
+        .filter(|i| {
+            if exclude_docs {
+                !i.file.starts_with("docs/") && !i.file.ends_with(".md")
+            } else {
+                true
+            }
+        })
         .cloned()
         .collect()
 }
@@ -384,19 +445,22 @@ fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
 /// 返回 `None` 表示无需修复或模型未生成有效补丁（例如缺少 @@ hunk）。
 async fn generate_fix_patch(
     issue: &ReviewIssue,
-    repo_name: &str,
+    ctx: &SkillContext,
     client: &CodexClient,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let content = repo::gh_get_file_raw(repo_name, &issue.file)?;
+    let content = repo::read_repo_file(&ctx.repo_root, &issue.file)?;
 
-    let system_prompt = "你是一个高级工程师。请根据提供的审查意见，为目标文件生成 unified diff 格式的修复补丁。\n仅返回补丁内容，不要任何其他解释文字。如果没有需要修复的，返回空。";
+    let system_prompt = format!(
+        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{}\n\n请根据提供的审查意见，为目标文件生成 unified diff 格式的修复补丁。\n仅返回补丁内容，不要任何其他解释文字。如果没有需要修复的，返回空。",
+        ctx.rules_text
+    );
 
     let user_prompt = format!(
         "文件: {}\n问题: {}\n建议: {}\n\n源码:\n```\n{}\n```",
         issue.file, issue.description, issue.suggestion, content
     );
 
-    let mut patch = client.call(system_prompt, &user_prompt).await?;
+    let mut patch = client.call(&system_prompt, &user_prompt).await?;
 
     if patch.contains("```")
         && let Some(extracted) = repo::extract_code_block(&patch)

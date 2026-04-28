@@ -456,13 +456,21 @@ export function useFileList() {
     if (pendingDeleteFileIds.size === 0) return;
     const currentIds = new Set(files.map((f) => f.id));
     const reappeared = [...pendingDeleteFileIds].filter((id) => currentIds.has(id));
-    if (reappeared.length > 0) {
+    if (reappeared.length === 0) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
       setPendingDeleteFileIds((prev) => {
         const n = new Set(prev);
         reappeared.forEach((id) => n.delete(id));
         return n;
       });
-    }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [files, pendingDeleteFileIds]);
 
   // 包装 executeDelete：先把 ID 加入 pending（立刻触发 re-render 隐藏卡片），再执行删除
@@ -612,19 +620,30 @@ export function useFileList() {
 
   // outFoldersRef 用于 pendingDeleteFolderIds 回滚检测的 useEffect
   const outFoldersRef = useRef<Folder[]>(displayFolders);
-  outFoldersRef.current = displayFolders;
+
+  useEffect(() => {
+    outFoldersRef.current = displayFolders;
+  }, [displayFolders]);
 
   useEffect(() => {
     if (pendingDeleteFolderIds.size === 0) return;
     const currentIds = new Set(outFoldersRef.current.map((f) => f.id));
     const reappeared = [...pendingDeleteFolderIds].filter((id) => currentIds.has(id));
-    if (reappeared.length > 0) {
+    if (reappeared.length === 0) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
       setPendingDeleteFolderIds((prev) => {
         const n = new Set(prev);
         reappeared.forEach((id) => n.delete(id));
         return n;
       });
-    }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [pendingDeleteFolderIds]);
 
   const { timeGroupedItems } = useTimeGroupingMixed(sortedFiles, displayFolders, isGroupByTime);

@@ -1,9 +1,9 @@
 //! 组织相关 DTO
 
+use crate::entities::organization::OrganizationRole;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::entities::organization::OrganizationRole;
 
 #[derive(Debug, Deserialize)]
 pub struct CreateOrganizationRequest {
