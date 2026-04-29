@@ -404,6 +404,8 @@ export default function LazyThumbnail({
             src={effectiveState.imageUrl}
             srcSet={getSrcSet()}
             sizes="(max-width: 640px) 100px, (max-width: 1024px) 200px, 400px"
+            width={400}
+            height={400}
             alt={filename}
             className={cn(
               "h-full w-full object-cover transition-opacity duration-300",

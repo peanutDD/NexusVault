@@ -122,12 +122,19 @@ export default function Login() {
               data-oid=".wvtkow"
             >
               <div data-oid="y8m-gm9">
-                <label className={AUTH_LABEL_CLASSES} data-oid="lqywvi6">
+                <label
+                  htmlFor="login-email"
+                  className={AUTH_LABEL_CLASSES}
+                  data-oid="lqywvi6"
+                >
                   Email
                 </label>
                 <input
                   {...register("email")}
+                  id="login-email"
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   className={AUTH_INPUT_CLASSES}
                   placeholder="you@example.com"
                   data-oid="snubptr"
@@ -141,12 +148,19 @@ export default function Login() {
               </div>
 
               <div data-oid="7:x0rz2">
-                <label className={AUTH_LABEL_CLASSES} data-oid="l03iiw8">
+                <label
+                  htmlFor="login-password"
+                  className={AUTH_LABEL_CLASSES}
+                  data-oid="l03iiw8"
+                >
                   Password
                 </label>
                 <input
                   {...register("password")}
+                  id="login-password"
                   type="password"
+                  name="password"
+                  autoComplete="current-password"
                   className={AUTH_INPUT_CLASSES}
                   placeholder="••••••••"
                   data-oid="wb1uwd_"

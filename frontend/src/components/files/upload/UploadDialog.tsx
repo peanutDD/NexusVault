@@ -4,14 +4,15 @@ import { fileService } from "../../../services/files";
 import { getErrorMessage } from "../../../utils/error";
 import {
   validateFile,
-  getMaxFileSizeGB,
   getMaxBatchCount,
   isLargeFileForConcurrentLimit,
 } from "../../../utils/uploadValidation";
 import { UPLOAD_QUEUE, LARGE_FILE_UPLOAD } from "../../../constants";
 import { UploadQueue } from "../../../utils/uploadQueue";
-import { cn } from "../../../utils/cn";
-import UploadFileItem, { type UploadFile } from "./UploadFileItem";
+import { type UploadFile } from "./UploadFileItem";
+import UploadDropzone from "./UploadDropzone";
+import UploadUrlForm from "./UploadUrlForm";
+import UploadProgressList from "./UploadProgressList";
 import "./UploadDialog.css";
 
 interface UploadDialogProps {
@@ -37,8 +38,6 @@ export default function UploadDialog({
   const [searchParams] = useSearchParams();
   const [dragActive, setDragActive] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
-  const [urlInput, setUrlInput] = useState("");
-  const [urlLoading, setUrlLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isUploadingRef = useRef(false);
   // 用 ref 保存真实状态，绕过 React 18 StrictMode 双重调用导致的 prev 始终为初始值问题
@@ -197,6 +196,14 @@ export default function UploadDialog({
     [appendFilesToState],
   );
 
+  /** URL 上传：添加单个文件到列表 */
+  const handleUrlFileAdd = useCallback(
+    (uploadFile: UploadFile) => {
+      updateUploadFiles((prev) => [...prev, uploadFile]);
+    },
+    [updateUploadFiles],
+  );
+
   // 打开弹窗时清空 input 并强制 multiple，避免部分环境不认 JSX 的 multiple
   useEffect(() => {
     if (open && inputRef.current) {
@@ -319,148 +326,10 @@ export default function UploadDialog({
     [updateUploadFiles],
   );
 
-  // URL 上传 - 获取详细错误信息
-  const getUrlErrorMessage = useCallback(
-    (err: unknown, url: string): string => {
-      // URL 格式无效
-      if (err instanceof TypeError && err.message.includes("URL")) {
-        return `URL 格式无效: "${url}"。请输入完整的 URL，例如 https://example.com/file.jpg`;
-      }
-
-      // fetch 错误
-      if (err instanceof TypeError) {
-        // CORS 或网络错误通常表现为 TypeError: Failed to fetch
-        if (
-          err.message.includes("Failed to fetch") ||
-          err.message.includes("NetworkError")
-        ) {
-          return `无法访问该 URL。可能的原因：
-• 目标服务器不允许跨域请求 (CORS)
-• URL 地址不存在或无法访问
-• 网络连接问题`;
-        }
-        return `网络请求失败: ${err.message}`;
-      }
-
-      // HTTP 错误
-      if (err instanceof Error) {
-        const httpMatch = err.message.match(/^HTTP (\d+)(?:\s*-\s*(.+))?$/);
-        if (httpMatch) {
-          const status = parseInt(httpMatch[1], 10);
-          const statusMessages: Record<number, string> = {
-            400: "请求无效",
-            401: "需要身份验证",
-            403: "访问被拒绝（无权限）",
-            404: "文件不存在",
-            405: "请求方法不允许",
-            408: "请求超时",
-            410: "资源已被删除",
-            429: "请求过于频繁",
-            500: "服务器内部错误",
-            502: "网关错误",
-            503: "服务暂时不可用",
-            504: "网关超时",
-          };
-          const statusText = statusMessages[status] || "请求失败";
-          return `下载失败 (HTTP ${status}): ${statusText}`;
-        }
-        return err.message;
-      }
-
-      return "URL 下载失败，请检查地址是否正确";
-    },
-    [],
-  );
-
-  // URL 上传
-  const handleUrlUpload = useCallback(async () => {
-    const trimmedUrl = urlInput.trim();
-    if (!trimmedUrl) return;
-
-    setUrlLoading(true);
-    try {
-      // 验证 URL 格式
-      let urlObj: URL;
-      try {
-        urlObj = new URL(trimmedUrl);
-      } catch {
-        throw new TypeError(`Invalid URL: ${trimmedUrl}`);
-      }
-
-      // 验证协议
-      if (!["http:", "https:"].includes(urlObj.protocol)) {
-        throw new Error(
-          `不支持的协议: ${urlObj.protocol}。仅支持 http:// 和 https://`,
-        );
-      }
-
-      const pathname = urlObj.pathname;
-      const filename = decodeURIComponent(
-        pathname.split("/").pop() || "downloaded-file",
-      );
-
-      // 使用 AbortController 设置超时
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
-
-      let response: Response;
-      try {
-        response = await fetch(trimmedUrl, {
-          signal: controller.signal,
-          mode: "cors",
-        });
-      } catch (fetchErr) {
-        clearTimeout(timeoutId);
-        if (fetchErr instanceof Error && fetchErr.name === "AbortError") {
-          throw new Error("HTTP 408 - 请求超时（超过30秒）");
-        }
-        throw fetchErr;
-      }
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
-
-      // 检查是否下载到有效内容
-      if (blob.size === 0) {
-        throw new Error("下载的文件为空");
-      }
-
-      const file = new File([blob], filename, { type: blob.type });
-
-      const validation = validateFile(file);
-      const uploadFile: UploadFile = {
-        id: `url-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        name: filename,
-        size: file.size,
-        mimeType: file.type || "application/octet-stream",
-        status: validation.ok ? "pending" : "error",
-        progress: 0,
-        error: validation.ok ? undefined : validation.error,
-        file: validation.ok ? file : undefined,
-      };
-
-      updateUploadFiles((prev) => [...prev, uploadFile]);
-      setUrlInput("");
-    } catch (err) {
-      const errorFile: UploadFile = {
-        id: `url-error-${Date.now()}`,
-        name:
-          trimmedUrl.length > 50 ? trimmedUrl.slice(0, 50) + "..." : trimmedUrl,
-        size: 0,
-        mimeType: "unknown",
-        status: "error",
-        progress: 0,
-        error: getUrlErrorMessage(err, trimmedUrl),
-      };
-      updateUploadFiles((prev) => [...prev, errorFile]);
-    } finally {
-      setUrlLoading(false);
-    }
-  }, [urlInput, getUrlErrorMessage, updateUploadFiles]);
+  // 清空所有文件
+  const handleClearAll = useCallback(() => {
+    updateUploadFiles([]);
+  }, [updateUploadFiles]);
 
   // 拖拽事件
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -491,15 +360,12 @@ export default function UploadDialog({
   const handleClose = useCallback(() => {
     if (uploadStatsForClose) return;
     updateUploadFiles([]);
-    setUrlInput("");
     setTotalLimitWarning("");
     setLargeLimitWarning("");
     setDuplicateWarning("");
     if (inputRef.current) inputRef.current.value = "";
     onClose();
   }, [onClose, updateUploadFiles, uploadStatsForClose]);
-
-  const maxGB = getMaxFileSizeGB();
 
   const uploadStats = useMemo(
     () =>
@@ -602,227 +468,32 @@ export default function UploadDialog({
         {/* 中间：可滚动，避免把底部按钮顶出视野 */}
         <div className="min-h-0 flex-1 overflow-y-auto px-6" data-oid="5gs6vhm">
           {/* 拖拽区域 */}
-          <div
+          <UploadDropzone
+            dragActive={dragActive}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            className={cn(
-              "uploadDialogCyberDropzone relative mb-5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition-all duration-200",
-              dragActive
-                ? "uploadDialogCyberDropzoneActive border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]"
-                : "border-[var(--upload-drop-border)] bg-[var(--upload-drop-bg)] hover:border-[var(--upload-drop-border-hover)]",
-            )}
-            data-oid="_z50by4"
-          >
-            <input
-              ref={inputRef}
-              type="file"
-              multiple
-              className="hidden"
-              aria-label="选择文件"
-              onChange={(e) => {
-                const list = e.target.files;
-                if (!list || list.length === 0) return;
-                appendFilesToState(Array.from(list));
-                setTimeout(() => {
-                  if (inputRef.current) inputRef.current.value = "";
-                }, 0);
-              }}
-              data-oid="cmzy5dv"
-            />
-
-            {/* 文件图标 - 带折角的文档样式 */}
-            <div className="mb-4" data-oid="ybxiui-">
-              <FileDocIcon data-oid="fk_xyyt" />
-            </div>
-
-            <p
-              className="font-brand mb-1 text-sm font-normal tracking-widest text-[var(--upload-text)]"
-              data-oid="rg8qpyg"
-            >
-              Drag and drop your files
-            </p>
-            <p
-              className="font-brand mb-5 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]"
-              data-oid="-vtfj4r"
-            >
-              Max. File size:{" "}
-              {maxGB > 1 ? `${maxGB} GB` : `${Math.round(maxGB * 1024)} MB`}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (inputRef.current) {
-                  inputRef.current.value = "";
-                  inputRef.current.click();
-                }
-              }}
-              className="uploadDialogCyberPrimaryBtn font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)]"
-              data-oid="xdol0-4"
-            >
-              Select files
-            </button>
-            <p
-              className="font-brand mt-2 text-xs text-[var(--upload-text-muted)]"
-              data-oid="d5m9iy1"
-            >
-              支持多选；若多选只显示 1 个，请将多个文件
-              <strong data-oid="0fhzygb">拖入上方区域</strong>
-              ，或多次点击「Select files」逐个添加
-            </p>
-          </div>
+            onFilesSelect={appendFilesToState}
+            open={open}
+          />
 
           {/* URL 上传 */}
-          <div className="mb-5" data-oid="_b1-ohy">
-            <p
-              className="font-brand mb-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]"
-              data-oid="mcl5tfe"
-            >
-              Or upload from URL
-            </p>
-            <div className="flex gap-2" data-oid="h__ldbv">
-              <input
-                type="url"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Add file URL"
-                className={cn(
-                  "uploadDialogCyberInput font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
-                  urlInput.trim()
-                    ? "uploadDialogCyberInputActive border-[var(--upload-accent)]"
-                    : "border-[var(--upload-input-border)] focus:border-[var(--upload-accent)]",
-                )}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleUrlUpload();
-                }}
-                data-oid="shiu-r."
-              />
+          <UploadUrlForm onFileAdd={handleUrlFileAdd} />
 
-              <button
-                type="button"
-                onClick={handleUrlUpload}
-                disabled={!urlInput.trim() || urlLoading}
-                className="uploadDialogCyberPrimaryBtn font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                data-oid="dp9.vve"
-              >
-                {urlLoading ? "..." : "Upload"}
-              </button>
-            </div>
-          </div>
-
-          {/* 总文件数 / 大文件数：分开显示、分开提醒 */}
-          {uploadFiles.length > 0 && (
-            <div className="font-brand mb-3 space-y-2" data-oid="yznpezc">
-              <div
-                className="flex items-center justify-between rounded-lg bg-[var(--upload-stat-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-stat-text)]"
-                data-oid="g0ntg:8"
-              >
-                <span data-oid=":i:btah">文件数量</span>
-                <span
-                  className={
-                    totalAtLimit
-                      ? "text-[var(--upload-warning-text)]"
-                      : "text-[var(--upload-stat-value)]"
-                  }
-                  data-oid="-4lmeu7"
-                >
-                  {uploadFiles.length} / {maxBatchCount} 个
-                </span>
-              </div>
-              <div
-                className="flex items-center justify-between rounded-lg bg-[var(--upload-stat-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-stat-text)]"
-                data-oid="woge7mu"
-              >
-                <span data-oid="cg18l.s">大文件（≥100MB）</span>
-                <span
-                  className={
-                    largeAtLimit
-                      ? "text-[var(--upload-warning-text)]"
-                      : "text-[var(--upload-stat-value)]"
-                  }
-                  data-oid="wmr3zro"
-                >
-                  {uploadStats.largeFileCount} /{" "}
-                  {LARGE_FILE_UPLOAD.MAX_CONCURRENT} 个
-                </span>
-              </div>
-            </div>
-          )}
-          {totalLimitWarning && (
-            <div
-              className="font-brand mb-3 rounded-lg bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]"
-              data-oid="pap8bih"
-            >
-              {totalLimitWarning}
-            </div>
-          )}
-          {largeLimitWarning && (
-            <div
-              className="font-brand mb-3 rounded-lg bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]"
-              data-oid="n.4sq-9"
-            >
-              {largeLimitWarning}
-            </div>
-          )}
-          {duplicateWarning && (
-            <div
-              className="font-brand mb-3 rounded-lg bg-[var(--upload-drop-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]"
-              data-oid="9mpex2h"
-            >
-              {duplicateWarning}
-            </div>
-          )}
-          {uploadFiles.length > 0 && totalAtLimit && !totalLimitWarning && (
-            <div
-              className="font-brand mb-3 rounded-lg border border-[var(--upload-warning-border)] bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]"
-              data-oid="mkphsir"
-            >
-              单次最多 {maxBatchCount}{" "}
-              个文件，当前已满。请先完成或取消后再添加。
-            </div>
-          )}
-          {uploadFiles.length > 0 && largeAtLimit && !largeLimitWarning && (
-            <div
-              className="font-brand mb-3 rounded-lg border border-[var(--upload-warning-border)] bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]"
-              data-oid="hzvtxeq"
-            >
-              大文件（≥100MB）最多 {LARGE_FILE_UPLOAD.MAX_CONCURRENT}{" "}
-              个，当前已满。请先完成或取消后再添加。
-            </div>
-          )}
-
-          {/* 已上传文件列表 */}
-          {uploadFiles.length > 0 && (
-            <div className="mb-5" data-oid="6u.unr8">
-              <div
-                className="mb-3 flex items-center justify-between"
-                data-oid="t5k3x3w"
-              >
-                <p
-                  className="font-brand text-sm font-normal tracking-widest text-[var(--upload-text)]"
-                  data-oid="vem_b1r"
-                >
-                  Uploaded Files
-                </p>
-              </div>
-              <div
-                className="uploadDialogCyberList max-h-60 space-y-2 overflow-y-auto pr-1"
-                data-oid="wo3szfd"
-              >
-                {uploadFiles.map((file) => (
-                  <UploadFileItem
-                    key={file.id}
-                    file={file}
-                    onRemove={handleRemove}
-                    onRetry={handleRetry}
-                    data-oid="tt0kt07"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          {/* 上传进度列表 */}
+          <UploadProgressList
+            uploadFiles={uploadFiles}
+            onRemoveFile={handleRemove}
+            onRetryFile={handleRetry}
+            onClearAll={handleClearAll}
+            maxBatchCount={maxBatchCount}
+            totalAtLimit={totalAtLimit}
+            largeAtLimit={largeAtLimit}
+            totalLimitWarning={totalLimitWarning}
+            largeLimitWarning={largeLimitWarning}
+            duplicateWarning={duplicateWarning}
+          />
         </div>
 
         {/* 底部按钮：固定，始终在视野内 */}
@@ -880,30 +551,4 @@ function CloseIcon() {
   );
 }
 
-// 文件文档图标（带折角）
-function FileDocIcon() {
-  return (
-    <svg
-      width="48"
-      height="48"
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      data-oid="kl.m.2n"
-    >
-      {/* 文档主体 */}
-      <path
-        d="M12 6C12 4.89543 12.8954 4 14 4H28L36 12V42C36 43.1046 35.1046 44 34 44H14C12.8954 44 12 43.1046 12 42V6Z"
-        fill="rgb(var(--upload-doc-icon-main))"
-        data-oid="4k7.6rn"
-      />
 
-      {/* 折角 */}
-      <path
-        d="M28 4L36 12H30C28.8954 12 28 11.1046 28 10V4Z"
-        fill="rgb(var(--upload-doc-icon-fold))"
-        data-oid="1v4j5zq"
-      />
-    </svg>
-  );
-}

@@ -83,7 +83,7 @@ export default function BrowserCompatibilityWarning({
           <button
             type="button"
             onClick={() => setShowWarning(false)}
-            className="text-[rgba(var(--rgb-slate-950),0.92)] hover:text-[rgba(var(--rgb-black),0.92)] focus:outline-none"
+            className="text-[rgba(var(--rgb-slate-950),0.92)] hover:text-[rgba(var(--rgb-black),0.92)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--rgb-slate-950),0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(var(--rgb-pistachio-400),0.86)] rounded"
             aria-label="关闭提示"
             title="关闭提示"
             data-oid="6ij2eek"

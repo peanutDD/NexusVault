@@ -309,6 +309,8 @@ export default function MarkdownPreview({ content }: MarkdownPreviewProps) {
           return (
             <img
               src={resolvedSrc}
+              width={800}
+              height={600}
               loading="lazy"
               className={cn(
                 "my-3 mx-auto block max-w-full max-h-[60vh] rounded-md border object-contain",

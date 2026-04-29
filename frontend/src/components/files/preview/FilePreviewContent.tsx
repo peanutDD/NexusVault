@@ -4,16 +4,17 @@
  */
 
 import { lazy, Suspense, useEffect, useState } from "react";
-import { ResponsivePicture } from "../../common/ResponsivePicture";
 import { formatFileSize } from "../../../utils/format";
 import { getMimeTypeLabel, isGifType } from "../../../utils/mimeType";
 import { cn } from "../../../utils/cn";
 import {
   ErrorIcon,
   FileIcon,
-  AudioIcon,
   SpinnerIcon,
 } from "./FilePreviewIcons";
+import { ImagePreview } from "./ImagePreview";
+import { AudioPreview } from "./AudioPreview";
+import { VideoPreview } from "./VideoPreview";
 
 // -------------------------------------------------------------------------
 // 动态加载的预览组件（降低首屏体积）
@@ -46,7 +47,6 @@ export interface FilePreviewContentProps {
   textContent: string | null;
   useHls: boolean;
   imageLoaded: boolean;
-  imageTransformRef: React.RefObject<HTMLDivElement | null>;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   loop: boolean;
   setImageLoaded: (v: boolean) => void;
@@ -72,7 +72,6 @@ export function FilePreviewContent({
   textContent,
   useHls,
   imageLoaded,
-  imageTransformRef,
   videoRef,
   loop,
   setImageLoaded,
@@ -378,44 +377,14 @@ export function FilePreviewContent({
                   {/* ----------------------------- */}
                   {/* 图片 / GIF 首帧 */}
                   {/* ----------------------------- */}
-                  {showImagePreview ? (
-                    <div
-                      className="relative flex h-full w-full min-h-0 items-center justify-center"
-                      data-oid="nkhpa89"
-                    >
-                      <div
-                        ref={imageTransformRef}
-                        className={cn(
-                          // 缩放与旋转由父层注入 transform，避免重新布局
-                          "flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-lg origin-center transition-transform duration-500 ease-out cursor-pointer",
-                          imageLoaded ? "opacity-100" : "opacity-0",
-                        )}
-                        data-oid="7dzq3rw"
-                      >
-                        <ResponsivePicture
-                          src={imagePreviewSrc ?? ""}
-                          alt={file.original_filename}
-                          className="max-h-full max-w-full object-contain"
-                          decoding="async"
-                          fetchPriority="high"
-                          onLoad={() => setImageLoaded(true)}
-                          onError={onImageError}
-                          data-oid="2j7js_c"
-                        />
-                      </div>
-                      {/* 图片未完成解码时保持中心 Loading，避免抖动 */}
-                      {!imageLoaded ? (
-                        <div
-                          className="absolute flex items-center justify-center inset-0"
-                          data-oid="uk1f569"
-                        >
-                          <div
-                            className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--preview-loading-border)] border-t-[var(--preview-loading-border-top)]"
-                            data-oid="rk.oeiq"
-                          />
-                        </div>
-                      ) : null}
-                    </div>
+                  {showImagePreview && imagePreviewSrc ? (
+                    <ImagePreview
+                      src={imagePreviewSrc}
+                      alt={file.original_filename}
+                      imageLoaded={imageLoaded}
+                      onImageLoad={() => setImageLoaded(true)}
+                      onImageError={onImageError}
+                    />
                   ) : null}
 
                   {/* ----------------------------- */}
@@ -456,80 +425,25 @@ export function FilePreviewContent({
                   {/* 视频（含 HLS 回退逻辑） */}
                   {/* ----------------------------- */}
                   {isVideo && blobUrl ? (
-                    <div
-                      className="relative flex h-full w-full min-h-0 items-center justify-center"
-                      data-oid="9_brskc"
-                    >
-                      {!videoReady && (
-                        <div
-                          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-transparent"
-                          data-oid="2j7pt_5"
-                        >
-                          <SpinnerIcon
-                            className="h-10 w-10 text-[var(--preview-spinner)]"
-                            data-oid="u9r97lb"
-                          />
-                        </div>
-                      )}
-                      <video
-                        ref={videoRef}
-                        key={blobUrl}
-                        src={useHls ? undefined : blobUrl}
-                        loop={loop}
-                        controls={videoReady}
-                        autoPlay
-                        preload="metadata"
-                        poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3C/svg%3E"
-                        className={cn(
-                          "pointer-events-auto max-h-full max-w-full rounded-lg shadow-2xl object-contain cursor-pointer transition-opacity duration-200",
-                          videoReady ? "opacity-100" : "opacity-0",
-                        )}
-                        style={{ backgroundColor: "transparent" }}
-                        onClick={(e) => e.stopPropagation()}
-                        onLoadedMetadata={() => setVideoReady(true)}
-                        onLoadedData={() => setVideoReady(true)}
-                        onCanPlay={() => setVideoReady(true)}
-                        onError={tryVideoAudioFallback}
-                        data-oid=".camnr9"
-                      >
-                        <track kind="captions" data-oid="kc_azfx" />
-                        您的浏览器不支持视频播放
-                      </video>
-                    </div>
+                    <VideoPreview
+                      blobUrl={blobUrl}
+                      useHls={useHls}
+                      loop={loop}
+                      videoReady={videoReady}
+                      videoRef={videoRef}
+                      onReady={() => setVideoReady(true)}
+                      onError={tryVideoAudioFallback}
+                    />
                   ) : null}
 
                   {/* ----------------------------- */}
                   {/* 音频（独立的交互卡片） */}
                   {/* ----------------------------- */}
                   {isAudio && blobUrl ? (
-                    <div
-                      className="flex h-full w-full flex-col items-center justify-center pointer-events-none"
-                      data-oid="h.1_-ta"
-                    >
-                      <div
-                        className="pointer-events-auto flex flex-col items-center gap-6 rounded-2xl bg-[var(--preview-surface-soft)] px-12 py-10"
-                        onClick={(e) => e.stopPropagation()}
-                        data-oid="t97wgej"
-                      >
-                        <div
-                          className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--preview-audio-icon-bg)]"
-                          data-oid="vp:v1h2"
-                        >
-                          <AudioIcon data-oid="n5a.zv-" />
-                        </div>
-                        <audio
-                          key={blobUrl}
-                          src={blobUrl}
-                          controls
-                          autoPlay
-                          className="w-80"
-                          onError={tryVideoAudioFallback}
-                          data-oid="ab7fcl9"
-                        >
-                          您的浏览器不支持音频播放
-                        </audio>
-                      </div>
-                    </div>
+                    <AudioPreview
+                      src={blobUrl}
+                      onError={tryVideoAudioFallback}
+                    />
                   ) : null}
 
                   {/* ----------------------------- */}

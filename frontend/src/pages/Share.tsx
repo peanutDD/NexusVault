@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import api from "../services/api";
 import { getErrorMessage } from "../utils/error";
 import ErrorMessage from "../components/common/feedback/ErrorMessage";
 
 export default function Share() {
   const { token } = useParams<{ token: string }>();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
@@ -29,10 +28,6 @@ export default function Share() {
   const handleCloseError = useCallback(() => {
     setError(null);
   }, []);
-
-  const handleNavigateToLogin = useCallback(() => {
-    navigate("/login");
-  }, [navigate]);
 
   const requestAccess = useCallback(
     async (p?: string) => {
@@ -106,7 +101,7 @@ export default function Share() {
           />
 
           <p className="text-[var(--color-text-secondary)]" data-oid="10-_ks1">
-            加载中...
+            加载中…
           </p>
         </div>
       </div>
@@ -146,13 +141,17 @@ export default function Share() {
           >
             <div data-oid="jd650pn">
               <label
+                htmlFor="share-password"
                 className="block text-sm font-medium text-[var(--control-label-text)] mb-2"
                 data-oid="yjocs6y"
               >
                 请输入访问密码
               </label>
               <input
+                id="share-password"
                 type="password"
+                name="sharePassword"
+                autoComplete="off"
                 value={password}
                 onChange={handlePasswordChange}
                 required
@@ -167,7 +166,7 @@ export default function Share() {
               className="w-full px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-lg hover:bg-[var(--btn-primary-bg-hover)] disabled:opacity-50"
               data-oid="z:pz6.h"
             >
-              {loading ? "验证中..." : "访问文件"}
+              {loading ? "验证中…" : "访问文件"}
             </button>
           </form>
         ) : fileInfo ? (
@@ -199,13 +198,13 @@ export default function Share() {
               下载文件
             </button>
 
-            <button
-              onClick={handleNavigateToLogin}
+            <Link
+              to="/login"
               className="w-full px-4 py-2 bg-[var(--btn-secondary-bg)] text-[var(--btn-secondary-text)] border border-[var(--btn-secondary-border)] rounded-lg hover:bg-[var(--btn-secondary-bg-hover)]"
               data-oid=".2axd23"
             >
               返回登录
-            </button>
+            </Link>
           </div>
         ) : null}
       </div>

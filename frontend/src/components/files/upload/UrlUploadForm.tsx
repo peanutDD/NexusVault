@@ -159,37 +159,44 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
   );
 
   return (
-    <div className="mb-5" data-oid="uvq14tr">
+    <div className="mb-5" data-oid="_b1-ohy">
       <p
         className="font-brand mb-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]"
-        data-oid=":fj8gon"
+        data-oid="mcl5tfe"
       >
         Or upload from URL
       </p>
-      <div className="flex gap-2" data-oid="g5l_g.0">
+      <div className="flex gap-2" data-oid="h__ldbv">
+        <label htmlFor="upload-url-input" className="sr-only">
+          File URL
+        </label>
         <input
+          id="upload-url-input"
           type="url"
+          name="uploadUrl"
+          autoComplete="off"
+          aria-label="File URL"
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder="Add file URL"
           className={cn(
-            "font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
+            "uploadDialogCyberInput font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
             urlInput.trim()
-              ? "border-[var(--upload-accent)]"
+              ? "uploadDialogCyberInputActive border-[var(--upload-accent)]"
               : "border-[var(--upload-input-border)] focus:border-[var(--upload-accent)]",
           )}
           onKeyDown={handleKeyDown}
-          data-oid="8.91spu"
+          data-oid="shiu-r."
         />
 
         <button
           type="button"
           onClick={handleUpload}
           disabled={!urlInput.trim() || loading}
-          className="font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-          data-oid="ah38xg8"
+          className="uploadDialogCyberPrimaryBtn font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          data-oid="dp9.vve"
         >
-          {loading ? "..." : "Upload"}
+          {loading ? "…" : "Upload"}
         </button>
       </div>
     </div>

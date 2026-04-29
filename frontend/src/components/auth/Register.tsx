@@ -110,12 +110,19 @@ export default function Register() {
               data-oid="frpuy1l"
             >
               <div data-oid="9-qoq2b">
-                <label className={AUTH_LABEL_CLASSES} data-oid="tyfk1l8">
+                <label
+                  htmlFor="register-username"
+                  className={AUTH_LABEL_CLASSES}
+                  data-oid="tyfk1l8"
+                >
                   Username
                 </label>
                 <input
                   {...register("username")}
+                  id="register-username"
                   type="text"
+                  name="username"
+                  autoComplete="username"
                   className={AUTH_INPUT_CLASSES}
                   placeholder="johndoe"
                   data-oid="-w-ygpq"
@@ -129,12 +136,19 @@ export default function Register() {
               </div>
 
               <div data-oid="buz1jo.">
-                <label className={AUTH_LABEL_CLASSES} data-oid="sa7q7p2">
+                <label
+                  htmlFor="register-email"
+                  className={AUTH_LABEL_CLASSES}
+                  data-oid="sa7q7p2"
+                >
                   Email
                 </label>
                 <input
                   {...register("email")}
+                  id="register-email"
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   className={AUTH_INPUT_CLASSES}
                   placeholder="you@example.com"
                   data-oid="5be270a"
@@ -148,12 +162,19 @@ export default function Register() {
               </div>
 
               <div data-oid="s.gblxc">
-                <label className={AUTH_LABEL_CLASSES} data-oid="p1i_69g">
+                <label
+                  htmlFor="register-password"
+                  className={AUTH_LABEL_CLASSES}
+                  data-oid="p1i_69g"
+                >
                   Password
                 </label>
                 <input
                   {...register("password")}
+                  id="register-password"
                   type="password"
+                  name="password"
+                  autoComplete="new-password"
                   className={AUTH_INPUT_CLASSES}
                   placeholder="••••••••"
                   data-oid="v5kzj7z"
