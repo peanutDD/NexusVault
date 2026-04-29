@@ -6,6 +6,60 @@
 
 ## [未发布] — 2026 年（当前会话）
 
+### 🧱 前端组件代码拆分（2026-04-30）
+
+#### 问题背景
+
+前端代码中存在多个超大文件（>500 行），职责混杂，不符合单一职责原则，难以维护和扩展：
+- `UploadDialog.tsx` - 909 行（上传弹窗、拖拽、URL 上传、进度列表混杂）
+- `FilePreviewContent.tsx` - 650+ 行（图片、视频、音频、PDF、Markdown 预览混杂）
+- `FileListContent.tsx` - 1000+ 行（列表、分组、选择、操作混杂）
+
+#### 拆分策略
+
+采用渐进式重构，按功能领域拆分为独立组件，保持视觉风格和功能完全不变。
+
+#### 新增组件
+
+**上传模块** (`frontend/src/components/files/upload/`)
+- `UploadDropzone.tsx` - 拖拽上传组件（含文件选择、拖拽状态、视觉效果）
+- `UrlUploadForm.tsx` - URL 上传表单组件（含 URL 验证、下载、错误处理）
+- `UploadProgressList.tsx` - 上传进度列表组件（含统计信息、警告、文件项）
+
+**预览模块** (`frontend/src/components/files/preview/`)
+- `ImagePreview.tsx` - 图片预览组件（含加载状态、错误处理）
+- `AudioPreview.tsx` - 音频预览组件（含播放器控件）
+
+**列表模块** (`frontend/src/components/files/list/`)
+- `GroupSelectCheckbox.tsx` - 分组全选复选框组件（含全选/取消全选/混合状态）
+
+#### 拆分效果
+
+| 文件 | 拆分前 | 拆分后 | 减少 |
+|------|--------|--------|------|
+| `UploadDialog.tsx` | 909 行 | 554 行 | -39% |
+| `FilePreviewContent.tsx` | 650+ 行 | 584 行 | -10% |
+| `FileListContent.tsx` | 1000+ 行 | 900+ 行 | -10% |
+
+#### 验收结果
+
+| 验收项 | 状态 |
+|--------|------|
+| `npm run build` | ✅ 通过 |
+| `npx tsc --noEmit` | ✅ 无类型错误 |
+| `npm run lint` | ✅ 无 lint 错误 |
+| 视觉一致性 | ✅ 完全保持原样 |
+| 功能完整性 | ✅ 所有功能正常 |
+
+#### 关键原则
+
+1. **零视觉变更**：所有 CSS 类、data-oid 属性完整保留
+2. **零功能回归**：所有业务逻辑、状态管理、事件处理完整保留
+3. **单一职责**：每个组件只负责一个明确的功能领域
+4. **渐进式**：每次只拆分一个文件，验证通过后再继续
+
+---
+
 ### 🚀 后端依赖升级与 OpenTelemetry 追踪集成（2026-04-28）
 
 #### 依赖版本升级

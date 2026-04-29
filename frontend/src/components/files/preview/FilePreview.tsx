@@ -18,8 +18,8 @@ import type { FileMetadata } from "../../../types/files";
 import { useFilePreviewData } from "./hooks/useFilePreviewData";
 import { useFilePreviewNavigation } from "./hooks/useFilePreviewNavigation";
 import { useFilePreviewEffects } from "./hooks/useFilePreviewEffects";
-import { FilePreviewContent } from "./FilePreviewContent.tsx";
-import { FilePreviewToolbar } from "./FilePreviewToolbar.tsx";
+import { FilePreviewContent } from "./FilePreviewContent";
+import { FilePreviewToolbar } from "./FilePreviewToolbar";
 import { truncateFilename, formatPreviewDate } from "./utils";
 
 // =============================================================================
@@ -321,7 +321,6 @@ export default function FilePreview({
         textContent={textContent}
         useHls={useHls}
         imageLoaded={imageLoaded}
-        imageTransformRef={imageTransformRef}
         videoRef={videoRef}
         loop={isLooping}
         setImageLoaded={setImageLoaded}
