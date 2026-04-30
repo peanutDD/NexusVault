@@ -13,10 +13,10 @@ use tokio::sync::Semaphore;
 
 use crate::config::Config;
 use crate::repositories::{
-    DynFileVersionsRepo, DynFilesRepo, DynUsersRepo, SqlxFileVersionsRepo, SqlxFilesRepo,
-    SqlxUsersRepo,
+    CachedFilesRepo, DynFileVersionsRepo, DynFilesRepo, DynUsersRepo, SqlxFileVersionsRepo,
+    SqlxFilesRepo, SqlxUsersRepo,
 };
-use crate::services::cache::CacheService;
+use crate::services::cache::{files::FileCacheService, CacheService};
 use crate::services::embeddings::EmbeddingService;
 use crate::services::file::FileService;
 use crate::services::storage::StorageBackend;
@@ -75,10 +75,26 @@ impl AppState {
         storage: Arc<dyn StorageBackend>,
         redis: Option<RedisPool>,
     ) -> Self {
-        let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new_with_replica(
+        let inner_files_repo = Arc::new(SqlxFilesRepo::new_with_replica(
             pool.clone(),
             read_pool.clone(),
         ));
+
+        // 如果 Redis 可用且缓存启用，使用带缓存的文件仓库
+        let files_repo: DynFilesRepo = if let Some(ref redis_pool) = redis {
+            if config.cache.enabled {
+                let file_cache = Arc::new(FileCacheService::new(
+                    redis_pool.clone(),
+                    Arc::new(config.cache.clone()),
+                ));
+                Arc::new(CachedFilesRepo::new(inner_files_repo, file_cache))
+            } else {
+                inner_files_repo
+            }
+        } else {
+            inner_files_repo
+        };
+
         let file_versions_repo: DynFileVersionsRepo =
             Arc::new(SqlxFileVersionsRepo::new(pool.clone()));
         let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(pool.clone()));

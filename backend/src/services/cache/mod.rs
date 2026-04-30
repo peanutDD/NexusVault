@@ -1,12 +1,12 @@
 //! # 缓存服务模块
 //!
-//! 提供应用级缓存功能，使用 moka 作为高性能内存缓存。
-//!
-//! ## 缓存策略
-//!
-//! - 用户信息缓存：5 分钟 TTL
-//! - 文件元数据缓存：1 分钟 TTL
-//! - 文件夹列表缓存：30 秒 TTL
+//! 提供应用级缓存功能，包括：
+//! - 内存缓存（moka）：用户、文件、文件夹等
+//! - Redis 二级缓存：文件列表、存储用量（跨实例共享）
+
+pub mod files;
+
+pub use self::files::FileCacheService;
 
 use moka::sync::Cache;
 use std::sync::Arc;

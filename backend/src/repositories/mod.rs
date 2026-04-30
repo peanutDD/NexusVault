@@ -31,6 +31,7 @@
 //! ```
 
 pub mod api_tokens;
+pub mod cached_files;
 pub mod file_versions;
 pub mod files;
 pub mod folders;
@@ -50,6 +51,7 @@ pub use traits::{DynFileVersionsRepo, DynFilesRepo, DynUsersRepo};
 // 重新导出：SQLx 具体实现
 // ============================================================================
 
+pub use cached_files::CachedFilesRepo;
 pub use file_versions::SqlxFileVersionsRepo;
 pub use files::SqlxFilesRepo;
 pub use organizations::OrganizationsRepo;
