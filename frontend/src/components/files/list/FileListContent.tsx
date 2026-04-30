@@ -1,13 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import FileGrid from "../grid/FileGrid";
-import FolderGrid from "../grid/FolderGrid";
-import MixedGrid from "../grid/MixedGrid";
-import FileListBatchActions from "./FileListBatchActions";
 import FileListPagination from "./FileListPagination";
-import { GroupSelectCheckbox, GroupSelectCheckboxMixed } from "./GroupSelectCheckbox";
-import FileListRow from "./FileListRow";
-import FileListGroupHeader from "./FileListGroupHeader";
 import FileListVirtualScroller from "./FileListVirtualScroller";
+import FileListSelectionBar from "./FileListSelectionBar";
+import FileListGroupedView from "./FileListGroupedView";
 import ErrorMessage from "../../common/feedback/ErrorMessage";
 import { FileCardSkeleton } from "../../common/feedback/Skeleton";
 import { FILE_LIST } from "../../../constants";
@@ -220,182 +215,6 @@ const FileListContent: React.FC<FileListContentProps> = ({
   const showBatchActions = selectedFiles.size + selectedFolders.size > 0;
   const totalText = `total:${displayFolders.length > 0 ? `${displayFolders.length} folders · ` : ""}${files.length} files`;
 
-  const renderStickyBar = () => (
-    <div
-      className="sticky top-[calc(clamp(4.75rem,7.6vw,6.25rem)+env(safe-area-inset-top))] z-40 mb-[var(--bar-gap)]"
-    >
-      {showBatchActions ? (
-        <div className="glass-panel-soft bars-integrated flex flex-col">
-          <FileListRow
-            isRevalidating={isRevalidating}
-            allFilesSelected={allFilesSelected}
-            selectedCount={selectedFiles.size + selectedFolders.size}
-            totalText={totalText}
-            onToggleSelectAll={toggleSelectAll}
-          />
-          <FileListBatchActions
-            bare
-            selectedFileCount={selectedFiles.size}
-            selectedFolderCount={selectedFolders.size}
-            onBatchMove={handleShowBatchMove}
-            onBatchShare={handleShowBatchShare}
-            onBatchDownload={handleBatchDownload}
-            onBatchDelete={handleBatchDelete}
-            batchDownloading={batchDownloading}
-          />
-        </div>
-      ) : (
-        <div className="flex flex-col" style={{ gap: "var(--bar-gap)" }}>
-          <div className="all-files-bar glass-panel-soft mb-0">
-            <FileListRow
-              isRevalidating={isRevalidating}
-              allFilesSelected={allFilesSelected}
-              selectedCount={selectedFiles.size + selectedFolders.size}
-              totalText={totalText}
-              onToggleSelectAll={toggleSelectAll}
-            />
-          </div>
-          <FileListBatchActions
-            selectedFileCount={selectedFiles.size}
-            selectedFolderCount={selectedFolders.size}
-            onBatchMove={handleShowBatchMove}
-            onBatchShare={handleShowBatchShare}
-            onBatchDownload={handleBatchDownload}
-            onBatchDelete={handleBatchDelete}
-            batchDownloading={batchDownloading}
-          />
-        </div>
-      )}
-    </div>
-  );
-
-  const renderTypeGroup = () => (
-    <div className="space-y-6">
-      {displayFolders.length > 0 ? (
-        <div>
-          <FileListGroupHeader
-            label="FOLDERS"
-            count={displayFolders.length}
-            checkbox={
-              <GroupSelectCheckbox
-                itemIds={displayFolders.map((f) => f.id)}
-                selectedIds={selectedFolders}
-                onToggle={(ids, selected) => {
-                  ids.forEach((id) => handleSelectFolder(id, selected));
-                }}
-              />
-            }
-            icon={
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--glass-bg-b)] text-base text-[var(--glass-text)]">
-                <i className="bi bi-folder2" aria-hidden />
-              </span>
-            }
-          />
-          <FolderGrid
-            folders={displayFolders}
-            selectedFolders={selectedFolders}
-            onSelect={handleSelectFolder}
-            onOpen={handleOpenFolder}
-            onRename={handleRenameFolder}
-            onDelete={(folderId) => {
-              const folder = displayFolders.find((f) => f.id === folderId);
-              if (folder) handleDelete(folder, "folder");
-            }}
-            onDrop={handleDropOnFolder}
-            openFolderMenuId={openFolderMenuId}
-            onToggleMenu={toggleFolderMenu}
-            onCloseMenu={closeMenu}
-          />
-        </div>
-      ) : null}
-
-      {(groupedFiles ?? []).map((group) => (
-        <div key={`group-${group.key}`}>
-          <FileListGroupHeader
-            label={group.label}
-            count={group.files.length}
-            checkbox={
-              <GroupSelectCheckbox
-                itemIds={group.files.map((f) => f.id)}
-                selectedIds={selectedFiles}
-                onToggle={(ids, selected) => {
-                  ids.forEach((id) => handleSelectFile(id, selected));
-                }}
-              />
-            }
-            icon={group.icon}
-          />
-          <FileGrid
-            files={group.files}
-            selectedFiles={selectedFiles}
-            onSelect={handleSelectFile}
-            onPreview={setPreviewFile}
-            onShare={setShareFile}
-            onDownload={handleDownload}
-            onRename={handleRenameFile}
-            onDelete={handleDelete}
-            onDragStart={handleFileDragStart}
-            openFileMenuId={openFileMenuId}
-            onToggleMenu={toggleFileMenu}
-            onCloseMenu={closeMenu}
-          />
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderTimeGroup = () => (
-    <div className="space-y-6">
-      {(timeGroupedItems ?? []).map((group) => (
-        <div key={`time-group-${group.key}`}>
-          <FileListGroupHeader
-            label={group.label}
-            count={group.files.length + group.folders.length}
-            checkbox={
-              <GroupSelectCheckboxMixed
-                fileIds={group.files.map((f) => f.id)}
-                folderIds={group.folders.map((f) => f.id)}
-                selectedFileIds={selectedFiles}
-                selectedFolderIds={selectedFolders}
-                onToggle={(fileIds, folderIds, selected) => {
-                  fileIds.forEach((id) => handleSelectFile(id, selected));
-                  folderIds.forEach((id) => handleSelectFolder(id, selected));
-                }}
-              />
-            }
-            icon={
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--glass-bg-b)] text-base text-[var(--glass-text)]">
-                <i className="bi bi-calendar3" aria-hidden />
-              </span>
-            }
-          />
-          <MixedGrid
-            key={`time-group-mixed-${group.key}`}
-            items={group.items}
-            selectedFiles={selectedFiles}
-            selectedFolders={selectedFolders}
-            onSelectFile={handleSelectFile}
-            onSelectFolder={handleSelectFolder}
-            onOpenFolder={handleOpenFolder}
-            onPreviewFile={setPreviewFile}
-            onShareFile={setShareFile}
-            onDownloadFile={handleDownload}
-            onRenameFolder={handleRenameFolder}
-            onRenameFile={handleRenameFile}
-            onDelete={handleDelete}
-            onFileDragStart={handleFileDragStart}
-            onDropOnFolder={handleDropOnFolder}
-            openFileMenuId={openFileMenuId}
-            openFolderMenuId={openFolderMenuId}
-            onToggleFileMenu={toggleFileMenu}
-            onToggleFolderMenu={toggleFolderMenu}
-            onCloseMenu={closeMenu}
-          />
-        </div>
-      ))}
-    </div>
-  );
-
   return (
     <div>
       {error && (
@@ -424,11 +243,70 @@ const FileListContent: React.FC<FileListContentProps> = ({
         />
       ) : (
         <>
-          {renderStickyBar()}
+          <FileListSelectionBar
+            showBatchActions={showBatchActions}
+            isRevalidating={isRevalidating}
+            allFilesSelected={allFilesSelected}
+            selectedFileCount={selectedFiles.size}
+            selectedFolderCount={selectedFolders.size}
+            totalText={totalText}
+            batchDownloading={batchDownloading}
+            onToggleSelectAll={toggleSelectAll}
+            onBatchMove={handleShowBatchMove}
+            onBatchShare={handleShowBatchShare}
+            onBatchDownload={handleBatchDownload}
+            onBatchDelete={handleBatchDelete}
+          />
           {isGroupByType && groupedFiles ? (
-            renderTypeGroup()
+            <FileListGroupedView
+              mode="type"
+              groupedFiles={groupedFiles}
+              timeGroupedItems={timeGroupedItems}
+              displayFolders={displayFolders}
+              selectedFiles={selectedFiles}
+              selectedFolders={selectedFolders}
+              openFileMenuId={openFileMenuId}
+              openFolderMenuId={openFolderMenuId}
+              onSelectFile={handleSelectFile}
+              onSelectFolder={handleSelectFolder}
+              onOpenFolder={handleOpenFolder}
+              onRenameFolder={handleRenameFolder}
+              onRenameFile={handleRenameFile}
+              onDelete={handleDelete}
+              onDownload={handleDownload}
+              onFileDragStart={handleFileDragStart}
+              onDropOnFolder={handleDropOnFolder}
+              onPreviewFile={setPreviewFile}
+              onShareFile={setShareFile}
+              onToggleFileMenu={toggleFileMenu}
+              onToggleFolderMenu={toggleFolderMenu}
+              onCloseMenu={closeMenu}
+            />
           ) : isGroupByTime && timeGroupedItems ? (
-            renderTimeGroup()
+            <FileListGroupedView
+              mode="time"
+              groupedFiles={groupedFiles}
+              timeGroupedItems={timeGroupedItems}
+              displayFolders={displayFolders}
+              selectedFiles={selectedFiles}
+              selectedFolders={selectedFolders}
+              openFileMenuId={openFileMenuId}
+              openFolderMenuId={openFolderMenuId}
+              onSelectFile={handleSelectFile}
+              onSelectFolder={handleSelectFolder}
+              onOpenFolder={handleOpenFolder}
+              onRenameFolder={handleRenameFolder}
+              onRenameFile={handleRenameFile}
+              onDelete={handleDelete}
+              onDownload={handleDownload}
+              onFileDragStart={handleFileDragStart}
+              onDropOnFolder={handleDropOnFolder}
+              onPreviewFile={setPreviewFile}
+              onShareFile={setShareFile}
+              onToggleFileMenu={toggleFileMenu}
+              onToggleFolderMenu={toggleFolderMenu}
+              onCloseMenu={closeMenu}
+            />
           ) : (
             <div className="space-y-4">
               <FileListVirtualScroller
@@ -499,5 +377,4 @@ function EmptyIcon() {
     </svg>
   );
 }
-
 export default FileListContent;

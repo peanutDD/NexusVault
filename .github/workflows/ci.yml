@@ -7,7 +7,17 @@ on:
       - master
   pull_request:
 
+# 并发保护：同一 PR 连续 push 时取消旧跑
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Backend —— Rust (axum + sqlx)
+  # 依赖约束：cargo-llvm-cov ≥ 1.87、cargo-outdated ≥ 1.88 需要最新 stable。
+  # 业务 MSRV 1.80 仍由 Cargo.toml 控制，CI 只跑 stable。
+  # ──────────────────────────────────────────────────────────────────────────
   backend:
     name: Backend (Rust)
     runs-on: ubuntu-latest
@@ -30,12 +40,16 @@ jobs:
           --health-retries 20
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/file_storage_test
+      CARGO_TERM_COLOR: always
+      RUSTDOCFLAGS: "-D warnings"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Rust
+      - name: Set up Rust (stable + llvm-tools-preview)
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt, llvm-tools-preview
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -43,8 +57,10 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
+            backend/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Cargo fmt
         run: cargo fmt --all -- --check
@@ -52,9 +68,87 @@ jobs:
       - name: Cargo clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Cargo test
-        run: cargo test --all-features
+      # ── 覆盖率：替代 `cargo test`，同时产出 lcov + junit ────────────────
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov@0.8
 
+      - name: Cargo test with coverage
+        run: |
+          cargo llvm-cov --all-features --workspace \
+            --lcov --output-path lcov.info \
+            --fail-under-lines 90
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: backend/lcov.info
+          flags: backend
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      # ── 文档健康：私有 item 也生成，且 warning = error ─────────────────
+      - name: Cargo doc
+        run: cargo doc --no-deps --document-private-items --all-features
+
+      - name: Build (release profile)
+        run: cargo build --release --locked
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Security audit —— 独立 job，与 backend 并行；命中 CVE 时红线阻塞合并
+  # ──────────────────────────────────────────────────────────────────────────
+  security-audit:
+    name: Security audit (cargo-audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit@0.22
+
+      - name: Cargo audit
+        run: cargo audit --deny warnings
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Dependency freshness —— 非阻塞预警，周期性提醒升级
+  # outdated 默认会因常有上游更新而返回非零，因此 continue-on-error
+  # ──────────────────────────────────────────────────────────────────────────
+  deps-freshness:
+    name: Dependency freshness (cargo-outdated)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-outdated
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-outdated@0.19
+
+      - name: Cargo outdated (report only)
+        run: cargo outdated --workspace --root-deps-only --exit-code 0
+        continue-on-error: true
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Frontend —— Vite + Vitest + Playwright(build-skipped) + 类型 + bundle 预算
+  # ──────────────────────────────────────────────────────────────────────────
   frontend:
     name: Frontend (Node)
     runs-on: ubuntu-latest
@@ -91,8 +185,16 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # ── 独立类型检查：`tsc -b --noEmit` 覆盖所有 project references ─────
+      - name: Type check (tsc --noEmit)
+        run: npx tsc -b --noEmit
+
       - name: Test
         run: npm run test
 
       - name: Build
         run: npm run build
+
+      # ── Bundle 预算：入口/小 chunk ≤ 200KB(gzip)、重型 vendor ≤ 400KB ──
+      - name: Bundle size budget
+        run: node scripts/check-bundle-size.mjs
