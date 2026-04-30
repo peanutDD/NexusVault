@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { cn } from "../../../utils/cn";
 import { SpinnerIcon } from "./FilePreviewIcons";
 
@@ -20,6 +21,12 @@ export function VideoPreview({
   onReady,
   onError,
 }: VideoPreviewProps) {
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.loop = loop;
+    }
+  }, [loop, videoRef]);
+
   return (
     <div
       className="relative flex h-full w-full min-h-0 items-center justify-center"

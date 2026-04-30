@@ -6,6 +6,55 @@
 
 ## [未发布] — 2026 年（当前会话）
 
+### 📚 文档统一整理（2026-05-01）
+
+#### 整理目的
+
+项目文档分散在多个文件中，存在内容重复、结构不清晰的问题。本次整理旨在：
+- 统一文档结构，便于快速查找
+- 合并重复内容，消除冗余
+- 建立文档中心入口
+
+#### 整理内容
+
+**1. 文档中心更新**
+- 更新 `docs/README.md` 作为统一文档入口，增加「已归档文档」章节，记录整合情况
+- 优化文档结构展示，添加清晰的分类导航
+- 更新版本号至 v2.3
+
+**2. 高并发优化文档整合**
+- 创建 `docs/HIGH_CONCURRENCY.md`：整合「高并发.md」和「前端降低后端并发压力方案.md」的内容
+- 统一前后端高并发优化方案，包含：
+  - 前端层：防抖/节流、请求去重、虚拟列表、缓存策略、并发控制
+  - 后端层：架构优化、上传/下载优化、列表/搜索优化
+  - 监控与可观测性、实施路线图
+
+**3. 功能开关文档整合**
+- 创建 `docs/FEATURE_FLAGS.md`：整合「开关矩阵与接口边界.md」的内容
+- 定义完整的 Feature Flags 矩阵和 Provider 接口边界
+
+**4. 代码审查文档整合**
+- 扩展 `docs/CODE_REVIEW_GUIDE.md`，整合以下文档内容：
+  - 开始使用指南（原 CODE_REVIEW_START.md）
+  - 操作指南（原 CODE_REVIEW_USAGE.md）
+  - 审查报告模板（原 CODE_REVIEW_REPORT.md）
+- 添加章节：§12 开始使用、§13 操作指南、§14 审查报告模板
+
+#### 文档结构优化
+
+| 原文档 | 状态 | 整合到 |
+|--------|------|--------|
+| `高并发.md` | 保留 | `HIGH_CONCURRENCY.md` |
+| `前端降低后端并发压力方案.md` | 保留 | `HIGH_CONCURRENCY.md` |
+| `开关矩阵与接口边界.md` | 保留 | `FEATURE_FLAGS.md` |
+| `CODE_REVIEW_START.md` | 保留 | `CODE_REVIEW_GUIDE.md` §12 |
+| `CODE_REVIEW_USAGE.md` | 保留 | `CODE_REVIEW_GUIDE.md` §13 |
+| `CODE_REVIEW_REPORT.md` | 保留 | `CODE_REVIEW_GUIDE.md` §14 |
+
+> **说明**：为保持向后兼容性，原有文档均保留，新内容优先在整合后的文档中维护。
+
+---
+
 ### 🧱 前端组件代码拆分（2026-04-30）
 
 #### 问题背景
@@ -57,6 +106,59 @@
 2. **零功能回归**：所有业务逻辑、状态管理、事件处理完整保留
 3. **单一职责**：每个组件只负责一个明确的功能领域
 4. **渐进式**：每次只拆分一个文件，验证通过后再继续
+
+---
+
+### 🐛 Bug 修复（预览功能）
+
+#### 1. 修复图片预览放大缩小旋转重置功能失效
+
+**问题描述**
+
+预览页的放大、缩小、旋转、重置按钮点击后，图片没有任何变化。
+
+**根本原因**
+
+`FilePreview.tsx` 中定义的 `zoom` 和 `rotation` 状态没有正确传递到 `ImagePreview` 组件。`ImagePreview` 组件有自己的 `imageTransformRef`，但无法获取到父组件的状态值。
+
+**修复方案**
+
+- 在 `ImagePreviewProps` 接口中添加 `zoom` 和 `rotation` 属性
+- 使用 CSS 变量 + Tailwind 任意值语法 `transform-[scale(var(--preview-zoom))_rotate(var(--preview-rotation))]` 应用变换
+- 更新 `FilePreviewContentProps` 接口，传递 `zoom` 和 `rotation` 到 `ImagePreview`
+- 清理 `FilePreview.tsx` 中不再需要的 `imageTransformRef` 和 `useEffect`
+
+**影响范围**
+
+- `frontend/src/components/files/preview/ImagePreview.tsx`
+- `frontend/src/components/files/preview/FilePreviewContent.tsx`
+- `frontend/src/components/files/preview/FilePreview.tsx`
+
+#### 2. 修复视频预览循环播放功能失效
+
+**问题描述**
+
+视频预览工具栏的循环播放按钮点击后，视频不会循环播放。
+
+**根本原因**
+
+虽然 `loop` 属性已正确绑定到 `<video>` 元素，但当 `loop` 状态变化时，React 的属性更新可能没有正确同步到 DOM，特别是在使用 HLS.js 加载视频时。
+
+**修复方案**
+
+在 `VideoPreview` 组件中添加 `useEffect`，当 `loop` 属性变化时，直接操作 DOM 元素更新 `loop` 属性：
+
+```typescript
+useEffect(() => {
+  if (videoRef.current) {
+    videoRef.current.loop = loop;
+  }
+}, [loop, videoRef]);
+```
+
+**影响范围**
+
+- `frontend/src/components/files/preview/VideoPreview.tsx`
 
 ---
 

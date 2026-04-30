@@ -25,7 +25,8 @@ use crate::models::folder::{
     MoveFolderRequest, RenameFolderRequest,
 };
 use crate::services::folder::FolderService;
-use crate::utils::{json_response, AppError};
+use crate::services::cache::files::{CACHE_PREFIX_FOLDERS_CONTENTS, CACHE_PREFIX_FOLDERS_LIST};
+use crate::utils::{cache, json_response, AppError};
 use crate::AppState;
 
 /// 创建文件夹
@@ -80,11 +81,28 @@ pub async fn list_folders_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Query(query): Query<FolderListQuery>,
 ) -> Result<Response, AppError> {
+    let parent_key = query.parent_id.map(|p| p.to_string()).unwrap_or_default();
+
+    // 尝试从缓存获取
+    if let Some(pool) = &state.redis {
+        if let Some(cached) = cache::get_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_LIST, &parent_key).await {
+            return Ok(cached);
+        }
+    }
+
+    // 缓存未命中，从数据库获取
     let folder_service = FolderService::from_state(&state);
     let folders = folder_service
         .list_folders(user_id, query.parent_id)
         .await?;
-    Ok(json_response(json!({ "folders": folders })))
+    let body = json!({ "folders": folders });
+
+    // 回填缓存
+    if let Some(pool) = &state.redis {
+        cache::set_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_LIST, &parent_key, &body, 60).await;
+    }
+
+    Ok(json_response(body))
 }
 
 /// 获取文件夹内容（子文件夹 + 路径）
@@ -105,11 +123,28 @@ pub async fn get_folder_contents_handler(
     AuthenticatedUser(user_id): AuthenticatedUser,
     Query(query): Query<FolderListQuery>,
 ) -> Result<Response, AppError> {
+    let parent_key = query.parent_id.map(|p| p.to_string()).unwrap_or_default();
+
+    // 尝试从缓存获取
+    if let Some(pool) = &state.redis {
+        if let Some(cached) = cache::get_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_CONTENTS, &parent_key).await {
+            return Ok(cached);
+        }
+    }
+
+    // 缓存未命中，从数据库获取
     let folder_service = FolderService::from_state(&state);
     let contents = folder_service
         .get_folder_contents(user_id, query.parent_id)
         .await?;
-    Ok(json_response(json!(contents)))
+    let body = json!(contents);
+
+    // 回填缓存
+    if let Some(pool) = &state.redis {
+        cache::set_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_CONTENTS, &parent_key, &body, 60).await;
+    }
+
+    Ok(json_response(body))
 }
 
 /// 获取文件夹详情

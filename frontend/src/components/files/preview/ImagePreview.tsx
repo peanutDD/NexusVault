@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { cn } from "../../../utils/cn";
 import { ResponsivePicture } from "../../common/ResponsivePicture";
 
@@ -8,6 +7,8 @@ interface ImagePreviewProps {
   imageLoaded: boolean;
   onImageLoad: () => void;
   onImageError: () => void;
+  zoom: number;
+  rotation: number;
 }
 
 export function ImagePreview({
@@ -16,19 +17,23 @@ export function ImagePreview({
   imageLoaded,
   onImageLoad,
   onImageError,
+  zoom,
+  rotation,
 }: ImagePreviewProps) {
-  const imageTransformRef = useRef<HTMLDivElement>(null);
-
   return (
     <div
       className="relative flex h-full w-full min-h-0 items-center justify-center"
       data-oid="nkhpa89"
+      style={{
+        "--preview-zoom": zoom,
+        "--preview-rotation": `${rotation}deg`,
+      } as React.CSSProperties}
     >
       <div
-        ref={imageTransformRef}
         className={cn(
-          // 缩放与旋转由父层注入 transform，避免重新布局
+          // 缩放与旋转由 CSS 变量驱动，避免重新布局
           "flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-lg origin-center transition-transform duration-500 ease-out cursor-pointer",
+          "transform-[scale(var(--preview-zoom))_rotate(var(--preview-rotation))]",
           imageLoaded ? "opacity-100" : "opacity-0",
         )}
         data-oid="7dzq3rw"

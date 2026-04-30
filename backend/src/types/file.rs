@@ -16,7 +16,7 @@ pub struct FileResponse {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct FileListQuery {
     pub page: Option<u32>,
     pub limit: Option<u32>,
@@ -35,7 +35,7 @@ pub struct FileListQuery {
     pub include_total: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileListResult {
     pub files: Vec<crate::entities::file::File>,
     pub total: Option<i64>,

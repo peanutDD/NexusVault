@@ -12,6 +12,7 @@
 //! - `parse`: 参数解析工具
 //! - `constant_time`: 常量时间比较工具
 
+pub mod cache;
 pub mod constant_time;
 pub mod crypto;
 pub mod error;
