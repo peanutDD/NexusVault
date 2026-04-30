@@ -8,7 +8,7 @@
 // 依赖
 // =============================================================================
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import { fileService } from "../../../services/files";
 import { formatFileSize } from "../../../utils/format";
 import { cn } from "../../../utils/cn";
@@ -106,7 +106,6 @@ export default function FilePreview({
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [isLooping, setIsLooping] = useState(true);
-  const imageTransformRef = useRef<HTMLDivElement>(null);
   const previewRootRef = useRef<HTMLDivElement>(null);
 
   // -------------------------------------------------------------------------
@@ -132,19 +131,6 @@ export default function FilePreview({
     goToPrev,
     goToNext,
   });
-
-  // -------------------------------------------------------------------------
-  // 文件切换时重置视图状态
-  // -------------------------------------------------------------------------
-
-  // -------------------------------------------------------------------------
-  // 将 zoom/rotation 同步到图片容器的 transform
-  // -------------------------------------------------------------------------
-  useEffect(() => {
-    const el = imageTransformRef.current;
-    if (!el) return;
-    el.style.transform = `scale(${zoom}) rotate(${rotation}deg)`;
-  }, [zoom, rotation]);
 
   // -------------------------------------------------------------------------
   // 文件名展示（中间省略）
@@ -328,6 +314,8 @@ export default function FilePreview({
         onImageError={onImageError}
         onClose={onClose}
         formatDate={formatPreviewDate}
+        zoom={zoom}
+        rotation={rotation}
         data-oid="gyzog51"
       />
 

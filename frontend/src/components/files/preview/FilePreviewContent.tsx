@@ -54,6 +54,8 @@ export interface FilePreviewContentProps {
   onImageError: () => void;
   onClose: () => void;
   formatDate: (dateStr: string) => string;
+  zoom: number;
+  rotation: number;
 }
 
 export function FilePreviewContent({
@@ -79,6 +81,8 @@ export function FilePreviewContent({
   onImageError,
   onClose,
   formatDate,
+  zoom,
+  rotation,
 }: FilePreviewContentProps) {
   const [videoReady, setVideoReady] = useState(false);
   useEffect(() => {
@@ -384,6 +388,8 @@ export function FilePreviewContent({
                       imageLoaded={imageLoaded}
                       onImageLoad={() => setImageLoaded(true)}
                       onImageError={onImageError}
+                      zoom={zoom}
+                      rotation={rotation}
                     />
                   ) : null}
 
