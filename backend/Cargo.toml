@@ -26,6 +26,7 @@ inherits     = "release"
 strip        = true           # 完全 strip（包含 debuginfo）
 
 [dependencies]
+tempfile = "3.10"
 # Web framework
 axum = { version = "0.8", features = ["multipart", "json"] }
 bytes = "1.0"

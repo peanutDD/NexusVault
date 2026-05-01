@@ -126,7 +126,7 @@ impl FileService {
     }
 
     /// 上传类操作的统一校验（详细配额错误信息）
-    pub(super) async fn ensure_can_store_detailed(
+    pub async fn ensure_can_store_detailed(
         &self,
         user_id: Uuid,
         mime_type: &str,

@@ -78,7 +78,7 @@ impl RateLimitState {
     // 失败策略：
     // - Redis 不可用时 fail-open（返回 true），避免把 Redis 抖动升级为全站不可用
     // - 单实例场景仍有进程内 moka 兜底（但多实例不一致）
-    async fn check_ip_rate_limit(&self, key: &str) -> bool {
+    pub async fn check_ip_rate_limit(&self, key: &str) -> bool {
         if let Some(pool) = &self.redis {
             let mut conn = match pool.get().await {
                 Ok(c) => c,
@@ -114,7 +114,7 @@ impl RateLimitState {
         current <= self.ip_max_requests
     }
 
-    async fn check_user_rate_limit(&self, key: &str) -> bool {
+    pub async fn check_user_rate_limit(&self, key: &str) -> bool {
         if let Some(pool) = &self.redis {
             let mut conn = match pool.get().await {
                 Ok(c) => c,
