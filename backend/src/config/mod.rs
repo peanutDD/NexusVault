@@ -232,6 +232,91 @@ impl Config {
         // ... 其他校验逻辑 ...
         Ok(())
     }
+
+    /// 创建测试用的默认配置
+    ///
+    /// 用于集成测试，提供合理的默认值
+    pub fn default_for_test() -> Self {
+        Self {
+            database: DatabaseConfig {
+                url: "postgres://postgres@localhost:5432/file_storage_test".to_string(),
+                read_replica_url: None,
+            },
+            redis: None,
+            auth: AuthConfig {
+                jwt_secret: "test_jwt_secret_that_is_long_enough_for_hs256".to_string(),
+                jwt_expiry: "24h".to_string(),
+                api_token_hmac_secret: Some("test_hmac_secret".to_string()),
+                api_token_hmac_secret_previous: None,
+                admin_token: None,
+            },
+            storage: StorageConfig {
+                backend: "local".to_string(),
+                path: "/tmp/test_uploads".to_string(),
+                max_file_size: 2147483648,
+                allowed_mime_types: vec![],
+                download_mode: "proxy".to_string(),
+                presign_ttl_secs: 300,
+                aws_access_key_id: None,
+                aws_secret_access_key: None,
+                aws_region: Some("us-east-1".to_string()),
+                aws_bucket: None,
+                hls_threshold_bytes: 104857600,
+                hls_abr_max_variants: 1,
+                hls_abr_variants: vec![],
+            },
+            server: ServerConfig {
+                port: 3000,
+                cors_origin: "*".to_string(),
+                frontend_base_url: Some("http://localhost:5173".to_string()),
+                trust_proxy_headers: false,
+                smtp_host: None,
+                smtp_port: None,
+                smtp_username: None,
+                smtp_password: None,
+                smtp_from: None,
+            },
+            tasks: TasksConfig {
+                queue_backend: "postgres".to_string(),
+                upload_session_cleanup_interval_secs: 300,
+                upload_session_cleanup_batch_size: 200,
+                files_consistency_check_interval_secs: 600,
+                files_consistency_check_batch_size: 500,
+                orphan_cleanup_interval_secs: 600,
+                orphan_cleanup_batch_limit: 500,
+                transcode_max_concurrent: 2,
+                task_type_concurrency: std::collections::HashMap::new(),
+                zip_cache_enabled: false,
+                zip_cache_backend: "local".to_string(),
+                zip_cache_ttl_secs: 3600,
+                zip_build_max_concurrent: 2,
+            },
+            rate_limit: RateLimitConfig {
+                ip_rate_limit: 600,
+                user_rate_limit: 600,
+                rate_limit_window_secs: 60,
+                rate_limit_max_keys: 20000,
+            },
+            oauth: OAuthConfig {
+                github_client_id: None,
+                github_client_secret: None,
+                github_oauth_redirect_uri: None,
+                google_client_id: None,
+                google_client_secret: None,
+                google_oauth_redirect_uri: None,
+            },
+            search: SearchConfig {
+                huggingface_api_token: None,
+                huggingface_model_id: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+                huggingface_api_url: "https://api-inference.huggingface.co".to_string(),
+            },
+            cache: CacheConfig {
+                enabled: true,
+                default_ttl_secs: 60,
+                list_ttl_secs: 20,
+            },
+        }
+    }
 }
 
 fn parse_hls_abr_variants_from_str(raw: &str) -> Result<Vec<HlsAbrVariant>, ConfigError> {

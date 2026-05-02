@@ -138,3 +138,8 @@ tower_governor = { version = "0.6", features = ["axum"] }
 
 # Constant-time comparison (security)
 subtle = "2.5"
+
+[dev-dependencies]
+tower = { version = "0.5.3", features = ["util"] }
+testcontainers = "0.14"
+hyper = "1.0"

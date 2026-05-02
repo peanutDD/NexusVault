@@ -5,6 +5,14 @@ use uuid::Uuid;
 
 use crate::utils::AppError;
 
+/// 创建内存存储后端（用于测试）
+///
+/// 使用临时目录创建 LocalStorage，适合集成测试使用
+pub fn create_memory_backend() -> LocalStorage {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp directory");
+    LocalStorage::new(temp_dir.path().to_string_lossy().to_string())
+}
+
 const THUMBNAIL_DIR: &str = ".thumbnails";
 const THUMBNAIL_EXT: &str = "jpg";
 

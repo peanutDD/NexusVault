@@ -4,7 +4,7 @@
 
 | 项目 | 文件数 | 覆盖率估算 |
 |------|--------|------------|
-| 后端测试 | 6 个（`auth_tests.rs`、`cursor_pagination_tests.rs`、`repository_tests.rs`、`service_file_tests.rs`、`service_cache_tests.rs`、`service_auth_tests.rs`、`service_storage_tests.rs`、`middleware_tests.rs`） | ~55% |
+| 后端测试 | 9 个（`auth_tests.rs`、`cursor_pagination_tests.rs`、`repository_tests.rs`、`service_file_tests.rs`、`service_cache_tests.rs`、`service_auth_tests.rs`、`service_storage_tests.rs`、`middleware_tests.rs`、`handler_files_upload_tests.rs`） | ~60% |
 | 前端测试 | 4 个（`pretextMeasure.test.ts`、`uploadValidation.test.ts`、`FileListFilters.test.tsx`、`useDebounce.test.ts`、`useThrottle.test.ts`、`useDialog.test.ts`） | ~35% |
 
 与 `AGENTS.md` 中 **"TDD 铁律：覆盖率 ≥ 90%"** 的规则严重不符。
@@ -22,6 +22,7 @@
 | `service_auth_tests.rs` | 认证服务 | 用户注册、登录、JWT 验证、Token 过期 |
 | `service_storage_tests.rs` | 存储服务 | 本地存储 CRUD、缩略图操作、流读取 |
 | `middleware_tests.rs` | 中间件层 | IP 限流、用户限流、Token 验证 |
+| `handler_files_upload_tests.rs` | Handler 层 | 上传、秒传、分块上传全链路集成测试（14 个测试用例） |
 
 ### 前端测试文件
 
@@ -55,6 +56,7 @@
 ### Handler 层（`handlers/`）
 - 每个 API endpoint 至少 1 个 happy path + 1 个 error path
 - 重点覆盖：分片上传、断点续传、批量操作
+- **进度**：✅ PR2a 完成（upload / instant / chunked 14 个测试）；⏳ PR2b 待完成（list / batch / download / delete / rename / storage / categories）
 
 ### Middleware 层（`middleware/`）
 - 认证中间件（缺失 token、过期 token、无效 token）
