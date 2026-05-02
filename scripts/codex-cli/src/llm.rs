@@ -142,7 +142,7 @@ async fn run_local_codex_command(
         .into());
     }
 
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 fn write_prompt_file(prompt: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {

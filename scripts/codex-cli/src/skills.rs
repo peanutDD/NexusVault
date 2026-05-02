@@ -179,7 +179,10 @@ impl Skill for BatchFixSkill {
             let patch = match generate_fix_patch(&issue, ctx, client).await {
                 Ok(Some(patch)) => patch,
                 Ok(None) => {
-                    eprintln!("❌ [BatchFix] 补丁为空 - 文件: {}, 问题: {}, 原因: 模型未返回可应用的 unified diff", issue.file, issue.description);
+                    eprintln!(
+                        "❌ [BatchFix] 补丁为空 - 文件: {}, 问题: {}, 原因: 模型未返回可应用的 unified diff",
+                        issue.file, issue.description
+                    );
                     ctx.fix_attempts.push(FixAttempt {
                         round: ctx.current_round,
                         issue_key,
@@ -191,7 +194,10 @@ impl Skill for BatchFixSkill {
                     continue;
                 }
                 Err(e) => {
-                    eprintln!("❌ [BatchFix] 补丁生成失败 - 文件: {}, 问题: {}, 原因: {}", issue.file, issue.description, e);
+                    eprintln!(
+                        "❌ [BatchFix] 补丁生成失败 - 文件: {}, 问题: {}, 原因: {}",
+                        issue.file, issue.description, e
+                    );
                     ctx.fix_attempts.push(FixAttempt {
                         round: ctx.current_round,
                         issue_key,
@@ -218,7 +224,10 @@ impl Skill for BatchFixSkill {
                     });
                 }
                 Ok(false) => {
-                    eprintln!("❌ [BatchFix] 补丁应用失败 - 文件: {}, 原因: git apply 未能应用补丁", issue.file);
+                    eprintln!(
+                        "❌ [BatchFix] 补丁应用失败 - 文件: {}, 原因: git apply 未能应用补丁",
+                        issue.file
+                    );
                     ctx.fix_attempts.push(FixAttempt {
                         round: ctx.current_round,
                         issue_key,
@@ -229,7 +238,10 @@ impl Skill for BatchFixSkill {
                     })
                 }
                 Err(e) => {
-                    eprintln!("❌ [BatchFix] 补丁应用错误 - 文件: {}, 原因: {}", issue.file, e);
+                    eprintln!(
+                        "❌ [BatchFix] 补丁应用错误 - 文件: {}, 原因: {}",
+                        issue.file, e
+                    );
                     ctx.fix_attempts.push(FixAttempt {
                         round: ctx.current_round,
                         issue_key,

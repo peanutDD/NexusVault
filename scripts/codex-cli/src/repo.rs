@@ -269,6 +269,13 @@ pub fn apply_patch_safely_in(
         .output()?;
 
     let _ = fs::remove_file(&tmp);
+    if !output.status.success() {
+        eprintln!(
+            "git apply failed for {}: {}",
+            file_path,
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
     Ok(output.status.success())
 }
 
