@@ -147,45 +147,17 @@ pub async fn login_and_get_token(...) -> String
 
 按 AGENTS.md 第 6 条「单 PR ≤ 300 行 / 单功能」拆 5 个 PR：
 
-| PR | 文件 | 测试数 | 估计行数 | 优先级 | 状态 |
-|---|---|---|---|---|---|
-| **PR1** 基础设施 | `tests/common/app.rs` 新增 + `Cargo.toml` 加 `tower util` | 0（仅 helper） | ~120 | P0（其他 PR 依赖） | ✅ 完成 |
-| **PR2** Handler 文件 happy/error | `tests/handler_files_tests.rs` | ~32 | ~600（**超 300 行红线 ⇒ 拆 2 个**） | P0 | 进行中 |
-| **PR2a** | upload / instant / chunked | ~14 | ~280 | P0 | ✅ **已完成（14/14 测试通过）** |
-| **PR2b** | list / batch / download / delete / rename / storage / categories | ~18 | ~280 | P0 | 待办 |
-| **PR3** Service file 边界补强 | 在 `service_file_tests.rs` 追加 | 4 | ~150 | P1 | 待办 |
-| **PR4** Service auth API Token 边界 | 在 `service_auth_tests.rs` 追加 | 3 | ~120 | P1 | 待办 |
-| **PR5** Middleware 真链路 | 重构 `middleware_tests.rs` | 4 | ~200 | P1 | 待办 |
+| PR | 文件 | 测试数 | 估计行数 | 优先级 |
+|---|---|---|---|---|
+| **PR1** 基础设施 | `tests/common/app.rs` 新增 + `Cargo.toml` 加 `tower util` | 0（仅 helper） | ~120 | P0（其他 PR 依赖） |
+| **PR2** Handler 文件 happy/error | `tests/handler_files_tests.rs` | ~32 | ~600（**超 300 行红线 ⇒ 拆 2 个**） | P0 |
+| **PR2a** | upload / instant / chunked | ~14 | ~280 | P0 |
+| **PR2b** | list / batch / download / delete / rename / storage / categories | ~18 | ~280 | P0 |
+| **PR3** Service file 边界补强 | 在 `service_file_tests.rs` 追加 | 4 | ~150 | P1 |
+| **PR4** Service auth API Token 边界 | 在 `service_auth_tests.rs` 追加 | 3 | ~120 | P1 |
+| **PR5** Middleware 真链路 | 重构 `middleware_tests.rs` | 4 | ~200 | P1 |
 
-> **完成进度：14/38 个新增测试用例已完成**，剩余 24 个测试用例待完成。
-
-### PR2a 完成详情
-
-**文件**：`backend/tests/handler_files_upload_tests.rs`（14 个测试）
-
-| 测试名称 | 覆盖端点 | 场景 |
-|---|---|---|
-| `test_upload_file_handler_happy_path` | `POST /api/v1/files/upload` | multipart 上传成功 |
-| `test_upload_file_handler_no_file_field` | `POST /api/v1/files/upload` | 缺少 file 字段 |
-| `test_upload_file_handler_invalid_folder_id` | `POST /api/v1/files/upload` | 无效 folder_id |
-| `test_instant_upload_handler_not_found` | `POST /api/v1/files/upload/instant` | 秒传文件不存在 |
-| `test_instant_upload_handler_invalid_hash` | `POST /api/v1/files/upload/instant` | 无效 SHA256 哈希 |
-| `test_chunked_upload_init_handler_happy_path` | `POST /api/v1/files/upload/chunked/init` | 分块上传初始化成功 |
-| `test_chunked_upload_init_handler_zero_size` | `POST /api/v1/files/upload/chunked/init` | 零大小文件初始化 |
-| `test_chunked_upload_chunk_handler_happy_path` | `PUT /api/v1/files/upload/chunked/{id}/chunk` | 上传分块成功 |
-| `test_chunked_upload_chunk_handler_invalid_upload_id` | `PUT /api/v1/files/upload/chunked/{id}/chunk` | 无效 upload_id |
-| `test_chunked_upload_status_handler_happy_path` | `GET /api/v1/files/upload/chunked/{id}/status` | 查询状态成功 |
-| `test_chunked_upload_status_handler_not_found` | `GET /api/v1/files/upload/chunked/{id}/status` | 会话不存在 |
-| `test_chunked_upload_complete_handler_missing_chunks` | `POST /api/v1/files/upload/chunked/{id}/complete` | 缺少分块 |
-| `test_chunked_upload_abort_handler_happy_path` | `DELETE /api/v1/files/upload/chunked/{id}/abort` | 取消上传成功 |
-| `test_chunked_upload_abort_handler_not_found` | `DELETE /api/v1/files/upload/chunked/{id}/abort` | 取消不存在的会话（幂等） |
-
-**运行命令**：
-```bash
-cargo test --test handler_files_upload_tests -- --test-threads=1
-```
-
-**注意**：由于测试共享真 PG 数据库，**必须使用 `--test-threads=1` 串行执行**，避免竞争条件。
+> **总计：~38 个新增测试用例 / ~1 200 行**，预计将后端整体覆盖率从「未知」推至 ≥ 90%。
 
 ---
 
@@ -221,4 +193,3 @@ cargo test --test handler_files_upload_tests -- --test-threads=1
 - [ ] **D**. 先把 5 条永久约束写入 `docs/constraints/C-001..C-005.md`，再讨论 PR
 
 > 默认推荐：**B + D**（基础设施 + 约束落地，原子化、低风险）
-
