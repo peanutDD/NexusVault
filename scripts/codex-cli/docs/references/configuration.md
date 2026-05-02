@@ -2,10 +2,22 @@
 
 ### 必要环境变量
 
-`codex-cli` 通过本地 Codex 命令调用模型，不依赖 GPT/OpenAI API：
+`codex-cli` 通过本地 Codex 命令调用模型，**不依赖任何外部 API（如 OpenAI/GPT）**：
 
 - `CODEX_AGENT_COMMAND`：必填，本地 Codex 执行命令
 - `CODEX_AGENT_TIMEOUT_SECONDS`：可选，单次 Codex 调用超时，默认 `900`
+
+### 本地执行架构优势
+
+**安全保证**
+- 无任何网络 API 调用，代码和数据完全保留在本地
+- 避免 API 泄露和网络传输风险
+- 无需管理 API 密钥
+
+**性能稳定**
+- 不受外部服务限流影响
+- 本地执行延迟更低
+- 可以充分利用本地硬件加速
 
 建议本地使用 `.env`：
 
