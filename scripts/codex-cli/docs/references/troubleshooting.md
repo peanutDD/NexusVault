@@ -1,22 +1,21 @@
 ## 故障排查
 
-### 1) 启动即报错：请在 .env 中设置 OPENAI_API_KEY
+### 1) 启动即报错：请设置 CODEX_AGENT_COMMAND
 
-原因：`OPENAI_API_KEY` 是硬依赖，客户端初始化会直接失败，避免“静默空跑”。
+原因：`codex-cli` 只调用本地 Codex 命令，不使用 GPT/OpenAI API；缺少本地命令配置会直接失败，避免“静默空跑”。
 
 处理：
 
-- 本地：创建 `scripts/codex-cli/.env` 并写入 `OPENAI_API_KEY=...`
+- 本地：创建 `scripts/codex-cli/.env` 并写入 `CODEX_AGENT_COMMAND=codex exec --skip-git-repo-check -`
 - CI：配置 secrets，并在 job 环境里导出
 
-### 2) API 请求失败（401/403/429/5xx）
+### 2) 本地 Codex 命令失败
 
 处理顺序：
 
-1. 确认 `OPENAI_API_BASE` 指向的网关可访问
-2. 确认 `CODEX_MODEL` 在该网关上可用
-3. 429：降频或增加并发限制；检查是否被网关限流
-4. 5xx：重试或切换网关
+1. 确认 `CODEX_AGENT_COMMAND` 指向真实的本地 Codex CLI，而不是本工具自身
+2. 确认 runner 用户已登录/授权本地 Codex
+3. 确认命令支持 stdin，或改用 `{prompt}` / `{prompt_file}` 占位符
 
 ### 3) 解析 Gemini Review JSON 失败
 
@@ -70,4 +69,3 @@
 
 - 仓库没有 changelog：使用 `--disable-changelog`
 - 或指定路径：`--changelog-path docs/CHANGELOG.md`
-

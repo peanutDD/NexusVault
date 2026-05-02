@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
  */
 export function useThrottle<T>(value: T, delay: number): T {
   const [throttled, setThrottled] = useState<T>(value);
-  const lastCall = useRef<number>(Date.now());
+  const lastCall = useRef<number>(0);
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingValue = useRef<T>(value);
 
@@ -16,17 +16,13 @@ export function useThrottle<T>(value: T, delay: number): T {
 
     if (timeout.current === null) {
       const timeSinceLast = now - lastCall.current;
+      const wait = Math.max(0, delay - timeSinceLast);
 
-      if (timeSinceLast >= delay) {
-        lastCall.current = now;
-        setThrottled(value);
-      } else {
-        timeout.current = setTimeout(() => {
-          lastCall.current = Date.now();
-          setThrottled(pendingValue.current);
-          timeout.current = null;
-        }, delay - timeSinceLast);
-      }
+      timeout.current = setTimeout(() => {
+        lastCall.current = Date.now();
+        setThrottled(pendingValue.current);
+        timeout.current = null;
+      }, wait);
     }
 
     return () => {

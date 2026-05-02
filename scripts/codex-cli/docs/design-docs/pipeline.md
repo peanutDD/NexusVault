@@ -26,25 +26,33 @@
 
 ### Pipeline 顺序（默认）
 
-默认顺序在运行时拼装：
+运行时把“当前 Gemini Review 的一次修复”和“最终反馈”拆开。执行顺序：
 
 1. `ReadReviewSkill`：解析 review → `ReviewData`
 2. `DecisionSkill`：筛选允许修复的 issues
 3. `BatchFixSkill`：为每条 issue 生成 patch 并尝试 `git apply`
-4. `SecurityCheckSkill`：prompt-based 软审计（遇到疑似风险则标记失败）
-5. `QualityScoreSkill`：质量评分（0-100）
-6. `DocumentationSkill`：可选写入 changelog
-7. `DryRunFeedbackSkill`：未 push 时可选发 PR 评论
-8. `FeedbackSkill`：push/评论/或输出“无需修复”
+4. `SecurityCheckSkill`：严格 JSON 软审计，解析失败 fail-closed
+5. `QualityScoreSkill`：质量评分（0-100），解析失败会重试并标记不可用
+6. `DocumentationSkill`：可选写入 changelog，记录 `current_round`
 
-### 为什么不用“循环修复”
+循环结束后统一执行：
 
-当前实现更偏向“单轮批处理”：
+1. `enforce_review_policy`：medium+ 未修复必须生成原因
+2. `DryRunFeedbackSkill`：未 push 时可选发 PR 评论
+3. `FeedbackSkill`：push/评论/或输出未修复说明
 
-- 优点：可控、可预测；避免一次失败导致整轮终止；更适合 CI
-- 缺点：无法自动重试“冲突/上下文不足”的 patch
+### 轮次边界
 
-如果未来需要多轮，可把 `rounds` 语义扩展为“最多 N 轮”，并在 `runtime` 层循环执行 Pipeline。
+`max_rounds` 只表示外层 PR Review 的轮次上限，默认 2。单次 `pr-auto-fix` 调用只处理当前这一条 Gemini Review；下一轮必须由 workflow 标签升级后重新请求 Gemini Review，再用新的评论触发。
+
+`SkillContext` 同时保留 `max_rounds` 与 `current_round`，避免把配置上限误写成当前执行轮次。
+
+### 可观测输出
+
+- `fix_attempts` 记录每条 issue 的补丁生成/应用阶段、成功状态与失败原因
+- `security_findings` 记录安全审计失败原因
+- `quality_score_available` 区分“评分为 0”和“评分不可用”
+- `pending_explanations` 记录 medium+ 未修复原因；禁用 PR 评论时会进入最终 JSON
 
 ### 如何新增 Skill（扩展点）
 
@@ -57,4 +65,3 @@
 - 单一职责：一个 Skill 做一件可解释的事
 - 可失败：失败应返回 error（让 CI 感知），或显式选择“跳过该条”并记录日志
 - 不污染 stdout：日志只写 stderr（保持 JSON 输出稳定）
-

@@ -5,7 +5,7 @@
 ## 1. 流程概述
 这是一套基于 **双模型博弈** 的自动化修复系统：
 - **Review 层 (情报获取)**: 由 GitHub 接入的 **Gemini Code Assist** 负责，它会在 PR 提交后自动给出审查意见。
-- **修复层 (执行层)**: 由本地 Self-hosted Runner 上的 **Codex (GPT-5.4)** 负责。它读取 Gemini 的意见，在本地 Harness Engineering 环境中执行修复并推送到 PR。
+- **修复层 (执行层)**: 由本地 Self-hosted Runner 上的 **Codex (GPT-5.5)** 负责。它读取 Gemini 的意见，在本地 Harness Engineering 环境中执行修复并推送到 PR。
 
 ## 2. 核心架构：Pipeline 编排模式
 系统采用更加工程化的 **Pipeline + Context** 编排模式：
@@ -40,7 +40,7 @@
 - **人工干预**: 最后一轮结束后，由人类进行最终 Review 并决定是否合并。
 
 ## 4. 方案优势
-1. **视角互补**: Review 模型 (Gemini) 与修复模型 (GPT-5.4) 不同，能有效发现视觉盲点。
+1. **视角互补**: Review 模型 (Gemini) 与修复模型 (Codex GPT-5.5) 不同，能有效发现视觉盲点。
 2. **交付稳定**: 修复动作在本地模拟真实开发环境（Harness Engineering）中运行，确保代码可编译且符合项目规则。
 3. **决策在我**: AI 负责搬砖（情报提取与补丁生成），人类负责关键节点（是否合并、是否开启新轮次）。
 

@@ -14,9 +14,8 @@
 
 **环境变量**
 
-- `OPENAI_API_KEY`：必填（OpenAI 兼容 Chat Completions API）
-- `OPENAI_API_BASE`：可选，默认 `https://api.openai.com/v1`
-- `CODEX_MODEL`：可选，默认 `gpt-4-turbo-preview`
+- `CODEX_AGENT_COMMAND`：必填，本地 Codex 执行命令，例如 `codex exec --skip-git-repo-check -`
+- `CODEX_AGENT_TIMEOUT_SECONDS`：可选，单次 Codex 调用超时，默认 `900`
 
 **构建**
 
@@ -29,7 +28,7 @@ cargo build --release
 **GitHub PR 模式（供 Actions 调用）**
 
 ```bash
-./target/release/codex pr-auto-fix \
+./target/release/codex-auto-fix pr-auto-fix \
   --pr-number 123 \
   --gemini-review "$GEMINI_REVIEW" \
   --max-rounds 2 \
@@ -40,7 +39,7 @@ cargo build --release
 **本地仓库模式（跨仓库复用）**
 
 ```bash
-./target/release/codex auto-fix-local \
+./target/release/codex-auto-fix auto-fix-local \
   --repo-root /abs/path/to/any-repo \
   --review-file /abs/path/to/review.md \
   --max-rounds 2 \
@@ -63,6 +62,7 @@ cargo build --release
 - [Pipeline / Skills 设计](design-docs/pipeline.md)
 - [CLI 与输出契约](references/cli.md)
 - [配置与策略（规则/Changelog/过滤）](references/configuration.md)
+- [自动 Review 使用说明](references/auto-review-usage.md)
 - [Skill Pack 自动加载（零同步）](references/development.md#skill-pack-自动加载零同步)
 - [GitHub Actions 集成](integrations/github-actions.md)
 - [开发与发布](references/development.md)

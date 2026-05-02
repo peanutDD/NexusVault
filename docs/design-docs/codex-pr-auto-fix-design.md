@@ -1,7 +1,7 @@
 # Codex PR Auto-Fix 设计文档
 
 ## 1. 核心架构：Skill 编排
-`codex pr-auto-fix` 命令采用模块化 Skill 编排架构，将复杂的修复任务拆分为多个原子级技能。
+`codex-auto-fix pr-auto-fix` 命令采用模块化 Skill 编排架构，将复杂的修复任务拆分为多个原子级技能。
 
 ### 1.1 技能流图
 ```mermaid
@@ -22,7 +22,7 @@ graph TD
 ## 2. 关键 Skill 定义
 
 ### 2.1 情报解析 (ReadReviewSkill)
-- **职责**: 使用 GPT-5.4 将 Gemini Code Assist 的 Markdown 评论解析为结构化数据。
+- **职责**: 使用本地 Codex GPT-5.5 将 Gemini Code Assist 的 Markdown 评论解析为结构化数据。
 - **输出**: `ReviewData` 结构，包含 `summary` 和 `issues`。
 - **字段**: 增加 `reason` 字段用于 Traceability，`severity` 支持 `Critical` 到 `Low`。
 

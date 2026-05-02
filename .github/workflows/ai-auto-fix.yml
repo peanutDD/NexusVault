@@ -12,6 +12,10 @@ permissions:
   issues: write
   statuses: read
 
+concurrency:
+  group: ai-auto-fix-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
 env:
   MAX_ROUNDS: 2
   GEMINI_BOT: gemini-code-assist[bot]
@@ -111,27 +115,34 @@ jobs:
           RAW_COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           # 使用中间 env 变量安全注入多行内容
-          echo "REVIEW_BODY<<EOF" >> $GITHUB_ENV
+          DELIM="REVIEW_BODY_$(date +%s%N)_${RANDOM}"
+          echo "REVIEW_BODY<<${DELIM}" >> $GITHUB_ENV
           echo "$RAW_COMMENT_BODY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "${DELIM}" >> $GITHUB_ENV
 
-      - name: 调用 codex pr-auto-fix (模块化 Skill 编排)
+      - name: 调用 codex-auto-fix pr-auto-fix
         if: steps.round.outputs.current_round != 'gemini-review-round-max'
         id: codex
         env:
           CODEX_SKILL_PACK_ROOT: ${{ github.workspace }}/scripts/codex-cli
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
-          CODEX_MODEL: ${{ secrets.CODEX_MODEL }}
+          CODEX_AGENT_COMMAND_SECRET: ${{ secrets.CODEX_AGENT_COMMAND }}
+          CODEX_AGENT_COMMAND_VAR: ${{ vars.CODEX_AGENT_COMMAND }}
         run: |
-          # 1. 直接调用编排好的组合 Skill
-          # 它会自动完成: Parse -> Decide -> Generate -> Apply -> Commit & Tag Round
+          set -euo pipefail
+
+          if [[ -n "${CODEX_AGENT_COMMAND_SECRET:-}" ]]; then
+            export CODEX_AGENT_COMMAND="${CODEX_AGENT_COMMAND_SECRET}"
+          elif [[ -n "${CODEX_AGENT_COMMAND_VAR:-}" ]]; then
+            export CODEX_AGENT_COMMAND="${CODEX_AGENT_COMMAND_VAR}"
+          fi
+
+          # 1. 直接调用自动修复器
+          # 它会自动完成: Parse -> Decide -> Generate -> Apply -> Commit
           # 注意：我们在 Rust 内部已经处理了 Git 操作和推送，所以这里只需要捕获结果
-          RESULT=$(codex pr-auto-fix \
+          RESULT=$(codex-auto-fix pr-auto-fix \
             --pr-number ${{ github.event.issue.number }} \
             --gemini-review "$REVIEW_BODY" \
-            --pre-skill codex-cli-workflow \
             --max-rounds ${{ env.MAX_ROUNDS }} \
             --yes)
           
@@ -141,7 +152,9 @@ jobs:
           
           # 检查是否真的修复了文件 (从 JSON 结果中提取)
           FIXED=$(echo "$RESULT" | jq -r '.fixed')
+          PUSH_BLOCKED=$(echo "$RESULT" | jq -r '.push_blocked // false')
           echo "fixed=$FIXED" >> $GITHUB_OUTPUT
+          echo "push_blocked=$PUSH_BLOCKED" >> $GITHUB_OUTPUT
 
       - name: 升级轮次标签 (基于 Skill 返回结果)
         if: steps.round.outputs.current_round != 'gemini-review-round-max' && steps.codex.outputs.fixed == 'true'
@@ -166,14 +179,16 @@ jobs:
             gh pr comment ${{ github.event.issue.number }} --body "/gemini review"
             echo "🚀 已请求 Gemini 下一轮 Review"
           else
-            # 这里的 comment 在 Rust 内部 commit_and_tag_round 已经发过一部分了，这里做个收尾
             echo "✅ 所有自动修复轮次已完成"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 无需修复时通知
-        if: steps.round.outputs.current_round != 'gemini-review-round-max' && steps.codex.outputs.fixed == 'false'
+        if: >
+          steps.round.outputs.current_round != 'gemini-review-round-max'
+          && steps.codex.outputs.fixed == 'false'
+          && steps.codex.outputs.push_blocked != 'true'
         run: |
           gh pr comment ${{ github.event.issue.number }} \
             --body "🤖 **Codex 分析：此轮无需代码修复。** Gemini 提出的建议可能已手动处理或不适用。建议人工 Review 或直接合并。"

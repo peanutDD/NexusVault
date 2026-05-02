@@ -1,0 +1,29 @@
+{
+  "date": "2026-05-03",
+  "scope": [
+    "Split UploadDialog into a controller hook and view shell",
+    "Split FilePreviewContent into stage, text panel, and state components",
+    "Split MarkdownPreview into schema utilities and focused renderers",
+    "Fix the useThrottle React Compiler lint violation",
+    "Keep existing upload behavior unchanged",
+    "Keep touched files under 300 lines"
+  ],
+  "assumptions": [
+    "UploadDialog remains the public component entry point",
+    "Existing upload child components already cover visual sub-responsibilities",
+    "Unrelated scripts/codex-cli, workflow, and constraints changes are user work and must not be touched"
+  ],
+  "risks": [
+    "Folder query parameter propagation could regress",
+    "Close blocking during active uploads could regress",
+    "StrictMode-safe state/ref synchronization could regress",
+    "Preview click-to-close propagation could regress",
+    "Markdown sanitize, image proxy, or code copy behavior could regress"
+  ],
+  "verification": [
+    "npm test -- uploadValidation.test.ts",
+    "npx tsc -b --pretty false",
+    "npm run lint",
+    "npm run build"
+  ]
+}

@@ -10,7 +10,7 @@ cp .env.example .env  # 如果你有模板；否则自行创建 .env
 `.env` 至少需要：
 
 ```env
-OPENAI_API_KEY=...
+CODEX_AGENT_COMMAND=codex exec --skip-git-repo-check -
 ```
 
 ### 常用命令
@@ -71,7 +71,7 @@ ${CLAUDE_PLUGIN_ROOT}/AGENTS.md
 对任意本地仓库跑一轮（Dry-Run，不提交不推送）：
 
 ```bash
-codex auto-fix-local \
+codex-auto-fix auto-fix-local \
   --repo-root /abs/path/to/repo \
   --review-file /abs/path/to/review.md
 ```
@@ -79,7 +79,7 @@ codex auto-fix-local \
 允许提交推送：
 
 ```bash
-codex auto-fix-local \
+codex-auto-fix auto-fix-local \
   --repo-root /abs/path/to/repo \
   --review-file /abs/path/to/review.md \
   --yes
@@ -87,17 +87,17 @@ codex auto-fix-local \
 
 ### 发布建议
 
-建议的发布产物是单一二进制 `codex`：
+建议在自动化里使用二进制 `codex-auto-fix`，避免与真实 Codex GPT-5.5 CLI 的 `codex` 命令冲突：
 
 ```bash
 cargo build --release
-ls -lah target/release/codex
+ls -lah target/release/codex-auto-fix
 ```
 
 如需在 CI 中复用，可把该二进制作为 artifacts 发布，或通过容器镜像提供。
 
 ### 故障排查入口
 
-- 模型调用失败（401/429/5xx）：检查 `OPENAI_API_KEY` / `OPENAI_API_BASE` / 网络代理
+- 本地 Codex 命令失败：检查 `CODEX_AGENT_COMMAND` 是否指向真实 Codex CLI，且 runner 用户已登录/授权
 - `git apply` 失败：通常是 patch 与当前工作区不匹配；检查 issue 的文件路径与上下文是否过期
 - PR 评论失败：检查 `gh` 登录与 token 权限（或使用 `--no-pr-comments`）

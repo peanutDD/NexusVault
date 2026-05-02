@@ -15,13 +15,13 @@
 
 ### 安全约束
 
-- 不打印/不落盘 `OPENAI_API_KEY`
+- 不打印/不落盘本地 Codex 凭证、runner token 或其它密钥
 - 默认对高风险文件做硬过滤（锁文件/配置文件/.env 等），并允许通过环境变量追加保护名单
 - 未传 `--yes` 时不得提交/推送（Dry-Run 默认安全）
+- 安全审计未通过或不可解析时必须 fail-closed，不得提交/推送
 
 ### 兼容性约束
 
 - `repo_root` 必须可配置：不得硬依赖 `GITHUB_WORKSPACE`
 - 规则文本来源必须可配置：支持 `--rules-file`，并能 fallback 到 `<repo_root>/AGENTS.md`
 - changelog 必须可选：允许 `--disable-changelog` 或指定 `--changelog-path`
-
