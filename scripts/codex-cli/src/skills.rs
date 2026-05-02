@@ -179,6 +179,7 @@ impl Skill for BatchFixSkill {
             let patch = match generate_fix_patch(&issue, ctx, client).await {
                 Ok(Some(patch)) => patch,
                 Ok(None) => {
+                    eprintln!("❌ [BatchFix] 补丁为空 - 文件: {}, 问题: {}, 原因: 模型未返回可应用的 unified diff", issue.file, issue.description);
                     ctx.fix_attempts.push(FixAttempt {
                         round: ctx.current_round,
                         issue_key,
@@ -190,6 +191,7 @@ impl Skill for BatchFixSkill {
                     continue;
                 }
                 Err(e) => {
+                    eprintln!("❌ [BatchFix] 补丁生成失败 - 文件: {}, 问题: {}, 原因: {}", issue.file, issue.description, e);
                     ctx.fix_attempts.push(FixAttempt {
                         round: ctx.current_round,
                         issue_key,
@@ -215,22 +217,28 @@ impl Skill for BatchFixSkill {
                         reason: None,
                     });
                 }
-                Ok(false) => ctx.fix_attempts.push(FixAttempt {
-                    round: ctx.current_round,
-                    issue_key,
-                    file: issue.file,
-                    stage: "patch_apply".to_string(),
-                    success: false,
-                    reason: Some("git apply 未能应用补丁".to_string()),
-                }),
-                Err(e) => ctx.fix_attempts.push(FixAttempt {
-                    round: ctx.current_round,
-                    issue_key,
-                    file: issue.file,
-                    stage: "patch_apply".to_string(),
-                    success: false,
-                    reason: Some(e.to_string()),
-                }),
+                Ok(false) => {
+                    eprintln!("❌ [BatchFix] 补丁应用失败 - 文件: {}, 原因: git apply 未能应用补丁", issue.file);
+                    ctx.fix_attempts.push(FixAttempt {
+                        round: ctx.current_round,
+                        issue_key,
+                        file: issue.file,
+                        stage: "patch_apply".to_string(),
+                        success: false,
+                        reason: Some("git apply 未能应用补丁".to_string()),
+                    })
+                }
+                Err(e) => {
+                    eprintln!("❌ [BatchFix] 补丁应用错误 - 文件: {}, 原因: {}", issue.file, e);
+                    ctx.fix_attempts.push(FixAttempt {
+                        round: ctx.current_round,
+                        issue_key,
+                        file: issue.file,
+                        stage: "patch_apply".to_string(),
+                        success: false,
+                        reason: Some(e.to_string()),
+                    })
+                }
             }
         }
         Ok(())
