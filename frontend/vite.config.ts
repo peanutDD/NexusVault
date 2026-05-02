@@ -230,6 +230,17 @@ export default defineConfig(({ mode }) => {
     globals: true,
     setupFiles: ["./src/test/setupTests.ts"],
     exclude: [...configDefaults.exclude, "e2e/**"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html", "lcov"],
+      exclude: [
+        "src/test/**",
+        "src/vite-env.d.ts",
+        "**/*.d.ts",
+        "e2e/**",
+        "node_modules/**",
+      ],
+    },
   },
   };
 });

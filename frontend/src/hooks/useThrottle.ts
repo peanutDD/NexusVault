@@ -6,21 +6,35 @@ import { useState, useEffect, useRef } from 'react';
  */
 export function useThrottle<T>(value: T, delay: number): T {
   const [throttled, setThrottled] = useState<T>(value);
-  const lastRan = useRef<number>(0);
-  const trailingRef = useRef<T>(value);
+  const lastCall = useRef<number>(Date.now());
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingValue = useRef<T>(value);
 
   useEffect(() => {
-    if (lastRan.current === 0) lastRan.current = Date.now();
-    trailingRef.current = value;
-    const elapsed = Date.now() - lastRan.current;
-    const remaining = Math.max(0, delay - elapsed);
+    pendingValue.current = value;
+    const now = Date.now();
 
-    const timer = setTimeout(() => {
-      lastRan.current = Date.now();
-      setThrottled(trailingRef.current);
-    }, remaining);
+    if (timeout.current === null) {
+      const timeSinceLast = now - lastCall.current;
 
-    return () => clearTimeout(timer);
+      if (timeSinceLast >= delay) {
+        lastCall.current = now;
+        setThrottled(value);
+      } else {
+        timeout.current = setTimeout(() => {
+          lastCall.current = Date.now();
+          setThrottled(pendingValue.current);
+          timeout.current = null;
+        }, delay - timeSinceLast);
+      }
+    }
+
+    return () => {
+      if (timeout.current !== null) {
+        clearTimeout(timeout.current);
+        timeout.current = null;
+      }
+    };
   }, [value, delay]);
 
   return throttled;

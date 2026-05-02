@@ -2,6 +2,8 @@
 //!
 //! 提供测试辅助函数和测试环境设置。
 
+pub mod app;
+
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Once;
 use std::sync::OnceLock;
