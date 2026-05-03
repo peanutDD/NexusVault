@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  getUploadMimeType,
   validateFile,
   getMaxBatchCount,
   isLargeFile,
@@ -41,6 +42,28 @@ describe('uploadValidation', () => {
     }
   });
 
+  it('should infer common upload mime types from extension when browser mime is missing', () => {
+    const file = makeFile({
+      name: 'camera-roll.mp4',
+      size: 1024 * 1024,
+      type: '',
+    });
+
+    expect(getUploadMimeType(file)).toBe('video/mp4');
+    expect(validateFile(file).ok).toBe(true);
+  });
+
+  it('should reject dangerous executable extensions even when browser mime is missing', () => {
+    const file = makeFile({
+      name: 'deploy.sh',
+      size: 10 * 1024,
+      type: '',
+    });
+
+    const result = validateFile(file);
+    expect(result.ok).toBe(false);
+  });
+
   it('should respect max batch count helper', () => {
     const maxBatch = getMaxBatchCount();
     expect(maxBatch).toBeGreaterThan(0);
@@ -59,4 +82,3 @@ describe('uploadValidation', () => {
     expect(isLargeFileForConcurrentLimit(justAbove)).toBe(true);
   });
 });
-

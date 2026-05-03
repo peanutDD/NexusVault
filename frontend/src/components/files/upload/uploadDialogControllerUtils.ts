@@ -1,5 +1,9 @@
 import { LARGE_FILE_UPLOAD } from "../../../constants";
-import { isLargeFileForConcurrentLimit, validateFile } from "../../../utils/uploadValidation";
+import {
+  getUploadMimeType,
+  isLargeFileForConcurrentLimit,
+  validateFile,
+} from "../../../utils/uploadValidation";
 import type { UploadFile } from "./UploadFileItem";
 
 export function fileDedupKey(f: File): string {
@@ -12,7 +16,7 @@ export function toUploadFile(file: File, baseId: number, index: number): UploadF
     id: `upload-${baseId}-${index}-${file.name}-${file.size}-${file.lastModified}`,
     name: file.name,
     size: file.size,
-    mimeType: file.type || "application/octet-stream",
+    mimeType: getUploadMimeType(file),
     status: validation.ok ? "pending" : "error",
     progress: 0,
     error: validation.ok ? undefined : validation.error,

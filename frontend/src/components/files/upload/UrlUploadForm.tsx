@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { cn } from "../../../utils/cn";
-import { validateFile } from "../../../utils/uploadValidation";
+import { getUploadMimeType, validateFile } from "../../../utils/uploadValidation";
 import type { UploadFile } from "./UploadFileItem";
 
 interface UrlUploadFormProps {
@@ -62,6 +62,16 @@ function getUrlErrorMessage(err: unknown, url: string): string {
 export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
   const [urlInput, setUrlInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const activeControllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      activeControllerRef.current?.abort();
+    };
+  }, []);
 
   const handleUpload = useCallback(async () => {
     const trimmedUrl = urlInput.trim();
@@ -91,6 +101,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
 
       // 使用 AbortController 设置超时
       const controller = new AbortController();
+      activeControllerRef.current = controller;
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       let response: Response;
@@ -125,7 +136,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
         id: `url-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         name: filename,
         size: file.size,
-        mimeType: file.type || "application/octet-stream",
+        mimeType: getUploadMimeType(file),
         status: validation.ok ? "pending" : "error",
         progress: 0,
         error: validation.ok ? undefined : validation.error,
@@ -135,6 +146,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
       onFileAdd(uploadFile);
       setUrlInput("");
     } catch (err) {
+      if (!mountedRef.current) return;
       const errorFile: UploadFile = {
         id: `url-error-${Date.now()}`,
         name:
@@ -147,7 +159,8 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
       };
       onFileAdd(errorFile);
     } finally {
-      setLoading(false);
+      activeControllerRef.current = null;
+      if (mountedRef.current) setLoading(false);
     }
   }, [urlInput, onFileAdd]);
 

@@ -13,7 +13,6 @@ import {
   closeIfAllSuccess,
   fileDedupKey,
   getUploadStats,
-  handleDragEvent,
   retryFile,
   toUploadFile,
   updateLimitWarnings,
@@ -44,6 +43,9 @@ export function useUploadDialogController({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isUploadingRef = useRef(false);
   const uploadFilesRef = useRef<UploadFile[]>([]);
+  const dragDepthRef = useRef(0);
+  const abortControllersRef = useRef(new Map<string, AbortController>());
+  const cancelledIdsRef = useRef(new Set<string>());
   const maxBatchCount = getMaxBatchCount();
   const folderId = searchParams.get("folder") || null;
 
@@ -62,7 +64,13 @@ export function useUploadDialogController({
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape" || isUploadingRef.current) return;
+      uploadFilesRef.current = [];
+      setUploadFiles([]);
+      setTotalLimitWarning("");
+      setLargeLimitWarning("");
+      setDuplicateWarning("");
+      onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -93,6 +101,24 @@ export function useUploadDialogController({
     setTotalLimitWarning("");
     setLargeLimitWarning("");
     setDuplicateWarning("");
+  }, []);
+
+  const cancelUploadTask = useCallback((id: string) => {
+    cancelledIdsRef.current.add(id);
+    abortControllersRef.current.get(id)?.abort();
+    uploadQueue.cancel(id);
+  }, []);
+
+  const cancelAllUploads = useCallback(() => {
+    for (const file of uploadFilesRef.current) {
+      if (file.status === "pending" || file.status === "uploading") {
+        cancelledIdsRef.current.add(file.id);
+      }
+    }
+    for (const controller of abortControllersRef.current.values()) {
+      controller.abort();
+    }
+    uploadQueue.clear();
   }, []);
 
   const appendFilesToState = useCallback(
@@ -202,7 +228,10 @@ export function useUploadDialogController({
         if (!uploadFile.file) return;
         const taskId = uploadFile.id;
         const priority = pendingFiles.length - index;
+        const controller = new AbortController();
+        abortControllersRef.current.set(taskId, controller);
         const updateProgress = (progress: number, statusMessage?: string) => {
+          if (cancelledIdsRef.current.has(taskId)) return;
           updateUploadFiles((prev) =>
             prev.map((f) =>
               f.id === taskId
@@ -220,23 +249,36 @@ export function useUploadDialogController({
                 uploadFile.file!,
                 updateProgress,
                 folderId,
+                { signal: controller.signal },
               ),
             { fileSize: uploadFile.file.size, priority },
           );
+          if (cancelledIdsRef.current.has(taskId)) return;
           updateUploadFiles((prev) =>
             prev.map((f) =>
-              f.id === taskId ? { ...f, status: "success", progress: 100 } : f,
+              f.id === taskId
+                ? { ...f, status: "success", progress: 100, statusMessage: undefined }
+                : f,
             ),
           );
           hasNewSuccess = true;
         } catch (err) {
+          if (cancelledIdsRef.current.has(taskId) || controller.signal.aborted) return;
           updateUploadFiles((prev) =>
             prev.map((f) =>
               f.id === taskId
-                ? { ...f, status: "error", error: getErrorMessage(err, "上传失败") }
+                ? {
+                    ...f,
+                    status: "error",
+                    error: getErrorMessage(err, "上传失败"),
+                    statusMessage: undefined,
+                  }
                 : f,
             ),
           );
+        } finally {
+          abortControllersRef.current.delete(taskId);
+          cancelledIdsRef.current.delete(taskId);
         }
       }),
     );
@@ -283,12 +325,38 @@ export function useUploadDialogController({
     appendFilesToState,
     handleUrlFileAdd,
     handleRetry: (id: string) => updateUploadFiles((prev) => retryFile(prev, id)),
-    handleRemove: (id: string) => updateUploadFiles((prev) => prev.filter((f) => f.id !== id)),
-    handleClearAll: () => updateUploadFiles([]),
-    handleDrag: (e: React.DragEvent) => handleDragEvent(e, setDragActive),
+    handleRemove: (id: string) => {
+      const file = uploadFilesRef.current.find((item) => item.id === id);
+      if (file?.status === "pending" || file?.status === "uploading") {
+        cancelUploadTask(id);
+      }
+      updateUploadFiles((prev) => prev.filter((f) => f.id !== id));
+    },
+    handleClearAll: () => {
+      cancelAllUploads();
+      updateUploadFiles([]);
+    },
+    handleDrag: (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.type === "dragenter") {
+        dragDepthRef.current += 1;
+        setDragActive(true);
+        return;
+      }
+      if (e.type === "dragover") {
+        setDragActive(true);
+        return;
+      }
+      if (e.type === "dragleave") {
+        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+        if (dragDepthRef.current === 0) setDragActive(false);
+      }
+    },
     handleDrop: (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      dragDepthRef.current = 0;
       setDragActive(false);
       appendFilesToState(Array.from(e.dataTransfer.files));
     },
