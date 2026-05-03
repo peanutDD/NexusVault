@@ -1,0 +1,24 @@
+{
+  "date": "2026-05-03",
+  "task": "codex-cli auto review loop hardening",
+  "assumptions": [
+    "Scope is scripts/codex-cli.",
+    "The workflow uses local Codex execution to fix Gemini review findings.",
+    "Human approval remains required for merge and review-loop decisions."
+  ],
+  "risks": [
+    "Multi-round execution can repeat stale review input.",
+    "Model outputs can drift from strict JSON.",
+    "Disabled PR comments still need machine-readable unresolved issue reasons."
+  ],
+  "dependencies": [
+    "scripts/codex-cli/src/runtime.rs",
+    "scripts/codex-cli/src/skills.rs",
+    "scripts/codex-cli/src/config.rs",
+    "scripts/codex-cli/src/types.rs"
+  ],
+  "verification": [
+    "cargo fmt",
+    "cargo test"
+  ]
+}

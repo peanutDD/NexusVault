@@ -1,5 +1,5 @@
 //! # Cache Utilities
-//! 
+//!
 //! 提供统一的缓存辅助函数，用于简化 handler 层的缓存逻辑。
 
 use axum::response::Response;
@@ -11,13 +11,13 @@ use crate::services::redis::RedisService;
 use crate::utils::json_response;
 
 /// 获取 Redis 缓存
-/// 
+///
 /// # 参数
 /// - `pool`: Redis 连接池
 /// - `user_id`: 用户 ID
 /// - `prefix`: 缓存键前缀
 /// - `sub_key`: 子键（如 parent_id）
-/// 
+///
 /// # 返回
 /// - Some(Response): 缓存命中时返回缓存的响应
 /// - None: 缓存未命中或 Redis 不可用
@@ -41,7 +41,7 @@ pub async fn get_cached_response(
     };
 
     let cached: Result<Option<String>, _> = cmd("GET").arg(&cache_key).query_async(&mut conn).await;
-    
+
     match cached {
         Ok(Some(s)) => match serde_json::from_str::<Value>(&s) {
             Ok(v) => Some(json_response(v)),
@@ -52,7 +52,7 @@ pub async fn get_cached_response(
 }
 
 /// 设置 Redis 缓存
-/// 
+///
 /// # 参数
 /// - `pool`: Redis 连接池
 /// - `user_id`: 用户 ID
@@ -75,18 +75,15 @@ pub async fn set_cached_response(
     };
 
     let cache_key = format!("{}:{}:{}:{}", prefix, user_id, ver, sub_key);
-    
-    match serde_json::to_string(body) {
-        Ok(s) => {
-            if let Ok(mut conn) = pool.get().await {
-                let _: Result<(), _> = cmd("SETEX")
-                    .arg(&cache_key)
-                    .arg(ttl_secs)
-                    .arg(s)
-                    .query_async(&mut conn)
-                    .await;
-            }
+
+    if let Ok(s) = serde_json::to_string(body) {
+        if let Ok(mut conn) = pool.get().await {
+            let _: Result<(), _> = cmd("SETEX")
+                .arg(&cache_key)
+                .arg(ttl_secs)
+                .arg(s)
+                .query_async(&mut conn)
+                .await;
         }
-        Err(_) => return,
     }
 }

@@ -8,14 +8,12 @@
 
 mod common;
 
-use common::{
-    cleanup_test_data, create_test_pool, create_test_user, init_test_env,
-};
+use common::{cleanup_test_data, create_test_pool, create_test_user, init_test_env};
 use file_storage_backend::{
     config::Config,
     models::api_token::CreateApiTokenRequest,
     models::user::{LoginRequest, RegisterRequest, UpdateProfileRequest},
-    repositories::{ApiTokensRepo, DynUsersRepo, SqlxUsersRepo},
+    repositories::{DynUsersRepo, SqlxUsersRepo},
     services::api_token::ApiTokenService,
     services::auth::{AuthService, AuthServiceError},
     services::cache::CacheService,
@@ -27,7 +25,7 @@ use std::sync::Arc;
 // ============================================================================
 
 async fn create_test_auth_service(pool: sqlx::PgPool) -> AuthService {
-    let config = Config::from_env().unwrap();
+    let config = Config::from_env().unwrap_or_else(|_| Config::default_for_test());
     let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(pool.clone()));
     let cache = CacheService::new();
 
@@ -47,8 +45,8 @@ async fn test_auth_service_register_happy_path() {
     let service = create_test_auth_service(pool.clone()).await;
 
     let req = RegisterRequest {
-        username: "testuser".to_string(),
-        email: "test@example.com".to_string(),
+        username: "test_auth_register_happy".to_string(),
+        email: "test_register@test.com".to_string(),
         password: "Password123!".to_string(),
     };
 
@@ -56,8 +54,8 @@ async fn test_auth_service_register_happy_path() {
 
     assert!(result.is_ok());
     let user = result.unwrap();
-    assert_eq!(user.username, "testuser");
-    assert_eq!(user.email, "test@example.com");
+    assert_eq!(user.username, "test_auth_register_happy");
+    assert_eq!(user.email, "test_register@test.com");
 }
 
 #[tokio::test]
@@ -70,22 +68,25 @@ async fn test_auth_service_register_duplicate_email() {
 
     // 第一次注册成功
     let req1 = RegisterRequest {
-        username: "user1".to_string(),
-        email: "same@example.com".to_string(),
+        username: "test_auth_duplicate_1".to_string(),
+        email: "same@test.com".to_string(),
         password: "Password123!".to_string(),
     };
     assert!(service.register(req1).await.is_ok());
 
     // 第二次使用相同邮箱注册应该失败
     let req2 = RegisterRequest {
-        username: "user2".to_string(),
-        email: "same@example.com".to_string(),
+        username: "test_auth_duplicate_2".to_string(),
+        email: "same@test.com".to_string(),
         password: "Password123!".to_string(),
     };
     let result = service.register(req2).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 #[tokio::test]
@@ -97,7 +98,7 @@ async fn test_auth_service_register_invalid_email() {
     let service = create_test_auth_service(pool.clone()).await;
 
     let req = RegisterRequest {
-        username: "testuser".to_string(),
+        username: "test_auth_invalid_email".to_string(),
         email: "invalid-email".to_string(),
         password: "Password123!".to_string(),
     };
@@ -105,7 +106,10 @@ async fn test_auth_service_register_invalid_email() {
     let result = service.register(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 #[tokio::test]
@@ -117,15 +121,18 @@ async fn test_auth_service_register_short_password() {
     let service = create_test_auth_service(pool.clone()).await;
 
     let req = RegisterRequest {
-        username: "testuser".to_string(),
-        email: "test@example.com".to_string(),
+        username: "test_auth_short_password".to_string(),
+        email: "short_password@test.com".to_string(),
         password: "short".to_string(),
     };
 
     let result = service.register(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 #[tokio::test]
@@ -138,14 +145,17 @@ async fn test_auth_service_register_empty_username() {
 
     let req = RegisterRequest {
         username: "".to_string(),
-        email: "test@example.com".to_string(),
+        email: "empty_username@test.com".to_string(),
         password: "Password123!".to_string(),
     };
 
     let result = service.register(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 // ============================================================================
@@ -184,14 +194,17 @@ async fn test_auth_service_login_invalid_email() {
     let service = create_test_auth_service(pool.clone()).await;
 
     let req = LoginRequest {
-        email: "nonexistent@example.com".to_string(),
+        email: "nonexistent@test.com".to_string(),
         password: "Password123!".to_string(),
     };
 
     let result = service.login(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::InvalidCredentials);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::InvalidCredentials
+    ));
 }
 
 #[tokio::test]
@@ -213,7 +226,10 @@ async fn test_auth_service_login_wrong_password() {
     let result = service.login(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::InvalidCredentials);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::InvalidCredentials
+    ));
 }
 
 // ============================================================================
@@ -250,7 +266,10 @@ async fn test_auth_service_verify_token_invalid_signature() {
     let result = service.verify_token(invalid_token);
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Unauthorized
+    ));
 }
 
 #[tokio::test]
@@ -261,13 +280,16 @@ async fn test_auth_service_verify_token_expired() {
     let service = create_test_auth_service(pool.clone()).await;
 
     // 使用辅助函数创建过期的 token
-    let config = Config::from_env().unwrap();
+    let config = Config::from_env().unwrap_or_else(|_| Config::default_for_test());
     let expired_token = create_expired_token(&config);
 
     let result = service.verify_token(&expired_token);
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Unauthorized
+    ));
 }
 
 #[tokio::test]
@@ -280,7 +302,10 @@ async fn test_auth_service_verify_token_invalid_format() {
     let result = service.verify_token("not-a-valid-jwt-token");
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Unauthorized
+    ));
 }
 
 #[tokio::test]
@@ -293,7 +318,10 @@ async fn test_auth_service_verify_token_empty() {
     let result = service.verify_token("");
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Unauthorized
+    ));
 }
 
 // ============================================================================
@@ -338,7 +366,10 @@ async fn test_auth_service_change_password_wrong_current() {
         .await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 #[tokio::test]
@@ -360,7 +391,10 @@ async fn test_auth_service_change_password_weak_new() {
         .await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 // ============================================================================
@@ -433,7 +467,10 @@ async fn test_api_token_verify_invalid() {
     let result = token_service.verify_token("invalid-token-12345").await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), file_storage_backend::utils::AppError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        file_storage_backend::utils::AppError::Unauthorized
+    ));
 }
 
 #[tokio::test]
@@ -506,7 +543,10 @@ async fn test_api_token_delete_nonexistent() {
     let result = token_service.delete_token(fake_token_id, user_id).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), file_storage_backend::utils::AppError::NotFound);
+    assert!(matches!(
+        result.err().unwrap(),
+        file_storage_backend::utils::AppError::NotFound
+    ));
 }
 
 // ============================================================================
@@ -514,7 +554,7 @@ async fn test_api_token_delete_nonexistent() {
 // ============================================================================
 
 fn create_expired_token(config: &Config) -> String {
-    use jsonwebtoken::{encode, Header, EncodingKey};
+    use jsonwebtoken::{encode, EncodingKey, Header};
 
     #[derive(Debug, serde::Serialize, serde::Deserialize)]
     struct Claims {
@@ -533,5 +573,6 @@ fn create_expired_token(config: &Config) -> String {
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(config.auth.jwt_secret.as_ref()),
-    ).unwrap()
+    )
+    .unwrap()
 }

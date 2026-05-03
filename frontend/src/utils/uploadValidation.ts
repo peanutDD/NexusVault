@@ -57,6 +57,57 @@ const BLOCKED_MIME_TYPES = [
   'application/x-sh',
 ];
 
+const BLOCKED_EXTENSIONS = new Set([
+  'bat',
+  'cmd',
+  'com',
+  'exe',
+  'msi',
+  'ps1',
+  'sh',
+]);
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '7z': 'application/x-7z-compressed',
+  avi: 'video/x-msvideo',
+  bz2: 'application/x-bzip2',
+  csv: 'text/csv',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  epub: 'application/epub+zip',
+  gif: 'image/gif',
+  gz: 'application/gzip',
+  jpeg: 'image/jpeg',
+  jpg: 'image/jpeg',
+  m4a: 'audio/mp4',
+  mkv: 'video/x-matroska',
+  mov: 'video/quicktime',
+  mp3: 'audio/mpeg',
+  mp4: 'video/mp4',
+  odp: 'application/vnd.oasis.opendocument.presentation',
+  ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  odt: 'application/vnd.oasis.opendocument.text',
+  pdf: 'application/pdf',
+  png: 'image/png',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  rar: 'application/x-rar-compressed',
+  tar: 'application/x-tar',
+  txt: 'text/plain',
+  wav: 'audio/wav',
+  webm: 'video/webm',
+  webp: 'image/webp',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  zip: 'application/zip',
+};
+
+function getExtension(filename: string): string {
+  const lastDot = filename.lastIndexOf('.');
+  if (lastDot < 0 || lastDot === filename.length - 1) return '';
+  return filename.slice(lastDot + 1).toLowerCase();
+}
+
 function parseAllowedTypes(spec: string): string[] {
   return spec.split(',').map((s) => s.trim().toLowerCase());
 }
@@ -78,6 +129,13 @@ function matchesType(mime: string, pattern: string): boolean {
   return mime === p;
 }
 
+export function getUploadMimeType(file: File): string {
+  const browserMime = file.type.trim().toLowerCase();
+  if (browserMime && browserMime !== 'application/octet-stream') return browserMime;
+  const extension = getExtension(file.name);
+  return MIME_BY_EXTENSION[extension] ?? (browserMime || 'application/octet-stream');
+}
+
 export function validateFile(
   file: File
 ): { ok: true } | { ok: false; error: string } {
@@ -88,10 +146,11 @@ export function validateFile(
       error: `「${file.name}」超过 ${maxGB}GB 限制`,
     };
   }
-  const mime = (file.type || 'application/octet-stream').toLowerCase();
+  const extension = getExtension(file.name);
+  const mime = getUploadMimeType(file);
 
   // 命中黑名单时直接拒绝上传
-  if (BLOCKED_MIME_TYPES.includes(mime)) {
+  if (BLOCKED_MIME_TYPES.includes(mime) || BLOCKED_EXTENSIONS.has(extension)) {
     return {
       ok: false,
       error: `「${file.name}」类型 ${file.type || '未知'} 不允许上传`,

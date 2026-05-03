@@ -1,6 +1,6 @@
+use crate::{utils::AppError, AppState};
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use crate::{utils::AppError, AppState};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AdminToken;

@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
  */
 export function useThrottle<T>(value: T, delay: number): T {
   const [throttled, setThrottled] = useState<T>(value);
-  const lastCall = useRef<number>(Date.now());
+  const lastCall = useRef<number>(0);
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingValue = useRef<T>(value);
 
@@ -19,6 +19,7 @@ export function useThrottle<T>(value: T, delay: number): T {
 
       if (timeSinceLast >= delay) {
         lastCall.current = now;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Leading-edge throttle must publish elapsed-window updates synchronously.
         setThrottled(value);
       } else {
         timeout.current = setTimeout(() => {
@@ -28,14 +29,16 @@ export function useThrottle<T>(value: T, delay: number): T {
         }, delay - timeSinceLast);
       }
     }
+  }, [value, delay]);
 
+  useEffect(() => {
     return () => {
       if (timeout.current !== null) {
         clearTimeout(timeout.current);
         timeout.current = null;
       }
     };
-  }, [value, delay]);
+  }, []);
 
   return throttled;
 }

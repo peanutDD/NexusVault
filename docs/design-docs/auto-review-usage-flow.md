@@ -12,10 +12,9 @@
   cd scripts/codex-cli
   cargo install --path .
   ```
-- **环境变量**: 在 `scripts/codex-cli/.env` 中配置：
-  - `OPENAI_API_KEY`: 你的 GPT-5.4/Codex 密钥。
-  - `OPENAI_API_BASE`: API 代理地址。
-  - `CODEX_MODEL`: 指定模型（默认 `gpt-4-turbo-preview`）。
+- **环境变量**: 在 runner 环境、GitHub Actions variable/secret，或 `scripts/codex-cli/.env` 中配置：
+  - `CODEX_AGENT_COMMAND`: 本地 Codex GPT-5.5 执行命令，例如 `codex exec --skip-git-repo-check -`。
+  - `CODEX_AGENT_TIMEOUT_SECONDS`: 可选，单次本地 Codex 调用超时，默认 900 秒。
 - **Runner 启动**: 启动 GitHub Self-hosted Runner，确保其能够接收 `file-server` 标签的任务。
 
 ### 1.2 云端 (GitHub Actions)
@@ -34,11 +33,11 @@
 
 ### 第二阶段：AI 自动修复 (The Loop)
 1. **监听评论**: GitHub Action 捕获到 Gemini 的评论。
-2. **启动本地编排**: Local Runner 启动，调用 `codex pr-auto-fix` 命令。
+2. **启动本地编排**: Local Runner 启动，调用 `codex-auto-fix pr-auto-fix` 命令。
 3. **执行 Pipeline**:
    - **Parse**: 结构化解析 Gemini 意见。
    - **Decide**: 过滤 Medium 以下及敏感文件。
-   - **Fix**: GPT-5.4 在本地生成的 Patch。
+   - **Fix**: Codex GPT-5.5 在本地生成 Patch。
    - **Apply**: 本地执行 `git apply` 修复。
    - **Security**: 对修复后的改动做安全审计（注入/泄露/严重逻辑漏洞）。
    - **Score**: 对修复结果做质量评分（0-100）。
@@ -65,7 +64,7 @@
 ## 4. 异常处理
 - **补丁冲突**: 如果 `git apply` 失败，AI 会在 PR 留言告知具体文件，此时需人工介入手动修复冲突。
 - **Runner 离线**: 检查本地机器的 Runner 进程是否存活。
-- **API 超时**: 检查网络连接或 API 额度。
+- **Codex 超时**: 检查 `CODEX_AGENT_COMMAND` 是否指向真实 Codex CLI、runner 是否已登录授权，以及 `CODEX_AGENT_TIMEOUT_SECONDS` 是否过短。
 
 ---
 

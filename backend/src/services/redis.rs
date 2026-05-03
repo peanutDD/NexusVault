@@ -134,10 +134,14 @@ impl RedisService {
             AppError::Internal
         })?;
         let key = format!("oauth_state:{}:{}", provider, state);
-        let deleted: i32 = cmd("DEL").arg(key).query_async(&mut conn).await.map_err(|e| {
-            tracing::warn!(error = %e, "Redis DEL failed for OAuth state");
-            AppError::Internal
-        })?;
+        let deleted: i32 = cmd("DEL")
+            .arg(key)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Redis DEL failed for OAuth state");
+                AppError::Internal
+            })?;
         Ok(deleted == 1)
     }
 
@@ -154,10 +158,14 @@ impl RedisService {
             AppError::Internal
         })?;
         let key = format!("cachever:user:{}", user_id);
-        let v: Option<i64> = cmd("GET").arg(key).query_async(&mut conn).await.map_err(|e| {
-            tracing::warn!(error = %e, "Redis GET failed for cache version");
-            AppError::Internal
-        })?;
+        let v: Option<i64> = cmd("GET")
+            .arg(key)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Redis GET failed for cache version");
+                AppError::Internal
+            })?;
         Ok(v.unwrap_or(1))
     }
 
@@ -168,10 +176,14 @@ impl RedisService {
             AppError::Internal
         })?;
         let key = format!("cachever:user:{}", user_id);
-        let v: i64 = cmd("INCR").arg(key).query_async(&mut conn).await.map_err(|e| {
-            tracing::warn!(error = %e, "Redis INCR failed for cache version");
-            AppError::Internal
-        })?;
+        let v: i64 = cmd("INCR")
+            .arg(key)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Redis INCR failed for cache version");
+                AppError::Internal
+            })?;
         Ok(v)
     }
 }

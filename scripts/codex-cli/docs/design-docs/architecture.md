@@ -19,8 +19,7 @@
 项目遵循单向依赖（上层依赖下层），避免循环引用。模块职责如下：
 
 - `types.rs`：数据结构与对外输出契约（ReviewData / ReviewIssue / PrAutoFixOutput 等）
-- `config.rs`：环境变量读取（模型名、API base 等）
-- `llm.rs`：OpenAI 兼容 Chat Completions 客户端（只负责调用与错误回传）
+- `llm.rs`：本地 Codex 命令执行器（读取 `CODEX_AGENT_COMMAND`，只负责调用与错误回传）
 - `repo.rs`：仓库侧能力（读文件、git apply、提交推送、可选 gh 评论、changelog 更新）
 - `skills.rs`：原子步骤（解析 review、决策、生成 patch、应用 patch、安全/质量评估、文档入档、反馈）
 - `pipeline.rs`：Skill 编排器（顺序执行、上下文传递）
@@ -80,7 +79,10 @@
   "fixed": true,
   "files": ["src/a.rs"],
   "quality_score": 95,
+  "quality_score_available": true,
   "security_passed": true,
+  "push_blocked": false,
+  "pending_explanations": [],
   "summary": "..."
 }
 ```
@@ -90,4 +92,3 @@
 - 把 repo 能力进一步抽象为 Backend（Local / GhCli / API），以便替换实现而不改 skill
 - 为 `SecurityCheckSkill` 引入可插拔扫描器（例如调用现有 SAST/secret scan）
 - 引入“单轮多 issue 统一 patch”策略以降低冲突概率
-

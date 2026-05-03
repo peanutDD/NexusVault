@@ -116,6 +116,8 @@ pub struct LocalStorage {
     base_path: String,
 }
 
+const MAX_LOCAL_FILENAME_BYTES: usize = 240;
+
 impl LocalStorage {
     pub fn new(base_path: String) -> Self {
         Self { base_path }
@@ -137,7 +139,40 @@ impl LocalStorage {
         base.join(normalized)
     }
 
+    fn local_filename(filename: &str) -> String {
+        if filename.len() <= MAX_LOCAL_FILENAME_BYTES {
+            return filename.to_string();
+        }
+
+        let extension = std::path::Path::new(filename)
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| format!(".{}", s))
+            .unwrap_or_default();
+        let stem = filename.strip_suffix(&extension).unwrap_or(filename);
+        let budget = MAX_LOCAL_FILENAME_BYTES.saturating_sub(extension.len());
+
+        let truncated = Self::truncate_utf8_to_bytes(stem, budget);
+
+        if truncated.is_empty() {
+            Self::truncate_utf8_to_bytes(filename, MAX_LOCAL_FILENAME_BYTES)
+        } else {
+            format!("{}{}", truncated, extension)
+        }
+    }
+
+    fn truncate_utf8_to_bytes(value: &str, max_bytes: usize) -> String {
+        match value
+            .char_indices()
+            .find(|&(idx, ch)| idx + ch.len_utf8() > max_bytes)
+        {
+            Some((idx, _)) => value[..idx].to_string(),
+            None => value.to_string(),
+        }
+    }
+
     fn get_file_path(&self, user_id: Uuid, file_id: Uuid, filename: &str) -> std::path::PathBuf {
+        let filename = Self::local_filename(filename);
         Path::new(&self.base_path)
             .join(user_id.to_string())
             .join(file_id.to_string())
@@ -255,9 +290,11 @@ impl StorageBackend for LocalStorage {
 
     async fn delete_file(&self, file_path: &str) -> Result<(), AppError> {
         let path = self.resolve_stored_path(file_path);
-        tokio::fs::remove_file(&path)
-            .await
-            .map_err(|e| AppError::File(format!("Failed to delete file: {}", e)))?;
+        match tokio::fs::remove_file(&path).await {
+            Ok(()) => {}
+            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(()),
+            Err(e) => return Err(AppError::File(format!("Failed to delete file: {}", e))),
+        }
 
         // Try to remove empty directories
         if let Some(parent) = path.parent() {

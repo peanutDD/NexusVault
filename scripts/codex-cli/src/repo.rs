@@ -2,6 +2,7 @@ use crate::types::{ChangelogEntryInput, SkillPackResolvedSkill, SkillPackSkillMe
 use std::fs;
 use std::path::Path;
 use std::process::Command as StdCommand;
+use std::process::Output;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// 从大模型输出中提取第一个代码块内容。
@@ -231,18 +232,13 @@ pub fn read_repo_file(repo_root: &str, path: &str) -> Result<String, Box<dyn std
 /// 选择 `gh api ... Accept: raw` 的原因：
 /// - 避免 base64/JSON 包装层，拿到直接文本用于 diff 生成
 pub fn gh_get_file_raw(repo: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let output = StdCommand::new("gh")
-        .args([
-            "api",
-            &format!("repos/{}/contents/{}", repo, path),
-            "-H",
-            "Accept: application/vnd.github.v3.raw",
-        ])
-        .output()?;
-
-    if !output.status.success() {
-        return Err(format!("无法读取文件: {}", path).into());
-    }
+    let output = checked_output(StdCommand::new("gh").args([
+        "api",
+        &format!("repos/{}/contents/{}", repo, path),
+        "-H",
+        "Accept: application/vnd.github.v3.raw",
+    ]))
+    .map_err(|e| format!("无法读取文件 {}: {}", path, e))?;
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
@@ -266,14 +262,21 @@ pub fn apply_patch_safely_in(
     let tmp = std::env::temp_dir().join(format!("codex-cli-{}.patch", file_path.replace('/', "_")));
     fs::write(&tmp, patch)?;
 
-    let status = StdCommand::new("git")
+    let output = StdCommand::new("git")
         .args(["-C", repo_root])
         .args(["apply", "--whitespace=fix"])
         .arg(&tmp)
-        .status()?;
+        .output()?;
 
     let _ = fs::remove_file(&tmp);
-    Ok(status.success())
+    if !output.status.success() {
+        eprintln!(
+            "git apply failed for {}: {}",
+            file_path,
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+    Ok(output.status.success())
 }
 
 /// 提交并推送本轮修复。
@@ -293,20 +296,23 @@ pub fn commit_and_push_in(
         fixed_files.len()
     );
 
-    StdCommand::new("git")
-        .args(["-C", repo_root])
-        .args(["add"])
-        .args(fixed_files)
-        .status()?;
-    StdCommand::new("git")
-        .args(["-C", repo_root])
-        .args(["commit", "-m", &msg])
-        .status()?;
-    if push {
+    checked_output(
         StdCommand::new("git")
             .args(["-C", repo_root])
-            .args(["push", "origin", "HEAD"])
-            .status()?;
+            .args(["add"])
+            .args(fixed_files),
+    )?;
+    checked_output(
+        StdCommand::new("git")
+            .args(["-C", repo_root])
+            .args(["commit", "-m", &msg]),
+    )?;
+    if push {
+        checked_output(
+            StdCommand::new("git")
+                .args(["-C", repo_root])
+                .args(["push", "origin", "HEAD"]),
+        )?;
     }
 
     Ok(())
@@ -314,10 +320,29 @@ pub fn commit_and_push_in(
 
 /// 在指定 PR 下发布评论（用于 Dry-Run 提示与修复结果回传）。
 pub fn post_comment(pr_number: u32, body: &str) -> Result<(), Box<dyn std::error::Error>> {
-    StdCommand::new("gh")
-        .args(["pr", "comment", &format!("{}", pr_number), "--body", body])
-        .status()?;
+    checked_output(StdCommand::new("gh").args([
+        "pr",
+        "comment",
+        &format!("{}", pr_number),
+        "--body",
+        body,
+    ]))?;
     Ok(())
+}
+
+fn checked_output(cmd: &mut StdCommand) -> Result<Output, Box<dyn std::error::Error>> {
+    let output = cmd.output()?;
+    if output.status.success() {
+        return Ok(output);
+    }
+
+    Err(format!(
+        "命令执行失败 status={} stdout={} stderr={}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout).trim(),
+        String::from_utf8_lossy(&output.stderr).trim()
+    )
+    .into())
 }
 
 pub fn discover_skill_pack_skills(

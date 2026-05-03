@@ -4,6 +4,8 @@
 //!
 //! 遵循约束 C-004：集成测试统一通过 `tests/common::build_test_app(pool)` 起完整 `axum::Router` + 真 PG
 
+#![allow(dead_code)]
+
 use std::sync::Arc;
 
 use axum::{
@@ -14,10 +16,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use file_storage_backend::{
-    app::create_app,
-    config::Config,
-    services::auth::AuthService,
-    AppState as RootAppState,
+    app::create_app, config::Config, services::auth::AuthService, AppState as RootAppState,
 };
 
 /// 创建测试用的 Axum Router
@@ -29,9 +28,7 @@ use file_storage_backend::{
 /// 配置完成的 Axum Router，包含所有 API 路由和中间件
 pub async fn build_test_app(pool: &PgPool) -> Router {
     // 创建测试配置
-    let config = Arc::new(Config::from_env().unwrap_or_else(|_| {
-        Config::default_for_test()
-    }));
+    let config = Arc::new(Config::from_env().unwrap_or_else(|_| Config::default_for_test()));
 
     // 创建存储后端（使用内存存储进行测试）
     let storage = file_storage_backend::services::storage::create_memory_backend();
@@ -57,10 +54,7 @@ pub async fn build_test_app(pool: &PgPool) -> Router {
 ///
 /// # 返回
 /// (HeaderName, HeaderValue) 元组，可直接用于请求头
-pub async fn auth_header(
-    auth_service: &AuthService,
-    user_id: &Uuid,
-) -> (HeaderName, HeaderValue) {
+pub async fn auth_header(auth_service: &AuthService, user_id: &Uuid) -> (HeaderName, HeaderValue) {
     let token = auth_service.generate_token(user_id).unwrap();
     let header_name = HeaderName::from_static("authorization");
     let header_value = HeaderValue::from_str(&format!("Bearer {}", token)).unwrap();
@@ -82,7 +76,9 @@ pub async fn login_and_get_token(pool: &PgPool, suffix: &str) -> (Uuid, String) 
     // 创建认证服务
     let config = Config::from_env().unwrap_or_else(|_| Config::default_for_test());
     let auth_service = AuthService::new(
-        std::sync::Arc::new(file_storage_backend::repositories::SqlxUsersRepo::new(pool.clone())),
+        std::sync::Arc::new(file_storage_backend::repositories::SqlxUsersRepo::new(
+            pool.clone(),
+        )),
         config,
         file_storage_backend::services::cache::CacheService::new(),
         None,

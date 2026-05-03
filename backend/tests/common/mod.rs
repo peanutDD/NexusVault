@@ -2,6 +2,8 @@
 //!
 //! 提供测试辅助函数和测试环境设置。
 
+#![allow(dead_code)]
+
 pub mod app;
 
 use sqlx::{postgres::PgPoolOptions, PgPool};

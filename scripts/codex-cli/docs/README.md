@@ -4,6 +4,33 @@
 
 它既可以在 GitHub Actions 里对 PR 的 Gemini Review 执行自动修复，也可以脱离 GitHub，直接对任意本地仓库执行同样的修复流水线。
 
+### 核心特性：完全本地执行架构
+
+**安全性提升**
+
+- 不依赖任何外部 API（如 OpenAI/GPT）
+- 所有 LLM 调用完全通过本地 Codex 命令执行
+- 代码和数据 100% 保留在本地环境
+- 避免网络传输中的数据泄露风险
+
+**性能与稳定性**
+
+- 本地执行延迟更低
+- 不受外部服务限流影响
+- 可以充分利用本地硬件加速
+
+**成本效益**
+
+- 无需支付 API 调用费用
+- 充分利用已有的计算资源
+
+**本地 Codex GPT-5.5 架构**
+- 所有 LLM 任务通过 `CODEX_AGENT_COMMAND` 配置的本地命令执行
+- 支持三种 prompt 输入方式：
+  - 无占位符：完整 prompt 写入 stdin
+  - `{prompt}`：prompt 作为单个命令参数
+  - `{prompt_file}`：prompt 写入临时文件，命令接收路径
+
 ### 快速开始
 
 **前置依赖**
@@ -14,9 +41,8 @@
 
 **环境变量**
 
-- `OPENAI_API_KEY`：必填（OpenAI 兼容 Chat Completions API）
-- `OPENAI_API_BASE`：可选，默认 `https://api.openai.com/v1`
-- `CODEX_MODEL`：可选，默认 `gpt-4-turbo-preview`
+- `CODEX_AGENT_COMMAND`：必填，本地 Codex 执行命令，例如 `codex exec --skip-git-repo-check -`
+- `CODEX_AGENT_TIMEOUT_SECONDS`：可选，单次 Codex 调用超时，默认 `900`
 
 **构建**
 
@@ -29,7 +55,7 @@ cargo build --release
 **GitHub PR 模式（供 Actions 调用）**
 
 ```bash
-./target/release/codex pr-auto-fix \
+./target/release/codex-auto-fix pr-auto-fix \
   --pr-number 123 \
   --gemini-review "$GEMINI_REVIEW" \
   --max-rounds 2 \
@@ -40,7 +66,7 @@ cargo build --release
 **本地仓库模式（跨仓库复用）**
 
 ```bash
-./target/release/codex auto-fix-local \
+./target/release/codex-auto-fix auto-fix-local \
   --repo-root /abs/path/to/any-repo \
   --review-file /abs/path/to/review.md \
   --max-rounds 2 \
@@ -63,6 +89,7 @@ cargo build --release
 - [Pipeline / Skills 设计](design-docs/pipeline.md)
 - [CLI 与输出契约](references/cli.md)
 - [配置与策略（规则/Changelog/过滤）](references/configuration.md)
+- [自动 Review 使用说明](references/auto-review-usage.md)
 - [Skill Pack 自动加载（零同步）](references/development.md#skill-pack-自动加载零同步)
 - [GitHub Actions 集成](integrations/github-actions.md)
 - [开发与发布](references/development.md)

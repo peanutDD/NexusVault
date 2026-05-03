@@ -20,13 +20,43 @@ pub struct SkillContext {
     pub parsed_data: Option<ReviewData>,
     pub selected_issues: Vec<ReviewIssue>,
     pub fixed_files: Vec<String>,
+    pub fixed_issue_keys: Vec<String>,
     pub quality_score: u8,
+    pub quality_score_available: bool,
+    pub quality_score_reason: Option<String>,
     pub security_passed: bool,
+    pub security_findings: Vec<String>,
+    pub push_blocked: bool,
     pub auto_push: bool,
     pub enable_pr_comments: bool,
     pub changelog_path: Option<String>,
     pub disable_changelog: bool,
+    pub max_rounds: u8,
+    pub current_round: u8,
     pub rounds: u8,
+    pub fix_attempts: Vec<FixAttempt>,
+    pub pending_explanations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FixAttempt {
+    pub round: u8,
+    pub issue_key: String,
+    pub file: String,
+    pub stage: String,
+    pub success: bool,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SecurityAuditResult {
+    passed: bool,
+    reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct QualityScoreResult {
+    score: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -57,13 +87,22 @@ impl SkillContext {
             parsed_data: None,
             selected_issues: Vec::new(),
             fixed_files: Vec::new(),
+            fixed_issue_keys: Vec::new(),
             quality_score: 0,
+            quality_score_available: false,
+            quality_score_reason: None,
             security_passed: false,
+            security_findings: Vec::new(),
+            push_blocked: false,
             auto_push: init.auto_push,
             enable_pr_comments: init.enable_pr_comments,
             changelog_path: init.changelog_path,
             disable_changelog: init.disable_changelog,
+            max_rounds: init.rounds.max(1),
+            current_round: 1,
             rounds: init.rounds,
+            fix_attempts: Vec::new(),
+            pending_explanations: Vec::new(),
         }
     }
 }
@@ -134,11 +173,84 @@ impl Skill for BatchFixSkill {
         ctx: &mut SkillContext,
         client: &CodexClient,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        for issue in &ctx.selected_issues {
-            if let Ok(Some(patch)) = generate_fix_patch(issue, ctx, client).await
-                && repo::apply_patch_safely_in(&ctx.repo_root, &issue.file, &patch)?
-            {
-                ctx.fixed_files.push(issue.file.clone());
+        let issues = ctx.selected_issues.clone();
+        for issue in issues {
+            let issue_key = review_issue_key(&issue);
+            let patch = match generate_fix_patch(&issue, ctx, client).await {
+                Ok(Some(patch)) => patch,
+                Ok(None) => {
+                    eprintln!(
+                        "❌ [BatchFix] 补丁为空 - 文件: {}, 问题: {}, 原因: 模型未返回可应用的 unified diff",
+                        issue.file, issue.description
+                    );
+                    ctx.fix_attempts.push(FixAttempt {
+                        round: ctx.current_round,
+                        issue_key,
+                        file: issue.file,
+                        stage: "patch_generation".to_string(),
+                        success: false,
+                        reason: Some("模型未返回可应用的 unified diff".to_string()),
+                    });
+                    continue;
+                }
+                Err(e) => {
+                    eprintln!(
+                        "❌ [BatchFix] 补丁生成失败 - 文件: {}, 问题: {}, 原因: {}",
+                        issue.file, issue.description, e
+                    );
+                    ctx.fix_attempts.push(FixAttempt {
+                        round: ctx.current_round,
+                        issue_key,
+                        file: issue.file,
+                        stage: "patch_generation".to_string(),
+                        success: false,
+                        reason: Some(e.to_string()),
+                    });
+                    continue;
+                }
+            };
+
+            match repo::apply_patch_safely_in(&ctx.repo_root, &issue.file, &patch) {
+                Ok(true) => {
+                    ctx.fixed_files.push(issue.file.clone());
+                    ctx.fixed_issue_keys.push(issue_key.clone());
+                    ctx.fix_attempts.push(FixAttempt {
+                        round: ctx.current_round,
+                        issue_key,
+                        file: issue.file,
+                        stage: "patch_apply".to_string(),
+                        success: true,
+                        reason: None,
+                    });
+                }
+                Ok(false) => {
+                    eprintln!(
+                        "❌ [BatchFix] 补丁应用失败 - 文件: {}, 原因: git apply 未能应用补丁",
+                        issue.file
+                    );
+                    ctx.fix_attempts.push(FixAttempt {
+                        round: ctx.current_round,
+                        issue_key,
+                        file: issue.file,
+                        stage: "patch_apply".to_string(),
+                        success: false,
+                        reason: Some("git apply 未能应用补丁".to_string()),
+                    })
+                }
+                Err(e) => {
+                    eprintln!(
+                        "❌ [BatchFix] 补丁应用错误 - 文件: {}, 原因: {}",
+                        issue.file, e
+                    );
+                    ctx.fix_attempts.push(FixAttempt {
+                        round: ctx.current_round,
+                        issue_key,
+                        file: issue.file,
+                        stage: "patch_apply".to_string(),
+                        success: false,
+                        reason: Some(e.to_string()),
+                    })
+                }
             }
         }
         Ok(())
@@ -161,17 +273,20 @@ impl Skill for SecurityCheckSkill {
     ) -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("🛡️ [Skill: SecurityCheck] 正在扫描修复后的代码安全性...");
 
+        ctx.security_findings.clear();
         let mut all_passed = true;
         for file in &ctx.fixed_files {
             let content = repo::read_repo_file(&ctx.repo_root, file)?;
-            let system_prompt = "你是一个安全审计专家。请检查代码是否存在注入、密钥泄露或严重逻辑漏洞。\n仅返回 JSON: {\"passed\": true/false, \"reason\": \"原因\"}";
+            let system_prompt = "你是一个安全审计专家。请检查代码是否存在注入、密钥泄露或严重逻辑漏洞。\n仅输出严格 JSON，不要 markdown，不要解释。Schema: {\"passed\": true, \"reason\": \"原因\"}";
             let user_prompt = format!("文件: {}\n内容: \n```\n{}\n```", file, content);
 
             let result = client.call(system_prompt, &user_prompt).await?;
-            if result.contains("false") {
+            let audit = parse_security_audit(&result)?;
+            if !audit.passed {
                 all_passed = false;
-                eprintln!("⚠️ 文件 {} 未通过安全扫描: {}", file, result);
-                break;
+                let finding = format!("{}: {}", file, audit.reason);
+                ctx.security_findings.push(finding.clone());
+                eprintln!("⚠️ 文件 {} 未通过安全扫描: {}", file, finding);
             }
         }
         ctx.security_passed = all_passed;
@@ -193,16 +308,37 @@ impl Skill for QualityScoreSkill {
     ) -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("📊 [Skill: QualityScore] 正在评估修复质量...");
 
-        let system_prompt = "你是一个代码质量专家。请根据 AGENTS.md 的 15 条铁律为本次修复打分 (0-100)。\n仅返回数字评分。";
+        let system_prompt = "你是一个代码质量专家。请根据 AGENTS.md 的 15 条铁律为本次修复打分 (0-100)。\n仅输出严格 JSON，不要 markdown，不要解释。Schema: {\"score\": 87, \"reason\": \"简短原因\"}";
         let user_prompt = format!(
             "修复的文件: {:?}\nGemini 原始意见: {}",
             ctx.fixed_files, ctx.raw_input
         );
 
-        let result = client.call(system_prompt, &user_prompt).await?;
-        if let Ok(score) = result.trim().parse::<u8>() {
-            ctx.quality_score = score;
-            eprintln!("📈 本次修复质量评分: {} 分", score);
+        let first = client.call(system_prompt, &user_prompt).await?;
+        let parsed = match parse_quality_score(&first) {
+            Ok(score) => Ok(score),
+            Err(first_err) => {
+                eprintln!("⚠️ 质量评分解析失败，正在重试: {}", first_err);
+                let retry = client.call(system_prompt, &user_prompt).await?;
+                parse_quality_score(&retry).map_err(|second_err| {
+                    format!("首次解析失败: {}; 重试解析失败: {}", first_err, second_err)
+                })
+            }
+        };
+
+        match parsed {
+            Ok(score) => {
+                ctx.quality_score = score;
+                ctx.quality_score_available = true;
+                ctx.quality_score_reason = None;
+                eprintln!("📈 本次修复质量评分: {} 分", score);
+            }
+            Err(e) => {
+                ctx.quality_score = 0;
+                ctx.quality_score_available = false;
+                ctx.quality_score_reason = Some(e);
+                eprintln!("⚠️ 质量评分不可用");
+            }
         }
         Ok(())
     }
@@ -226,7 +362,7 @@ impl Skill for DocumentationSkill {
 
         let input = ChangelogEntryInput {
             pr_number: ctx.pr_number,
-            round: ctx.rounds,
+            round: ctx.current_round,
             unix_ts: repo::now_unix_ts()?,
             files: ctx.fixed_files.clone(),
             security_passed: ctx.security_passed,
@@ -289,24 +425,41 @@ impl Skill for FeedbackSkill {
                 return Ok(());
             }
 
+            if !ctx.security_passed {
+                ctx.push_blocked = true;
+                let gh_msg = format!(
+                    "🤖 **Codex 自动修复已生成，但未推送**\n\n⚠️ 安全扫描未通过，已按 fail-closed 策略停止提交。\n\n{}\n{}",
+                    build_security_findings(ctx),
+                    pending_explanations_block(ctx)
+                );
+                if ctx.enable_pr_comments {
+                    repo::post_comment(ctx.pr_number, &gh_msg)?;
+                } else {
+                    eprintln!("{}", gh_msg);
+                }
+                return Ok(());
+            }
+
             let security_info = if ctx.security_passed {
                 "✅ 安全扫描通过"
             } else {
                 "⚠️ 安全扫描发现潜在风险"
             };
-            let score_info = format!("🏆 质量评分: {} 分", ctx.quality_score);
+            let score_info = quality_score_label(ctx);
 
             repo::commit_and_push_in(&ctx.repo_root, &ctx.fixed_files, true)?;
 
             let gh_msg = format!(
-                "🤖 **Codex 自动修复完成**\n\n{}\n{}\n\n✅ 已修复文件：\n{}",
+                "🤖 **Codex 自动修复完成**\n\n{}\n{}\n{}\n\n✅ 已修复文件：\n{}{}",
                 security_info,
                 score_info,
+                build_fix_attempt_summary(&ctx.fix_attempts),
                 ctx.fixed_files
                     .iter()
                     .map(|f| format!("- `{}`", f))
                     .collect::<Vec<_>>()
-                    .join("\n")
+                    .join("\n"),
+                pending_explanations_block(ctx)
             );
             if ctx.enable_pr_comments {
                 repo::post_comment(ctx.pr_number, &gh_msg)?;
@@ -314,10 +467,18 @@ impl Skill for FeedbackSkill {
                 eprintln!("{}", gh_msg);
             }
         } else if let Some(data) = &ctx.parsed_data {
-            let msg = format!(
-                "🤖 **GPT-5.4 分析**: 未发现需要自动修复的高优先级问题。\n\n**总结**: {}",
-                data.summary
-            );
+            let msg = if ctx.pending_explanations.is_empty() {
+                format!(
+                    "🤖 **Codex GPT-5.5 分析**: 未发现需要自动修复的高优先级问题。\n\n**总结**: {}",
+                    data.summary
+                )
+            } else {
+                format!(
+                    "🤖 **Codex GPT-5.5 分析**: 存在未自动修复的问题，已保留原因。\n\n**总结**: {}\n{}",
+                    data.summary,
+                    pending_explanations_block(ctx)
+                )
+            };
             if ctx.enable_pr_comments {
                 repo::post_comment(ctx.pr_number, &msg)?;
             } else {
@@ -335,21 +496,142 @@ fn build_dry_run_comment(ctx: &SkillContext) -> String {
     } else {
         "⚠️ 安全扫描发现潜在风险"
     };
-    let score_info = format!("🏆 质量评分: {} 分", ctx.quality_score);
+    let score_info = quality_score_label(ctx);
 
     let mut files = ctx.fixed_files.clone();
     files.sort();
     files.dedup();
 
     format!(
-        "🤖 **Codex 已在本地生成并应用补丁，但未推送**\n\n原因：未传 `--yes`（auto_push=false），系统已进入 Dry-Run 模式。\n\n{}\n{}\n\n📄 本地变更文件：\n{}\n\n如确认无误，请在同一环境重新运行并加上 `--yes` 以提交并推送。",
+        "🤖 **Codex 已在本地生成并应用补丁，但未推送**\n\n原因：未传 `--yes`（auto_push=false），系统已进入 Dry-Run 模式。\n\n{}\n{}\n{}\n\n📄 本地变更文件：\n{}{}\n\n如确认无误，请在同一环境重新运行并加上 `--yes` 以提交并推送。",
         security_info,
         score_info,
+        build_fix_attempt_summary(&ctx.fix_attempts),
         files
             .iter()
             .map(|f| format!("- `{}`", f))
             .collect::<Vec<_>>()
+            .join("\n"),
+        pending_explanations_block(ctx)
+    )
+}
+
+fn pending_explanations_block(ctx: &SkillContext) -> String {
+    if ctx.pending_explanations.is_empty() {
+        return String::new();
+    }
+
+    format!(
+        "\n\n🧭 未自动修复说明：\n{}",
+        ctx.pending_explanations
+            .iter()
+            .map(|e| format!("- {}", e))
+            .collect::<Vec<_>>()
             .join("\n")
+    )
+}
+
+fn build_security_findings(ctx: &SkillContext) -> String {
+    if ctx.security_findings.is_empty() {
+        return "安全扫描未通过，但没有可展示的结构化 finding。".to_string();
+    }
+
+    format!(
+        "安全扫描发现：\n{}",
+        ctx.security_findings
+            .iter()
+            .map(|f| format!("- {}", f))
+            .collect::<Vec<_>>()
+            .join("\n")
+    )
+}
+
+fn parse_security_audit(raw: &str) -> Result<SecurityAuditResult, Box<dyn std::error::Error>> {
+    let json = clean_json_response(raw);
+    match serde_json::from_str::<SecurityAuditResult>(&json) {
+        Ok(result) => Ok(result),
+        Err(e) => Ok(SecurityAuditResult {
+            passed: false,
+            reason: format!("无法解析安全审计 JSON: {}; 原始输出: {}", e, raw.trim()),
+        }),
+    }
+}
+
+fn parse_quality_score(raw: &str) -> Result<u8, String> {
+    let trimmed = raw.trim();
+    if let Ok(score) = trimmed.parse::<u8>()
+        && score <= 100
+    {
+        return Ok(score);
+    }
+
+    let json = clean_json_response(raw);
+    let parsed: QualityScoreResult =
+        serde_json::from_str(&json).map_err(|e| format!("无法解析质量评分 JSON: {}", e))?;
+    if parsed.score > 100 {
+        return Err(format!("质量评分超出范围: {}", parsed.score));
+    }
+    Ok(parsed.score as u8)
+}
+
+fn clean_json_response(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if trimmed.starts_with("```") {
+        let without_start = trimmed
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim();
+        return without_start.trim_end_matches("```").trim().to_string();
+    }
+    trimmed.to_string()
+}
+
+fn quality_score_label(ctx: &SkillContext) -> String {
+    if ctx.quality_score_available {
+        format!("🏆 质量评分: {} 分", ctx.quality_score)
+    } else {
+        format!(
+            "🏆 质量评分: 不可用 ({})",
+            ctx.quality_score_reason
+                .as_deref()
+                .unwrap_or("模型输出不可解析")
+        )
+    }
+}
+
+fn build_fix_attempt_summary(attempts: &[FixAttempt]) -> String {
+    if attempts.is_empty() {
+        return "🧾 修复尝试：0 次".to_string();
+    }
+
+    let success = attempts.iter().filter(|a| a.success).count();
+    let failure = attempts.len().saturating_sub(success);
+    let reasons = attempts
+        .iter()
+        .filter(|a| !a.success)
+        .filter_map(|a| a.reason.as_ref())
+        .take(3)
+        .map(|r| format!("- {}", r))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if reasons.is_empty() {
+        format!("🧾 修复尝试：成功 {}，失败 {}", success, failure)
+    } else {
+        format!(
+            "🧾 修复尝试：成功 {}，失败 {}\n{}",
+            success, failure, reasons
+        )
+    }
+}
+
+pub(crate) fn review_issue_key(issue: &ReviewIssue) -> String {
+    format!(
+        "{}:{}:{}:{}",
+        issue.file,
+        issue.line.unwrap_or(0),
+        issue.severity,
+        issue.description
     )
 }
 
@@ -472,5 +754,83 @@ async fn generate_fix_patch(
         Ok(None)
     } else {
         Ok(Some(patch))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_security_audit_ignores_false_inside_reason_when_passed() {
+        let parsed = parse_security_audit(
+            r#"{"passed": true, "reason": "no false positive secrets found"}"#,
+        )
+        .unwrap();
+
+        assert!(parsed.passed);
+    }
+
+    #[test]
+    fn parse_security_audit_fails_closed_on_non_json() {
+        let parsed = parse_security_audit("passed: true").unwrap();
+
+        assert!(!parsed.passed);
+        assert!(parsed.reason.contains("无法解析安全审计 JSON"));
+    }
+
+    #[test]
+    fn parse_quality_score_accepts_json_and_numbers() {
+        assert_eq!(
+            parse_quality_score(r#"{"score": 91, "reason": "ok"}"#).unwrap(),
+            91
+        );
+        assert_eq!(parse_quality_score("87").unwrap(), 87);
+    }
+
+    #[test]
+    fn build_attempt_summary_counts_success_and_failure() {
+        let attempts = vec![
+            FixAttempt {
+                round: 1,
+                issue_key: "src/a.rs:1:Medium:a".to_string(),
+                file: "src/a.rs".to_string(),
+                stage: "patch_apply".to_string(),
+                success: true,
+                reason: None,
+            },
+            FixAttempt {
+                round: 1,
+                issue_key: "src/b.rs:1:Medium:b".to_string(),
+                file: "src/b.rs".to_string(),
+                stage: "patch_generation".to_string(),
+                success: false,
+                reason: Some("empty patch".to_string()),
+            },
+        ];
+
+        let summary = build_fix_attempt_summary(&attempts);
+
+        assert!(summary.contains("成功 1"));
+        assert!(summary.contains("失败 1"));
+        assert!(summary.contains("empty patch"));
+    }
+
+    #[test]
+    fn review_issue_key_distinguishes_same_file_issues() {
+        let first = ReviewIssue {
+            file: "src/a.rs".to_string(),
+            line: Some(10),
+            severity: "Medium".to_string(),
+            description: "first".to_string(),
+            suggestion: String::new(),
+            reason: None,
+        };
+        let second = ReviewIssue {
+            description: "second".to_string(),
+            ..first.clone()
+        };
+
+        assert_ne!(review_issue_key(&first), review_issue_key(&second));
     }
 }
