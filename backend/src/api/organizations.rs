@@ -34,7 +34,10 @@ pub fn create_router() -> Router<AppState> {
             get(list_members).post(add_member_by_email),
         )
         .route("/orgs/{org_id}/files", get(list_org_files))
-        .route("/orgs/{org_id}/files/{file_id}/link", post(link_file_to_org))
+        .route(
+            "/orgs/{org_id}/files/{file_id}/link",
+            post(link_file_to_org),
+        )
         .route(
             "/orgs/{org_id}/files/{file_id}/link",
             axum::routing::delete(unlink_file_from_org),

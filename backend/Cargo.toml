@@ -38,7 +38,7 @@ tower = { version = "0.5.3", features = ["limit", "load-shed"] }
 tower-http = { version = "0.6.8", features = ["cors", "trace", "timeout", "limit", "catch-panic"] }
 
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate", "macros"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -65,16 +65,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 mime = "0.3"
 mime_guess = "2.0"
 # 缩略图解码：启用默认格式以支持 jpeg/png/gif/webp/bmp/ico/tiff/tga/pnm 等
-image = "0.25.10"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "ico", "tiff", "tga", "pnm"] }
 gif = "0.13"
 
 # AWS S3
-aws-sdk-s3 = "1.131"
-aws-config = "1.8"
+aws-sdk-s3 = { version = "1.131", default-features = false, features = ["behavior-version-latest", "http-1x", "rt-tokio", "default-https-client"] }
+aws-config = { version = "1.8", default-features = false, features = ["behavior-version-latest", "rt-tokio", "rustls"] }
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
-validator = { version = "0.18", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 
 # Cache (bounded in-memory rate limit, etc.)
 moka = { version = "0.12.15", features = ["sync"] }
@@ -86,7 +86,7 @@ deadpool-redis = { version = "0.15", features = ["rt_tokio_1"] }
 fs2 = "0.4"
 httpdate = "1.0"
 percent-encoding = "2.3"
-reqwest = { version = "0.12", features = ["json", "stream", "gzip", "brotli", "deflate", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "gzip", "brotli", "deflate", "rustls-tls"] }
 url = "2.5"
 urlencoding = "2.1"
 

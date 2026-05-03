@@ -24,8 +24,8 @@ use crate::models::folder::{
     BatchMoveToFolderRequest, CreateFolderRequest, FolderListQuery, GetFilesInFoldersRequest,
     MoveFolderRequest, RenameFolderRequest,
 };
-use crate::services::folder::FolderService;
 use crate::services::cache::files::{CACHE_PREFIX_FOLDERS_CONTENTS, CACHE_PREFIX_FOLDERS_LIST};
+use crate::services::folder::FolderService;
 use crate::utils::{cache, json_response, AppError};
 use crate::AppState;
 
@@ -85,7 +85,9 @@ pub async fn list_folders_handler(
 
     // 尝试从缓存获取
     if let Some(pool) = &state.redis {
-        if let Some(cached) = cache::get_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_LIST, &parent_key).await {
+        if let Some(cached) =
+            cache::get_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_LIST, &parent_key).await
+        {
             return Ok(cached);
         }
     }
@@ -99,7 +101,15 @@ pub async fn list_folders_handler(
 
     // 回填缓存
     if let Some(pool) = &state.redis {
-        cache::set_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_LIST, &parent_key, &body, 60).await;
+        cache::set_cached_response(
+            pool,
+            user_id,
+            CACHE_PREFIX_FOLDERS_LIST,
+            &parent_key,
+            &body,
+            60,
+        )
+        .await;
     }
 
     Ok(json_response(body))
@@ -127,7 +137,10 @@ pub async fn get_folder_contents_handler(
 
     // 尝试从缓存获取
     if let Some(pool) = &state.redis {
-        if let Some(cached) = cache::get_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_CONTENTS, &parent_key).await {
+        if let Some(cached) =
+            cache::get_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_CONTENTS, &parent_key)
+                .await
+        {
             return Ok(cached);
         }
     }
@@ -141,7 +154,15 @@ pub async fn get_folder_contents_handler(
 
     // 回填缓存
     if let Some(pool) = &state.redis {
-        cache::set_cached_response(pool, user_id, CACHE_PREFIX_FOLDERS_CONTENTS, &parent_key, &body, 60).await;
+        cache::set_cached_response(
+            pool,
+            user_id,
+            CACHE_PREFIX_FOLDERS_CONTENTS,
+            &parent_key,
+            &body,
+            60,
+        )
+        .await;
     }
 
     Ok(json_response(body))

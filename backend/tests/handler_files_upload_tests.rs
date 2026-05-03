@@ -5,7 +5,10 @@
 
 mod common;
 
-use axum::{http::StatusCode, body::{Body as AxumBody, to_bytes}};
+use axum::{
+    body::{to_bytes, Body as AxumBody},
+    http::StatusCode,
+};
 use bytes::Bytes;
 use common::{
     app::{bearer_auth_header, build_test_app, login_and_get_token},
@@ -36,7 +39,10 @@ async fn test_upload_file_handler_happy_path() {
     let response = app
         .oneshot(
             axum::http::Request::post("/api/v1/files/upload")
-                .header("Content-Type", format!("multipart/form-data; boundary={boundary}"))
+                .header(
+                    "Content-Type",
+                    format!("multipart/form-data; boundary={boundary}"),
+                )
                 .header(auth_name, auth_value)
                 .body(AxumBody::from(body))
                 .unwrap(),
@@ -65,7 +71,10 @@ async fn test_upload_file_handler_no_file_field() {
     let response = app
         .oneshot(
             axum::http::Request::post("/api/v1/files/upload")
-                .header("Content-Type", format!("multipart/form-data; boundary={boundary}"))
+                .header(
+                    "Content-Type",
+                    format!("multipart/form-data; boundary={boundary}"),
+                )
                 .header(auth_name, auth_value)
                 .body(AxumBody::from(body))
                 .unwrap(),
@@ -94,7 +103,10 @@ async fn test_upload_file_handler_invalid_folder_id() {
     let response = app
         .oneshot(
             axum::http::Request::post("/api/v1/files/upload")
-                .header("Content-Type", format!("multipart/form-data; boundary={boundary}"))
+                .header(
+                    "Content-Type",
+                    format!("multipart/form-data; boundary={boundary}"),
+                )
                 .header(auth_name, auth_value)
                 .body(AxumBody::from(body))
                 .unwrap(),
@@ -233,7 +245,7 @@ async fn test_chunked_upload_init_handler_zero_size() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
-    
+
     let body_bytes = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
     let result: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
     assert!(result.get("upload_id").is_some());
@@ -276,18 +288,22 @@ async fn test_chunked_upload_chunk_handler_happy_path() {
     assert_eq!(init_response.status(), StatusCode::OK);
 
     // 解析 upload_id
-    let init_body_bytes = to_bytes(init_response.into_body(), 1024 * 1024).await.unwrap();
+    let init_body_bytes = to_bytes(init_response.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
     let init_result: serde_json::Value = serde_json::from_slice(&init_body_bytes).unwrap();
     let upload_id = init_result["upload_id"].as_str().unwrap();
 
     // 上传分块
     let chunk_response = app
         .oneshot(
-            axum::http::Request::put(&format!("/api/v1/files/upload/chunked/{upload_id}/chunk?part=1"))
-                .header("Content-Type", "application/octet-stream")
-                .header(auth_name, auth_value)
-                .body(AxumBody::from(Bytes::from_static(b"test chunk data")))
-                .unwrap(),
+            axum::http::Request::put(format!(
+                "/api/v1/files/upload/chunked/{upload_id}/chunk?part=1"
+            ))
+            .header("Content-Type", "application/octet-stream")
+            .header(auth_name, auth_value)
+            .body(AxumBody::from(Bytes::from_static(b"test chunk data")))
+            .unwrap(),
         )
         .await
         .unwrap();
@@ -309,11 +325,13 @@ async fn test_chunked_upload_chunk_handler_invalid_upload_id() {
 
     let response = app
         .oneshot(
-            axum::http::Request::put(&format!("/api/v1/files/upload/chunked/{invalid_upload_id}/chunk?part=1"))
-                .header("Content-Type", "application/octet-stream")
-                .header(auth_name, auth_value)
-                .body(AxumBody::from(Bytes::from_static(b"test chunk data")))
-                .unwrap(),
+            axum::http::Request::put(format!(
+                "/api/v1/files/upload/chunked/{invalid_upload_id}/chunk?part=1"
+            ))
+            .header("Content-Type", "application/octet-stream")
+            .header(auth_name, auth_value)
+            .body(AxumBody::from(Bytes::from_static(b"test chunk data")))
+            .unwrap(),
         )
         .await
         .unwrap();
@@ -354,14 +372,16 @@ async fn test_chunked_upload_status_handler_happy_path() {
         .await
         .unwrap();
 
-    let init_body_bytes = to_bytes(init_response.into_body(), 1024 * 1024).await.unwrap();
+    let init_body_bytes = to_bytes(init_response.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
     let init_result: serde_json::Value = serde_json::from_slice(&init_body_bytes).unwrap();
     let upload_id = init_result["upload_id"].as_str().unwrap();
 
     // 查询状态
     let response = app
         .oneshot(
-            axum::http::Request::get(&format!("/api/v1/files/upload/chunked/{upload_id}/status"))
+            axum::http::Request::get(format!("/api/v1/files/upload/chunked/{upload_id}/status"))
                 .header(auth_name, auth_value)
                 .body(AxumBody::empty())
                 .unwrap(),
@@ -386,10 +406,12 @@ async fn test_chunked_upload_status_handler_not_found() {
 
     let response = app
         .oneshot(
-            axum::http::Request::get(&format!("/api/v1/files/upload/chunked/{invalid_upload_id}/status"))
-                .header(auth_name, auth_value)
-                .body(AxumBody::empty())
-                .unwrap(),
+            axum::http::Request::get(format!(
+                "/api/v1/files/upload/chunked/{invalid_upload_id}/status"
+            ))
+            .header(auth_name, auth_value)
+            .body(AxumBody::empty())
+            .unwrap(),
         )
         .await
         .unwrap();
@@ -431,11 +453,19 @@ async fn test_chunked_upload_complete_handler_missing_chunks() {
         .unwrap();
 
     // 检查初始化响应是否成功
-    assert_eq!(init_response.status(), StatusCode::OK, "Failed to initialize upload");
-    
-    let init_body_bytes = to_bytes(init_response.into_body(), 1024 * 1024).await.unwrap();
+    assert_eq!(
+        init_response.status(),
+        StatusCode::OK,
+        "Failed to initialize upload"
+    );
+
+    let init_body_bytes = to_bytes(init_response.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
     let init_result: serde_json::Value = serde_json::from_slice(&init_body_bytes).unwrap();
-    let upload_id = init_result["upload_id"].as_str().expect("upload_id not found in response");
+    let upload_id = init_result["upload_id"]
+        .as_str()
+        .expect("upload_id not found in response");
 
     // 尝试完成但没有上传任何分块
     let complete_body = serde_json::json!({
@@ -445,18 +475,23 @@ async fn test_chunked_upload_complete_handler_missing_chunks() {
 
     let response = app
         .oneshot(
-            axum::http::Request::post(&format!("/api/v1/files/upload/chunked/{upload_id}/complete"))
+            axum::http::Request::post(format!("/api/v1/files/upload/chunked/{upload_id}/complete"))
                 .header("Content-Type", "application/json")
                 .header(auth_name, auth_value)
-                .body(AxumBody::from(serde_json::to_string(&complete_body).unwrap()))
+                .body(AxumBody::from(
+                    serde_json::to_string(&complete_body).unwrap(),
+                ))
                 .unwrap(),
         )
         .await
         .unwrap();
 
     // 实际返回的可能是 BAD_REQUEST 或其他状态码，让我们检查实际行为
-    assert!(response.status().is_client_error() || response.status().is_server_error(), 
-            "Expected error status, got: {:?}", response.status());
+    assert!(
+        response.status().is_client_error() || response.status().is_server_error(),
+        "Expected error status, got: {:?}",
+        response.status()
+    );
 }
 
 // ============================================================================
@@ -493,16 +528,24 @@ async fn test_chunked_upload_abort_handler_happy_path() {
         .unwrap();
 
     // 检查初始化响应是否成功
-    assert_eq!(init_response.status(), StatusCode::OK, "Failed to initialize upload");
-    
-    let init_body_bytes = to_bytes(init_response.into_body(), 1024 * 1024).await.unwrap();
+    assert_eq!(
+        init_response.status(),
+        StatusCode::OK,
+        "Failed to initialize upload"
+    );
+
+    let init_body_bytes = to_bytes(init_response.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
     let init_result: serde_json::Value = serde_json::from_slice(&init_body_bytes).unwrap();
-    let upload_id = init_result["upload_id"].as_str().expect("upload_id not found in response");
+    let upload_id = init_result["upload_id"]
+        .as_str()
+        .expect("upload_id not found in response");
 
     // 取消上传
     let response = app
         .oneshot(
-            axum::http::Request::delete(&format!("/api/v1/files/upload/chunked/{upload_id}/abort"))
+            axum::http::Request::delete(format!("/api/v1/files/upload/chunked/{upload_id}/abort"))
                 .header(auth_name, auth_value)
                 .body(AxumBody::empty())
                 .unwrap(),
@@ -527,10 +570,12 @@ async fn test_chunked_upload_abort_handler_not_found() {
 
     let response = app
         .oneshot(
-            axum::http::Request::delete(&format!("/api/v1/files/upload/chunked/{invalid_upload_id}/abort"))
-                .header(auth_name, auth_value)
-                .body(AxumBody::empty())
-                .unwrap(),
+            axum::http::Request::delete(format!(
+                "/api/v1/files/upload/chunked/{invalid_upload_id}/abort"
+            ))
+            .header(auth_name, auth_value)
+            .body(AxumBody::empty())
+            .unwrap(),
         )
         .await
         .unwrap();

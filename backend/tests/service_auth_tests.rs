@@ -8,14 +8,12 @@
 
 mod common;
 
-use common::{
-    cleanup_test_data, create_test_pool, create_test_user, init_test_env,
-};
+use common::{cleanup_test_data, create_test_pool, create_test_user, init_test_env};
 use file_storage_backend::{
     config::Config,
     models::api_token::CreateApiTokenRequest,
     models::user::{LoginRequest, RegisterRequest, UpdateProfileRequest},
-    repositories::{ApiTokensRepo, DynUsersRepo, SqlxUsersRepo},
+    repositories::{DynUsersRepo, SqlxUsersRepo},
     services::api_token::ApiTokenService,
     services::auth::{AuthService, AuthServiceError},
     services::cache::CacheService,
@@ -433,7 +431,10 @@ async fn test_api_token_verify_invalid() {
     let result = token_service.verify_token("invalid-token-12345").await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), file_storage_backend::utils::AppError::Unauthorized);
+    matches!(
+        result.err().unwrap(),
+        file_storage_backend::utils::AppError::Unauthorized
+    );
 }
 
 #[tokio::test]
@@ -506,7 +507,10 @@ async fn test_api_token_delete_nonexistent() {
     let result = token_service.delete_token(fake_token_id, user_id).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), file_storage_backend::utils::AppError::NotFound);
+    matches!(
+        result.err().unwrap(),
+        file_storage_backend::utils::AppError::NotFound
+    );
 }
 
 // ============================================================================
@@ -514,7 +518,7 @@ async fn test_api_token_delete_nonexistent() {
 // ============================================================================
 
 fn create_expired_token(config: &Config) -> String {
-    use jsonwebtoken::{encode, Header, EncodingKey};
+    use jsonwebtoken::{encode, EncodingKey, Header};
 
     #[derive(Debug, serde::Serialize, serde::Deserialize)]
     struct Claims {
@@ -533,5 +537,6 @@ fn create_expired_token(config: &Config) -> String {
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(config.auth.jwt_secret.as_ref()),
-    ).unwrap()
+    )
+    .unwrap()
 }

@@ -16,7 +16,10 @@ use deadpool_redis::Pool;
 use file_storage_backend::{
     config::{CacheConfig, Config},
     models::file::FileListQuery,
-    repositories::{DynFileVersionsRepo, DynFilesRepo, DynUsersRepo, SqlxFileVersionsRepo, SqlxFilesRepo, SqlxUsersRepo},
+    repositories::{
+        DynFileVersionsRepo, DynFilesRepo, DynUsersRepo, SqlxFileVersionsRepo, SqlxFilesRepo,
+        SqlxUsersRepo,
+    },
     services::file::FileService,
     services::redis::RedisService,
     services::storage::{LocalStorage, StorageBackend},
@@ -30,7 +33,9 @@ fn create_redis_pool() -> Option<Pool> {
     // 如果环境变量未设置，跳过 Redis 测试
     let redis_url = std::env::var("REDIS_URL").ok()?;
     let cfg = deadpool_redis::Config::from_url(redis_url);
-    let pool = cfg.create_pool(Some(deadpool_redis::Runtime::Tokio1)).ok()?;
+    let pool = cfg
+        .create_pool(Some(deadpool_redis::Runtime::Tokio1))
+        .ok()?;
     Some(pool)
 }
 
@@ -40,13 +45,10 @@ fn create_redis_pool() -> Option<Pool> {
 
 async fn create_test_service(pool: sqlx::PgPool) -> FileService {
     let config = Arc::new(Config::from_env().unwrap());
-    let storage: Arc<dyn StorageBackend> =
-        Arc::new(LocalStorage::new(config.storage.path.clone()));
+    let storage: Arc<dyn StorageBackend> = Arc::new(LocalStorage::new(config.storage.path.clone()));
 
-    let files_repo: DynFilesRepo = Arc::new(SqlxFilesRepo::new_with_replica(
-        pool.clone(),
-        pool.clone(),
-    ));
+    let files_repo: DynFilesRepo =
+        Arc::new(SqlxFilesRepo::new_with_replica(pool.clone(), pool.clone()));
     let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(pool.clone()));
     let file_versions_repo: DynFileVersionsRepo = Arc::new(SqlxFileVersionsRepo::new(pool.clone()));
 
@@ -295,7 +297,7 @@ async fn test_file_service_cache_invalidation_after_write() {
 
     let redis = RedisService::new(redis_pool.clone());
     let (user_id, _, _) = create_test_user(&pool, "cache_invalidate").await;
-    let file_id = create_test_file(&pool, user_id, "file1.txt").await;
+    let _file_id = create_test_file(&pool, user_id, "file1.txt").await;
 
     let service = create_test_service(pool.clone()).await;
     let cache_config = CacheConfig {

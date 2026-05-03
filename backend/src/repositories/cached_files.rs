@@ -80,14 +80,19 @@ impl FilesRepository for CachedFilesRepo {
         content_sha256: &str,
         file_size: u64,
     ) -> Result<Option<File>, AppError> {
-        self.inner.find_by_content_hash_and_size(content_sha256, file_size).await
+        self.inner
+            .find_by_content_hash_and_size(content_sha256, file_size)
+            .await
     }
 
     async fn count_by_file_path(&self, file_path: &str) -> Result<u64, AppError> {
         self.inner.count_by_file_path(file_path).await
     }
 
-    async fn count_by_file_paths(&self, paths: &[String]) -> Result<HashMap<String, u64>, AppError> {
+    async fn count_by_file_paths(
+        &self,
+        paths: &[String],
+    ) -> Result<HashMap<String, u64>, AppError> {
         self.inner.count_by_file_paths(paths).await
     }
 
@@ -105,7 +110,9 @@ impl FilesRepository for CachedFilesRepo {
         original_filename: &str,
         folder_id: Option<Uuid>,
     ) -> Result<Option<File>, AppError> {
-        self.inner.find_by_name_and_folder(user_id, original_filename, folder_id).await
+        self.inner
+            .find_by_name_and_folder(user_id, original_filename, folder_id)
+            .await
     }
 
     async fn rename(
@@ -114,7 +121,10 @@ impl FilesRepository for CachedFilesRepo {
         user_id: Uuid,
         original_filename: &str,
     ) -> Result<File, AppError> {
-        let result = self.inner.rename(file_id, user_id, original_filename).await?;
+        let result = self
+            .inner
+            .rename(file_id, user_id, original_filename)
+            .await?;
 
         // 写操作后失效缓存
         self.invalidate_cache(user_id).await;
@@ -122,7 +132,11 @@ impl FilesRepository for CachedFilesRepo {
         Ok(result)
     }
 
-    async fn list_by_folder(&self, user_id: Uuid, folder_id: Option<Uuid>) -> Result<Vec<File>, AppError> {
+    async fn list_by_folder(
+        &self,
+        user_id: Uuid,
+        folder_id: Option<Uuid>,
+    ) -> Result<Vec<File>, AppError> {
         self.inner.list_by_folder(user_id, folder_id).await
     }
 
@@ -155,7 +169,10 @@ impl FilesRepository for CachedFilesRepo {
         let (total_size, file_count) = self.inner.get_storage_usage(user_id).await?;
 
         // 回填缓存
-        let _ = self.cache.set_storage_usage(user_id, total_size, file_count).await;
+        let _ = self
+            .cache
+            .set_storage_usage(user_id, total_size, file_count)
+            .await;
 
         Ok((total_size, file_count))
     }
@@ -171,7 +188,10 @@ impl FilesRepository for CachedFilesRepo {
         category: Option<&str>,
         updated_at: DateTime<Utc>,
     ) -> Result<u64, AppError> {
-        let result = self.inner.update_category(user_id, ids, category, updated_at).await?;
+        let result = self
+            .inner
+            .update_category(user_id, ids, category, updated_at)
+            .await?;
 
         // 写操作后失效缓存
         self.invalidate_cache(user_id).await;
@@ -269,11 +289,18 @@ mod tests {
             Ok(0)
         }
 
-        async fn count_by_file_paths(&self, _paths: &[String]) -> Result<HashMap<String, u64>, AppError> {
+        async fn count_by_file_paths(
+            &self,
+            _paths: &[String],
+        ) -> Result<HashMap<String, u64>, AppError> {
             Ok(HashMap::new())
         }
 
-        async fn find_by_id(&self, _file_id: Uuid, _user_id: Uuid) -> Result<Option<File>, AppError> {
+        async fn find_by_id(
+            &self,
+            _file_id: Uuid,
+            _user_id: Uuid,
+        ) -> Result<Option<File>, AppError> {
             Ok(None)
         }
 
@@ -313,7 +340,11 @@ mod tests {
             })
         }
 
-        async fn list_by_folder(&self, _user_id: Uuid, _folder_id: Option<Uuid>) -> Result<Vec<File>, AppError> {
+        async fn list_by_folder(
+            &self,
+            _user_id: Uuid,
+            _folder_id: Option<Uuid>,
+        ) -> Result<Vec<File>, AppError> {
             Ok(Vec::new())
         }
 
@@ -343,7 +374,11 @@ mod tests {
             Ok(1)
         }
 
-        async fn sum_size_for_ids(&self, _user_id: Uuid, _ids: &[Uuid]) -> Result<(i64, i64), AppError> {
+        async fn sum_size_for_ids(
+            &self,
+            _user_id: Uuid,
+            _ids: &[Uuid],
+        ) -> Result<(i64, i64), AppError> {
             Ok((0, 0))
         }
 
@@ -359,7 +394,11 @@ mod tests {
             Ok(Vec::new())
         }
 
-        async fn list(&self, _user_id: Uuid, _query: FileListQuery) -> Result<FileListResult, AppError> {
+        async fn list(
+            &self,
+            _user_id: Uuid,
+            _query: FileListQuery,
+        ) -> Result<FileListResult, AppError> {
             Ok(FileListResult {
                 files: Vec::new(),
                 total: Some(0),

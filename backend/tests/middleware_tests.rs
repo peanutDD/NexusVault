@@ -6,11 +6,8 @@
 
 mod common;
 
-use common::{init_test_env};
-use file_storage_backend::{
-    middleware::rate_limit::{create_rate_limit_middleware, RateLimitState},
-    utils::AppError,
-};
+use common::init_test_env;
+use file_storage_backend::{middleware::rate_limit::create_rate_limit_middleware, utils::AppError};
 use std::time::Duration;
 
 // ============================================================================
@@ -78,7 +75,7 @@ async fn test_auth_middleware_verify_token_expired() {
 // ============================================================================
 
 fn generate_test_token(jwt_secret: &str, user_id: &uuid::Uuid) -> String {
-    use jsonwebtoken::{encode, Header, EncodingKey};
+    use jsonwebtoken::{encode, EncodingKey, Header};
     use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -99,11 +96,12 @@ fn generate_test_token(jwt_secret: &str, user_id: &uuid::Uuid) -> String {
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(jwt_secret.as_ref()),
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 fn create_expired_token(jwt_secret: &str) -> String {
-    use jsonwebtoken::{encode, Header, EncodingKey};
+    use jsonwebtoken::{encode, EncodingKey, Header};
     use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -123,7 +121,8 @@ fn create_expired_token(jwt_secret: &str) -> String {
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(jwt_secret.as_ref()),
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 fn verify_token_simple(jwt_secret: &str, token: &str) -> Result<uuid::Uuid, AppError> {
@@ -141,9 +140,11 @@ fn verify_token_simple(jwt_secret: &str, token: &str) -> Result<uuid::Uuid, AppE
         token,
         &DecodingKey::from_secret(jwt_secret.as_ref()),
         &Validation::default(),
-    ).map_err(|_| AppError::Unauthorized)?;
+    )
+    .map_err(|_| AppError::Unauthorized)?;
 
-    let user_id = uuid::Uuid::parse_str(&token_data.claims.sub).map_err(|_| AppError::Unauthorized)?;
+    let user_id =
+        uuid::Uuid::parse_str(&token_data.claims.sub).map_err(|_| AppError::Unauthorized)?;
 
     Ok(user_id)
 }
@@ -158,10 +159,10 @@ async fn test_rate_limit_ip_basic() {
 
     // 创建限流状态：IP最多3次请求，窗口1秒
     let state = create_rate_limit_middleware(
-        3,  // ip_max_requests
-        10, // user_max_requests
-        1,  // window_seconds
-        100, // max_keys
+        3,    // ip_max_requests
+        10,   // user_max_requests
+        1,    // window_seconds
+        100,  // max_keys
         None, // redis
     );
 
@@ -181,10 +182,10 @@ async fn test_rate_limit_ip_different_ips() {
     init_test_env();
 
     let state = create_rate_limit_middleware(
-        2,  // ip_max_requests
-        10, // user_max_requests
-        1,  // window_seconds
-        100, // max_keys
+        2,    // ip_max_requests
+        10,   // user_max_requests
+        1,    // window_seconds
+        100,  // max_keys
         None, // redis
     );
 
@@ -203,10 +204,10 @@ async fn test_rate_limit_user_basic() {
     init_test_env();
 
     let state = create_rate_limit_middleware(
-        10, // ip_max_requests
-        2,  // user_max_requests
-        1,  // window_seconds
-        100, // max_keys
+        10,   // ip_max_requests
+        2,    // user_max_requests
+        1,    // window_seconds
+        100,  // max_keys
         None, // redis
     );
 
@@ -225,10 +226,10 @@ async fn test_rate_limit_user_different_users() {
     init_test_env();
 
     let state = create_rate_limit_middleware(
-        10, // ip_max_requests
-        2,  // user_max_requests
-        1,  // window_seconds
-        100, // max_keys
+        10,   // ip_max_requests
+        2,    // user_max_requests
+        1,    // window_seconds
+        100,  // max_keys
         None, // redis
     );
 
@@ -247,10 +248,10 @@ async fn test_rate_limit_window_reset() {
     init_test_env();
 
     let state = create_rate_limit_middleware(
-        2,  // ip_max_requests
-        10, // user_max_requests
-        1,  // window_seconds
-        100, // max_keys
+        2,    // ip_max_requests
+        10,   // user_max_requests
+        1,    // window_seconds
+        100,  // max_keys
         None, // redis
     );
 
@@ -259,7 +260,7 @@ async fn test_rate_limit_window_reset() {
     // 前2次通过
     assert!(state.check_ip_rate_limit(ip_key).await);
     assert!(state.check_ip_rate_limit(ip_key).await);
-    
+
     // 第3次被限流
     assert!(!state.check_ip_rate_limit(ip_key).await);
 
@@ -275,10 +276,10 @@ async fn test_rate_limit_both_ip_and_user() {
     init_test_env();
 
     let state = create_rate_limit_middleware(
-        5,  // ip_max_requests
-        3,  // user_max_requests
-        1,  // window_seconds
-        100, // max_keys
+        5,    // ip_max_requests
+        3,    // user_max_requests
+        1,    // window_seconds
+        100,  // max_keys
         None, // redis
     );
 

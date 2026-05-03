@@ -93,12 +93,7 @@ impl FileCacheService {
     // 缓存键生成（确定性哈希）
     // -------------------------------------------------------------------------
 
-    fn build_list_cache_key(
-        &self,
-        user_id: Uuid,
-        version: i64,
-        query: &FileListQuery,
-    ) -> String {
+    fn build_list_cache_key(&self, user_id: Uuid, version: i64, query: &FileListQuery) -> String {
         let fingerprint = format!(
             "page={:?}&limit={:?}&pagination={:?}&cursor={:?}&search={:?}&mime_type={:?}&category={:?}&folder_id={:?}&date_from={:?}&date_to={:?}&size_min={:?}&size_max={:?}&sort_by={:?}&sort_order={:?}&include_total={:?}",
             query.page,
@@ -118,7 +113,10 @@ impl FileCacheService {
             query.include_total,
         );
         let hash = sha256_hex(fingerprint.as_bytes());
-        format!("{}:{}:{}:{}", CACHE_PREFIX_FILES_LIST, user_id, version, hash)
+        format!(
+            "{}:{}:{}:{}",
+            CACHE_PREFIX_FILES_LIST, user_id, version, hash
+        )
     }
 
     fn build_storage_usage_key(&self, user_id: Uuid, version: i64) -> String {
@@ -142,7 +140,7 @@ impl FileCacheService {
         }
 
         // 有搜索条件不缓存（高基数）
-        if query.search.as_deref().map_or(false, |s| !s.is_empty()) {
+        if query.search.as_deref().is_some_and(|s| !s.is_empty()) {
             return false;
         }
 
@@ -178,15 +176,13 @@ impl FileCacheService {
                     cmd("GET").arg(&cache_key).query_async(&mut conn).await;
 
                 match cached {
-                    Ok(Some(s)) => {
-                        match serde_json::from_str::<CachedFileListResponse>(&s) {
-                            Ok(cached_response) => Ok(Some(cached_response.into())),
-                            Err(e) => {
-                                tracing::warn!(error = %e, "Failed to deserialize cached file list");
-                                Ok(None)
-                            }
+                    Ok(Some(s)) => match serde_json::from_str::<CachedFileListResponse>(&s) {
+                        Ok(cached_response) => Ok(Some(cached_response.into())),
+                        Err(e) => {
+                            tracing::warn!(error = %e, "Failed to deserialize cached file list");
+                            Ok(None)
                         }
-                    }
+                    },
                     Ok(None) => Ok(None),
                     Err(e) => {
                         tracing::warn!(error = %e, "Redis GET failed for file list cache");
@@ -217,21 +213,19 @@ impl FileCacheService {
         let cached_response: CachedFileListResponse = result.into();
 
         match serde_json::to_string(&cached_response) {
-            Ok(body) => {
-                match self.redis.pool().get().await {
-                    Ok(mut conn) => {
-                        let _: Result<(), _> = cmd("SETEX")
-                            .arg(&cache_key)
-                            .arg(self.config.list_ttl_secs)
-                            .arg(body)
-                            .query_async(&mut conn)
-                            .await;
-                    }
-                    Err(e) => {
-                        tracing::warn!(error = %e, "Redis connection failed for set file list");
-                    }
+            Ok(body) => match self.redis.pool().get().await {
+                Ok(mut conn) => {
+                    let _: Result<(), _> = cmd("SETEX")
+                        .arg(&cache_key)
+                        .arg(self.config.list_ttl_secs)
+                        .arg(body)
+                        .query_async(&mut conn)
+                        .await;
                 }
-            }
+                Err(e) => {
+                    tracing::warn!(error = %e, "Redis connection failed for set file list");
+                }
+            },
             Err(e) => {
                 tracing::warn!(error = %e, "Failed to serialize file list for cache");
             }
@@ -245,10 +239,7 @@ impl FileCacheService {
     // -------------------------------------------------------------------------
 
     /// 获取存储用量缓存
-    pub async fn get_storage_usage(
-        &self,
-        user_id: Uuid,
-    ) -> Result<Option<(i64, u64)>, AppError> {
+    pub async fn get_storage_usage(&self, user_id: Uuid) -> Result<Option<(i64, u64)>, AppError> {
         if !self.config.enabled {
             return Ok(None);
         }
@@ -263,9 +254,10 @@ impl FileCacheService {
 
                 match cached {
                     Ok(Some(s)) => match serde_json::from_str::<CachedStorageUsage>(&s) {
-                        Ok(cached_response) => {
-                            Ok(Some((cached_response.total_size, cached_response.file_count)))
-                        }
+                        Ok(cached_response) => Ok(Some((
+                            cached_response.total_size,
+                            cached_response.file_count,
+                        ))),
                         Err(e) => {
                             tracing::warn!(error = %e, "Failed to deserialize cached storage usage");
                             Ok(None)
@@ -286,7 +278,12 @@ impl FileCacheService {
     }
 
     /// 设置存储用量缓存
-    pub async fn set_storage_usage(&self, user_id: Uuid, total_size: i64, file_count: u64) -> Result<(), AppError> {
+    pub async fn set_storage_usage(
+        &self,
+        user_id: Uuid,
+        total_size: i64,
+        file_count: u64,
+    ) -> Result<(), AppError> {
         if !self.config.enabled {
             return Ok(());
         }
@@ -294,24 +291,25 @@ impl FileCacheService {
         let version = self.get_user_cache_version(user_id).await?;
         let cache_key = self.build_storage_usage_key(user_id, version);
 
-        let cached_response = CachedStorageUsage { total_size, file_count };
+        let cached_response = CachedStorageUsage {
+            total_size,
+            file_count,
+        };
 
         match serde_json::to_string(&cached_response) {
-            Ok(body) => {
-                match self.redis.pool().get().await {
-                    Ok(mut conn) => {
-                        let _: Result<(), _> = cmd("SETEX")
-                            .arg(&cache_key)
-                            .arg(self.config.default_ttl_secs)
-                            .arg(body)
-                            .query_async(&mut conn)
-                            .await;
-                    }
-                    Err(e) => {
-                        tracing::warn!(error = %e, "Redis connection failed for set storage usage");
-                    }
+            Ok(body) => match self.redis.pool().get().await {
+                Ok(mut conn) => {
+                    let _: Result<(), _> = cmd("SETEX")
+                        .arg(&cache_key)
+                        .arg(self.config.default_ttl_secs)
+                        .arg(body)
+                        .query_async(&mut conn)
+                        .await;
                 }
-            }
+                Err(e) => {
+                    tracing::warn!(error = %e, "Redis connection failed for set storage usage");
+                }
+            },
             Err(e) => {
                 tracing::warn!(error = %e, "Failed to serialize storage usage for cache");
             }
@@ -349,8 +347,10 @@ mod tests {
     /// 创建测试用的 FileCacheService（不依赖真实 Redis）
     fn create_test_service() -> FileCacheService {
         let config = deadpool_redis::Config::from_url("redis://localhost:6379");
-        let pool = config.create_pool(Some(deadpool_redis::Runtime::Tokio1)).unwrap();
-        
+        let pool = config
+            .create_pool(Some(deadpool_redis::Runtime::Tokio1))
+            .unwrap();
+
         FileCacheService {
             redis: RedisService::new(pool),
             config: Arc::new(CacheConfig {

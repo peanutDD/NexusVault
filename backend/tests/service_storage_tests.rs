@@ -8,7 +8,7 @@
 
 mod common;
 
-use common::{init_test_env};
+use common::init_test_env;
 use file_storage_backend::{
     services::storage::{LocalStorage, StorageBackend},
     utils::AppError,
@@ -35,7 +35,10 @@ async fn test_local_storage_save_and_get_file() {
     let data = b"Hello, World!";
 
     // 保存文件
-    let file_path = storage.save_file(user_id, file_id, filename, data).await.unwrap();
+    let file_path = storage
+        .save_file(user_id, file_id, filename, data)
+        .await
+        .unwrap();
     assert!(!file_path.is_empty());
 
     // 读取文件
@@ -56,7 +59,9 @@ async fn test_local_storage_save_file_from_path() {
 
     // 创建源文件
     let source_path = temp_dir.path().join("source.txt");
-    tokio::fs::write(&source_path, b"Content from file").await.unwrap();
+    tokio::fs::write(&source_path, b"Content from file")
+        .await
+        .unwrap();
 
     // 从路径保存文件
     let file_path = storage
@@ -82,7 +87,10 @@ async fn test_local_storage_delete_file() {
     let data = b"Will be deleted";
 
     // 保存文件
-    let file_path = storage.save_file(user_id, file_id, filename, data).await.unwrap();
+    let file_path = storage
+        .save_file(user_id, file_id, filename, data)
+        .await
+        .unwrap();
 
     // 验证文件存在
     assert!(storage.get_file(&file_path).await.is_ok());
@@ -134,7 +142,10 @@ async fn test_local_storage_thumbnail_operations() {
     let thumbnail_data = b"thumbnail data";
 
     // 保存缩略图
-    storage.save_thumbnail(file_id, user_id, thumbnail_data).await.unwrap();
+    storage
+        .save_thumbnail(file_id, user_id, thumbnail_data)
+        .await
+        .unwrap();
 
     // 获取缩略图
     let read_data = storage.get_thumbnail(file_id, user_id).await.unwrap();
@@ -178,13 +189,19 @@ async fn test_local_storage_open_read_stream() {
     let data = b"Streamable content";
 
     // 保存文件
-    let file_path = storage.save_file(user_id, file_id, filename, data).await.unwrap();
+    let file_path = storage
+        .save_file(user_id, file_id, filename, data)
+        .await
+        .unwrap();
 
     // 打开读取流
     let stream = storage.open_read_stream(&file_path).await.unwrap();
 
     // 验证流类型
-    matches!(stream, file_storage_backend::services::storage::StorageReadStream::Local(_));
+    matches!(
+        stream,
+        file_storage_backend::services::storage::StorageReadStream::Local(_)
+    );
 }
 
 #[tokio::test]
@@ -200,13 +217,22 @@ async fn test_local_storage_open_read_stream_range() {
     let data = b"0123456789ABCDEFGHIJ";
 
     // 保存文件
-    let file_path = storage.save_file(user_id, file_id, filename, data).await.unwrap();
+    let file_path = storage
+        .save_file(user_id, file_id, filename, data)
+        .await
+        .unwrap();
 
     // 打开区间读取流
-    let stream = storage.open_read_stream_range(&file_path, 5, 14).await.unwrap();
+    let stream = storage
+        .open_read_stream_range(&file_path, 5, 14)
+        .await
+        .unwrap();
 
     // 验证流类型
-    matches!(stream, file_storage_backend::services::storage::StorageReadStream::Local(_));
+    matches!(
+        stream,
+        file_storage_backend::services::storage::StorageReadStream::Local(_)
+    );
 }
 
 #[tokio::test]
@@ -241,7 +267,10 @@ async fn test_local_storage_file_path_format() {
     let filename = "test_file.txt";
     let data = b"test";
 
-    let file_path = storage.save_file(user_id, file_id, filename, data).await.unwrap();
+    let file_path = storage
+        .save_file(user_id, file_id, filename, data)
+        .await
+        .unwrap();
 
     // 验证路径格式包含用户 ID 和文件 ID
     assert!(file_path.contains("12345678-1234-1234-1234-123456789abc"));
@@ -268,11 +297,17 @@ async fn test_local_storage_multi_user_isolation() {
 
     // 用户1保存文件
     let data1 = b"User 1's secret data";
-    let path1 = storage.save_file(user1_id, file_id1, "secret.txt", data1).await.unwrap();
+    let path1 = storage
+        .save_file(user1_id, file_id1, "secret.txt", data1)
+        .await
+        .unwrap();
 
     // 用户2保存同名文件
     let data2 = b"User 2's secret data";
-    let path2 = storage.save_file(user2_id, file_id2, "secret.txt", data2).await.unwrap();
+    let path2 = storage
+        .save_file(user2_id, file_id2, "secret.txt", data2)
+        .await
+        .unwrap();
 
     // 验证路径不同
     assert_ne!(path1, path2);
@@ -297,12 +332,15 @@ async fn test_local_storage_user_cannot_access_other_user_files() {
     // 用户1保存文件
     let file_id = Uuid::new_v4();
     let data = b"Secret data";
-    let path = storage.save_file(user1_id, file_id, "secret.txt", data).await.unwrap();
+    let path = storage
+        .save_file(user1_id, file_id, "secret.txt", data)
+        .await
+        .unwrap();
 
     // 用户2尝试读取用户1的文件（通过直接路径）
     // 这里验证存储后端的文件隔离机制
     assert!(storage.get_file(&path).await.is_ok());
-    
+
     // 验证路径包含用户1的ID，确保隔离
     assert!(path.contains(&user1_id.to_string()));
     assert!(!path.contains(&user2_id.to_string()));
@@ -324,7 +362,10 @@ async fn test_local_storage_directories_created() {
     let data = b"test data";
 
     // 保存文件会自动创建目录结构
-    let path = storage.save_file(user_id, file_id, "test.txt", data).await.unwrap();
+    let path = storage
+        .save_file(user_id, file_id, "test.txt", data)
+        .await
+        .unwrap();
 
     // 验证目录存在
     let dir_path = Path::new(&path).parent().unwrap();
@@ -344,7 +385,10 @@ async fn test_local_storage_empty_data() {
     let data = b"";
 
     // 保存空文件
-    let path = storage.save_file(user_id, file_id, "empty.txt", data).await.unwrap();
+    let path = storage
+        .save_file(user_id, file_id, "empty.txt", data)
+        .await
+        .unwrap();
 
     // 读取空文件
     let read_data = storage.get_file(&path).await.unwrap();
@@ -364,7 +408,10 @@ async fn test_local_storage_large_filename() {
     let data = b"test";
 
     // 保存长文件名
-    let path = storage.save_file(user_id, file_id, &long_filename, data).await.unwrap();
+    let path = storage
+        .save_file(user_id, file_id, &long_filename, data)
+        .await
+        .unwrap();
 
     // 验证文件存在
     assert!(Path::new(&path).exists());

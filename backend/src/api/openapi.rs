@@ -62,5 +62,6 @@ where
 {
     use utoipa_swagger_ui::SwaggerUi;
 
-    axum::Router::new().merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+    axum::Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
 }
