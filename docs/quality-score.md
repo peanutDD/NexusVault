@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-04 | chunked upload CORS header fix | 95 | 修复浏览器分片上传预检失败：后端 CORS 允许 `X-Part-SHA256`，新增预检回归测试和 C-024 永久约束。 |
 | 2026-05-04 | upload completeness hardening | 96 | P0-P3 上传链路补强：folder ownership 校验覆盖普通/秒传/分片完成，上传 handler DB 测试用 `serial_test` 隔离；前端实现可恢复分片会话与每片 SHA，后端校验分片 SHA 和大小；秒传跨用户复制改存储层 copy，分片完成打 metrics；删除未使用 `useFileUpload`，测试迁到实际 UploadDialog controller。目标前后端测试通过。 |
 | 2026-05-04 | themed tech dialogs | 94 | 文件操作 glass 弹窗统一升级为主题化科技视觉：`ConfirmDialog` 覆盖新建/批量移动/批量删除/批量分享/重命名/删除，`Modal` 覆盖单文件分享；新增行为不变回归测试，前端 lint/test/build 通过。 |
 | 2026-05-04 | codex-cli toolbox extraction design | 94 | 整理 `scripts/codex-cli` 独立工具箱改造设计，明确当前可复用能力、Gemini/GitHub/仓库规则耦合点、配置文件方案、P0-P3 改造清单、迁移步骤与验收标准。 |

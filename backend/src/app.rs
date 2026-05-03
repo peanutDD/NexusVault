@@ -163,6 +163,70 @@ fn create_cors_layer(config: &Config) -> CorsLayer {
             axum::http::header::ACCEPT,
             axum::http::header::ORIGIN,
             axum::http::header::RANGE,
+            axum::http::HeaderName::from_static("x-part-sha256"),
         ])
         .allow_credentials(allow_credentials)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{
+            header::{
+                ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_REQUEST_HEADERS,
+                ACCESS_CONTROL_REQUEST_METHOD, ORIGIN,
+            },
+            Method, Request,
+        },
+        routing::put,
+    };
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn cors_preflight_allows_chunked_part_checksum_header() {
+        let mut config = Config::default_for_test();
+        config.server.cors_origin = "http://192.168.0.108:5173".to_string();
+
+        let app = Router::new()
+            .route(
+                "/api/files/upload/chunked/{id}/chunk",
+                put(|| async { StatusCode::OK }),
+            )
+            .layer(create_cors_layer(&config));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::OPTIONS)
+                    .uri("/api/files/upload/chunked/test-upload/chunk?part=1")
+                    .header(ORIGIN, "http://192.168.0.108:5173")
+                    .header(ACCESS_CONTROL_REQUEST_METHOD, "PUT")
+                    .header(
+                        ACCESS_CONTROL_REQUEST_HEADERS,
+                        "x-part-sha256, authorization, content-type",
+                    )
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let allowed_headers = response
+            .headers()
+            .get(ACCESS_CONTROL_ALLOW_HEADERS)
+            .expect("preflight should return allowed headers")
+            .to_str()
+            .unwrap()
+            .to_ascii_lowercase();
+
+        assert!(
+            allowed_headers
+                .split(',')
+                .any(|header| header.trim() == "x-part-sha256"),
+            "allowed headers should include x-part-sha256, got: {allowed_headers}"
+        );
+    }
 }
