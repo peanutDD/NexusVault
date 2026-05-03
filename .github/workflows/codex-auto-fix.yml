@@ -5,8 +5,6 @@ on:
     types: [created]
   pull_request_review:
     types: [submitted]
-  pull_request:
-    types: [opened, reopened, ready_for_review, synchronize]
 
 permissions:
   contents: write
@@ -15,54 +13,13 @@ permissions:
   statuses: read
 
 concurrency:
-  group: ai-auto-fix-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  group: codex-auto-fix-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false
 
 env:
   MAX_ROUNDS: 2
-  GEMINI_BOT: gemini-code-assist[bot]
-  GEMINI_TRIGGER_MARKER: "## Gemini Code Assist Review"
 
 jobs:
-  gemini-kickoff:
-    if: >
-      github.event_name == 'pull_request'
-      && github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    steps:
-      - name: 自动触发 Gemini Review（首轮/更新）
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          
-          LAST_COMMIT_AT="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.committer.date')"
-          
-          LAST_REQUEST_AT="$(
-            gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate --jq '
-              [
-                .[]
-                | select(.body | startswith("/gemini review"))
-                | select(.user.login == "github-actions[bot]")
-                | .created_at
-              ]
-              | sort
-              | last
-              // ""
-            '
-          )"
-          
-          if [[ -n "${LAST_REQUEST_AT}" && "${LAST_REQUEST_AT}" > "${LAST_COMMIT_AT}" ]]; then
-            echo "Skip: already requested after latest commit. last_request_at=${LAST_REQUEST_AT} last_commit_at=${LAST_COMMIT_AT}"
-            exit 0
-          fi
-          
-          echo "Requesting Gemini review. last_request_at=${LAST_REQUEST_AT:-none} last_commit_at=${LAST_COMMIT_AT}"
-          gh pr comment "${PR_NUMBER}" --body "/gemini review"
-
   codex-fix:
     if: >
       (
@@ -90,7 +47,6 @@ jobs:
       - name: Checkout PR 分支
         run: |
           gh pr checkout "${PR_NUMBER}"
-          # 配置 Git 用户以防提交失败
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
         env:
@@ -99,9 +55,8 @@ jobs:
       - name: 获取当前轮次标签
         id: round
         run: |
-          # 获取 PR 标签列表
           LABELS=$(gh pr view "${PR_NUMBER}" --json labels -q '.labels[].name')
-          
+
           ROUND_LABEL="gemini-review-round-1"
           for label in $LABELS; do
             if [[ "$label" == gemini-review-round-* ]]; then
@@ -109,7 +64,7 @@ jobs:
               break
             fi
           done
-          echo "current_round=$ROUND_LABEL" >> $GITHUB_OUTPUT
+          echo "current_round=$ROUND_LABEL" >> "$GITHUB_OUTPUT"
           echo "Current detected round: $ROUND_LABEL"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -132,7 +87,6 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           RAW_COMMENT_BODY: ${{ github.event.comment.body || github.event.review.body || '' }}
         run: |
-          # 使用中间 env 变量安全注入多行内容
           REVIEW_TEXT="$RAW_COMMENT_BODY"
 
           if [[ "$EVENT_NAME" == "pull_request_review" && -n "${REVIEW_ID}" ]]; then
@@ -150,9 +104,9 @@ jobs:
           fi
 
           DELIM="REVIEW_BODY_$(date +%s%N)_${RANDOM}"
-          echo "REVIEW_BODY<<${DELIM}" >> $GITHUB_ENV
-          echo "$REVIEW_TEXT" >> $GITHUB_ENV
-          echo "${DELIM}" >> $GITHUB_ENV
+          echo "REVIEW_BODY<<${DELIM}" >> "$GITHUB_ENV"
+          echo "$REVIEW_TEXT" >> "$GITHUB_ENV"
+          echo "${DELIM}" >> "$GITHUB_ENV"
 
       - name: 调用 codex-auto-fix pr-auto-fix
         if: steps.round.outputs.current_round != 'gemini-review-round-max'
@@ -176,44 +130,37 @@ jobs:
             exit 1
           fi
 
-          # 1. 直接调用自动修复器
-          # 它会自动完成: Parse -> Decide -> Generate -> Apply -> Commit
-          # 注意：我们在 Rust 内部已经处理了 Git 操作和推送，所以这里只需要捕获结果
           RESULT=$(codex-auto-fix pr-auto-fix \
             --pr-number "${PR_NUMBER}" \
             --gemini-review "$REVIEW_BODY" \
             --max-rounds ${{ env.MAX_ROUNDS }} \
             --yes)
-          
+
           echo "skill_result<<EOF" >> "$GITHUB_OUTPUT"
           echo "$RESULT" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          
-          # 检查是否真的修复了文件 (从 JSON 结果中提取)
+
           FIXED=$(echo "$RESULT" | jq -r '.fixed')
           PUSH_BLOCKED=$(echo "$RESULT" | jq -r '.push_blocked // false')
-          echo "fixed=$FIXED" >> $GITHUB_OUTPUT
-          echo "push_blocked=$PUSH_BLOCKED" >> $GITHUB_OUTPUT
+          echo "fixed=$FIXED" >> "$GITHUB_OUTPUT"
+          echo "push_blocked=$PUSH_BLOCKED" >> "$GITHUB_OUTPUT"
 
       - name: 升级轮次标签 (基于 Skill 返回结果)
         if: steps.round.outputs.current_round != 'gemini-review-round-max' && steps.codex.outputs.fixed == 'true'
         run: |
-          # 确定下一轮标签
           CURRENT="${{ steps.round.outputs.current_round }}"
           NEXT="gemini-review-round-max"
-          
+
           if [[ "$CURRENT" == "gemini-review-round-1" ]]; then
             NEXT="gemini-review-round-2"
           elif [[ "$CURRENT" == "gemini-review-round-2" ]]; then
             NEXT="gemini-review-round-max"
           fi
-          
-          # 升级标签
+
           gh pr edit "${PR_NUMBER}" --remove-label "$CURRENT" || true
           gh pr edit "${PR_NUMBER}" --add-label "$NEXT"
           echo "🏷️ 标签升级: $CURRENT -> $NEXT"
 
-          # 触发下一轮或结束
           if [[ "$NEXT" != "gemini-review-round-max" ]]; then
             gh pr comment "${PR_NUMBER}" --body "/gemini review"
             echo "🚀 已请求 Gemini 下一轮 Review"
