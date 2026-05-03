@@ -16,7 +16,9 @@ Review and upgrade the frontend upload path so cancel/remove behavior, validatio
 
 - Browser `File.type` is often empty, so validation must not rely only on MIME.
 - Cancelling a UI item without aborting transport can leave hidden uploads alive.
+- Cancelling a running queue item can hang the upload batch if the queue Promise never settles.
 - Chunked upload retries can leave server sessions behind unless failures are cleaned up.
+- URL upload can read a very large remote body into browser memory before local validation runs.
 
 ## Dependencies
 
@@ -30,5 +32,7 @@ Review and upgrade the frontend upload path so cancel/remove behavior, validatio
 2. Add `AbortSignal` propagation through hashing and upload service methods.
 3. Wire UI remove/clear actions to abort queued and running uploads.
 4. Add MIME fallback validation for common extensions and block dangerous extensions.
-5. Add regression tests and permanent constraint docs.
-6. Run targeted tests, lint, typecheck, and build.
+5. Add URL upload size preflight before `response.blob()` and filename fallback from `Content-Disposition`.
+6. Ensure queued and running upload cancellation settles the queue Promise.
+7. Add regression tests and permanent constraint docs.
+8. Run targeted tests, lint, typecheck, and build.

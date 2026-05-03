@@ -121,6 +121,10 @@ export function useUploadDialogController({
     uploadQueue.clear();
   }, []);
 
+  useEffect(() => {
+    return () => cancelAllUploads();
+  }, [cancelAllUploads]);
+
   const appendFilesToState = useCallback(
     (files: File[]) => {
       if (files.length === 0) return;
@@ -283,7 +287,9 @@ export function useUploadDialogController({
       }),
     );
 
-    isUploadingRef.current = false;
+    isUploadingRef.current = uploadFilesRef.current.some(
+      (f) => f.status === "uploading",
+    );
     if (hasNewSuccess) onUploadComplete();
   }, [folderId, onClose, onUploadComplete, updateUploadFiles]);
 

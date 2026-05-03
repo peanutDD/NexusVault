@@ -171,6 +171,10 @@ export function getMaxFileSizeMB(): number {
   return MAX_FILE_SIZE / (1024 * 1024);
 }
 
+export function getMaxFileSizeBytes(): number {
+  return MAX_FILE_SIZE;
+}
+
 export function getMaxFileSizeGB(): number {
   return MAX_FILE_SIZE / (1024 * 1024 * 1024);
 }

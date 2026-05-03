@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { cn } from "../../../utils/cn";
-import { getUploadMimeType, validateFile } from "../../../utils/uploadValidation";
+import {
+  getMaxFileSizeBytes,
+  getUploadMimeType,
+  validateFile,
+} from "../../../utils/uploadValidation";
 import type { UploadFile } from "./UploadFileItem";
 
 interface UrlUploadFormProps {
@@ -56,6 +60,45 @@ function getUrlErrorMessage(err: unknown, url: string): string {
   return "URL 下载失败，请检查地址是否正确";
 }
 
+function getFilenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      return null;
+    }
+  }
+
+  const plainMatch = header.match(/filename="?([^";]+)"?/i);
+  return plainMatch ? plainMatch[1].trim() : null;
+}
+
+function getFilenameFromUrl(urlObj: URL): string {
+  const pathname = urlObj.pathname;
+  const rawFilename = pathname.split("/").pop() || "downloaded-file";
+  try {
+    return decodeURIComponent(rawFilename);
+  } catch {
+    return rawFilename;
+  }
+}
+
+function assertRemoteFileSizeAllowed(response: Response): void {
+  const contentLength = response.headers.get("content-length");
+  if (!contentLength) return;
+
+  const size = Number(contentLength);
+  if (!Number.isFinite(size) || size <= 0) return;
+
+  const maxBytes = getMaxFileSizeBytes();
+  if (size > maxBytes) {
+    const maxGB = (maxBytes / (1024 * 1024 * 1024)).toFixed(1);
+    throw new Error(`远程文件超过 ${maxGB}GB 限制`);
+  }
+}
+
 /**
  * URL 上传表单组件
  */
@@ -94,10 +137,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
         );
       }
 
-      const pathname = urlObj.pathname;
-      const filename = decodeURIComponent(
-        pathname.split("/").pop() || "downloaded-file",
-      );
+      const fallbackFilename = getFilenameFromUrl(urlObj);
 
       // 使用 AbortController 设置超时
       const controller = new AbortController();
@@ -122,6 +162,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} - ${response.statusText}`);
       }
+      assertRemoteFileSizeAllowed(response);
 
       const blob = await response.blob();
 
@@ -129,6 +170,9 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
         throw new Error("下载的文件为空");
       }
 
+      const filename =
+        getFilenameFromContentDisposition(response.headers.get("content-disposition")) ??
+        fallbackFilename;
       const file = new File([blob], filename, { type: blob.type });
       const validation = validateFile(file);
 
