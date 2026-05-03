@@ -83,7 +83,7 @@ async fn run_local_codex_command(
             uses_prompt_arg = true;
             args.push(prompt.to_string());
         } else if arg == PROMPT_FILE_PLACEHOLDER {
-            let path = write_prompt_file(prompt)?;
+            let path = write_prompt_file(prompt).await?;
             args.push(path.to_string_lossy().to_string());
             prompt_file = Some(path);
         } else {
@@ -106,7 +106,7 @@ async fn run_local_codex_command(
         Ok(child) => child,
         Err(e) => {
             if let Some(path) = prompt_file {
-                let _ = std::fs::remove_file(path);
+                let _ = tokio::fs::remove_file(path).await;
             }
             return Err(format!("启动本地 Codex 命令失败: {} ({})", program, e).into());
         }
@@ -122,7 +122,7 @@ async fn run_local_codex_command(
 
     let output_result = timeout(command_timeout, child.wait_with_output()).await;
     if let Some(path) = prompt_file {
-        let _ = std::fs::remove_file(path);
+        let _ = tokio::fs::remove_file(path).await;
     }
 
     let output = match output_result {
@@ -144,10 +144,10 @@ async fn run_local_codex_command(
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
-fn write_prompt_file(prompt: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+async fn write_prompt_file(prompt: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
     let path = env::temp_dir().join(format!("codex-agent-prompt-{}.md", now));
-    std::fs::write(&path, prompt)?;
+    tokio::fs::write(&path, prompt).await?;
     Ok(path)
 }
 

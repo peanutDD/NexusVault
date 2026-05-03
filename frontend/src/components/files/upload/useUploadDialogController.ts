@@ -311,6 +311,56 @@ export function useUploadDialogController({
     }
   }, [hasPending, isUploading, onClose, onUploadComplete, startUpload, uploadStats.successCount, updateUploadFiles]);
 
+  const handleRetry = useCallback(
+    (id: string) => updateUploadFiles((prev) => retryFile(prev, id)),
+    [updateUploadFiles],
+  );
+
+  const handleRemove = useCallback(
+    (id: string) => {
+      const file = uploadFilesRef.current.find((item) => item.id === id);
+      if (file?.status === "pending" || file?.status === "uploading") {
+        cancelUploadTask(id);
+      }
+      updateUploadFiles((prev) => prev.filter((f) => f.id !== id));
+    },
+    [cancelUploadTask, updateUploadFiles],
+  );
+
+  const handleClearAll = useCallback(() => {
+    cancelAllUploads();
+    updateUploadFiles([]);
+  }, [cancelAllUploads, updateUploadFiles]);
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter") {
+      dragDepthRef.current += 1;
+      setDragActive(true);
+      return;
+    }
+    if (e.type === "dragover") {
+      setDragActive(true);
+      return;
+    }
+    if (e.type === "dragleave") {
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current === 0) setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragDepthRef.current = 0;
+      setDragActive(false);
+      appendFilesToState(Array.from(e.dataTransfer.files));
+    },
+    [appendFilesToState],
+  );
+
   return {
     dragActive,
     uploadFiles,
@@ -324,42 +374,11 @@ export function useUploadDialogController({
     hasPending,
     appendFilesToState,
     handleUrlFileAdd,
-    handleRetry: (id: string) => updateUploadFiles((prev) => retryFile(prev, id)),
-    handleRemove: (id: string) => {
-      const file = uploadFilesRef.current.find((item) => item.id === id);
-      if (file?.status === "pending" || file?.status === "uploading") {
-        cancelUploadTask(id);
-      }
-      updateUploadFiles((prev) => prev.filter((f) => f.id !== id));
-    },
-    handleClearAll: () => {
-      cancelAllUploads();
-      updateUploadFiles([]);
-    },
-    handleDrag: (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.type === "dragenter") {
-        dragDepthRef.current += 1;
-        setDragActive(true);
-        return;
-      }
-      if (e.type === "dragover") {
-        setDragActive(true);
-        return;
-      }
-      if (e.type === "dragleave") {
-        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-        if (dragDepthRef.current === 0) setDragActive(false);
-      }
-    },
-    handleDrop: (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragDepthRef.current = 0;
-      setDragActive(false);
-      appendFilesToState(Array.from(e.dataTransfer.files));
-    },
+    handleRetry,
+    handleRemove,
+    handleClearAll,
+    handleDrag,
+    handleDrop,
     handleClose,
     handleAttach,
   };

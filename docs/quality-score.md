@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-03 | reviewer cleanup after upload hardening | 95 | 收敛 reviewer 后续意见：上传 drag/drop handler 使用稳定引用，SHA worker cleanup 简化并避免重复 settle，codex-cli async 路径改用 `tokio::fs`，新增 C-016 约束。 |
 | 2026-05-03 | frontend upload logic hardening | 95 | 上传取消从 UI-only 升级为 `AbortSignal` 全链路中止，分片失败/取消后清理服务端会话；补充 MIME 扩展名兜底与危险扩展名阻断，新增 C-015 约束与回归测试。 |
 | 2026-05-03 | Gemini medium findings cleanup | 94 | 修复最新 Gemini Review 的 3 个 Medium：`useThrottle` leading-edge 行为、`run_local_codex_command` 临时 prompt 文件错误路径清理、UTF-8 截断效率；补充 C-013/C-014 约束。 |
 | 2026-05-03 | Gemini review trigger integration test | 91 | 真实 PR 测试确认 `gemini-kickoff` 可跑，但 `codex-fix` 只监听 issue_comment 会漏掉 Gemini 的 pull_request_review。workflow 改为同时监听 review submission，并拼接 inline comments；新增 C-012 约束。 |

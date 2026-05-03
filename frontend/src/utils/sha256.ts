@@ -37,29 +37,27 @@ function sha256WithWorker(file: File, signal?: AbortSignal): Promise<string> {
     const worker = new Worker(new URL('../workers/sha256.worker.ts', import.meta.url), {
       type: 'module',
     });
-    let cleanup = () => {
-      worker.terminate();
-    };
+    let settled = false;
     const abort = () => {
-      cleanup();
-      reject(new DOMException('File hash cancelled', 'AbortError'));
+      finish(() => reject(new DOMException('File hash cancelled', 'AbortError')));
     };
-    cleanup = () => {
+    function finish(settle: () => void) {
+      if (settled) return;
+      settled = true;
       signal?.removeEventListener('abort', abort);
       worker.terminate();
-    };
+      settle();
+    }
     signal?.addEventListener('abort', abort, { once: true });
     worker.onmessage = (e: MessageEvent<{ ok: boolean; hash?: string; error?: string }>) => {
       if (e.data.ok && e.data.hash) {
-        resolve(e.data.hash);
+        finish(() => resolve(e.data.hash!));
       } else {
-        reject(new Error(e.data.error || 'sha256 worker failed'));
+        finish(() => reject(new Error(e.data.error || 'sha256 worker failed')));
       }
-      cleanup();
     };
     worker.onerror = (e: ErrorEvent) => {
-      reject(new Error(e.message || 'sha256 worker error'));
-      cleanup();
+      finish(() => reject(new Error(e.message || 'sha256 worker error')));
     };
     worker.postMessage(file);
   });
