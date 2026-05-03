@@ -32,7 +32,7 @@ use file_storage_backend::{
 // ============================================================================
 
 async fn create_test_service(pool: sqlx::PgPool) -> FileService {
-    let config = Arc::new(Config::from_env().unwrap());
+    let config = Arc::new(Config::from_env().unwrap_or_else(|_| Config::default_for_test()));
     let storage: Arc<dyn StorageBackend> = Arc::new(LocalStorage::new(config.storage.path.clone()));
 
     let files_repo: DynFilesRepo =
@@ -407,7 +407,7 @@ async fn test_file_service_chunked_upload_happy_path() {
         .await;
     assert!(result.is_ok());
     let file = result.unwrap();
-    assert_eq!(file.filename, "chunked_test.txt");
+    assert_eq!(file.original_filename, "chunked_test.txt");
 }
 
 #[tokio::test]

@@ -44,7 +44,7 @@ fn create_redis_pool() -> Option<Pool> {
 // ============================================================================
 
 async fn create_test_service(pool: sqlx::PgPool) -> FileService {
-    let config = Arc::new(Config::from_env().unwrap());
+    let config = Arc::new(Config::from_env().unwrap_or_else(|_| Config::default_for_test()));
     let storage: Arc<dyn StorageBackend> = Arc::new(LocalStorage::new(config.storage.path.clone()));
 
     let files_repo: DynFilesRepo =

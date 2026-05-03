@@ -25,7 +25,7 @@ use std::sync::Arc;
 // ============================================================================
 
 async fn create_test_auth_service(pool: sqlx::PgPool) -> AuthService {
-    let config = Config::from_env().unwrap();
+    let config = Config::from_env().unwrap_or_else(|_| Config::default_for_test());
     let users_repo: DynUsersRepo = Arc::new(SqlxUsersRepo::new(pool.clone()));
     let cache = CacheService::new();
 
@@ -45,8 +45,8 @@ async fn test_auth_service_register_happy_path() {
     let service = create_test_auth_service(pool.clone()).await;
 
     let req = RegisterRequest {
-        username: "testuser".to_string(),
-        email: "test@example.com".to_string(),
+        username: "test_auth_register_happy".to_string(),
+        email: "test_register@test.com".to_string(),
         password: "Password123!".to_string(),
     };
 
@@ -54,8 +54,8 @@ async fn test_auth_service_register_happy_path() {
 
     assert!(result.is_ok());
     let user = result.unwrap();
-    assert_eq!(user.username, "testuser");
-    assert_eq!(user.email, "test@example.com");
+    assert_eq!(user.username, "test_auth_register_happy");
+    assert_eq!(user.email, "test_register@test.com");
 }
 
 #[tokio::test]
@@ -68,16 +68,16 @@ async fn test_auth_service_register_duplicate_email() {
 
     // 第一次注册成功
     let req1 = RegisterRequest {
-        username: "user1".to_string(),
-        email: "same@example.com".to_string(),
+        username: "test_auth_duplicate_1".to_string(),
+        email: "same@test.com".to_string(),
         password: "Password123!".to_string(),
     };
     assert!(service.register(req1).await.is_ok());
 
     // 第二次使用相同邮箱注册应该失败
     let req2 = RegisterRequest {
-        username: "user2".to_string(),
-        email: "same@example.com".to_string(),
+        username: "test_auth_duplicate_2".to_string(),
+        email: "same@test.com".to_string(),
         password: "Password123!".to_string(),
     };
     let result = service.register(req2).await;
@@ -95,7 +95,7 @@ async fn test_auth_service_register_invalid_email() {
     let service = create_test_auth_service(pool.clone()).await;
 
     let req = RegisterRequest {
-        username: "testuser".to_string(),
+        username: "test_auth_invalid_email".to_string(),
         email: "invalid-email".to_string(),
         password: "Password123!".to_string(),
     };
@@ -115,8 +115,8 @@ async fn test_auth_service_register_short_password() {
     let service = create_test_auth_service(pool.clone()).await;
 
     let req = RegisterRequest {
-        username: "testuser".to_string(),
-        email: "test@example.com".to_string(),
+        username: "test_auth_short_password".to_string(),
+        email: "short_password@test.com".to_string(),
         password: "short".to_string(),
     };
 
@@ -136,7 +136,7 @@ async fn test_auth_service_register_empty_username() {
 
     let req = RegisterRequest {
         username: "".to_string(),
-        email: "test@example.com".to_string(),
+        email: "empty_username@test.com".to_string(),
         password: "Password123!".to_string(),
     };
 
@@ -182,7 +182,7 @@ async fn test_auth_service_login_invalid_email() {
     let service = create_test_auth_service(pool.clone()).await;
 
     let req = LoginRequest {
-        email: "nonexistent@example.com".to_string(),
+        email: "nonexistent@test.com".to_string(),
         password: "Password123!".to_string(),
     };
 
@@ -259,7 +259,7 @@ async fn test_auth_service_verify_token_expired() {
     let service = create_test_auth_service(pool.clone()).await;
 
     // 使用辅助函数创建过期的 token
-    let config = Config::from_env().unwrap();
+    let config = Config::from_env().unwrap_or_else(|_| Config::default_for_test());
     let expired_token = create_expired_token(&config);
 
     let result = service.verify_token(&expired_token);
