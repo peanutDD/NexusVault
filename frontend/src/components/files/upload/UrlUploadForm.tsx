@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Link2, SatelliteDish } from "lucide-react";
 import { cn } from "../../../utils/cn";
 import {
   getMaxFileSizeBytes,
@@ -216,11 +217,12 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
   );
 
   return (
-    <div className="mb-5" data-oid="_b1-ohy">
+    <div className="uploadUrlPanel mb-4" data-oid="_b1-ohy">
       <p
-        className="font-brand mb-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]"
+        className="font-brand mb-2 flex items-center gap-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]"
         data-oid="mcl5tfe"
       >
+        <SatelliteDish className="h-4 w-4 text-[var(--upload-accent)]" aria-hidden="true" />
         Or upload from URL
       </p>
       <div className="flex gap-2" data-oid="h__ldbv">
@@ -250,9 +252,10 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
           type="button"
           onClick={handleUpload}
           disabled={!urlInput.trim() || loading}
-          className="uploadDialogCyberPrimaryBtn font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="uploadDialogCyberPrimaryBtn font-brand inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           data-oid="dp9.vve"
         >
+          <Link2 className="h-4 w-4" aria-hidden="true" />
           {loading ? "…" : "Upload"}
         </button>
       </div>

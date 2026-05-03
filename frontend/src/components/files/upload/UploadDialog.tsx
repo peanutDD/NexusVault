@@ -1,3 +1,4 @@
+import { CheckCircle2, RadioTower, X, Zap } from "lucide-react";
 import UploadDropzone from "./UploadDropzone";
 import UploadProgressList from "./UploadProgressList";
 import UploadUrlForm from "./UploadUrlForm";
@@ -32,7 +33,7 @@ export default function UploadDialog({
       data-oid=".7:8wip"
     >
       <div
-        className="uploadDialogCyberSurface flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[var(--upload-surface-bg)] text-[var(--upload-text)] shadow-2xl animate-fade-in"
+        className="uploadDialogCyberSurface flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-[var(--upload-surface-bg)] text-[var(--upload-text)] shadow-2xl animate-fade-in"
         data-oid="oz49qwv"
       >
         <UploadDialogHeader
@@ -40,7 +41,10 @@ export default function UploadDialog({
           onClose={controller.handleClose}
         />
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6" data-oid="5gs6vhm">
+        <div
+          className="uploadDialogCyberBody min-h-0 flex-1 overflow-y-auto px-5 sm:px-6"
+          data-oid="5gs6vhm"
+        >
           <UploadDropzone
             dragActive={controller.dragActive}
             onDragEnter={controller.handleDrag}
@@ -87,32 +91,44 @@ function UploadDialogHeader({
   onClose: () => void;
 }) {
   return (
-    <div className="flex-shrink-0 p-6 pb-0" data-oid="-5uz:9s">
-      <div className="mb-1 flex items-center justify-between" data-oid="kbqfnqy">
-        <h2
-          id="upload-dialog-title"
-          className="font-brand text-lg font-normal tracking-widest text-[var(--upload-text)]"
-          data-oid="zksxhi."
-        >
-          Upload Files
-        </h2>
+    <div className="uploadDialogCyberHeader flex-shrink-0 p-5 pb-3 sm:p-6 sm:pb-4" data-oid="-5uz:9s">
+      <div className="flex items-start justify-between gap-4" data-oid="kbqfnqy">
+        <div className="min-w-0" data-oid="upload-head-copy">
+          <div className="uploadDialogCyberEyebrow mb-2 flex items-center gap-2" data-oid="upload-eyebrow">
+            <RadioTower className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>PRISM UPLINK</span>
+          </div>
+          <h2
+            id="upload-dialog-title"
+            className="font-brand uploadDialogCyberTitle truncate text-xl font-semibold tracking-widest text-[var(--upload-text)] sm:text-2xl"
+            data-oid="zksxhi."
+          >
+            Upload Files
+          </h2>
+          <p
+            className="font-brand mt-1.5 text-xs font-normal tracking-widest text-[var(--upload-text-muted)] sm:text-sm"
+            data-oid="oa-6jsg"
+          >
+            Uploaded project attachments
+          </p>
+        </div>
         <button
           type="button"
           onClick={onClose}
           disabled={isUploading}
           aria-label="关闭"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--upload-text-muted)] transition-colors hover:bg-[var(--upload-control-hover)] hover:text-[var(--upload-text)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="uploadDialogCyberIconBtn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--upload-text-muted)] transition-colors hover:bg-[var(--upload-control-hover)] hover:text-[var(--upload-text)] disabled:cursor-not-allowed disabled:opacity-50"
           data-oid="nrse-xn"
         >
-          <CloseIcon data-oid="2v7ndiv" />
+          <X className="h-4 w-4" aria-hidden="true" data-oid="2v7ndiv" />
         </button>
       </div>
-      <p
-        className="font-brand mb-5 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]"
-        data-oid="oa-6jsg"
-      >
-        Uploaded project attachments
-      </p>
+      <div className="uploadDialogCyberSignal mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" data-oid="upload-signal">
+        <span>LOCAL</span>
+        <span>REMOTE</span>
+        <span>CHUNKED</span>
+        <span>INSTANT</span>
+      </div>
     </div>
   );
 }
@@ -131,7 +147,15 @@ function UploadDialogFooter({
   onAttach: () => void;
 }) {
   return (
-    <div className="flex-shrink-0 p-6 pt-4" data-oid="9yo:.vp">
+    <div className="uploadDialogCyberFooter flex-shrink-0 p-5 pt-3 sm:p-6 sm:pt-4" data-oid="9yo:.vp">
+      <div className="mb-2 flex items-center gap-2 text-xs tracking-widest text-[var(--upload-text-muted)]" data-oid="upload-footer-status">
+        {hasFiles ? (
+          <CheckCircle2 className="h-3.5 w-3.5 text-[var(--upload-accent)]" aria-hidden="true" />
+        ) : (
+          <Zap className="h-3.5 w-3.5 text-[var(--upload-accent)]" aria-hidden="true" />
+        )}
+        <span>{hasFiles ? "QUEUE ARMED" : "AWAITING PAYLOAD"}</span>
+      </div>
       <div className="flex gap-3" data-oid="3b-ji.z">
         <button
           type="button"
@@ -153,25 +177,5 @@ function UploadDialogFooter({
         </button>
       </div>
     </div>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-      data-oid="gj1aoxz"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M6 18L18 6M6 6l12 12"
-        data-oid="-_l5jt3"
-      />
-    </svg>
   );
 }

@@ -83,16 +83,36 @@
 }
 
 .uploadFileItemCyber {
-    border: 1px solid rgba(148, 163, 184, 0.3);
+    border: 1px solid var(--upload-tech-border);
     box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-        0 8px 18px rgba(2, 6, 12, 0.45);
+        inset 0 0 0 1px color-mix(in srgb, var(--upload-text) 7%, transparent),
+        0 10px 22px color-mix(in srgb, var(--upload-backdrop) 36%, transparent);
+}
+
+.uploadFileItemCyber::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--upload-tech-corner) 35%, transparent),
+            transparent 34%
+        ),
+        linear-gradient(
+            0deg,
+            transparent 0 70%,
+            color-mix(in srgb, var(--upload-tech-grid) 45%, transparent)
+        );
+    opacity: 0.7;
 }
 
 .uploadFileItemName {
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.08);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--upload-accent) 18%, transparent);
 }
 
 .uploadFileItemActionBtn {
     border: 1px solid var(--upload-item-action-border);
+    backdrop-filter: blur(8px);
 }
