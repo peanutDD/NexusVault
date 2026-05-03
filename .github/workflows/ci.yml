@@ -42,6 +42,7 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/file_storage_test
       CARGO_TERM_COLOR: always
       RUSTDOCFLAGS: "-D warnings"
+      RUST_TEST_THREADS: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
