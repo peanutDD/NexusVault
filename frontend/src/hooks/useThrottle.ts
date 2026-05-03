@@ -16,22 +16,29 @@ export function useThrottle<T>(value: T, delay: number): T {
 
     if (timeout.current === null) {
       const timeSinceLast = now - lastCall.current;
-      const wait = Math.max(0, delay - timeSinceLast);
 
-      timeout.current = setTimeout(() => {
-        lastCall.current = Date.now();
-        setThrottled(pendingValue.current);
-        timeout.current = null;
-      }, wait);
+      if (timeSinceLast >= delay) {
+        lastCall.current = now;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Leading-edge throttle must publish elapsed-window updates synchronously.
+        setThrottled(value);
+      } else {
+        timeout.current = setTimeout(() => {
+          lastCall.current = Date.now();
+          setThrottled(pendingValue.current);
+          timeout.current = null;
+        }, delay - timeSinceLast);
+      }
     }
+  }, [value, delay]);
 
+  useEffect(() => {
     return () => {
       if (timeout.current !== null) {
         clearTimeout(timeout.current);
         timeout.current = null;
       }
     };
-  }, [value, delay]);
+  }, []);
 
   return throttled;
 }

@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-03 | Gemini medium findings cleanup | 94 | 修复最新 Gemini Review 的 3 个 Medium：`useThrottle` leading-edge 行为、`run_local_codex_command` 临时 prompt 文件错误路径清理、UTF-8 截断效率；补充 C-013/C-014 约束。 |
 | 2026-05-03 | Gemini review trigger integration test | 91 | 真实 PR 测试确认 `gemini-kickoff` 可跑，但 `codex-fix` 只监听 issue_comment 会漏掉 Gemini 的 pull_request_review。workflow 改为同时监听 review submission，并拼接 inline comments；新增 C-012 约束。 |
 | 2026-05-03 | PR review assertion and filename hardening | 94 | 修复 `LocalStorage::local_filename` 多字节 UTF-8 兜底截断按字符计数的问题，新增多字节扩展名回归测试；清理 backend 测试中的裸 `matches!` 假断言并新增 C-011 永久约束。 |
 | 2026-05-03 | backend coverage gate baseline correction | 90 | 真实 `cargo llvm-cov` 全量测试通过，但全局行覆盖率为 23.08%，原 90% CI 门槛是未来目标误作当前硬门槛。CI 改为 23% 基线守门并同步约束文档，后续只能随补测上调。 |

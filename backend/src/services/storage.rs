@@ -162,14 +162,13 @@ impl LocalStorage {
     }
 
     fn truncate_utf8_to_bytes(value: &str, max_bytes: usize) -> String {
-        let mut truncated = String::new();
-        for ch in value.chars() {
-            if truncated.len() + ch.len_utf8() > max_bytes {
-                break;
-            }
-            truncated.push(ch);
+        match value
+            .char_indices()
+            .find(|&(idx, ch)| idx + ch.len_utf8() > max_bytes)
+        {
+            Some((idx, _)) => value[..idx].to_string(),
+            None => value.to_string(),
         }
-        truncated
     }
 
     fn get_file_path(&self, user_id: Uuid, file_id: Uuid, filename: &str) -> std::path::PathBuf {

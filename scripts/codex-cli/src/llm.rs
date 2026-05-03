@@ -120,18 +120,17 @@ async fn run_local_codex_command(
         drop(stdin);
     }
 
-    let output = match timeout(command_timeout, child.wait_with_output()).await {
-        Ok(output) => output?,
-        Err(_) => {
-            if let Some(path) = prompt_file {
-                let _ = std::fs::remove_file(path);
-            }
-            return Err(format!("本地 Codex 命令超时（{} 秒）", command_timeout.as_secs()).into());
-        }
-    };
+    let output_result = timeout(command_timeout, child.wait_with_output()).await;
     if let Some(path) = prompt_file {
         let _ = std::fs::remove_file(path);
     }
+
+    let output = match output_result {
+        Ok(output) => output?,
+        Err(_) => {
+            return Err(format!("本地 Codex 命令超时（{} 秒）", command_timeout.as_secs()).into());
+        }
+    };
 
     if !output.status.success() {
         return Err(format!(

@@ -84,6 +84,22 @@ describe('useThrottle', () => {
     expect(result.current).toBe('final');
   });
 
+  it('should update immediately when the throttle window has elapsed', () => {
+    const { result, rerender } = renderHook(
+      (props) => useThrottle(props.value, props.delay),
+      { initialProps: { value: 'start', delay: 500 } }
+    );
+
+    rerender({ value: 'first', delay: 500 });
+    act(() => vi.advanceTimersByTime(500));
+    expect(result.current).toBe('first');
+
+    act(() => vi.advanceTimersByTime(500));
+    rerender({ value: 'second', delay: 500 });
+
+    expect(result.current).toBe('second');
+  });
+
   it('should work with different types', () => {
     // Number
     const { result: numResult, rerender: numRerender } = renderHook(
