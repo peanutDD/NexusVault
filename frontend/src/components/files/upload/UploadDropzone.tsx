@@ -1,4 +1,5 @@
 import { useRef, useCallback, useEffect } from "react";
+import { Files, UploadCloud } from "lucide-react";
 import { cn } from "../../../utils/cn";
 import { getMaxFileSizeGB } from "../../../utils/uploadValidation";
 
@@ -66,7 +67,7 @@ export default function UploadDropzone({
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={cn(
-        "uploadDialogCyberDropzone relative mb-5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition-colors duration-200",
+        "uploadDialogCyberDropzone relative mb-4 flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed px-6 py-5 text-center transition-colors duration-200 sm:py-6",
         dragActive
           ? "uploadDialogCyberDropzoneActive border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]"
           : "border-[var(--upload-drop-border)] bg-[var(--upload-drop-bg)] hover:border-[var(--upload-drop-border-hover)]",
@@ -83,9 +84,9 @@ export default function UploadDropzone({
         data-oid="cmzy5dv"
       />
 
-      {/* 文件图标 - 带折角的文档样式 */}
-      <div className="mb-4" data-oid="ybxiui-">
-        <FileDocIcon data-oid="fk_xyyt" />
+      <div className="uploadDropzoneCore mb-3 flex h-14 w-14 items-center justify-center rounded-xl" data-oid="ybxiui-">
+        <Files className="uploadDropzoneCoreBack h-8 w-8" aria-hidden="true" />
+        <UploadCloud className="uploadDropzoneCoreFront h-8 w-8" aria-hidden="true" />
       </div>
 
       <p
@@ -95,7 +96,7 @@ export default function UploadDropzone({
         Drag and drop your files
       </p>
       <p
-        className="font-brand mb-5 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]"
+        className="font-brand mb-4 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]"
         data-oid="-vtfj4r"
       >
         Max. File size:{" "}
@@ -105,9 +106,10 @@ export default function UploadDropzone({
       <button
         type="button"
         onClick={handleSelectClick}
-        className="uploadDialogCyberPrimaryBtn font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)]"
+        className="uploadDialogCyberPrimaryBtn font-brand inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)]"
         data-oid="xdol0-4"
       >
+        <UploadCloud className="h-4 w-4" aria-hidden="true" />
         Select files
       </button>
       <p
@@ -119,32 +121,5 @@ export default function UploadDropzone({
         ，或多次点击「Select files」逐个添加
       </p>
     </div>
-  );
-}
-
-// 文件文档图标（带折角）
-function FileDocIcon() {
-  return (
-    <svg
-      width="48"
-      height="48"
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      data-oid="fk_xyyt"
-    >
-      {/* 文档主体 */}
-      <path
-        d="M12 6C12 4.89543 12.8954 4 14 4H28L36 12V42C36 43.1046 35.1046 44 34 44H14C12.8954 44 12 43.1046 12 42V6Z"
-        fill="rgb(var(--upload-doc-icon-main))"
-      />
-
-      {/* 折角 */}
-      <path
-        d="M28 4L36 12H30C28.8954 12 28 11.1046 28 10V4Z"
-        fill="rgb(var(--upload-doc-icon-fold))"
-      />
-    </svg>
   );
 }

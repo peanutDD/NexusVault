@@ -10,7 +10,9 @@
   "risks": [
     "Browser File.type can be empty for common files.",
     "UI-only removal can leave hidden network uploads running.",
-    "Chunked upload failures can leak server-side sessions."
+    "Cancelling a running queue item can hang the upload batch if the queue Promise never settles.",
+    "Chunked upload failures can leak server-side sessions.",
+    "URL upload can read a very large remote body into browser memory before local validation runs."
   ],
   "dependencies": [
     "Axios AbortSignal support",
@@ -22,6 +24,8 @@
     "Add AbortSignal propagation through hashing and upload services.",
     "Wire remove and clear actions to abort queued and running uploads.",
     "Add MIME fallback validation and dangerous extension blocking.",
+    "Add URL upload size preflight before response.blob() and filename fallback from Content-Disposition.",
+    "Ensure queued and running upload cancellation settles the queue Promise.",
     "Add regression tests and permanent constraints.",
     "Run tests, lint, typecheck, and build."
   ]

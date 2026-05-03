@@ -126,9 +126,9 @@ const FolderCard = memo(function FolderCard({
         </div>
 
         {/* 文件夹名称 + 设置按钮 */}
-        <div className="relative flex w-full items-center" data-oid="ebqewy5">
+        <div className="relative flex w-full items-start" data-oid="ebqewy5">
           <p
-            className="w-full line-clamp-2 leading-[1.3] px-[clamp(0.7rem,2vw,1rem)] text-center text-[clamp(0.6rem,2.2vw,0.82rem)] font-medium text-[var(--glass-text)] lg:px-[clamp(0.42rem,1vw,0.62rem)]"
+            className="min-w-0 w-full truncate whitespace-nowrap leading-[1.3] px-[clamp(1rem,2.4vw,1.5rem)] text-center text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-[var(--file-card-text)]"
             title={folder.name}
             data-oid="7ndc6ny"
           >
@@ -139,7 +139,7 @@ const FolderCard = memo(function FolderCard({
           <button
             type="button"
             onClick={handleToggleMenu}
-            className="absolute right-0 top-1/2 z-10 inline-flex -translate-y-1/2 translate-x-[6px] items-center justify-center rounded-md leading-none text-[var(--glass-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--glass-text)]"
+            className="absolute right-0 top-0 z-10 inline-flex translate-x-[6px] items-center justify-center rounded-md leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
             aria-label="更多操作"
             data-oid="v.ta39e"
           >

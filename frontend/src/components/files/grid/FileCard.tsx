@@ -136,11 +136,11 @@ const FileCard = memo(
           {/* 文件信息 + 设置按钮 */}
           <div className="relative flex w-full items-start" data-oid="y5j_0ma">
             <div
-              className="min-w-0 w-full space-y-0.5 pr-[clamp(1rem,2.4vw,1.5rem)]"
+              className="min-w-0 w-full space-y-0.5"
               data-oid="4w9i3kj"
             >
               <p
-                className="min-w-0 line-clamp-2 leading-[1.3] text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-[var(--file-card-text)]"
+                className="min-w-0 w-full truncate whitespace-nowrap leading-[1.3] pr-[clamp(1rem,2.4vw,1.5rem)] text-left text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-[var(--file-card-text)]"
                 title={file.original_filename}
                 data-oid="b7fv8ct"
               >

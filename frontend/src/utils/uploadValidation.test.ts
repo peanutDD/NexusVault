@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getUploadMimeType,
+  getMaxFileSizeBytes,
   validateFile,
   getMaxBatchCount,
   isLargeFile,
@@ -67,6 +68,11 @@ describe('uploadValidation', () => {
   it('should respect max batch count helper', () => {
     const maxBatch = getMaxBatchCount();
     expect(maxBatch).toBeGreaterThan(0);
+  });
+
+  it('should expose the byte limit used by preflight upload checks', () => {
+    expect(getMaxFileSizeBytes()).toBeGreaterThan(0);
+    expect(getMaxFileSizeBytes()).toBe(getMaxFileSizeBytes());
   });
 
   it('should classify large files correctly', () => {

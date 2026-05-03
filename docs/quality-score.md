@@ -2,6 +2,9 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-04 | codex-cli toolbox extraction design | 94 | 整理 `scripts/codex-cli` 独立工具箱改造设计，明确当前可复用能力、Gemini/GitHub/仓库规则耦合点、配置文件方案、P0-P3 改造清单、迁移步骤与验收标准。 |
+| 2026-05-03 | image preview pan after zoom | 95 | 图片预览放大后支持 pointer 拖动平移，缩回 1x、切换文件和 Reset 会清除 pan；新增 `useImagePan` 与 `ImagePreview` 回归测试，并记录 C-019 永久约束。 |
+| 2026-05-03 | frontend upload logic completion | 96 | 审查并补齐上传取消与 URL 上传边界：运行中队列取消会 settle，旧 `useFileUpload` hook 传递并中止 `AbortSignal`，上传弹窗卸载时统一取消；URL 上传在读取 body 前按 `Content-Length` 拦截超限文件并支持 `Content-Disposition` 文件名。新增 C-017/C-018 约束，前端 test/lint/build 通过。 |
 | 2026-05-03 | reviewer cleanup after upload hardening | 95 | 收敛 reviewer 后续意见：上传 drag/drop handler 使用稳定引用，SHA worker cleanup 简化并避免重复 settle，codex-cli async 路径改用 `tokio::fs`，新增 C-016 约束。 |
 | 2026-05-03 | frontend upload logic hardening | 95 | 上传取消从 UI-only 升级为 `AbortSignal` 全链路中止，分片失败/取消后清理服务端会话；补充 MIME 扩展名兜底与危险扩展名阻断，新增 C-015 约束与回归测试。 |
 | 2026-05-03 | Gemini medium findings cleanup | 94 | 修复最新 Gemini Review 的 3 个 Medium：`useThrottle` leading-edge 行为、`run_local_codex_command` 临时 prompt 文件错误路径清理、UTF-8 截断效率；补充 C-013/C-014 约束。 |

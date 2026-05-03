@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { fileService } from '../../services/files';
 import { getErrorMessage } from '../../utils/error';
 import {
+  getUploadMimeType,
   validateFile,
   getMaxBatchCount,
   isLargeFileForConcurrentLimit,
@@ -53,6 +54,8 @@ export function useFileUpload(
   const [batchLimitWarning, setBatchLimitWarning] = useState('');
   const isUploadingRef = useRef(false);
   const uploadFilesRef = useRef<UploadFile[]>([]);
+  const abortControllersRef = useRef(new Map<string, AbortController>());
+  const cancelledIdsRef = useRef(new Set<string>());
   const maxBatchCount = getMaxBatchCount();
 
   // 同步更新 ref 和 state
@@ -66,6 +69,28 @@ export function useFileUpload(
   );
 
   const fileDedupKey = (f: File) => `${f.name}-${f.size}-${f.lastModified}`;
+
+  const cancelUploadTask = useCallback((id: string) => {
+    cancelledIdsRef.current.add(id);
+    abortControllersRef.current.get(id)?.abort();
+    uploadQueue.cancel(id);
+  }, []);
+
+  const cancelAllUploads = useCallback(() => {
+    for (const file of uploadFilesRef.current) {
+      if (file.status === 'pending' || file.status === 'uploading') {
+        cancelledIdsRef.current.add(file.id);
+      }
+    }
+    for (const controller of abortControllersRef.current.values()) {
+      controller.abort();
+    }
+    uploadQueue.clear();
+  }, []);
+
+  useEffect(() => {
+    return () => cancelAllUploads();
+  }, [cancelAllUploads]);
 
   const addFiles = useCallback(
     (files: File[]) => {
@@ -134,7 +159,7 @@ export function useFileUpload(
           id: `upload-${baseId}-${index}-${file.name}-${file.size}-${file.lastModified}`,
           name: file.name,
           size: file.size,
-          mimeType: file.type || 'application/octet-stream',
+          mimeType: getUploadMimeType(file),
           status: validation.ok ? 'pending' : 'error',
           progress: 0,
           error: validation.ok ? undefined : validation.error,
@@ -194,8 +219,11 @@ export function useFileUpload(
         const file = uploadFile.file;
         const taskId = uploadFile.id;
         const priority = totalPending - index;
+        const controller = new AbortController();
+        abortControllersRef.current.set(taskId, controller);
 
         const updateProgress = (progress: number, statusMessage?: string) => {
+          if (cancelledIdsRef.current.has(taskId)) return;
           updateUploadFiles((prev) =>
             prev.map((f) =>
               f.id === taskId
@@ -208,17 +236,25 @@ export function useFileUpload(
         try {
           await uploadQueue.add(
             taskId,
-            () => fileService.uploadFileWithInstant(file, updateProgress),
+            () =>
+              fileService.uploadFileWithInstant(file, updateProgress, null, {
+                signal: controller.signal,
+              }),
             { fileSize: file.size, priority }
           );
 
+          if (cancelledIdsRef.current.has(taskId) || controller.signal.aborted) return;
+
           updateUploadFiles((prev) =>
             prev.map((f) =>
-              f.id === taskId ? { ...f, status: 'success', progress: 100 } : f
+              f.id === taskId
+                ? { ...f, status: 'success', progress: 100, statusMessage: undefined }
+                : f
             )
           );
           hasNewSuccess = true;
         } catch (err) {
+          if (cancelledIdsRef.current.has(taskId) || controller.signal.aborted) return;
           trackError(err, {
             action: 'upload_file',
             fileSize: file.size,
@@ -231,11 +267,14 @@ export function useFileUpload(
                 : f
             )
           );
+        } finally {
+          abortControllersRef.current.delete(taskId);
+          cancelledIdsRef.current.delete(taskId);
         }
       })
     );
 
-    isUploadingRef.current = false;
+    isUploadingRef.current = uploadFilesRef.current.some((f) => f.status === 'uploading');
 
     if (hasNewSuccess) {
       onUploadComplete?.();
@@ -259,16 +298,21 @@ export function useFileUpload(
   // 移除文件
   const removeFile = useCallback(
     (id: string) => {
+      const file = uploadFilesRef.current.find((item) => item.id === id);
+      if (file?.status === 'pending' || file?.status === 'uploading') {
+        cancelUploadTask(id);
+      }
       updateUploadFiles((prev) => prev.filter((f) => f.id !== id));
     },
-    [updateUploadFiles]
+    [cancelUploadTask, updateUploadFiles]
   );
 
   // 清空文件
   const clearFiles = useCallback(() => {
+    cancelAllUploads();
     updateUploadFiles([]);
     setBatchLimitWarning('');
-  }, [updateUploadFiles]);
+  }, [cancelAllUploads, updateUploadFiles]);
 
   // 计算状态
   const uploadingCount = uploadFiles.filter((f) => f.status === 'uploading').length;

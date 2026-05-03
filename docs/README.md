@@ -27,6 +27,7 @@ docs/
 │   ├── auto-review-flow.md            # 自动审查流程
 │   ├── auto-review-usage-flow.md      # 自动审查使用流程
 │   ├── codex-pr-auto-fix-design.md    # PR自动修复设计
+│   ├── codex-cli-toolbox-extraction.md # codex-cli 独立工具箱改造设计
 │   └── frontend-component-split-detail.md # 前端组件拆分详情
 ├── exec-plans/                        # 执行计划
 │   ├── 2026-04-27-error-boundary-unification.md # 错误边界统一计划
@@ -47,6 +48,7 @@ docs/
 |------|------|
 | `design-docs/frontend-component-split-detail.md` | 前端组件大文件拆分详细设计 |
 | `design-docs/codex-pr-auto-fix-design.md` | PR自动修复系统设计 |
+| `design-docs/codex-cli-toolbox-extraction.md` | codex-cli 独立工具箱改造设计 |
 | `design-docs/auto-review.md` | 自动代码审查系统设计 |
 
 ### 📊 高并发优化
@@ -163,5 +165,5 @@ docs/
 
 ---
 
-**最后更新**: 2026-05-01  
-**文档版本**: v2.3
+**最后更新**: 2026-05-04  
+**文档版本**: v2.4

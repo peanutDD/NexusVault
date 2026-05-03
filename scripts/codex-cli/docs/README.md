@@ -86,6 +86,7 @@ cargo build --release
 **推荐阅读顺序**
 
 - [架构与模块](design-docs/architecture.md)
+- [文件详解](file-inventory.md)
 - [Pipeline / Skills 设计](design-docs/pipeline.md)
 - [CLI 与输出契约](references/cli.md)
 - [配置与策略（规则/Changelog/过滤）](references/configuration.md)

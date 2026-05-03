@@ -210,7 +210,7 @@ export class UploadQueue {
   /**
    * 取消指定任务
    * 如果任务还在队列中，会被移除并 reject
-   * 如果任务正在执行，无法取消（返回 false）
+   * 如果任务正在执行，会立即 reject 队列 Promise；调用方仍需中止底层网络请求
    */
   cancel(id: string): boolean {
     const item = this.itemsById.get(id);
@@ -222,12 +222,12 @@ export class UploadQueue {
     // 从堆中移除
     if (this.heap.remove(item)) {
       this.itemsById.delete(id);
-      item.reject(new Error('Task cancelled'));
+      item.reject(new DOMException('Task cancelled', 'AbortError'));
       return true;
     }
 
-    // 任务可能正在执行，无法取消
-    return false;
+    item.reject(new DOMException('Task cancelled', 'AbortError'));
+    return true;
   }
 
   /**
@@ -309,11 +309,11 @@ export class UploadQueue {
   }
 
   /**
-   * 清空队列，拒绝所有等待中的任务
+   * 清空队列，拒绝所有等待和运行中的队列 Promise
    */
   clear(): void {
-    const error = new Error('Queue cleared');
-    const items = this.heap.toArray();
+    const error = new DOMException('Queue cleared', 'AbortError');
+    const items = Array.from(this.itemsById.values());
     for (const item of items) {
       item.cancelled = true;
       item.reject(error);

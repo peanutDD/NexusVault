@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Link2, SatelliteDish } from "lucide-react";
 import { cn } from "../../../utils/cn";
-import { getUploadMimeType, validateFile } from "../../../utils/uploadValidation";
+import {
+  getMaxFileSizeBytes,
+  getUploadMimeType,
+  validateFile,
+} from "../../../utils/uploadValidation";
 import type { UploadFile } from "./UploadFileItem";
 
 interface UrlUploadFormProps {
@@ -56,6 +61,45 @@ function getUrlErrorMessage(err: unknown, url: string): string {
   return "URL 下载失败，请检查地址是否正确";
 }
 
+function getFilenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      return null;
+    }
+  }
+
+  const plainMatch = header.match(/filename="?([^";]+)"?/i);
+  return plainMatch ? plainMatch[1].trim() : null;
+}
+
+function getFilenameFromUrl(urlObj: URL): string {
+  const pathname = urlObj.pathname;
+  const rawFilename = pathname.split("/").pop() || "downloaded-file";
+  try {
+    return decodeURIComponent(rawFilename);
+  } catch {
+    return rawFilename;
+  }
+}
+
+function assertRemoteFileSizeAllowed(response: Response): void {
+  const contentLength = response.headers.get("content-length");
+  if (!contentLength) return;
+
+  const size = Number(contentLength);
+  if (!Number.isFinite(size) || size <= 0) return;
+
+  const maxBytes = getMaxFileSizeBytes();
+  if (size > maxBytes) {
+    const maxGB = (maxBytes / (1024 * 1024 * 1024)).toFixed(1);
+    throw new Error(`远程文件超过 ${maxGB}GB 限制`);
+  }
+}
+
 /**
  * URL 上传表单组件
  */
@@ -94,10 +138,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
         );
       }
 
-      const pathname = urlObj.pathname;
-      const filename = decodeURIComponent(
-        pathname.split("/").pop() || "downloaded-file",
-      );
+      const fallbackFilename = getFilenameFromUrl(urlObj);
 
       // 使用 AbortController 设置超时
       const controller = new AbortController();
@@ -122,6 +163,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} - ${response.statusText}`);
       }
+      assertRemoteFileSizeAllowed(response);
 
       const blob = await response.blob();
 
@@ -129,6 +171,9 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
         throw new Error("下载的文件为空");
       }
 
+      const filename =
+        getFilenameFromContentDisposition(response.headers.get("content-disposition")) ??
+        fallbackFilename;
       const file = new File([blob], filename, { type: blob.type });
       const validation = validateFile(file);
 
@@ -172,11 +217,12 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
   );
 
   return (
-    <div className="mb-5" data-oid="_b1-ohy">
+    <div className="uploadUrlPanel mb-4" data-oid="_b1-ohy">
       <p
-        className="font-brand mb-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]"
+        className="font-brand mb-2 flex items-center gap-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]"
         data-oid="mcl5tfe"
       >
+        <SatelliteDish className="h-4 w-4 text-[var(--upload-accent)]" aria-hidden="true" />
         Or upload from URL
       </p>
       <div className="flex gap-2" data-oid="h__ldbv">
@@ -206,9 +252,10 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
           type="button"
           onClick={handleUpload}
           disabled={!urlInput.trim() || loading}
-          className="uploadDialogCyberPrimaryBtn font-brand rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="uploadDialogCyberPrimaryBtn font-brand inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           data-oid="dp9.vve"
         >
+          <Link2 className="h-4 w-4" aria-hidden="true" />
           {loading ? "…" : "Upload"}
         </button>
       </div>

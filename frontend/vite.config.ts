@@ -124,14 +124,39 @@ export default defineConfig(({ mode }) => {
         manualChunks(id) {
           // node_modules 中的依赖
           if (id.includes("node_modules")) {
-            // React 核心库
+            // React core must not include router/state packages that import
+            // other vendor modules, otherwise Rollup creates vendor cycles.
             if (
-              id.includes("react") ||
-              id.includes("react-dom") ||
-              id.includes("react-router-dom") ||
-              id.includes("zustand")
+              id.includes("/react/") ||
+              id.includes("/react-dom/") ||
+              id.includes("/scheduler/") ||
+              id.includes("/use-sync-external-store/")
             ) {
               return "react-vendor";
+            }
+            if (
+              id.includes("react-router-dom") ||
+              id.includes("react-router") ||
+              id.includes("@remix-run/router")
+            ) {
+              return "router-vendor";
+            }
+            if (id.includes("zustand")) {
+              return "state-vendor";
+            }
+            if (
+              id.includes("@tanstack/react-query") ||
+              id.includes("@tanstack/query-core") ||
+              id.includes("@tanstack/react-query-devtools")
+            ) {
+              return "query-vendor";
+            }
+            if (
+              id.includes("react-hook-form") ||
+              id.includes("@hookform/resolvers") ||
+              id.includes("/zod/")
+            ) {
+              return "form-vendor";
             }
             // UI 组件库和图标
             if (
@@ -174,40 +199,9 @@ export default defineConfig(({ mode }) => {
             return "vendor-other";
           }
 
-          // 按路由拆分页面代码
-          if (id.includes("/src/pages/")) {
-            if (id.includes("/pages/Files")) {
-              return "chunk-Files";
-            }
-            if (id.includes("/pages/Settings")) {
-              return "chunk-Settings";
-            }
-            if (id.includes("/pages/Share")) {
-              return "chunk-Share";
-            }
-          }
-
-          // 按功能模块拆分组件
-          if (id.includes("/src/components/auth/")) {
-            return "chunk-auth";
-          }
-
-          // 文件预览（重型：three.js / hls.js）
-          if (id.includes("/src/components/files/preview/")) {
-            return "chunk-files-preview";
-          }
-          // 文件上传（重型对话框）
-          if (id.includes("/src/components/files/upload/")) {
-            return "chunk-files-upload";
-          }
-          // 文件相关对话框（懒加载）
-          if (id.includes("/src/components/files/dialogs/")) {
-            return "chunk-files-dialogs";
-          }
-          // 文件相关组件（列表等核心组件）
-          if (id.includes("/src/components/files/")) {
-            return "chunk-files-components";
-          }
+          // App source is already split by route and dialog lazy imports.
+          // Keep source modules in Rollup's natural graph to avoid circular
+          // chunks between pages, list components, and preview-only code.
         },
       },
     },
