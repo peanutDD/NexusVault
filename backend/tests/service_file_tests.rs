@@ -438,10 +438,10 @@ async fn test_file_service_chunked_upload_invalid_part_index() {
         .await;
 
     assert!(result.is_err());
-    matches!(
+    assert!(matches!(
         result.err().unwrap(),
         FileServiceError::InvalidChunkIndex { .. }
-    );
+    ));
 }
 
 #[tokio::test]
@@ -479,10 +479,10 @@ async fn test_file_service_chunked_upload_missing_chunks() {
         .await;
 
     assert!(result.is_err());
-    matches!(
+    assert!(matches!(
         result.err().unwrap(),
         FileServiceError::MissingUploadedChunks { .. }
-    );
+    ));
 }
 
 #[tokio::test]
@@ -519,7 +519,7 @@ async fn test_file_service_chunked_upload_abort() {
     // 验证会话已删除
     let result = service.get_upload_session(upload_id, user_id).await;
     assert!(result.is_err());
-    matches!(result.err().unwrap(), FileServiceError::NotFound);
+    assert!(matches!(result.err().unwrap(), FileServiceError::NotFound));
 }
 
 #[tokio::test]
@@ -712,10 +712,10 @@ async fn test_file_service_delete_file_happy_path() {
     // 验证文件已删除（通过公共API）
     let result = service.get_file(file_id, user_id).await;
     assert!(result.is_err());
-    matches!(
+    assert!(matches!(
         result.err().unwrap(),
         file_storage_backend::utils::AppError::NotFound
-    );
+    ));
 }
 
 #[tokio::test]
@@ -730,10 +730,10 @@ async fn test_file_service_delete_nonexistent_file() {
 
     let result = service.delete_file(fake_file_id, user_id).await;
     assert!(result.is_err());
-    matches!(
+    assert!(matches!(
         result.err().unwrap(),
         file_storage_backend::utils::AppError::NotFound
-    );
+    ));
 }
 
 #[tokio::test]

@@ -152,22 +152,24 @@ impl LocalStorage {
         let stem = filename.strip_suffix(&extension).unwrap_or(filename);
         let budget = MAX_LOCAL_FILENAME_BYTES.saturating_sub(extension.len());
 
+        let truncated = Self::truncate_utf8_to_bytes(stem, budget);
+
+        if truncated.is_empty() {
+            Self::truncate_utf8_to_bytes(filename, MAX_LOCAL_FILENAME_BYTES)
+        } else {
+            format!("{}{}", truncated, extension)
+        }
+    }
+
+    fn truncate_utf8_to_bytes(value: &str, max_bytes: usize) -> String {
         let mut truncated = String::new();
-        for ch in stem.chars() {
-            if truncated.len() + ch.len_utf8() > budget {
+        for ch in value.chars() {
+            if truncated.len() + ch.len_utf8() > max_bytes {
                 break;
             }
             truncated.push(ch);
         }
-
-        if truncated.is_empty() {
-            filename
-                .chars()
-                .take(MAX_LOCAL_FILENAME_BYTES)
-                .collect::<String>()
-        } else {
-            format!("{}{}", truncated, extension)
-        }
+        truncated
     }
 
     fn get_file_path(&self, user_id: Uuid, file_id: Uuid, filename: &str) -> std::path::PathBuf {

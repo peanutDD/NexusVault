@@ -83,7 +83,10 @@ async fn test_auth_service_register_duplicate_email() {
     let result = service.register(req2).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 #[tokio::test]
@@ -103,7 +106,10 @@ async fn test_auth_service_register_invalid_email() {
     let result = service.register(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 #[tokio::test]
@@ -123,7 +129,10 @@ async fn test_auth_service_register_short_password() {
     let result = service.register(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 #[tokio::test]
@@ -143,7 +152,10 @@ async fn test_auth_service_register_empty_username() {
     let result = service.register(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 // ============================================================================
@@ -189,7 +201,10 @@ async fn test_auth_service_login_invalid_email() {
     let result = service.login(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::InvalidCredentials);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::InvalidCredentials
+    ));
 }
 
 #[tokio::test]
@@ -211,7 +226,10 @@ async fn test_auth_service_login_wrong_password() {
     let result = service.login(req).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::InvalidCredentials);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::InvalidCredentials
+    ));
 }
 
 // ============================================================================
@@ -248,7 +266,10 @@ async fn test_auth_service_verify_token_invalid_signature() {
     let result = service.verify_token(invalid_token);
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Unauthorized
+    ));
 }
 
 #[tokio::test]
@@ -265,7 +286,10 @@ async fn test_auth_service_verify_token_expired() {
     let result = service.verify_token(&expired_token);
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Unauthorized
+    ));
 }
 
 #[tokio::test]
@@ -278,7 +302,10 @@ async fn test_auth_service_verify_token_invalid_format() {
     let result = service.verify_token("not-a-valid-jwt-token");
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Unauthorized
+    ));
 }
 
 #[tokio::test]
@@ -291,7 +318,10 @@ async fn test_auth_service_verify_token_empty() {
     let result = service.verify_token("");
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Unauthorized);
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Unauthorized
+    ));
 }
 
 // ============================================================================
@@ -336,7 +366,10 @@ async fn test_auth_service_change_password_wrong_current() {
         .await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 #[tokio::test]
@@ -358,7 +391,10 @@ async fn test_auth_service_change_password_weak_new() {
         .await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AuthServiceError::Validation(_));
+    assert!(matches!(
+        result.err().unwrap(),
+        AuthServiceError::Validation(_)
+    ));
 }
 
 // ============================================================================
@@ -431,10 +467,10 @@ async fn test_api_token_verify_invalid() {
     let result = token_service.verify_token("invalid-token-12345").await;
 
     assert!(result.is_err());
-    matches!(
+    assert!(matches!(
         result.err().unwrap(),
         file_storage_backend::utils::AppError::Unauthorized
-    );
+    ));
 }
 
 #[tokio::test]
@@ -507,10 +543,10 @@ async fn test_api_token_delete_nonexistent() {
     let result = token_service.delete_token(fake_token_id, user_id).await;
 
     assert!(result.is_err());
-    matches!(
+    assert!(matches!(
         result.err().unwrap(),
         file_storage_backend::utils::AppError::NotFound
-    );
+    ));
 }
 
 // ============================================================================

@@ -40,7 +40,7 @@ async fn test_auth_middleware_verify_token_empty() {
     let result = verify_token_simple(jwt_secret, "");
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AppError::Unauthorized);
+    assert!(matches!(result.err().unwrap(), AppError::Unauthorized));
 }
 
 #[tokio::test]
@@ -52,7 +52,7 @@ async fn test_auth_middleware_verify_token_invalid() {
     let result = verify_token_simple(jwt_secret, "invalid.token.string");
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AppError::Unauthorized);
+    assert!(matches!(result.err().unwrap(), AppError::Unauthorized));
 }
 
 #[tokio::test]
@@ -67,7 +67,7 @@ async fn test_auth_middleware_verify_token_expired() {
     let result = verify_token_simple(jwt_secret, &expired_token);
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AppError::Unauthorized);
+    assert!(matches!(result.err().unwrap(), AppError::Unauthorized));
 }
 
 // ============================================================================

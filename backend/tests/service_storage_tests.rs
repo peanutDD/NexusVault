@@ -101,7 +101,7 @@ async fn test_local_storage_delete_file() {
     // 验证文件不存在
     let result = storage.get_file(&file_path).await;
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AppError::NotFound);
+    assert!(matches!(result.err().unwrap(), AppError::NotFound));
 }
 
 #[tokio::test]
@@ -114,7 +114,7 @@ async fn test_local_storage_get_nonexistent_file() {
     let result = storage.get_file("/nonexistent/path.txt").await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AppError::NotFound);
+    assert!(matches!(result.err().unwrap(), AppError::NotFound));
 }
 
 #[tokio::test]
@@ -157,7 +157,7 @@ async fn test_local_storage_thumbnail_operations() {
     // 验证缩略图不存在
     let result = storage.get_thumbnail(file_id, user_id).await;
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AppError::NotFound);
+    assert!(matches!(result.err().unwrap(), AppError::NotFound));
 }
 
 #[tokio::test]
@@ -173,7 +173,7 @@ async fn test_local_storage_get_nonexistent_thumbnail() {
     let result = storage.get_thumbnail(file_id, user_id).await;
 
     assert!(result.is_err());
-    matches!(result.err().unwrap(), AppError::NotFound);
+    assert!(matches!(result.err().unwrap(), AppError::NotFound));
 }
 
 #[tokio::test]
@@ -198,10 +198,10 @@ async fn test_local_storage_open_read_stream() {
     let stream = storage.open_read_stream(&file_path).await.unwrap();
 
     // 验证流类型
-    matches!(
+    assert!(matches!(
         stream,
         file_storage_backend::services::storage::StorageReadStream::Local(_)
-    );
+    ));
 }
 
 #[tokio::test]
@@ -229,10 +229,10 @@ async fn test_local_storage_open_read_stream_range() {
         .unwrap();
 
     // 验证流类型
-    matches!(
+    assert!(matches!(
         stream,
         file_storage_backend::services::storage::StorageReadStream::Local(_)
-    );
+    ));
 }
 
 #[tokio::test]
@@ -419,4 +419,26 @@ async fn test_local_storage_large_filename() {
     // 读取验证
     let read_data = storage.get_file(&path).await.unwrap();
     assert_eq!(read_data, data);
+}
+
+#[tokio::test]
+async fn test_local_storage_large_multibyte_extension_stays_under_byte_limit() {
+    init_test_env();
+
+    let temp_dir = tempdir().unwrap();
+    let storage = LocalStorage::new(temp_dir.path().to_str().unwrap().to_string());
+
+    let user_id = Uuid::new_v4();
+    let file_id = Uuid::new_v4();
+    let filename = format!("short.{}", "界".repeat(100));
+    let data = b"test";
+
+    let path = storage
+        .save_file(user_id, file_id, &filename, data)
+        .await
+        .unwrap();
+
+    let stored_name = Path::new(&path).file_name().unwrap().to_str().unwrap();
+    assert!(stored_name.len() <= 240);
+    assert!(Path::new(&path).exists());
 }

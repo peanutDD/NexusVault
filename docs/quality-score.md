@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-03 | PR review assertion and filename hardening | 94 | 修复 `LocalStorage::local_filename` 多字节 UTF-8 兜底截断按字符计数的问题，新增多字节扩展名回归测试；清理 backend 测试中的裸 `matches!` 假断言并新增 C-011 永久约束。 |
 | 2026-05-03 | backend coverage gate baseline correction | 90 | 真实 `cargo llvm-cov` 全量测试通过，但全局行覆盖率为 23.08%，原 90% CI 门槛是未来目标误作当前硬门槛。CI 改为 23% 基线守门并同步约束文档，后续只能随补测上调。 |
 | 2026-05-03 | frontend large component split completion | 95 | 完成 `UploadDialog.tsx`、`FilePreviewContent.tsx`、`MarkdownPreview.tsx` 拆分，目标大文件均降至阈值内；修复 `useThrottle` React Compiler lint 问题。`test`、`typecheck`、`lint`、`build` 通过，仍有既有 Vite chunk 循环与 vendor 大包警告。 |
 | 2026-05-03 | codex-cli auto review loop hardening | 93 | 补齐多轮 `max_rounds` 闭环、严格 JSON 安全审计、质量评分可用性、`gpt-5.4` 默认模型、结构化修复尝试统计与 medium+ 未修复说明策略。`scripts/codex-cli` 单测通过。 |
