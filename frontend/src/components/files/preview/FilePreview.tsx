@@ -18,6 +18,7 @@ import type { FileMetadata } from "../../../types/files";
 import { useFilePreviewData } from "./hooks/useFilePreviewData";
 import { useFilePreviewNavigation } from "./hooks/useFilePreviewNavigation";
 import { useFilePreviewEffects } from "./hooks/useFilePreviewEffects";
+import { useImagePan } from "./hooks/useImagePan";
 import { FilePreviewContent } from "./FilePreviewContent";
 import { FilePreviewToolbar } from "./FilePreviewToolbar";
 import { truncateFilename, formatPreviewDate } from "./utils";
@@ -107,6 +108,15 @@ export default function FilePreview({
   const [rotation, setRotation] = useState(0);
   const [isLooping, setIsLooping] = useState(true);
   const previewRootRef = useRef<HTMLDivElement>(null);
+  const {
+    pan,
+    isDragging: isDraggingImage,
+    resetPan,
+    onPointerDown: onImagePointerDown,
+    onPointerMove: onImagePointerMove,
+    onPointerUp: onImagePointerUp,
+    onPointerCancel: onImagePointerCancel,
+  } = useImagePan({ zoom, resetKey: file?.id });
 
   // -------------------------------------------------------------------------
   // Side Effects：HLS、键盘、滚动锁定、预加载
@@ -150,6 +160,7 @@ export default function FilePreview({
   const handleResetView = () => {
     setZoom(1);
     setRotation(0);
+    resetPan();
   };
   const handleDownload = async () => {
     if (!file) return;
@@ -316,6 +327,12 @@ export default function FilePreview({
         formatDate={formatPreviewDate}
         zoom={zoom}
         rotation={rotation}
+        pan={pan}
+        isDraggingImage={isDraggingImage}
+        onImagePointerDown={onImagePointerDown}
+        onImagePointerMove={onImagePointerMove}
+        onImagePointerUp={onImagePointerUp}
+        onImagePointerCancel={onImagePointerCancel}
         data-oid="gyzog51"
       />
 

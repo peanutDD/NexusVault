@@ -45,6 +45,12 @@ export interface FilePreviewContentProps {
   formatDate: (dateStr: string) => string;
   zoom: number;
   rotation: number;
+  pan: { x: number; y: number };
+  isDraggingImage: boolean;
+  onImagePointerDown: React.PointerEventHandler<HTMLDivElement>;
+  onImagePointerMove: React.PointerEventHandler<HTMLDivElement>;
+  onImagePointerUp: React.PointerEventHandler<HTMLDivElement>;
+  onImagePointerCancel: React.PointerEventHandler<HTMLDivElement>;
 }
 
 export function FilePreviewContent(props: FilePreviewContentProps) {
@@ -73,6 +79,12 @@ export function FilePreviewContent(props: FilePreviewContentProps) {
     formatDate,
     zoom,
     rotation,
+    pan,
+    isDraggingImage,
+    onImagePointerDown,
+    onImagePointerMove,
+    onImagePointerUp,
+    onImagePointerCancel,
   } = props;
   const [videoReady, setVideoReady] = useState(false);
 
@@ -113,6 +125,12 @@ export function FilePreviewContent(props: FilePreviewContentProps) {
               onImageError={onImageError}
               zoom={zoom}
               rotation={rotation}
+              pan={pan}
+              isDragging={isDraggingImage}
+              onPointerDown={onImagePointerDown}
+              onPointerMove={onImagePointerMove}
+              onPointerUp={onImagePointerUp}
+              onPointerCancel={onImagePointerCancel}
             />
           ) : null}
 

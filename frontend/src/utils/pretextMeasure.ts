@@ -11,7 +11,7 @@ const FONT_FAMILY =
 
 export const GRID_CARD = {
   H_PAD: 24, V_PAD: 24, THUMB_MB: 12, MAX_NAME_LINES: 2,
-  NAME_LH_FACTOR: 1.3, NAME_RIGHT_RESERVED: 20, FILE_META_H: 28, ROW_GAP: 8,
+  NAME_LH_FACTOR: 1.3, NAME_RIGHT_RESERVED: 20, FILE_META_H: 28, COL_GAP: 8, ROW_GAP: 12,
 } as const
 
 const _cache = new Map<string, PreparedText>()
@@ -62,8 +62,7 @@ export type GridItemDescriptor = { kind: 'file'; filename: string } | { kind: 'f
 
 export function buildRowModel(items: GridItemDescriptor[], columns: number, containerWidth: number, viewportWidth: number): { rowHeights: number[]; prefixSums: number[] } {
   if (!items.length || columns <= 0 || containerWidth <= 0) return { rowHeights: [], prefixSums: [0] }
-  const gap = 8
-  const cardWidth = Math.max(0, (containerWidth - gap * (columns - 1)) / columns)
+  const cardWidth = Math.max(0, (containerWidth - GRID_CARD.COL_GAP * (columns - 1)) / columns)
   const rowCount = Math.ceil(items.length / columns)
   const rowHeights = new Array<number>(rowCount)
   for (let r = 0; r < rowCount; r++) {

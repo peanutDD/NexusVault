@@ -222,7 +222,7 @@ export default function VirtualizedMixedGrid({
             return (
               <div
                 key={rowIndex}
-                className="virtualized-row mb-2 last:mb-0"
+                className="virtualized-row mb-3 last:mb-0"
                 data-oid="jzokoas"
               >
                 <div

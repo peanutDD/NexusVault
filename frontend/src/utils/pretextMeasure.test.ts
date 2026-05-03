@@ -56,6 +56,7 @@ describe('buildRowModel', () => {
   ]
   it('empty',     () => expect(buildRowModel([], 3, 400, 1280).prefixSums).toEqual([0]))
   it('2 rows',    () => expect(buildRowModel(items, 3, 400, 1280).rowHeights).toHaveLength(2))
+  it('reserves hover-safe vertical spacing', () => expect(GRID_CARD.ROW_GAP).toBeGreaterThanOrEqual(12))
   it('monotone',  () => { const { prefixSums: ps } = buildRowModel(items, 3, 400, 1280); for (let i = 1; i < ps.length; i++) expect(ps[i]).toBeGreaterThan(ps[i-1]) })
   it('total',     () => { const { rowHeights: rh, prefixSums: ps } = buildRowModel(items, 3, 400, 1280); expect(ps[rh.length]).toBeCloseTo(rh.reduce((a,b)=>a+b,0)) })
 })
