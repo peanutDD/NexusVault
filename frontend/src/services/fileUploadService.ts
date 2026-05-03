@@ -1,6 +1,6 @@
 import api from './api';
 import { CHUNKED_UPLOAD } from '../constants';
-import { sha256FileHex } from '../utils/sha256';
+import { sha256BlobHex, sha256FileHex } from '../utils/sha256';
 import { trackError, trackEvent } from '../utils/telemetry';
 import { getUploadMimeType } from '../utils/uploadValidation';
 import type { FileMetadata } from '../types/files';
@@ -9,7 +9,23 @@ type UploadResult = { file: FileMetadata };
 type UploadProgress = (percent: number, message?: string) => void;
 interface UploadOptions {
   signal?: AbortSignal;
+  contentSha256?: string;
 }
+
+interface ChunkedUploadSessionRecord {
+  uploadId: string;
+  chunkSize: number;
+  totalParts: number;
+  fileName: string;
+  fileSize: number;
+  fileLastModified: number;
+  mimeType: string;
+  folderId: string | null;
+  contentSha256: string;
+  updatedAt: number;
+}
+
+const CHUNKED_SESSION_PREFIX = 'file-storage:chunked-upload:v1';
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
@@ -40,6 +56,56 @@ function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
     }, ms);
     signal?.addEventListener('abort', abort, { once: true });
   });
+}
+
+function chunkedSessionKey(
+  file: globalThis.File,
+  mimeType: string,
+  folderId: string | null | undefined,
+  contentSha256: string,
+): string {
+  const folder = folderId ?? 'root';
+  return [
+    CHUNKED_SESSION_PREFIX,
+    contentSha256,
+    file.size,
+    file.lastModified,
+    folder,
+    mimeType,
+    file.name,
+  ].join(':');
+}
+
+function readChunkedSession(key: string): ChunkedUploadSessionRecord | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as ChunkedUploadSessionRecord;
+  } catch {
+    return null;
+  }
+}
+
+function writeChunkedSession(key: string, record: ChunkedUploadSessionRecord): void {
+  try {
+    globalThis.localStorage?.setItem(key, JSON.stringify(record));
+  } catch {
+    // Resume state is opportunistic; upload correctness does not depend on storage availability.
+  }
+}
+
+function removeChunkedSession(key: string): void {
+  try {
+    globalThis.localStorage?.removeItem(key);
+  } catch {
+    // Nothing to do.
+  }
+}
+
+function isRetryableUploadFailure(err: unknown): boolean {
+  if (isAbortLikeError(err)) return false;
+  const status = (err as { response?: { status?: number } } | null)?.response?.status;
+  return status == null || status >= 500;
 }
 
 export const fileUploadService = {
@@ -90,14 +156,14 @@ export const fileUploadService = {
     try {
       throwIfAborted(options.signal);
       onProgress?.(0, '计算指纹…');
-      const content_sha256 = await sha256FileHex(file, options.signal);
+      const contentSha256 = await sha256FileHex(file, options.signal);
       let result: UploadResult | null = null;
 
       try {
         throwIfAborted(options.signal);
         onProgress?.(0, '检查秒传…');
         result = await this.uploadInstant({
-          content_sha256,
+          content_sha256: contentSha256,
           filename: file.name,
           file_size: file.size,
           mime_type: mime,
@@ -112,7 +178,7 @@ export const fileUploadService = {
         onProgress?.(0, '秒传未命中，正在上传…');
         const progressOnly: UploadProgress = (p, message) => onProgress?.(p, message);
         const uploaded = await (useChunked
-          ? this.uploadFileChunked(file, progressOnly, folderId, options)
+          ? this.uploadFileChunked(file, progressOnly, folderId, { ...options, contentSha256 })
           : this.uploadFile(file, progressOnly, folderId, options));
 
         trackUploadSuccess('upload_with_instant', uploaded.file.id, file.size, startedAt);
@@ -190,11 +256,15 @@ export const fileUploadService = {
     uploadId: string,
     part: number,
     blob: Blob,
+    partSha256: string,
     options: UploadOptions = {},
   ): Promise<void> {
     await api.put(`/api/files/upload/chunked/${uploadId}/chunk?part=${part}`, blob, {
       signal: options.signal,
-      headers: { 'Content-Type': 'application/octet-stream' },
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Part-SHA256': partSha256,
+      },
     });
   },
 
@@ -236,18 +306,66 @@ export const fileUploadService = {
   ): Promise<UploadResult> {
     const mimeType = getUploadMimeType(file);
     throwIfAborted(options.signal);
+    onProgress?.(0, '准备断点续传…');
+    const contentSha256 = options.contentSha256 ?? await sha256FileHex(file, options.signal);
+    const sessionKey = chunkedSessionKey(file, mimeType, folderId, contentSha256);
+    const storedSession = readChunkedSession(sessionKey);
     let uploadId: string | null = null;
-    const { upload_id, chunk_size, total_parts } = await this.chunkedUploadInit(
-      file.name,
-      mimeType,
-      file.size,
-      options,
+    let chunkSize = 0;
+    let totalParts = 0;
+
+    const matchesCurrentFile = (record: ChunkedUploadSessionRecord): boolean => (
+      record.fileName === file.name &&
+      record.fileSize === file.size &&
+      record.fileLastModified === file.lastModified &&
+      record.mimeType === mimeType &&
+      record.folderId === (folderId ?? null) &&
+      record.contentSha256 === contentSha256
     );
-    uploadId = upload_id;
+
+    if (storedSession && matchesCurrentFile(storedSession)) {
+      try {
+        const status = await this.chunkedUploadStatus(storedSession.uploadId, options);
+        if (status.total_parts === storedSession.totalParts) {
+          uploadId = storedSession.uploadId;
+          chunkSize = storedSession.chunkSize;
+          totalParts = storedSession.totalParts;
+        } else {
+          removeChunkedSession(sessionKey);
+        }
+      } catch {
+        removeChunkedSession(sessionKey);
+      }
+    }
+
+    if (uploadId === null) {
+      const { upload_id, chunk_size, total_parts } = await this.chunkedUploadInit(
+        file.name,
+        mimeType,
+        file.size,
+        options,
+      );
+      uploadId = upload_id;
+      chunkSize = chunk_size;
+      totalParts = total_parts;
+      writeChunkedSession(sessionKey, {
+        uploadId,
+        chunkSize,
+        totalParts,
+        fileName: file.name,
+        fileSize: file.size,
+        fileLastModified: file.lastModified,
+        mimeType,
+        folderId: folderId ?? null,
+        contentSha256,
+        updatedAt: Date.now(),
+      });
+    }
 
     const refreshUploaded = async (): Promise<Set<number>> => {
+      if (uploadId === null) return new Set();
       try {
-        const status = await this.chunkedUploadStatus(upload_id, options);
+        const status = await this.chunkedUploadStatus(uploadId, options);
         return new Set(status.uploaded_parts);
       } catch {
         return new Set();
@@ -256,19 +374,25 @@ export const fileUploadService = {
 
     const uploaded = await refreshUploaded();
     let completedChunks = uploaded.size;
-    const report = () => onProgress?.(Math.round((completedChunks / total_parts) * 100));
+    const report = () => onProgress?.(
+      totalParts === 0 ? 100 : Math.round((completedChunks / totalParts) * 100),
+    );
     report();
 
     const uploadChunk = async (part: number): Promise<void> => {
       throwIfAborted(options.signal);
-      const start = (part - 1) * chunk_size;
-      const blob = file.slice(start, Math.min(part * chunk_size, file.size));
+      if (uploadId === null) throw new Error('Chunked upload session is not initialized');
+      const start = (part - 1) * chunkSize;
+      const blob = file.slice(start, Math.min(part * chunkSize, file.size));
+      const partSha256 = await sha256BlobHex(blob, options.signal);
 
       for (let attempt = 0; attempt < CHUNKED_UPLOAD.MAX_RETRIES; attempt++) {
         try {
           throwIfAborted(options.signal);
-          await this.chunkedUploadChunk(upload_id, part, blob, options);
+          await this.chunkedUploadChunk(uploadId, part, blob, partSha256, options);
           completedChunks++;
+          const existing = readChunkedSession(sessionKey);
+          if (existing) writeChunkedSession(sessionKey, { ...existing, updatedAt: Date.now() });
           report();
           return;
         } catch (e) {
@@ -281,14 +405,14 @@ export const fileUploadService = {
           }
           if (attempt === CHUNKED_UPLOAD.MAX_RETRIES - 1) throw e;
           const delay = CHUNKED_UPLOAD.RETRY_DELAY_BASE * Math.pow(2, attempt);
-          onProgress?.(Math.round((completedChunks / total_parts) * 100), `分片 ${part} 重试中…`);
+          onProgress?.(Math.round((completedChunks / totalParts) * 100), `分片 ${part} 重试中…`);
           await abortableDelay(delay, options.signal);
         }
       }
     };
 
     try {
-      const pendingParts = Array.from({ length: total_parts }, (_, i) => i + 1).filter(
+      const pendingParts = Array.from({ length: totalParts }, (_, i) => i + 1).filter(
         (part) => !uploaded.has(part),
       );
       const chunks = [...pendingParts];
@@ -304,7 +428,7 @@ export const fileUploadService = {
       }
 
       const finalStatus = await refreshUploaded();
-      const missingParts = Array.from({ length: total_parts }, (_, i) => i + 1).filter(
+      const missingParts = Array.from({ length: totalParts }, (_, i) => i + 1).filter(
         (part) => !finalStatus.has(part),
       );
 
@@ -313,12 +437,15 @@ export const fileUploadService = {
       }
 
       throwIfAborted(options.signal);
-      return this.chunkedUploadComplete(upload_id, file.name, mimeType, folderId, options);
+      const result = await this.chunkedUploadComplete(uploadId, file.name, mimeType, folderId, options);
+      removeChunkedSession(sessionKey);
+      return result;
     } catch (err) {
-      if (uploadId !== null) {
+      if (uploadId !== null && !isRetryableUploadFailure(err)) {
         await this.chunkedUploadAbort(uploadId).catch((abortErr) => {
           trackError(abortErr, { action: 'chunked_upload_abort_failed', fileSize: file.size });
         });
+        removeChunkedSession(sessionKey);
       }
       throw err;
     }

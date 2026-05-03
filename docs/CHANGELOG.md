@@ -6,6 +6,23 @@
 
 ## [未发布] — 2026 年（当前会话）
 
+### 上传链路完整性补强（2026-05-04）
+
+- 普通上传、秒传、分片完成统一校验 `folder_id` 是否属于当前用户，防止跨用户写入文件夹。
+- 后端上传 handler 集成测试增加 `serial_test` 隔离，避免共享测试数据库并发清理导致 upload session / user FK 抖动。
+- 前端分片上传支持真正断点续传：本地 session 绑定文件指纹、大小、修改时间、MIME、folder 和文件名，复用前先查询后端 status。
+- 每个分片上传发送 `X-Part-SHA256`，后端在记录 uploaded part 前校验 SHA 和该分片期望字节数。
+- 秒传跨用户复制改为 storage 层 copy：Local 用文件系统 copy，S3 用 `copy_object`，避免大文件读入内存。
+- 分片 complete 成功/失败记录 `chunked_upload_complete` metrics。
+- 删除未使用的 `useFileUpload` hook，并将取消与 folder 传递回归测试集中到实际 `UploadDialog` controller。
+- 新增 `docs/design-docs/upload-completeness-hardening.md`、`docs/constraints/C-023-upload-resume-integrity.md` 和本任务 exec plan。
+
+### 🐛 图片预览放大拖动（2026-05-03）
+
+- 图片预览放大到 `1x` 以上后，支持通过鼠标、触摸或笔拖动平移，查看被预览框裁掉的边缘区域。
+- 缩回 `1x`、切换预览文件、点击 Reset 时会同步清除平移偏移，避免下一张图继承上一张图的位置。
+- 新增 `useImagePan` 与 `ImagePreview` 回归测试，并记录永久约束 `docs/constraints/C-019-image-preview-pan-when-zoomed.md`。
+
 ### 📚 文档统一整理（2026-05-01）
 
 #### 整理目的

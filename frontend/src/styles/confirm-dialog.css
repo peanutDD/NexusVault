@@ -3,6 +3,139 @@
    ========================================================================== */
 
 @layer components {
+    .confirm-dialog-tech,
+    .modal-dialog-tech {
+        background-image:
+            linear-gradient(var(--dialog-tech-backdrop-grid) 1px, transparent 1px),
+            linear-gradient(90deg, var(--dialog-tech-backdrop-grid) 1px, transparent 1px),
+            radial-gradient(circle at 22% 12%, var(--dialog-tech-accent-soft), transparent 34%),
+            radial-gradient(circle at 78% 18%, var(--dialog-tech-secondary-soft), transparent 38%),
+            linear-gradient(135deg, var(--dialog-tech-backdrop-start), var(--dialog-tech-backdrop-end));
+        background-size:
+            44px 44px,
+            44px 44px,
+            100% 100%,
+            100% 100%,
+            100% 100%;
+    }
+
+    .confirm-dialog-tech-backdrop {
+        background-image:
+            linear-gradient(135deg, transparent, var(--dialog-tech-accent-soft), transparent),
+            linear-gradient(90deg, transparent, var(--dialog-tech-scanline), transparent);
+    }
+
+    .confirm-dialog-tech-panel,
+    .modal-dialog-tech-panel {
+        box-shadow: var(--dialog-tech-panel-shadow);
+        isolation: isolate;
+    }
+
+    .confirm-dialog-tech-panel::after,
+    .modal-dialog-tech-panel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(
+            135deg,
+            var(--dialog-tech-edge) 0%,
+            transparent 34%,
+            transparent 66%,
+            var(--dialog-tech-secondary) 100%
+        );
+        -webkit-mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+    }
+
+    .confirm-dialog-tech-topline,
+    .modal-dialog-tech-topline {
+        background: linear-gradient(
+            90deg,
+            transparent,
+            var(--dialog-tech-accent),
+            var(--dialog-tech-secondary),
+            transparent
+        );
+        box-shadow: 0 0 24px var(--dialog-tech-accent-soft);
+        z-index: 1;
+    }
+
+    .confirm-dialog-tech-grid,
+    .modal-dialog-tech-grid {
+        background-image:
+            linear-gradient(var(--dialog-tech-grid) 1px, transparent 1px),
+            linear-gradient(90deg, var(--dialog-tech-grid) 1px, transparent 1px),
+            linear-gradient(180deg, transparent, var(--dialog-tech-scanline), transparent);
+        background-size:
+            18px 18px,
+            18px 18px,
+            100% 120px;
+        opacity: 0.58;
+        z-index: 0;
+    }
+
+    .confirm-dialog-tech-groove {
+        background:
+            linear-gradient(180deg, var(--dialog-tech-groove-top), var(--dialog-tech-groove-bottom)),
+            linear-gradient(90deg, transparent, var(--dialog-tech-scanline), transparent);
+        box-shadow:
+            inset 0 2px 14px rgba(0, 0, 0, 0.34),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .confirm-dialog-tech-groove::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--dialog-tech-accent), var(--dialog-tech-secondary), transparent);
+        pointer-events: none;
+    }
+
+    .confirm-dialog-tech-icon {
+        box-shadow:
+            0 0 0 1px var(--dialog-tech-edge),
+            0 0 18px var(--dialog-tech-accent-soft),
+            inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .confirm-dialog-tech-title {
+        text-shadow: 0 0 16px var(--dialog-tech-accent-soft);
+    }
+
+    .confirm-dialog-tech-cancel {
+        border-color: var(--dialog-tech-cancel-border);
+    }
+
+    .confirm-dialog-tech-cancel:hover:not(:disabled) {
+        border-color: var(--dialog-tech-edge);
+        background: var(--dialog-tech-cancel-hover-bg);
+    }
+
+    .confirm-dialog-tech-confirm {
+        box-shadow:
+            0 0 0 1px var(--dialog-tech-edge),
+            0 0 22px var(--dialog-tech-accent-soft);
+    }
+
+    .confirm-dialog-tech-confirm:hover:not(:disabled) {
+        box-shadow:
+            0 0 0 1px var(--dialog-tech-accent),
+            0 0 28px var(--dialog-tech-accent-soft),
+            0 0 42px var(--dialog-tech-secondary-soft);
+    }
+
     /* 删除确认弹窗 - 科幻风玻璃拟态 */
     .confirm-dialog-sci-fi-backdrop {
         background-image: linear-gradient(

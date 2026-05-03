@@ -44,6 +44,7 @@ export default function Modal({
         variant === "glass" || isUploadVariant
           ? "bg-[var(--modal-backdrop-glass)]"
           : "bg-[var(--modal-backdrop)]",
+        variant === "glass" && "modal-dialog-tech",
       )}
       onClick={handleBackdropClick}
       role="dialog"
@@ -60,6 +61,7 @@ export default function Modal({
                 "backdrop-blur-xl backdrop-saturate-150",
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
                 "before:bg-[image:var(--modal-surface-glass-highlight)]",
+                "modal-dialog-tech-panel",
               ].join(" ")
             : isUploadVariant
               ? [
@@ -75,8 +77,20 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
         data-oid="o0:osfm"
       >
+        {variant === "glass" && (
+          <>
+            <div
+              className="modal-dialog-tech-topline absolute inset-x-0 top-0 h-0.5 rounded-t-2xl pointer-events-none"
+              aria-hidden
+            />
+            <div
+              className="modal-dialog-tech-grid absolute inset-0 rounded-2xl pointer-events-none"
+              aria-hidden
+            />
+          </>
+        )}
         <div
-          className="flex justify-between items-center mb-4"
+          className="relative flex justify-between items-center mb-4"
           data-oid="5kruig."
         >
           <h2
@@ -111,7 +125,7 @@ export default function Modal({
         {description && (
           <p
             className={cn(
-              "mb-4 text-sm transition-colors duration-200",
+              "relative mb-4 text-sm transition-colors duration-200",
               "text-[var(--color-text-secondary)]",
             )}
             data-oid="s-bcnks"
@@ -119,7 +133,7 @@ export default function Modal({
             {description}
           </p>
         )}
-        {children}
+        <div className="relative">{children}</div>
       </div>
     </div>
   );

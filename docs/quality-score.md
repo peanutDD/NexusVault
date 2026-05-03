@@ -2,6 +2,8 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-04 | upload completeness hardening | 96 | P0-P3 上传链路补强：folder ownership 校验覆盖普通/秒传/分片完成，上传 handler DB 测试用 `serial_test` 隔离；前端实现可恢复分片会话与每片 SHA，后端校验分片 SHA 和大小；秒传跨用户复制改存储层 copy，分片完成打 metrics；删除未使用 `useFileUpload`，测试迁到实际 UploadDialog controller。目标前后端测试通过。 |
+| 2026-05-04 | themed tech dialogs | 94 | 文件操作 glass 弹窗统一升级为主题化科技视觉：`ConfirmDialog` 覆盖新建/批量移动/批量删除/批量分享/重命名/删除，`Modal` 覆盖单文件分享；新增行为不变回归测试，前端 lint/test/build 通过。 |
 | 2026-05-04 | codex-cli toolbox extraction design | 94 | 整理 `scripts/codex-cli` 独立工具箱改造设计，明确当前可复用能力、Gemini/GitHub/仓库规则耦合点、配置文件方案、P0-P3 改造清单、迁移步骤与验收标准。 |
 | 2026-05-03 | image preview pan after zoom | 95 | 图片预览放大后支持 pointer 拖动平移，缩回 1x、切换文件和 Reset 会清除 pan；新增 `useImagePan` 与 `ImagePreview` 回归测试，并记录 C-019 永久约束。 |
 | 2026-05-03 | frontend upload logic completion | 96 | 审查并补齐上传取消与 URL 上传边界：运行中队列取消会 settle，旧 `useFileUpload` hook 传递并中止 `AbortSignal`，上传弹窗卸载时统一取消；URL 上传在读取 body 前按 `Content-Length` 拦截超限文件并支持 `Content-Disposition` 文件名。新增 C-017/C-018 约束，前端 test/lint/build 通过。 |

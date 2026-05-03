@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from './api';
 import { fileUploadService } from './fileUploadService';
-import { sha256FileHex } from '../utils/sha256';
+import { sha256BlobHex, sha256FileHex } from '../utils/sha256';
 
 vi.mock('./api', () => ({
   default: {
@@ -14,6 +14,7 @@ vi.mock('./api', () => ({
 
 vi.mock('../utils/sha256', () => ({
   sha256FileHex: vi.fn(),
+  sha256BlobHex: vi.fn(),
 }));
 
 vi.mock('../utils/telemetry', () => ({
@@ -24,17 +25,21 @@ vi.mock('../utils/telemetry', () => ({
 const mockedApi = vi.mocked(api);
 const apiPost = mockedApi.post as unknown as ReturnType<typeof vi.fn>;
 const apiGet = mockedApi.get as unknown as ReturnType<typeof vi.fn>;
+const apiPut = mockedApi.put as unknown as ReturnType<typeof vi.fn>;
 const apiDelete = mockedApi.delete as unknown as ReturnType<typeof vi.fn>;
 const mockedSha256 = sha256FileHex as unknown as ReturnType<typeof vi.fn>;
+const mockedBlobSha256 = sha256BlobHex as unknown as ReturnType<typeof vi.fn>;
 
-function makeFile(name: string, type: string, body = 'hello'): File {
-  return new File([body], name, { type });
+function makeFile(name: string, type: string, body = 'hello', lastModified = 123): File {
+  return new File([body], name, { type, lastModified });
 }
 
 describe('fileUploadService upload orchestration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedSha256.mockResolvedValue('a'.repeat(64));
+    mockedBlobSha256.mockResolvedValue('b'.repeat(64));
+    localStorage.clear();
   });
 
   it('passes AbortSignal through hash, instant check, and normal upload requests', async () => {
@@ -100,5 +105,121 @@ describe('fileUploadService upload orchestration', () => {
     expect(apiDelete).toHaveBeenCalledWith(
       '/api/files/upload/chunked/upload-1/abort',
     );
+  });
+
+  it('sends a SHA-256 header for every uploaded chunk', async () => {
+    const file = makeFile('movie.mp4', 'video/mp4', 'abcde');
+
+    apiPost
+      .mockResolvedValueOnce({
+        data: {
+          upload_id: 'upload-1',
+          chunk_size: 5,
+          total_parts: 1,
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          file: {
+            id: 'file-1',
+            filename: 'movie.mp4',
+          },
+        },
+      });
+    apiGet.mockResolvedValue({ data: { uploaded_parts: [], total_parts: 1 } });
+    apiPut.mockResolvedValue({ data: { ok: true } });
+
+    await fileUploadService.uploadFileChunked(file);
+
+    expect(mockedBlobSha256).toHaveBeenCalledWith(expect.any(Blob), undefined);
+    expect(apiPut).toHaveBeenCalledWith(
+      '/api/files/upload/chunked/upload-1/chunk?part=1',
+      expect.any(Blob),
+      expect.objectContaining({
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'X-Part-SHA256': 'b'.repeat(64),
+        },
+      }),
+    );
+  });
+
+  it('resumes a persisted chunked upload session instead of creating a new one', async () => {
+    const file = makeFile('movie.mp4', 'video/mp4', 'abcde', 456);
+    const contentSha256 = 'a'.repeat(64);
+    localStorage.setItem(
+      [
+        'file-storage:chunked-upload:v1',
+        contentSha256,
+        file.size,
+        file.lastModified,
+        'root',
+        'video/mp4',
+        file.name,
+      ].join(':'),
+      JSON.stringify({
+        uploadId: 'upload-existing',
+        chunkSize: 5,
+        totalParts: 1,
+        fileName: file.name,
+        fileSize: file.size,
+        fileLastModified: file.lastModified,
+        mimeType: 'video/mp4',
+        folderId: null,
+        contentSha256,
+        updatedAt: 1,
+      }),
+    );
+    apiGet.mockResolvedValue({ data: { uploaded_parts: [1], total_parts: 1 } });
+    apiPost.mockResolvedValueOnce({
+      data: {
+        file: {
+          id: 'file-1',
+          filename: 'movie.mp4',
+        },
+      },
+    });
+
+    await fileUploadService.uploadFileChunked(file);
+
+    expect(apiPost).not.toHaveBeenCalledWith(
+      '/api/files/upload/chunked/init',
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(apiPost).toHaveBeenCalledWith(
+      '/api/files/upload/chunked/upload-existing/complete',
+      expect.objectContaining({ filename: 'movie.mp4' }),
+      expect.anything(),
+    );
+    expect(apiPut).not.toHaveBeenCalled();
+  });
+
+  it('keeps a chunked session after retryable failures so the next attempt can resume', async () => {
+    vi.useFakeTimers();
+    const file = makeFile('movie.mp4', 'video/mp4', 'abcde');
+
+    try {
+      apiPost.mockResolvedValueOnce({
+        data: {
+          upload_id: 'upload-1',
+          chunk_size: 5,
+          total_parts: 1,
+        },
+      });
+      apiGet.mockResolvedValue({ data: { uploaded_parts: [], total_parts: 1 } });
+      apiPut.mockRejectedValue(Object.assign(new Error('Network Error'), { response: undefined }));
+
+      const uploadPromise = expect(fileUploadService.uploadFileChunked(file)).rejects.toThrow(
+        'Network Error',
+      );
+      await vi.runAllTimersAsync();
+      await uploadPromise;
+
+      expect(apiDelete).not.toHaveBeenCalled();
+      expect(localStorage.length).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -34,6 +34,8 @@ impl FileService {
 
         self.ensure_can_store_detailed(user_id, &req.mime_type, req.file_size)
             .await?;
+        self.ensure_folder_belongs_to_user(user_id, req.folder_id)
+            .await?;
 
         let existing = self
             .files_repo
@@ -66,14 +68,9 @@ impl FileService {
             // 路径已属于当前用户，可直接复用
             existing.file_path.clone()
         } else {
-            // 路径属于其他用户（或无法解析），复制到当前用户目录，避免跨用户路径引用
-            // 先读取源文件内容，再写入新路径（兼容 LocalStorage 和 S3）
-            let source_data = self.storage.get_file(&existing.file_path).await?;
-            let new_path = self
-                .storage
-                .save_file(user_id, file_id, &storage_filename, &source_data)
-                .await?;
-            new_path
+            self.storage
+                .copy_file_to_user(&existing.file_path, user_id, file_id, &storage_filename)
+                .await?
         };
 
         // 检查是否存在同名文件（在同一文件夹下）

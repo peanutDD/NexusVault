@@ -136,6 +136,8 @@ impl FileService {
         } = input;
         self.ensure_can_store_detailed(user_id, &mime_type, file_size)
             .await?;
+        self.ensure_folder_belongs_to_user(user_id, folder_id)
+            .await?;
 
         // 同目录同名文件：用“版本化覆盖”保证用户体验（同名上传即更新），同时保留历史版本回滚能力。
         // 检查是否存在同名文件（在同一文件夹下）

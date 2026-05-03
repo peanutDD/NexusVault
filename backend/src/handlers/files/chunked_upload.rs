@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 use crate::constants::MAX_CONCURRENT_CHUNKED_UPLOADS;
 use crate::extractors::AuthenticatedUser;
+use crate::middleware::metrics::record_file_operation;
 use crate::models::upload_session::{CompleteChunkedUploadRequest, InitChunkedUploadRequest};
 use crate::utils::{json_response, parse_part_number, success_response, AppError};
 use crate::AppState;
@@ -127,10 +128,24 @@ pub async fn chunked_upload_complete_handler(
     axum::Json(req): axum::Json<CompleteChunkedUploadRequest>,
 ) -> Result<Response, AppError> {
     tracing::info!(upload_id = %upload_id, "POST /upload/chunked/:id/complete");
-    let file = state
+    let file = match state
         .file_service
         .complete_chunked_upload(upload_id, user_id, req)
-        .await?;
+        .await
+    {
+        Ok(file) => {
+            record_file_operation(
+                "chunked_upload_complete",
+                file.file_size.max(0) as u64,
+                true,
+            );
+            file
+        }
+        Err(err) => {
+            record_file_operation("chunked_upload_complete", 0, false);
+            return Err(err.into());
+        }
+    };
     if let Some(pool) = &state.redis {
         let _ = crate::services::redis::RedisService::new(pool.clone())
             .bump_user_cache_version(user_id)

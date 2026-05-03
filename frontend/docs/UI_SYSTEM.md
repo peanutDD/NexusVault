@@ -108,9 +108,52 @@ import { FormField } from '../../common/form';
 </FormField>
 ```
 
-## 7. 文件预览体验（补充说明）
+## 7. 对话框与文件操作弹窗
 
-### 7.1 GIF / 视频预览（HLS 优先，MP4 兜底）
+### 7.1 通用结构
+
+- 位置：
+  - 基础对话框：`frontend/src/components/common/dialog/BaseDialog.tsx`
+  - 确认弹窗：`frontend/src/components/common/dialog/ConfirmDialog.tsx`
+  - 通用模态框：`frontend/src/components/common/dialog/Modal.tsx`
+- 文件操作弹窗优先复用现有通用组件，不在业务组件内重新实现遮罩、ESC 关闭、背景点击、自动聚焦、loading 禁用等交互。
+- `ConfirmDialog appearance="glass"` 是文件操作确认类弹窗的默认外观，覆盖：
+  - 新建文件夹
+  - 批量移动
+  - 批量删除
+  - 批量分享
+  - 文件/文件夹重命名
+  - 文件/文件夹删除
+- `Modal variant="glass"` 用于表单较完整的模态流程，例如单文件分享。
+
+### 7.2 主题化科技玻璃外观
+
+- 科技感外观由公共组件自动挂载：
+  - `confirm-dialog-tech`
+  - `confirm-dialog-tech-panel`
+  - `modal-dialog-tech`
+  - `modal-dialog-tech-panel`
+- 视觉细节集中在 `frontend/src/styles/confirm-dialog.css`：
+  - 背景光栅
+  - 顶部能量线
+  - 面板发光描边
+  - 凹槽式标题栏
+  - 确认/取消按钮 hover glow
+- 颜色、光效、网格透明度必须通过 `frontend/src/styles/tokens.css` 的 `--dialog-tech-*` 变量控制。
+- 新增主题时必须同时补齐 dark / light / purple 对应的 `--dialog-tech-*` token，避免组件内写死颜色。
+
+### 7.3 行为约束
+
+- 视觉升级不得改变业务回调、表单校验、loading 状态、错误提示、复制链接、移动目标选择或删除确认流程。
+- 对话框正文里的列表、输入框、摘要卡片继续使用 `--dialog-panel-*`、`--dialog-list-*`、`--dialog-field-*`、`--dialog-action-*` token。
+- 文件操作弹窗的回归测试至少覆盖：
+  - 科技玻璃 shell 已挂载
+  - confirm / close 回调仍按原按钮触发
+  - 弹窗内容可见，不被装饰层遮挡
+
+## 8. 文件预览体验（补充说明）
+
+### 8.1 GIF / 视频预览（HLS 优先，MP4 兜底）
 
 - GIF 预览默认走 HLS：
   - 前端优先请求 `GET /api/files/:id/hls`（`.m3u8`）
@@ -122,16 +165,16 @@ import { FormField } from '../../common/form';
 - 视频循环播放：
   - 工具栏「循环播放」按钮会切换播放器循环状态
 
-### 7.2 移动端下载兜底（URL Token）
+### 8.2 移动端下载兜底（URL Token）
 
 - 部分浏览器不支持文件系统写入能力时，下载采用浏览器原生下载：
   - `GET /api/files/:id/download?token=...`
   - 仅 GET 场景支持 query token；优先使用 `Authorization: Bearer <token>`
   - 注意避免在不可信页面暴露 token（Referer/日志风险）
 
-## 8. 文件列表交互规范（排序 / 分组 / 滚动位置）
+## 9. 文件列表交互规范（排序 / 分组 / 滚动位置）
 
-### 8.1 排序与分组策略
+### 9.1 排序与分组策略
 
 - 普通排序（按名称/时间/大小）：
   - 文件与文件夹会合并为同一列表统一排序并混排展示
@@ -141,12 +184,12 @@ import { FormField } from '../../common/form';
   - 按天分组，文件夹与文件都会进入对应日期分组
   - 分组“全选”会同时选择该日期分组内的文件与文件夹
 
-### 8.2 进入/返回文件夹时的滚动位置
+### 9.2 进入/返回文件夹时的滚动位置
 
 - 仅在浏览器后退/前进（POP）时，会按当前条件（folder/sort/mime/search）记忆并恢复滚动位置
 - 点击进入子文件夹时始终从顶部开始（避免误以为列表“跳动/错位”）
 
-### 8.3 列表卡片排版与数字格式
+### 9.3 列表卡片排版与数字格式
 
 - 文件大小在卡片中使用紧凑格式：
   - 不显示小数
@@ -154,14 +197,14 @@ import { FormField } from '../../common/form';
 - FileCard/FolderCard 文字使用 `clamp()` 响应式字号，并保证长文本不会撑破布局（`min-w-0 + truncate`）
 - 卡片所有视觉尺寸（圆角、阴影、模糊）均通过 Design Tokens 的 `clamp()` 流体值随视口自适应缩放，详见 [TOKENS_USAGE.md §11](./TOKENS_USAGE.md#11-流体自适应规范fluid-tokens)
 
-### 8.4 预览页 3D 玻璃拟态背景（说明）
+### 9.4 预览页 3D 玻璃拟态背景（说明）
 
 - 预览弹窗使用 3D 分层玻璃拟态背景，优先保证内容可读与可点击：
   - 工具栏/导航按钮始终在最上层（避免被 3D 场景遮挡）
   - 背板/网格等装饰保持透明或半透明，避免遮住文件内容
   - 移动端优先兼容（性能与可用性优先于装饰效果）
 
-## 9. 后续规范建议
+## 10. 后续规范建议
 
 - 新增页面或组件时：
   - 优先从 `components/common` 挑选现有组件（Button、EmptyState、ErrorMessage、Skeleton、Tag 等）。

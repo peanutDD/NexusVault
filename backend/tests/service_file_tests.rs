@@ -445,6 +445,48 @@ async fn test_file_service_chunked_upload_invalid_part_index() {
 }
 
 #[tokio::test]
+async fn test_file_service_chunked_upload_invalid_chunk_size() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "chunked_invalid_size").await;
+    let service = create_test_service(pool.clone()).await;
+
+    let init_req = InitChunkedUploadRequest {
+        filename: "test.txt".to_string(),
+        mime_type: "text/plain".to_string(),
+        total_size: CHUNK_SIZE as u64 + 1,
+    };
+
+    let (upload_id, _, total_parts) = service
+        .init_chunked_upload(user_id, init_req)
+        .await
+        .unwrap();
+    assert_eq!(total_parts, 2);
+
+    let result = service
+        .upload_chunk(
+            upload_id,
+            user_id,
+            1,
+            Bytes::from_static(b"too short"),
+            None,
+        )
+        .await;
+
+    assert!(result.is_err());
+    assert!(matches!(
+        result.err().unwrap(),
+        FileServiceError::InvalidChunkSize {
+            part_index: 1,
+            expected,
+            actual: 9
+        } if expected == CHUNK_SIZE as u64
+    ));
+}
+
+#[tokio::test]
 async fn test_file_service_chunked_upload_missing_chunks() {
     init_test_env();
     let pool = create_test_pool().await;
