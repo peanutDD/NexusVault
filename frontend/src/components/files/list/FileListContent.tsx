@@ -308,7 +308,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
               onCloseMenu={closeMenu}
             />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 pt-1">
               <FileListVirtualScroller
                 isPlainSort={isPlainSort}
                 shouldUseVirtualList={shouldUseVirtualList}

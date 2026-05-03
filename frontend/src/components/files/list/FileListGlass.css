@@ -214,6 +214,7 @@
 
 .fileListGlassScope .glass-card:hover {
   transform: translateY(-1px);
+  z-index: 1;
   border-color: var(--filelist-card-border-hover);
   box-shadow: none;
 }
