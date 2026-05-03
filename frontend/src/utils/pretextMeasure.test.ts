@@ -35,11 +35,12 @@ describe('measureLineCount', () => {
 })
 describe('computeFileCardHeight', () => {
   it('positive',  () => expect(computeFileCardHeight('a.jpg', 120, 1280)).toBeGreaterThan(0))
+  it('keeps card titles single-line', () => expect(GRID_CARD.MAX_NAME_LINES).toBe(1))
   it('formula',   () => {
     const iW = 120 - GRID_CARD.H_PAD, fs = fileNameFontSizePx(1280), lh = Math.ceil(fs * GRID_CARD.NAME_LH_FACTOR)
     expect(computeFileCardHeight('a.jpg', 120, 1280)).toBeCloseTo(GRID_CARD.V_PAD + iW + GRID_CARD.THUMB_MB + lh + GRID_CARD.FILE_META_H, 0)
   })
-  it('grows',     () => expect(computeFileCardHeight('x'.repeat(80), 120, 1280)).toBeGreaterThanOrEqual(computeFileCardHeight('x.jpg', 120, 1280)))
+  it('does not grow for long names', () => expect(computeFileCardHeight('x'.repeat(80), 120, 1280)).toBe(computeFileCardHeight('x.jpg', 120, 1280)))
   it('capped',    () => {
     const iW = 120 - GRID_CARD.H_PAD, fs = fileNameFontSizePx(1280), lh = Math.ceil(fs * GRID_CARD.NAME_LH_FACTOR)
     expect(computeFileCardHeight('x'.repeat(500), 120, 1280)).toBeLessThanOrEqual(GRID_CARD.V_PAD + iW + GRID_CARD.THUMB_MB + GRID_CARD.MAX_NAME_LINES * lh + GRID_CARD.FILE_META_H)

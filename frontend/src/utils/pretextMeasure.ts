@@ -10,7 +10,7 @@ const FONT_FAMILY =
   'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
 
 export const GRID_CARD = {
-  H_PAD: 24, V_PAD: 24, THUMB_MB: 12, MAX_NAME_LINES: 2,
+  H_PAD: 24, V_PAD: 24, THUMB_MB: 12, MAX_NAME_LINES: 1,
   NAME_LH_FACTOR: 1.3, NAME_RIGHT_RESERVED: 20, FILE_META_H: 28, COL_GAP: 8, ROW_GAP: 12,
 } as const
 
