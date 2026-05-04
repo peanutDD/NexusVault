@@ -269,7 +269,10 @@ impl Skill for BatchFixSkill {
                         }
                     };
 
-                    match repo::apply_patch_safely_in(&ctx.repo_root, &issue.file, &retry_patch) {
+                    let retry_apply_result =
+                        repo::apply_patch_safely_in(&ctx.repo_root, &issue.file, &retry_patch)
+                            .map_err(|e| e.to_string());
+                    match retry_apply_result {
                         Ok(true) => {
                             ctx.fixed_files.push(issue.file.clone());
                             ctx.fixed_issue_keys.push(issue_key.clone());
@@ -282,25 +285,41 @@ impl Skill for BatchFixSkill {
                                 reason: None,
                             });
                         }
-                        Ok(false) => {
+                        Ok(false) | Err(_) => {
+                            eprintln!(
+                                "❌ [BatchFix] 补丁重试仍失败，尝试完整文件兜底 - 文件: {}",
+                                issue.file
+                            );
                             ctx.fix_attempts.push(FixAttempt {
                                 round: ctx.current_round,
-                                issue_key,
-                                file: issue.file,
+                                issue_key: issue_key.clone(),
+                                file: issue.file.clone(),
                                 stage: "patch_apply_retry".to_string(),
                                 success: false,
                                 reason: Some("git apply 重试后仍未能应用补丁".to_string()),
                             });
-                        }
-                        Err(e) => {
-                            ctx.fix_attempts.push(FixAttempt {
-                                round: ctx.current_round,
-                                issue_key,
-                                file: issue.file,
-                                stage: "patch_apply_retry".to_string(),
-                                success: false,
-                                reason: Some(e.to_string()),
-                            });
+                            match apply_full_file_fallback(
+                                &issue,
+                                ctx,
+                                client,
+                                &retry_patch,
+                                &issue_key,
+                            )
+                            .await
+                            {
+                                Ok(true) => {}
+                                Ok(false) => {}
+                                Err(e) => {
+                                    ctx.fix_attempts.push(FixAttempt {
+                                        round: ctx.current_round,
+                                        issue_key,
+                                        file: issue.file,
+                                        stage: "file_replacement_fallback".to_string(),
+                                        success: false,
+                                        reason: Some(e.to_string()),
+                                    });
+                                }
+                            }
                         }
                     }
                 }
@@ -855,6 +874,84 @@ async fn generate_retry_fix_patch(
     } else {
         Ok(Some(patch))
     }
+}
+
+async fn apply_full_file_fallback(
+    issue: &ReviewIssue,
+    ctx: &mut SkillContext,
+    client: &CodexClient,
+    failed_patch: &str,
+    issue_key: &str,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    let Some(replacement) = generate_replacement_file(issue, ctx, client, failed_patch).await?
+    else {
+        ctx.fix_attempts.push(FixAttempt {
+            round: ctx.current_round,
+            issue_key: issue_key.to_string(),
+            file: issue.file.clone(),
+            stage: "file_replacement_fallback".to_string(),
+            success: false,
+            reason: Some("完整文件兜底未返回有效变更".to_string()),
+        });
+        return Ok(false);
+    };
+
+    repo::write_repo_file(&ctx.repo_root, &issue.file, &replacement)?;
+    ctx.fixed_files.push(issue.file.clone());
+    ctx.fixed_issue_keys.push(issue_key.to_string());
+    ctx.fix_attempts.push(FixAttempt {
+        round: ctx.current_round,
+        issue_key: issue_key.to_string(),
+        file: issue.file.clone(),
+        stage: "file_replacement_fallback".to_string(),
+        success: true,
+        reason: None,
+    });
+    Ok(true)
+}
+
+async fn generate_replacement_file(
+    issue: &ReviewIssue,
+    ctx: &SkillContext,
+    client: &CodexClient,
+    failed_patch: &str,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let content = repo::read_repo_file(&ctx.repo_root, &issue.file)?;
+
+    let system_prompt = format!(
+        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{}\n\n前两次 unified diff 补丁均无法应用。请改为返回修复后的完整目标文件内容。\n只返回完整文件内容，不要 diff，不要解释文字；如果没有需要修复的，返回空。",
+        ctx.rules_text
+    );
+
+    let user_prompt = format!(
+        "文件: {}\n问题: {}\n建议: {}\n\n最后一次失败补丁如下：\n```\n{}\n```\n\n当前完整源码:\n```\n{}\n```",
+        issue.file, issue.description, issue.suggestion, failed_patch, content
+    );
+
+    let mut replacement = client.call(&system_prompt, &user_prompt).await?;
+    if replacement.contains("```")
+        && let Some(extracted) = repo::extract_code_block(&replacement)
+    {
+        replacement = extracted;
+    }
+
+    let replacement = normalize_replacement_file(&replacement, &content);
+    if replacement.is_empty() || replacement == content {
+        Ok(None)
+    } else {
+        Ok(Some(replacement))
+    }
+}
+
+fn normalize_replacement_file(candidate: &str, original: &str) -> String {
+    let mut replacement = candidate.trim_matches('\n').to_string();
+    if replacement.is_empty() {
+        return String::new();
+    }
+    if original.ends_with('\n') {
+        replacement.push('\n');
+    }
+    replacement
 }
 
 #[cfg(test)]

@@ -161,6 +161,45 @@ fn auto_fix_local_retries_patch_generation_after_apply_failure() {
     );
 }
 
+#[test]
+fn auto_fix_local_falls_back_to_full_file_after_corrupt_patch_retry() {
+    let workspace = TestWorkspace::new("full-file-fallback");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("full_file_fallback");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["pending_count"], 0);
+    assert_eq!(json["review_clean"], true);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+    assert!(
+        stderr(&output).contains("完整文件兜底"),
+        "stderr={}",
+        stderr(&output)
+    );
+}
+
 fn run_auto_fix(repo: &Path, review: &Path, fake_agent: &Path, yes: bool) -> std::process::Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
     command
@@ -289,6 +328,27 @@ case "$prompt" in
     fi
     ;;
   *"高级工程师"*)
+    if [ "$mode" = "full_file_fallback" ]; then
+      if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
+        cat <<'FILE'
+pub fn value() -> i32 {{
+    2
+}}
+FILE
+      else
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3
+ pub fn value() -> i32 {{
+-    1
++    2
+ }}
+PATCH
+      fi
+      exit 0
+    fi
     if [ "$mode" = "apply_retry" ]; then
       if printf '%s' "$prompt" | grep -q "上一版补丁应用失败"; then
         cat <<'PATCH'

@@ -227,6 +227,16 @@ pub fn read_repo_file(repo_root: &str, path: &str) -> Result<String, Box<dyn std
     Ok(fs::read_to_string(abs)?)
 }
 
+pub fn write_repo_file(
+    repo_root: &str,
+    path: &str,
+    content: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let abs = Path::new(repo_root).join(path);
+    fs::write(abs, content)?;
+    Ok(())
+}
+
 /// 通过 GitHub CLI 以 raw 形式读取仓库文件内容。
 ///
 /// 选择 `gh api ... Accept: raw` 的原因：

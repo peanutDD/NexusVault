@@ -35,9 +35,7 @@ push_blocked="$(bool "$push_blocked")"
 current_number="$(round_number "$current")"
 next_number=$((current_number + 1))
 next_round="gemini-review-round-max"
-if (( next_number < max_rounds )); then
-  next_round="$(round_label "$next_number")"
-elif (( next_number == max_rounds )); then
+if (( next_number <= max_rounds )); then
   next_round="$(round_label "$next_number")"
 fi
 
@@ -116,12 +114,17 @@ apply_plan() {
   ensure_label "gemini-review-needs-human" "b60205" "Automated review loop requires human decision"
   ensure_label "gemini-review-clean" "0e8a16" "Automated review loop has no pending medium+ findings"
 
-  remove_label "gemini-review-round-1"
-  remove_label "gemini-review-round-2"
-  remove_label "gemini-review-round-max"
-  remove_label "gemini-review-pending"
-  remove_label "gemini-review-needs-human"
-  remove_label "gemini-review-clean"
+  labels_to_clear=(
+    "gemini-review-round-1"
+    "gemini-review-round-2"
+    "gemini-review-round-max"
+    "gemini-review-pending"
+    "gemini-review-needs-human"
+    "gemini-review-clean"
+  )
+  for label in "${labels_to_clear[@]}"; do
+    remove_label "$label"
+  done
 
   case "$action" in
     max_stop)
