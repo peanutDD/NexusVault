@@ -112,6 +112,43 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
     assert!(pending[0].as_str().unwrap().contains("模型未返回可应用"));
 }
 
+#[test]
+fn auto_fix_local_retries_patch_generation_after_apply_failure() {
+    let workspace = TestWorkspace::new("apply-retry");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("apply_retry");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["pending_explanations"].as_array().unwrap().len(), 0);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+    assert!(
+        stderr(&output).contains("补丁应用失败，准备重试"),
+        "stderr={}",
+        stderr(&output)
+    );
+}
+
 fn run_auto_fix(repo: &Path, review: &Path, fake_agent: &Path, yes: bool) -> std::process::Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
     command
@@ -240,6 +277,32 @@ case "$prompt" in
     fi
     ;;
   *"高级工程师"*)
+    if [ "$mode" = "apply_retry" ]; then
+      if printf '%s' "$prompt" | grep -q "上一版补丁应用失败"; then
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3 @@
+ pub fn value() -> i32 {{
+-    1
++    2
+ }}
+PATCH
+      else
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3 @@
+ pub fn value() -> i32 {{
+-    99
++    2
+ }}
+PATCH
+      fi
+      exit 0
+    fi
     if [ "$mode" = "same_file_partial" ] && printf '%s' "$prompt" | grep -q "fix other"; then
       exit 0
     fi

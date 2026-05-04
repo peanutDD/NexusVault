@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use std::io::ErrorKind;
 use std::path::Path;
 use uuid::Uuid;
@@ -15,6 +16,17 @@ pub fn create_memory_backend() -> LocalStorage {
 
 const THUMBNAIL_DIR: &str = ".thumbnails";
 const THUMBNAIL_EXT: &str = "jpg";
+const S3_COPY_SOURCE_ENCODE_SET: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'%')
+    .add(b'<')
+    .add(b'>')
+    .add(b'?')
+    .add(b'`')
+    .add(b'{')
+    .add(b'}');
 
 /// 将 S3 错误映射为 AppError：对象不存在时返回 NotFound(404)，其余为 File 错误。
 fn s3_to_app_error<E: std::fmt::Display>(e: &E, op: &str) -> AppError {
@@ -450,6 +462,24 @@ impl S3Storage {
     fn get_thumbnail_key_legacy(&self, file_id: Uuid) -> String {
         format!("{}/{}.{}", THUMBNAIL_DIR, file_id, THUMBNAIL_EXT)
     }
+
+    fn copy_source_header(bucket: &str, source_path: &str) -> String {
+        let source_path = utf8_percent_encode(source_path, S3_COPY_SOURCE_ENCODE_SET);
+        format!("{}/{}", bucket, source_path)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::S3Storage;
+
+    #[test]
+    fn s3_copy_source_url_encodes_object_key() {
+        assert_eq!(
+            S3Storage::copy_source_header("uploads", "user/a b/#report?中文%.txt"),
+            "uploads/user/a%20b/%23report%3F%E4%B8%AD%E6%96%87%25.txt"
+        );
+    }
 }
 
 #[async_trait]
@@ -530,7 +560,7 @@ impl StorageBackend for S3Storage {
         filename: &str,
     ) -> Result<String, AppError> {
         let key = self.get_s3_key(user_id, file_id, filename);
-        let copy_source = format!("{}/{}", self.bucket, source_path);
+        let copy_source = Self::copy_source_header(&self.bucket, source_path);
 
         self.client
             .copy_object()

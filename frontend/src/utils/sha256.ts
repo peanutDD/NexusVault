@@ -25,6 +25,21 @@ async function yieldToMain(): Promise<void> {
   });
 }
 
+async function readBlobAsArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  if (typeof blob.arrayBuffer === 'function') {
+    return blob.arrayBuffer();
+  }
+  if (typeof FileReader !== 'undefined') {
+    return new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob chunk'));
+      reader.readAsArrayBuffer(blob);
+    });
+  }
+  return new Response(blob).arrayBuffer();
+}
+
 function sha256WithWorker(file: File, signal?: AbortSignal): Promise<string> {
   if (typeof Worker === 'undefined') {
     return Promise.reject(new Error('Worker is not supported'));
@@ -66,8 +81,7 @@ function sha256WithWorker(file: File, signal?: AbortSignal): Promise<string> {
 /**
  * 计算文件内容的 SHA-256，返回 64 位十六进制字符串。
  * 用于秒传：与后端 content_sha256 + file_size 匹配已有文件。
- * - 安全上下文（HTTPS/localhost）：优先使用 crypto.subtle（更快）。
- * - HTTP：使用纯 JS 的 js-sha256，无需安全上下文即可秒传。
+ * 使用分块增量哈希，避免大文件在浏览器中一次性读入内存。
  */
 export async function sha256FileHex(file: File, signal?: AbortSignal): Promise<string> {
   throwIfAborted(signal);
@@ -78,24 +92,19 @@ export async function sha256FileHex(file: File, signal?: AbortSignal): Promise<s
   if (workerResult) {
     return workerResult;
   }
-  throwIfAborted(signal);
-  if (isSha256Supported()) {
-    const buffer = await file.arrayBuffer();
-    throwIfAborted(signal);
-    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buffer);
-    throwIfAborted(signal);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
+  return sha256BlobIncrementalHex(file, signal);
+}
+
+export async function sha256BlobIncrementalHex(blob: Blob, signal?: AbortSignal): Promise<string> {
   const hasher = sha256.create();
   let offset = 0;
-  while (offset < file.size) {
-    const chunk = file.slice(offset, offset + CHUNK_SIZE);
-    const buffer = await chunk.arrayBuffer();
+  while (offset < blob.size) {
+    const chunk = blob.slice(offset, offset + CHUNK_SIZE);
+    const buffer = await readBlobAsArrayBuffer(chunk);
     throwIfAborted(signal);
     hasher.update(new Uint8Array(buffer));
     offset += CHUNK_SIZE;
-    if (offset < file.size) {
+    if (offset < blob.size) {
       await yieldToMain();
     }
   }
@@ -104,17 +113,5 @@ export async function sha256FileHex(file: File, signal?: AbortSignal): Promise<s
 
 export async function sha256BlobHex(blob: Blob, signal?: AbortSignal): Promise<string> {
   throwIfAborted(signal);
-  const buffer = await blob.arrayBuffer();
-  throwIfAborted(signal);
-
-  if (isSha256Supported()) {
-    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buffer);
-    throwIfAborted(signal);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  const hasher = sha256.create();
-  hasher.update(new Uint8Array(buffer));
-  return hasher.hex();
+  return sha256BlobIncrementalHex(blob, signal);
 }

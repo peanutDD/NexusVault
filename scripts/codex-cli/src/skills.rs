@@ -210,7 +210,10 @@ impl Skill for BatchFixSkill {
                 }
             };
 
-            match repo::apply_patch_safely_in(&ctx.repo_root, &issue.file, &patch) {
+            let apply_result = repo::apply_patch_safely_in(&ctx.repo_root, &issue.file, &patch)
+                .map_err(|e| e.to_string());
+
+            match apply_result {
                 Ok(true) => {
                     ctx.fixed_files.push(issue.file.clone());
                     ctx.fixed_issue_keys.push(issue_key.clone());
@@ -225,17 +228,81 @@ impl Skill for BatchFixSkill {
                 }
                 Ok(false) => {
                     eprintln!(
-                        "❌ [BatchFix] 补丁应用失败 - 文件: {}, 原因: git apply 未能应用补丁",
+                        "❌ [BatchFix] 补丁应用失败，准备重试 - 文件: {}, 原因: git apply 未能应用补丁",
                         issue.file
                     );
                     ctx.fix_attempts.push(FixAttempt {
                         round: ctx.current_round,
                         issue_key,
-                        file: issue.file,
+                        file: issue.file.clone(),
                         stage: "patch_apply".to_string(),
                         success: false,
                         reason: Some("git apply 未能应用补丁".to_string()),
-                    })
+                    });
+
+                    let issue_key = review_issue_key(&issue);
+                    let retry_patch = match generate_retry_fix_patch(&issue, ctx, client, &patch)
+                        .await
+                    {
+                        Ok(Some(patch)) => patch,
+                        Ok(None) => {
+                            ctx.fix_attempts.push(FixAttempt {
+                                round: ctx.current_round,
+                                issue_key,
+                                file: issue.file,
+                                stage: "patch_generation_retry".to_string(),
+                                success: false,
+                                reason: Some("重试后模型未返回可应用的 unified diff".to_string()),
+                            });
+                            continue;
+                        }
+                        Err(e) => {
+                            ctx.fix_attempts.push(FixAttempt {
+                                round: ctx.current_round,
+                                issue_key,
+                                file: issue.file,
+                                stage: "patch_generation_retry".to_string(),
+                                success: false,
+                                reason: Some(e.to_string()),
+                            });
+                            continue;
+                        }
+                    };
+
+                    match repo::apply_patch_safely_in(&ctx.repo_root, &issue.file, &retry_patch) {
+                        Ok(true) => {
+                            ctx.fixed_files.push(issue.file.clone());
+                            ctx.fixed_issue_keys.push(issue_key.clone());
+                            ctx.fix_attempts.push(FixAttempt {
+                                round: ctx.current_round,
+                                issue_key,
+                                file: issue.file,
+                                stage: "patch_apply_retry".to_string(),
+                                success: true,
+                                reason: None,
+                            });
+                        }
+                        Ok(false) => {
+                            ctx.fix_attempts.push(FixAttempt {
+                                round: ctx.current_round,
+                                issue_key,
+                                file: issue.file,
+                                stage: "patch_apply_retry".to_string(),
+                                success: false,
+                                reason: Some("git apply 重试后仍未能应用补丁".to_string()),
+                            });
+                        }
+                        Err(e) => {
+                            ctx.fix_attempts.push(FixAttempt {
+                                round: ctx.current_round,
+                                issue_key,
+                                file: issue.file,
+                                stage: "patch_apply_retry".to_string(),
+                                success: false,
+                                reason: Some(e.to_string()),
+                            });
+                        }
+                    }
                 }
                 Err(e) => {
                     eprintln!(
@@ -740,6 +807,39 @@ async fn generate_fix_patch(
     let user_prompt = format!(
         "文件: {}\n问题: {}\n建议: {}\n\n源码:\n```\n{}\n```",
         issue.file, issue.description, issue.suggestion, content
+    );
+
+    let mut patch = client.call(&system_prompt, &user_prompt).await?;
+
+    if patch.contains("```")
+        && let Some(extracted) = repo::extract_code_block(&patch)
+    {
+        patch = extracted;
+    }
+
+    if patch.trim().is_empty() || !patch.contains("@@") {
+        Ok(None)
+    } else {
+        Ok(Some(patch))
+    }
+}
+
+async fn generate_retry_fix_patch(
+    issue: &ReviewIssue,
+    ctx: &SkillContext,
+    client: &CodexClient,
+    failed_patch: &str,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let content = repo::read_repo_file(&ctx.repo_root, &issue.file)?;
+
+    let system_prompt = format!(
+        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{}\n\n上一版补丁应用失败。请基于最新源码重新生成更小、更精确的 unified diff。\n仅返回补丁内容，不要任何其他解释文字。如果没有需要修复的，返回空。",
+        ctx.rules_text
+    );
+
+    let user_prompt = format!(
+        "文件: {}\n问题: {}\n建议: {}\n\n上一版补丁应用失败，失败补丁如下：\n```\n{}\n```\n\n最新源码:\n```\n{}\n```",
+        issue.file, issue.description, issue.suggestion, failed_patch, content
     );
 
     let mut patch = client.call(&system_prompt, &user_prompt).await?;
