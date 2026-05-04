@@ -1,0 +1,29 @@
+{
+  "task": "frontend-fluid-sizing-pr1",
+  "date": "2026-05-05",
+  "intent": "Add frontend fluid sizing governance and convert PR1 shared/upload/common visible fixed dimensions to responsive sizing.",
+  "assumptions": [
+    "This is the first staged PR, not the complete frontend-wide cleanup.",
+    "Clamp upper bounds preserve the existing desktop visual size.",
+    "Existing upload dialog mobile spacing changes must be preserved."
+  ],
+  "risks": [
+    "Visual parity still needs screenshot verification beyond CSS contract tests.",
+    "Virtualized list intrinsic-size fallback must stay close to the old value.",
+    "Remaining frontend domains need follow-up PRs."
+  ],
+  "dependencies": [
+    "React",
+    "Tailwind CSS",
+    "Vitest",
+    "Vite"
+  ],
+  "steps": [
+    "Add failing tests for the fluid sizing governance script.",
+    "Implement check-fluid-sizing.mjs and package command.",
+    "Convert PR1 fixed visible dimensions to clamp/rem/semantic values.",
+    "Extend upload dialog layout contract tests.",
+    "Document the permanent constraint and quality score.",
+    "Run check:fluid-sizing, targeted tests, lint, and build."
+  ]
+}

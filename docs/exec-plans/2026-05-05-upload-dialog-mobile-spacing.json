@@ -1,0 +1,28 @@
+{
+  "task": "upload-dialog-mobile-spacing",
+  "date": "2026-05-05",
+  "intent": "Ensure the upload dialog keeps visible spacing from mobile browser viewport edges.",
+  "assumptions": [
+    "The bug is isolated to upload dialog viewport sizing and safe-area spacing.",
+    "Mobile browsers may expose a visual viewport smaller than static vh units.",
+    "CSS contract tests are suitable for regression coverage, with visual verification as a separate check."
+  ],
+  "risks": [
+    "jsdom does not perform real layout calculations.",
+    "Too much mobile spacing can reduce usable dialog content height.",
+    "Existing user change in docs/testing-strategy.md must remain untouched."
+  ],
+  "dependencies": [
+    "React",
+    "Tailwind CSS",
+    "Vitest",
+    "jsdom"
+  ],
+  "steps": [
+    "Add a failing regression test for dynamic viewport and safe-area spacing.",
+    "Update UploadDialog.css to reserve safe viewport gaps on all sides.",
+    "Run targeted frontend tests.",
+    "Run frontend lint/build checks where feasible.",
+    "Document the permanent constraint and quality score."
+  ]
+}

@@ -372,7 +372,7 @@ function QueryDevtools() {
         {devtoolsOpen && (
           <div
             ref={devtoolsContainerRef}
-            className="fixed inset-0 z-[9998] devtools-vh devtools-shell border-t border-white/10 bg-slate-950/85 backdrop-blur-xl sm:inset-x-0 sm:bottom-0 sm:h-[60vh] sm:min-h-[360px] sm:max-h-[70vh]"
+            className="fixed inset-0 z-[9998] devtools-vh devtools-shell border-t border-white/10 bg-slate-950/85 backdrop-blur-xl sm:inset-x-0 sm:bottom-0 sm:h-[60vh] sm:min-h-[22.5rem] sm:max-h-[70vh]"
           >
             <div className="flex h-full w-full items-center justify-center overflow-hidden sm:items-end sm:justify-end">
               <div

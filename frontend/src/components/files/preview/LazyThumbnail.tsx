@@ -50,7 +50,7 @@ function getSharedObserver() {
         if (cb) cb();
       }
     },
-    { rootMargin: "80px", threshold: 0.01 },
+    { rootMargin: "80px", threshold: 0.01 }, // fluid-sizing-allow: observer prefetch window
   );
   return sharedObserver;
 }
@@ -403,7 +403,7 @@ export default function LazyThumbnail({
           <img
             src={effectiveState.imageUrl}
             srcSet={getSrcSet()}
-            sizes="(max-width: 640px) 100px, (max-width: 1024px) 200px, 400px"
+            sizes="(max-width: 40rem) 6.25rem, (max-width: 64rem) 12.5rem, 25rem"
             width={400}
             height={400}
             alt={filename}

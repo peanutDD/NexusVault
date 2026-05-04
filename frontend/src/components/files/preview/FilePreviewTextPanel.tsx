@@ -21,7 +21,7 @@ export default function FilePreviewTextPanel({
         <TextPanelToolbar lineCount={textContent.split("\n").length} />
         <div
           className={cn(
-            "h-[calc(100%-56px)] overflow-auto p-4 text-sm leading-relaxed",
+            "h-[calc(100%_-_3.5rem)] overflow-auto p-4 text-sm leading-relaxed",
             isMarkdown
               ? "bg-transparent text-[var(--preview-text-primary)]"
               : "text-[var(--preview-text-primary)]",

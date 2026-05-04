@@ -1,7 +1,36 @@
 .uploadDialogCyberBackdrop {
+    --upload-dialog-viewport-gap: clamp(1rem, 4vw, 1.5rem);
+    --upload-dialog-vertical-gap: calc(
+        (var(--upload-dialog-viewport-gap) + env(safe-area-inset-top)) +
+            (var(--upload-dialog-viewport-gap) + env(safe-area-inset-bottom))
+    );
+    --upload-dialog-horizontal-gap: calc(
+        (var(--upload-dialog-viewport-gap) + env(safe-area-inset-left)) +
+            (var(--upload-dialog-viewport-gap) + env(safe-area-inset-right))
+    );
+    --upload-dialog-grid-step: clamp(2rem, 3vw, 2.625rem);
+    --upload-dialog-backdrop-blur: clamp(0.625rem, 1vw, 0.8125rem);
+    --upload-dialog-scanline-gap: clamp(0.625rem, 1vw, 0.8125rem);
+    --upload-dialog-scanline-mark: clamp(0.7rem, 1.05vw, 0.875rem);
+    --upload-dialog-scanline-fade: clamp(0.75rem, 1.1vw, 0.9375rem);
+    --upload-dialog-panel-grid-gap: clamp(1rem, 1.8vw, 1.125rem);
+    --upload-dialog-panel-grid-mark: clamp(1.05rem, 1.9vw, 1.1875rem);
+    --upload-dialog-panel-grid-step: clamp(1.25rem, 2.4vw, 2.375rem);
+    --upload-dialog-dropzone-grid-gap: clamp(1.125rem, 2vw, 1.25rem);
+    --upload-dialog-dropzone-grid-mark: clamp(1.1875rem, 2.1vw, 1.3125rem);
+    --upload-dialog-dropzone-grid-step: clamp(1.5rem, 3vw, 2.625rem);
+    --upload-dialog-scan-sweep: clamp(7.5rem, 12vw, 10rem);
+    --upload-dialog-enter-y: clamp(0.5rem, 1vw, 0.625rem);
     --upload-tech-grid: rgba(74, 222, 128, 0.18);
     --upload-tech-beam: rgba(34, 211, 238, 0.32);
     --upload-tech-scanline: rgba(255, 255, 255, 0.08);
+    box-sizing: border-box;
+    height: 100dvh;
+    padding-top: calc(var(--upload-dialog-viewport-gap) + env(safe-area-inset-top));
+    padding-right: calc(var(--upload-dialog-viewport-gap) + env(safe-area-inset-right));
+    padding-bottom: calc(var(--upload-dialog-viewport-gap) + env(safe-area-inset-bottom));
+    padding-left: calc(var(--upload-dialog-viewport-gap) + env(safe-area-inset-left));
+    overflow: hidden;
     background:
         linear-gradient(
             115deg,
@@ -20,8 +49,11 @@
             color-mix(in srgb, var(--upload-tech-grid) 34%, transparent) 1px,
             transparent 1px
         );
-    background-size: auto, 42px 42px, 42px 42px;
-    backdrop-filter: blur(13px) saturate(1.24);
+    background-size:
+        auto,
+        var(--upload-dialog-grid-step) var(--upload-dialog-grid-step),
+        var(--upload-dialog-grid-step) var(--upload-dialog-grid-step);
+    backdrop-filter: blur(var(--upload-dialog-backdrop-blur)) saturate(1.24);
 }
 
 [data-theme="light"] .uploadDialogCyberBackdrop,
@@ -54,9 +86,10 @@
         ),
         repeating-linear-gradient(
             0deg,
-            transparent 0 13px,
-            color-mix(in srgb, var(--upload-tech-scanline) 38%, transparent) 14px,
-            transparent 15px
+            transparent 0 var(--upload-dialog-scanline-gap),
+            color-mix(in srgb, var(--upload-tech-scanline) 38%, transparent)
+                var(--upload-dialog-scanline-mark),
+            transparent var(--upload-dialog-scanline-fade)
         );
 }
 
@@ -76,9 +109,10 @@
     --upload-tech-border-strong: rgba(134, 239, 172, 0.44);
     --upload-tech-corner: rgba(34, 211, 238, 0.58);
     --upload-tech-shadow:
-        0 30px 80px rgba(0, 0, 0, 0.56),
+        0 clamp(1.375rem, 3vw, 1.875rem) clamp(3.75rem, 7vw, 5rem)
+            rgba(0, 0, 0, 0.56),
         0 0 0 1px rgba(134, 239, 172, 0.16),
-        0 0 48px rgba(34, 211, 238, 0.12);
+        0 0 clamp(2.25rem, 4vw, 3rem) rgba(34, 211, 238, 0.12);
     background:
         linear-gradient(
             135deg,
@@ -89,6 +123,9 @@
     border: 1px solid var(--upload-tech-border);
     box-shadow: var(--upload-tech-shadow);
     isolation: isolate;
+    width: 100%;
+    max-width: min(42rem, calc(100dvw - var(--upload-dialog-horizontal-gap)));
+    max-height: calc(100dvh - var(--upload-dialog-vertical-gap));
 }
 
 [data-theme="light"] .uploadDialogCyberSurface,
@@ -103,9 +140,10 @@
     --upload-tech-border-strong: rgba(46, 220, 133, 0.34);
     --upload-tech-corner: rgba(56, 189, 248, 0.58);
     --upload-tech-shadow:
-        0 30px 70px rgba(15, 23, 42, 0.2),
+        0 clamp(1.375rem, 3vw, 1.875rem) clamp(3.25rem, 6vw, 4.375rem)
+            rgba(15, 23, 42, 0.2),
         0 0 0 1px rgba(255, 255, 255, 0.82),
-        0 0 42px rgba(46, 220, 133, 0.12);
+        0 0 clamp(2rem, 3.5vw, 2.625rem) rgba(46, 220, 133, 0.12);
 }
 
 [data-theme="purple"] .uploadDialogCyberSurface,
@@ -120,9 +158,10 @@
     --upload-tech-border-strong: rgba(34, 211, 238, 0.36);
     --upload-tech-corner: rgba(217, 70, 239, 0.62);
     --upload-tech-shadow:
-        0 30px 80px rgba(9, 4, 20, 0.62),
+        0 clamp(1.375rem, 3vw, 1.875rem) clamp(3.75rem, 7vw, 5rem)
+            rgba(9, 4, 20, 0.62),
         0 0 0 1px rgba(217, 70, 239, 0.18),
-        0 0 48px rgba(34, 211, 238, 0.14);
+        0 0 clamp(2.25rem, 4vw, 3rem) rgba(34, 211, 238, 0.14);
 }
 
 .uploadDialogCyberSurface::before,
@@ -153,9 +192,11 @@
             0 0 / 100% 1px no-repeat,
         repeating-linear-gradient(
             90deg,
-            transparent 0 18px,
-            color-mix(in srgb, var(--upload-tech-grid) 65%, transparent) 19px,
-            transparent 20px 38px
+            transparent 0 var(--upload-dialog-panel-grid-gap),
+            color-mix(in srgb, var(--upload-tech-grid) 65%, transparent)
+                var(--upload-dialog-panel-grid-mark),
+            transparent var(--upload-dialog-panel-grid-mark)
+                var(--upload-dialog-panel-grid-step)
         );
     opacity: 0.72;
 }
@@ -187,7 +228,8 @@
 }
 
 .uploadDialogCyberTitle {
-    text-shadow: 0 0 18px color-mix(in srgb, var(--upload-accent) 38%, transparent);
+    text-shadow: 0 0 clamp(1rem, 1.8vw, 1.125rem)
+        color-mix(in srgb, var(--upload-accent) 38%, transparent);
 }
 
 .uploadDialogCyberEyebrow {
@@ -228,7 +270,8 @@
 .uploadDialogCyberDropzone {
     box-shadow:
         inset 0 0 0 1px color-mix(in srgb, var(--upload-tech-border) 72%, transparent),
-        0 16px 34px color-mix(in srgb, var(--upload-backdrop) 38%, transparent);
+        0 clamp(0.75rem, 1.6vw, 1rem) clamp(1.5rem, 3vw, 2.125rem)
+            color-mix(in srgb, var(--upload-backdrop) 38%, transparent);
 }
 
 .uploadDialogCyberDropzone::before {
@@ -245,9 +288,11 @@
         ),
         repeating-linear-gradient(
             90deg,
-            transparent 0 20px,
-            color-mix(in srgb, var(--upload-tech-grid) 60%, transparent) 21px,
-            transparent 22px 42px
+            transparent 0 var(--upload-dialog-dropzone-grid-gap),
+            color-mix(in srgb, var(--upload-tech-grid) 60%, transparent)
+                var(--upload-dialog-dropzone-grid-mark),
+            transparent calc(var(--upload-dialog-dropzone-grid-mark) + 0.0625rem)
+                var(--upload-dialog-dropzone-grid-step)
         );
     opacity: 0.56;
 }
@@ -255,7 +300,8 @@
 .uploadDialogCyberDropzoneActive {
     box-shadow:
         inset 0 0 0 1px var(--upload-tech-border-strong),
-        0 0 34px color-mix(in srgb, var(--upload-accent) 24%, transparent);
+        0 0 clamp(1.5rem, 3vw, 2.125rem)
+            color-mix(in srgb, var(--upload-accent) 24%, transparent);
 }
 
 .uploadDropzoneCore {
@@ -269,7 +315,8 @@
         );
     box-shadow:
         inset 0 1px 0 color-mix(in srgb, var(--upload-text) 18%, transparent),
-        0 16px 28px color-mix(in srgb, var(--upload-backdrop) 38%, transparent);
+        0 clamp(0.75rem, 1.6vw, 1rem) clamp(1.25rem, 2.4vw, 1.75rem)
+            color-mix(in srgb, var(--upload-backdrop) 38%, transparent);
 }
 
 .uploadDropzoneCoreBack {
@@ -282,7 +329,8 @@
     position: relative;
     color: var(--upload-accent);
     filter: drop-shadow(
-        0 0 10px color-mix(in srgb, var(--upload-accent) 42%, transparent)
+        0 0 clamp(0.5rem, 1vw, 0.625rem)
+            color-mix(in srgb, var(--upload-accent) 42%, transparent)
     );
 }
 
@@ -296,26 +344,30 @@
 .uploadDialogCyberInput {
     box-shadow:
         inset 0 0 0 1px color-mix(in srgb, var(--upload-input-border) 72%, transparent),
-        0 10px 20px color-mix(in srgb, var(--upload-backdrop) 32%, transparent);
+        0 clamp(0.5rem, 1vw, 0.625rem) clamp(1rem, 2vw, 1.25rem)
+            color-mix(in srgb, var(--upload-backdrop) 32%, transparent);
 }
 
 .uploadDialogCyberInputActive {
     box-shadow:
         inset 0 0 0 1px var(--upload-accent),
-        0 0 18px color-mix(in srgb, var(--upload-accent) 18%, transparent);
+        0 0 clamp(1rem, 1.8vw, 1.125rem)
+            color-mix(in srgb, var(--upload-accent) 18%, transparent);
 }
 
 .uploadDialogCyberPrimaryBtn {
     border: 1px solid color-mix(in srgb, var(--upload-accent) 70%, transparent);
     box-shadow:
-        0 12px 26px color-mix(in srgb, var(--upload-accent) 24%, transparent),
+        0 clamp(0.625rem, 1.2vw, 0.75rem) clamp(1.25rem, 2.4vw, 1.625rem)
+            color-mix(in srgb, var(--upload-accent) 24%, transparent),
         inset 0 1px 0 color-mix(in srgb, var(--upload-text) 30%, transparent);
 }
 
 .uploadDialogCyberSecondaryBtn {
     border: 1px solid var(--upload-tech-border);
     box-shadow:
-        0 10px 20px color-mix(in srgb, var(--upload-backdrop) 36%, transparent),
+        0 clamp(0.5rem, 1vw, 0.625rem) clamp(1rem, 2vw, 1.25rem)
+            color-mix(in srgb, var(--upload-backdrop) 36%, transparent),
         inset 0 1px 0 color-mix(in srgb, var(--upload-text) 12%, transparent);
 }
 
@@ -333,11 +385,7 @@
 @media (max-width: 640px) {
     .uploadDialogCyberBackdrop {
         align-items: center;
-        padding: 0.75rem;
-    }
-
-    .uploadDialogCyberSurface {
-        max-height: 94vh;
+        --upload-dialog-viewport-gap: clamp(1rem, 5vw, 1.25rem);
     }
 
     .uploadDialogCyberSignal {
@@ -365,7 +413,7 @@
 @keyframes uploadSurfaceIn {
     from {
         opacity: 0;
-        transform: translateY(10px) scale(0.985);
+        transform: translateY(var(--upload-dialog-enter-y)) scale(0.985);
     }
     to {
         opacity: 1;
@@ -375,9 +423,11 @@
 
 @keyframes uploadScanShift {
     from {
-        background-position: -160px 0, 0 0;
+        background-position: calc(var(--upload-dialog-scan-sweep) * -1) 0, 0 0;
     }
     to {
-        background-position: 160px 0, 42px 0;
+        background-position:
+            var(--upload-dialog-scan-sweep) 0,
+            var(--upload-dialog-grid-step) 0;
     }
 }

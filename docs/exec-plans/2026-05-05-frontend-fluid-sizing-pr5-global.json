@@ -1,0 +1,30 @@
+{
+  "task": "frontend-fluid-sizing-pr5-global",
+  "date": "2026-05-05",
+  "intent": "Converge remaining global frontend sizing tokens and make the all-scope fluid sizing checker pass.",
+  "assumptions": [
+    "PR5 covers global tokens, CTA/nav decoration, devtools, and all-scope tail findings.",
+    "Global token pixel values can be converted to rem equivalents to preserve desktop appearance.",
+    "IntersectionObserver rootMargin and offscreen clipboard staging may remain explicit non-visual exceptions."
+  ],
+  "risks": [
+    "tokens.css affects multiple themes and shared components.",
+    "Tailwind arbitrary calc values need underscore spacing after rem conversion.",
+    "Visual proof depends on the current logged-in /files page."
+  ],
+  "dependencies": [
+    "check-fluid-sizing.mjs",
+    "Vitest",
+    "ESLint",
+    "Vite build",
+    "In-app browser"
+  ],
+  "steps": [
+    "Add a failing test for --scope=global.",
+    "Add a failing test for signed fixed px detection.",
+    "Implement global scope and signed px matching.",
+    "Convert remaining global fixed visible dimensions to rem.",
+    "Mark non-visible observer and clipboard exceptions explicitly.",
+    "Run all-scope sizing check, tests, lint, build, and browser verification."
+  ]
+}

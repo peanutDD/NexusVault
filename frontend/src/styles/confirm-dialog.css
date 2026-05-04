@@ -5,6 +5,16 @@
 @layer components {
     .confirm-dialog-tech,
     .modal-dialog-tech {
+        --dialog-tech-backdrop-grid-size: clamp(2.25rem, 5vw, 2.75rem);
+        --dialog-tech-panel-grid-size: clamp(0.875rem, 2.5vw, 1.125rem);
+        --dialog-tech-panel-scanline-height: clamp(5.625rem, 12vw, 7.5rem);
+        --dialog-tech-glow-sm: clamp(0.875rem, 2vw, 1rem);
+        --dialog-tech-glow-md: clamp(1rem, 2.5vw, 1.125rem);
+        --dialog-tech-glow-lg: clamp(1.25rem, 3vw, 1.5rem);
+        --dialog-tech-glow-xl: clamp(1.625rem, 4vw, 1.75rem);
+        --dialog-tech-glow-2xl: clamp(1.875rem, 5vw, 2rem);
+        --dialog-tech-glow-3xl: clamp(2.5rem, 6vw, 2.625rem);
+        --dialog-tech-inner-shadow-blur: clamp(0.625rem, 2vw, 0.875rem);
         background-image:
             linear-gradient(var(--dialog-tech-backdrop-grid) 1px, transparent 1px),
             linear-gradient(90deg, var(--dialog-tech-backdrop-grid) 1px, transparent 1px),
@@ -12,8 +22,8 @@
             radial-gradient(circle at 78% 18%, var(--dialog-tech-secondary-soft), transparent 38%),
             linear-gradient(135deg, var(--dialog-tech-backdrop-start), var(--dialog-tech-backdrop-end));
         background-size:
-            44px 44px,
-            44px 44px,
+            var(--dialog-tech-backdrop-grid-size) var(--dialog-tech-backdrop-grid-size),
+            var(--dialog-tech-backdrop-grid-size) var(--dialog-tech-backdrop-grid-size),
             100% 100%,
             100% 100%,
             100% 100%;
@@ -65,7 +75,7 @@
             var(--dialog-tech-secondary),
             transparent
         );
-        box-shadow: 0 0 24px var(--dialog-tech-accent-soft);
+        box-shadow: 0 0 var(--dialog-tech-glow-lg) var(--dialog-tech-accent-soft);
         z-index: 1;
     }
 
@@ -76,9 +86,9 @@
             linear-gradient(90deg, var(--dialog-tech-grid) 1px, transparent 1px),
             linear-gradient(180deg, transparent, var(--dialog-tech-scanline), transparent);
         background-size:
-            18px 18px,
-            18px 18px,
-            100% 120px;
+            var(--dialog-tech-panel-grid-size) var(--dialog-tech-panel-grid-size),
+            var(--dialog-tech-panel-grid-size) var(--dialog-tech-panel-grid-size),
+            100% var(--dialog-tech-panel-scanline-height);
         opacity: 0.58;
         z-index: 0;
     }
@@ -88,7 +98,7 @@
             linear-gradient(180deg, var(--dialog-tech-groove-top), var(--dialog-tech-groove-bottom)),
             linear-gradient(90deg, transparent, var(--dialog-tech-scanline), transparent);
         box-shadow:
-            inset 0 2px 14px rgba(0, 0, 0, 0.34),
+            inset 0 2px var(--dialog-tech-inner-shadow-blur) rgba(0, 0, 0, 0.34),
             inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
 
@@ -106,12 +116,12 @@
     .confirm-dialog-tech-icon {
         box-shadow:
             0 0 0 1px var(--dialog-tech-edge),
-            0 0 18px var(--dialog-tech-accent-soft),
+            0 0 var(--dialog-tech-glow-md) var(--dialog-tech-accent-soft),
             inset 0 1px 0 rgba(255, 255, 255, 0.12);
     }
 
     .confirm-dialog-tech-title {
-        text-shadow: 0 0 16px var(--dialog-tech-accent-soft);
+        text-shadow: 0 0 var(--dialog-tech-glow-sm) var(--dialog-tech-accent-soft);
     }
 
     .confirm-dialog-tech-cancel {
@@ -126,14 +136,14 @@
     .confirm-dialog-tech-confirm {
         box-shadow:
             0 0 0 1px var(--dialog-tech-edge),
-            0 0 22px var(--dialog-tech-accent-soft);
+            0 0 clamp(1.125rem, 3vw, 1.375rem) var(--dialog-tech-accent-soft);
     }
 
     .confirm-dialog-tech-confirm:hover:not(:disabled) {
         box-shadow:
             0 0 0 1px var(--dialog-tech-accent),
-            0 0 28px var(--dialog-tech-accent-soft),
-            0 0 42px var(--dialog-tech-secondary-soft);
+            0 0 var(--dialog-tech-glow-xl) var(--dialog-tech-accent-soft),
+            0 0 var(--dialog-tech-glow-3xl) var(--dialog-tech-secondary-soft);
     }
 
     /* 删除确认弹窗 - 科幻风玻璃拟态 */
@@ -151,8 +161,8 @@
         border-color: var(--confirm-danger-glass-border);
         box-shadow:
             0 0 0 1px rgba(255, 255, 255, 0.08),
-            0 0 24px rgba(var(--rgb-malachite-500), 0.1),
-            0 0 48px rgba(var(--rgb-emerald-400), 0.06),
+            0 0 var(--dialog-tech-glow-lg) rgba(var(--rgb-malachite-500), 0.1),
+            0 0 clamp(2.5rem, 6vw, 3rem) rgba(var(--rgb-emerald-400), 0.06),
             inset 0 1px 0 rgba(255, 255, 255, 0.12);
     }
 
@@ -185,20 +195,20 @@
     .confirm-dialog-sci-fi-icon {
         box-shadow:
             0 0 0 1px rgba(var(--rgb-malachite-500), 0.35),
-            0 0 16px rgba(var(--rgb-malachite-500), 0.22);
+            0 0 var(--dialog-tech-glow-sm) rgba(var(--rgb-malachite-500), 0.22);
     }
 
     .confirm-dialog-sci-fi-confirm {
         box-shadow:
             0 0 0 1px rgba(var(--rgb-malachite-500), 0.35),
-            0 0 20px rgba(var(--rgb-malachite-500), 0.2);
+            0 0 clamp(1rem, 2.5vw, 1.25rem) rgba(var(--rgb-malachite-500), 0.2);
     }
 
     .confirm-dialog-sci-fi-confirm:hover:not(:disabled) {
         box-shadow:
             0 0 0 1px rgba(var(--rgb-malachite-500), 0.44),
-            0 0 24px rgba(var(--rgb-malachite-500), 0.3),
-            0 0 32px rgba(var(--rgb-emerald-400), 0.1);
+            0 0 var(--dialog-tech-glow-lg) rgba(var(--rgb-malachite-500), 0.3),
+            0 0 var(--dialog-tech-glow-2xl) rgba(var(--rgb-emerald-400), 0.1);
     }
 
     .confirm-dialog-sci-fi-panel .confirm-dialog-sci-fi-gradient {
@@ -214,7 +224,7 @@
         background-image:
             linear-gradient(rgba(var(--rgb-emerald-400), 0.6) 1px, transparent 1px),
             linear-gradient(90deg, rgba(var(--rgb-emerald-400), 0.6) 1px, transparent 1px);
-        background-size: 12px 12px;
+        background-size: clamp(0.625rem, 2vw, 0.75rem) clamp(0.625rem, 2vw, 0.75rem);
         opacity: 0.04;
     }
 
@@ -231,7 +241,7 @@
             rgba(0, 0, 0, 0.3) 100%
         );
         box-shadow:
-            inset 0 2px 12px rgba(0, 0, 0, 0.5),
+            inset 0 2px clamp(0.625rem, 2vw, 0.75rem) rgba(0, 0, 0, 0.5),
             inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 

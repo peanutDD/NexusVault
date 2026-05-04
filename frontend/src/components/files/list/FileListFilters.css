@@ -1,4 +1,10 @@
 .filtersGlass {
+  --filters-backdrop-blur-strong: clamp(1.125rem, 2vw, 1.5rem);
+  --filters-backdrop-blur-medium: clamp(0.875rem, 1.6vw, 1.25rem);
+  --filters-backdrop-blur-soft: clamp(0.75rem, 1.4vw, 1.125rem);
+  --filters-scrollbar-sm: clamp(0.3125rem, 0.7vw, 0.375rem);
+  --filters-scrollbar-md: clamp(0.375rem, 0.9vw, 0.5rem);
+  --filters-nudge-sm: 0.03125rem;
   /* 横排但不均分：Search 更宽，Type/Sort 固定宽度 */
   width: min(64rem, 100%);
   margin-inline: auto;
@@ -137,9 +143,9 @@
   background:
     radial-gradient(120% 90% at 15% 0%, var(--filters-surface-hi), transparent 62%),
     linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
-  box-shadow: 0 18px 38px rgba(2, 6, 23, 0.08);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 clamp(0.875rem, 1.8vw, 1.125rem) clamp(1.875rem, 3.5vw, 2.375rem) rgba(2, 6, 23, 0.08);
+  -webkit-backdrop-filter: blur(var(--filters-backdrop-blur-strong)) saturate(150%);
+  backdrop-filter: blur(var(--filters-backdrop-blur-strong)) saturate(150%);
   position: relative;
   overflow: hidden;
 }
@@ -201,11 +207,11 @@
 
 .filtersSearchClearButton:hover {
   opacity: 0.9;
-  transform: translateY(-0.5px);
+  transform: translateY(calc(var(--filters-nudge-sm) * -1));
 }
 
 .filtersSearchClearButton:active {
-  transform: translateY(0.5px) scale(0.97);
+  transform: translateY(var(--filters-nudge-sm)) scale(0.97);
 }
 
 .filtersSearchClearButton:focus-visible {
@@ -239,8 +245,8 @@
     radial-gradient(120% 90% at 10% 0%, var(--filters-surface-hi), transparent 62%),
     linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
   box-shadow: var(--filters-surface-shadow);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--filters-backdrop-blur-strong)) saturate(150%);
+  backdrop-filter: blur(var(--filters-backdrop-blur-strong)) saturate(150%);
   /* 下拉已改为 portal（挂到 body），无需裁剪高光层 */
   /* overflow: hidden; */
   /* 高度压缩：卡片更紧凑 */
@@ -390,8 +396,8 @@
     radial-gradient(120% 90% at 10% 0%, var(--filters-surface-hi), transparent 62%),
     linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
   box-shadow: var(--filters-surface-shadow);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--filters-backdrop-blur-soft)) saturate(140%);
+  backdrop-filter: blur(var(--filters-backdrop-blur-soft)) saturate(140%);
 
   /* 更紧凑：减少容器内边距（0.75 倍） */
   padding: clamp(0.3rem, 0.45vw, 0.41rem);
@@ -416,13 +422,13 @@
     radial-gradient(120% 90% at 10% 0%, var(--filters-surface-hi), transparent 60%),
     linear-gradient(180deg, var(--filters-surface-bg-top), var(--filters-surface-bg-bottom));
   box-shadow: var(--filters-surface-shadow);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--filters-backdrop-blur-medium)) saturate(150%);
+  backdrop-filter: blur(var(--filters-backdrop-blur-medium)) saturate(150%);
   padding: 0.1rem;
 }
 
 .filtersDropdownPortal::-webkit-scrollbar {
-  width: 6px;
+  width: var(--filters-scrollbar-sm);
 }
 
 .filtersDropdownPortal::-webkit-scrollbar-track {
@@ -438,7 +444,7 @@
 
 /* 细滚动条（保持玻璃拟态观感） */
 .filtersCardBodyOpen::-webkit-scrollbar {
-  width: 8px;
+  width: var(--filters-scrollbar-md);
 }
 
 .filtersCardBodyOpen::-webkit-scrollbar-track {

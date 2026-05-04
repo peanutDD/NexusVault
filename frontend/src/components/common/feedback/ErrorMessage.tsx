@@ -120,7 +120,7 @@ export default function ErrorMessage({
       className={cn(
         "relative w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4 text-xs",
         "bg-[var(--notice-surface-bg)] backdrop-blur-xl",
-        "shadow-[0_0_0_1px_rgba(var(--rgb-white),0.08),0_12px_40px_rgba(var(--rgb-black),0.5)]",
+        "shadow-[0_0_0_1px_rgba(var(--rgb-white),0.08),0_0.75rem_2.5rem_rgba(var(--rgb-black),0.5)]",
         config.borderClass,
         "animate-fade-in transition-all duration-200",
         className,
@@ -162,7 +162,7 @@ export default function ErrorMessage({
         <div className="min-w-0 flex-1" data-oid="hakyjqu">
           <p
             className={cn(
-              "text-[10px] font-medium tracking-wide",
+              "text-[0.625rem] font-medium tracking-wide",
               config.iconClass,
             )}
             data-oid="pfrbya2"

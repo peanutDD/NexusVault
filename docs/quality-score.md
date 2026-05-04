@@ -2,6 +2,12 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-05 | frontend fluid sizing PR5 global | 95 | 将 `check:fluid-sizing` 扩展 `--scope=global` 和 signed px 检测；全局 tokens、CTA/nav shadow、devtools min-height、preview text calc 与 hover translate 固定视觉尺寸收敛为 `rem`，observer/clipboard 非视觉例外显式标注；补充 in-app browser `/files` 截图证明。 |
+| 2026-05-05 | frontend fluid sizing PR4 dialogs | 95 | 将 `check:fluid-sizing` 扩展 `--scope=dialogs` 并补红绿测试；确认弹窗/文件夹弹窗 shadow、grid、blur 与小字号固定视觉尺寸改为 `clamp()`/`rem` 语义变量；补充 in-app browser 新建文件夹弹窗截图证明。 |
+| 2026-05-05 | frontend fluid sizing PR3 preview | 95 | 将 `check:fluid-sizing` 扩展 `--scope=preview` 并补红绿测试；预览舞台、PDF loading、scanline、neon shadow、thumbnail sizes 固定视觉尺寸改为 `clamp()`/`rem`，保留 observer rootMargin 的显式非视觉例外；补充 in-app browser 预览截图证明。 |
+| 2026-05-05 | frontend fluid sizing PR2 filelist | 95 | 将 `check:fluid-sizing` 扩展 `--scope=filelist` 并补红绿测试；文件列表/网格域固定视觉尺寸改为 `clamp()`/`rem`，保留 IntersectionObserver rootMargin 的显式非视觉例外；补充 in-app browser `/files` 截图证明。 |
+| 2026-05-05 | frontend fluid sizing PR1 | 95 | 新增 `check:fluid-sizing` 尺寸治理脚本与红绿测试，PR1 范围内 common/layout/upload/shared 固定视觉尺寸改为 `clamp()`/`rem`/语义变量；上传弹窗契约测试覆盖 dynamic viewport、safe-area、动态网格与模糊 token；补充 in-app browser 截图证明并新增 C-030 永久约束。 |
+| 2026-05-05 | upload dialog mobile spacing | 96 | 修复上传弹窗移动端贴边：backdrop 改用 `100dvh`、safe-area 四边 padding，surface 最大高宽按留白扣减；移除冲突静态 `vh/max-w` Tailwind 类。新增 CSS 契约测试、C-028 永久约束、移动视口截图，上传相关测试/lint/build 通过。 |
 | 2026-05-05 | auto review loop state machine | 96 | 将 Gemini/Codex 自动 Review 闭环升级为显式状态机：CLI 输出 pending/clean 字段，workflow 通过测试脚本区分 clean/pending/blocked/round-max；pending 不再误报无需修复，auto-fix commit 触发 CI，kickoff 跳过 auto-fix commit 避免重复 Gemini 请求。 |
 | 2026-05-04 | PR #12 backend CI fix | 95 | 修复 Backend (Rust) CI 的 `clippy::items_after_test_module`：将 `storage.rs` 的测试模块移动到生产 impl 之后，新增 C-026 永久约束；本地 fmt/clippy/定向测试通过。 |
 | 2026-05-04 | upload review follow-up | 95 | 修复 PR 遗留反馈：前端全文件与 worker SHA-256 改为分块增量读取，避免大文件整块 `arrayBuffer()`；S3 `copy_object` copy source 对对象 key 做百分号编码并保留 `/`；codex-cli 在 `git apply` 失败后带最新源码重试一次。新增回归测试与 C-025/ai-auto-fix 永久约束，定向前后端与 codex-cli 测试通过。 |

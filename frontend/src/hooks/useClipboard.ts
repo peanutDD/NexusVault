@@ -24,7 +24,7 @@ export function useClipboard(): {
       textarea.setAttribute('readonly', 'true');
       textarea.style.position = 'fixed';
       textarea.style.top = '0';
-      textarea.style.left = '-9999px';
+      textarea.style.left = '-9999px'; // fluid-sizing-allow: offscreen clipboard staging
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
       textarea.select();

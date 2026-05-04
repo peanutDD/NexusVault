@@ -145,7 +145,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     >
       {/* 头部组件：包含面包屑和工具栏 */}
       <Suspense
-        fallback={<div className="h-[84px] sm:h-[96px]" data-oid="r-g:0nh" />}
+        fallback={<div className="h-[5.25rem] sm:h-[6rem]" data-oid="r-g:0nh" />}
         data-oid="3jfxvzo"
       >
         <FileListHeader

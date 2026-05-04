@@ -87,7 +87,7 @@ const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
         lastTriggeredListSizeRef.current = size;
         onLoadMoreRef.current();
       },
-      { rootMargin: "200px", threshold: 0 },
+      { rootMargin: "200px", threshold: 0 }, // fluid-sizing-allow: observer prefetch window
     );
 
     observer.observe(el);

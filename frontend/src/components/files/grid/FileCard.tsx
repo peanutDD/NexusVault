@@ -174,7 +174,7 @@ const FileCard = memo(
             <button
               type="button"
               onClick={handleToggleMenu}
-              className="absolute right-0 top-0 z-10 inline-flex translate-x-[7px] items-center justify-center rounded-md leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--file-card-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
+              className="absolute right-0 top-0 z-10 inline-flex translate-x-[0.4375rem] items-center justify-center rounded-md leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--file-card-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
               aria-label="更多操作"
               data-oid="npjy::1"
             >

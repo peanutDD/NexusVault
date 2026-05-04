@@ -33,7 +33,7 @@ export default function UploadDialog({
       data-oid=".7:8wip"
     >
       <div
-        className="uploadDialogCyberSurface flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-[var(--upload-surface-bg)] text-[var(--upload-text)] shadow-2xl animate-fade-in"
+        className="uploadDialogCyberSurface flex w-full flex-col overflow-hidden rounded-xl bg-[var(--upload-surface-bg)] text-[var(--upload-text)] shadow-2xl animate-fade-in"
         data-oid="oz49qwv"
       >
         <UploadDialogHeader
