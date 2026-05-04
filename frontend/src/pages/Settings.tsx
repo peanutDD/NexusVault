@@ -12,6 +12,14 @@ import { Settings2, ArrowLeft } from "lucide-react";
 import { useStorageUsage } from "../hooks/useStorageUsage";
 import { useApiTokens } from "../hooks/useApiTokens";
 
+const SETTINGS_SECTIONS = [
+  { href: "#profile", label: "Account" },
+  { href: "#storage", label: "Storage" },
+  { href: "#appearance", label: "Appearance" },
+  { href: "#security", label: "Security" },
+  { href: "#api-tokens", label: "Tokens" },
+];
+
 export default function Settings() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -173,42 +181,20 @@ export default function Settings() {
                 >
                   Quick nav
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2" data-oid="ofccbv_">
-                  <a
-                    href="#profile"
-                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
-                    data-oid="1r.x_54"
-                  >
-                    Account
-                  </a>
-                  <a
-                    href="#storage"
-                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
-                    data-oid="m65reru"
-                  >
-                    Storage
-                  </a>
-                  <a
-                    href="#appearance"
-                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
-                    data-oid="xv.vpy2"
-                  >
-                    Appearance
-                  </a>
-                  <a
-                    href="#security"
-                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
-                    data-oid=":3imrtb"
-                  >
-                    Security
-                  </a>
-                  <a
-                    href="#api-tokens"
-                    className="font-brand rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)]"
-                    data-oid="y_u57_4"
-                  >
-                    Tokens
-                  </a>
+                <div
+                  className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"
+                  data-oid="ofccbv_"
+                >
+                  {SETTINGS_SECTIONS.map((section) => (
+                    <a
+                      key={section.href}
+                      href={section.href}
+                      aria-label={`Jump to ${section.label}`}
+                      className="font-brand inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-center text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)] hover:bg-[var(--settings-chip-bg-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]"
+                    >
+                      {section.label}
+                    </a>
+                  ))}
                 </div>
               </div>
             </div>

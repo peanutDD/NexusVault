@@ -3,9 +3,15 @@ import { KeyRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { cn } from "../../utils/cn";
 import ErrorMessage from "../common/feedback/ErrorMessage";
 import SettingsCard from "./SettingsCard";
+import {
+  settingsErrorClass,
+  settingsHelperClass,
+  settingsInputClass,
+  settingsLabelClass,
+  settingsPrimaryButtonClass,
+} from "./settingsUi";
 import { authService } from "../../services/auth";
 import { getErrorMessage } from "../../utils/error";
 
@@ -135,7 +141,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
         <div data-oid="0h03yxf">
           <label
             htmlFor="current-password"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
+            className={settingsLabelClass()}
             data-oid="6.-il:2"
           >
             Current password
@@ -151,20 +157,14 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
                 ? "current-password-error"
                 : undefined
             }
-            className={cn(
-              "w-full rounded-xl px-4 py-2.5",
-              "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
-              "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
-              errors.current_password && "border-red-500 focus:ring-red-500"
-            )}
+            className={settingsInputClass(Boolean(errors.current_password))}
             data-oid="8_-nvyf"
           />
 
           {errors.current_password && (
             <p
               id="current-password-error"
-              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
+              className={settingsErrorClass()}
               data-oid="hvyxc0c"
             >
               {errors.current_password.message}
@@ -174,7 +174,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
         <div data-oid="hp88ntt">
           <label
             htmlFor="new-password"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
+            className={settingsLabelClass()}
             data-oid="ig:8b27"
           >
             New password
@@ -190,27 +190,21 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
             aria-describedby={
               errors.new_password ? "new-password-error" : undefined
             }
-            className={cn(
-              "w-full rounded-xl px-4 py-2.5",
-              "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
-              "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
-              errors.new_password && "border-red-500 focus:ring-red-500"
-            )}
+            className={settingsInputClass(Boolean(errors.new_password))}
             data-oid="bnlj:z1"
           />
 
           {errors.new_password ? (
             <p
               id="new-password-error"
-              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
+              className={settingsErrorClass()}
               data-oid="6-qjqxf"
             >
               {errors.new_password.message}
             </p>
           ) : (
             <p
-              className="font-brand text-[var(--settings-form-helper)] text-[length:var(--settings-text-xs)] font-normal tracking-wide mt-1"
+              className={settingsHelperClass()}
               data-oid=".--qsoi"
             >
               8–64 characters, include at least one letter and one digit
@@ -220,7 +214,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
         <div data-oid="47ix9rd">
           <label
             htmlFor="confirm-password"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
+            className={settingsLabelClass()}
             data-oid="5xmgdgc"
           >
             Confirm new password
@@ -238,20 +232,14 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
                 ? "confirm-password-error"
                 : undefined
             }
-            className={cn(
-              "w-full rounded-xl px-4 py-2.5",
-              "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
-              "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
-              errors.confirm_password && "border-red-500 focus:ring-red-500"
-            )}
+            className={settingsInputClass(Boolean(errors.confirm_password))}
             data-oid=".8op07u"
           />
 
           {errors.confirm_password && (
             <p
               id="confirm-password-error"
-              className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-form-error)]"
+              className={settingsErrorClass()}
               data-oid="3:cc56f"
             >
               {errors.confirm_password.message}
@@ -261,12 +249,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
         <button
           type="submit"
           disabled={loading}
-          className={cn(
-            "font-brand w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide",
-            "border border-[var(--settings-action-border)] bg-[var(--settings-action-bg)] text-[var(--settings-action-text)] shadow-[var(--settings-action-shadow)]",
-            "hover:bg-[image:var(--settings-action-bg-hover)]",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-          )}
+          className={settingsPrimaryButtonClass("w-full")}
           data-oid="-zsxz4-"
         >
           {loading ? "Changing..." : "Change password"}

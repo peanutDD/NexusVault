@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-04 | settings page optimization | 95 | Settings 页面保守视觉与体验优化：新增 settings-local UI helper，统一表单/错误/按钮语义样式，改善移动端 email 与 API Token 标题换行，快速导航改为数据驱动；补充 Settings 回归测试并完成 test/lint/token/build/桌面+移动视觉检查。 |
 | 2026-05-04 | chunked upload CORS header fix | 95 | 修复浏览器分片上传预检失败：后端 CORS 允许 `X-Part-SHA256`，新增预检回归测试和 C-024 永久约束。 |
 | 2026-05-04 | upload completeness hardening | 96 | P0-P3 上传链路补强：folder ownership 校验覆盖普通/秒传/分片完成，上传 handler DB 测试用 `serial_test` 隔离；前端实现可恢复分片会话与每片 SHA，后端校验分片 SHA 和大小；秒传跨用户复制改存储层 copy，分片完成打 metrics；删除未使用 `useFileUpload`，测试迁到实际 UploadDialog controller。目标前后端测试通过。 |
 | 2026-05-04 | themed tech dialogs | 94 | 文件操作 glass 弹窗统一升级为主题化科技视觉：`ConfirmDialog` 覆盖新建/批量移动/批量删除/批量分享/重命名/删除，`Modal` 覆盖单文件分享；新增行为不变回归测试，前端 lint/test/build 通过。 |
