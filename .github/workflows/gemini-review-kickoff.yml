@@ -31,7 +31,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          LAST_COMMIT_AT="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.committer.date')"
           LAST_COMMIT_MESSAGE="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.message')"
 
           if [[ "$LAST_COMMIT_MESSAGE" == *"codex auto-fix"* ]]; then
@@ -39,27 +38,8 @@ jobs:
             exit 0
           fi
 
-          LAST_REQUEST_AT="$(
-            gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate --jq '
-              [
-                .[]
-                | select(.body | startswith("/gemini review"))
-                | select(.user.login == "github-actions[bot]")
-                | .created_at
-              ]
-              | sort
-              | last
-              // ""
-            '
-          )"
-
-          REQUESTED_AT="${LAST_REQUEST_AT}"
-          if [[ -n "${LAST_REQUEST_AT}" && "${LAST_REQUEST_AT}" > "${LAST_COMMIT_AT}" ]]; then
-            echo "Already requested after latest commit. last_request_at=${LAST_REQUEST_AT} last_commit_at=${LAST_COMMIT_AT}"
-          else
-            REQUESTED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-            echo "Requesting Gemini review. last_request_at=${LAST_REQUEST_AT:-none} last_commit_at=${LAST_COMMIT_AT}"
-            gh pr comment "${PR_NUMBER}" --body "/gemini review"
-          fi
+          REQUESTED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "Requesting Gemini review for ${PR_SHA} at ${REQUESTED_AT}"
+          gh pr comment "${PR_NUMBER}" --body "/gemini review"
 
           REVIEW_REQUESTED_AT="${REQUESTED_AT}" bash .github/scripts/gemini-review-watchdog.sh watch
