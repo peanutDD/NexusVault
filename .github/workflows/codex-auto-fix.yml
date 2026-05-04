@@ -130,7 +130,7 @@ jobs:
             exit 1
           fi
 
-          RESULT=$(codex-auto-fix pr-auto-fix \
+          RESULT=$(cargo run --manifest-path scripts/codex-cli/Cargo.toml --bin codex-auto-fix -- pr-auto-fix \
             --pr-number "${PR_NUMBER}" \
             --gemini-review "$REVIEW_BODY" \
             --max-rounds ${{ env.MAX_ROUNDS }} \
@@ -142,41 +142,23 @@ jobs:
 
           FIXED=$(echo "$RESULT" | jq -r '.fixed')
           PUSH_BLOCKED=$(echo "$RESULT" | jq -r '.push_blocked // false')
+          PENDING_COUNT=$(echo "$RESULT" | jq -r '.pending_count // (.pending_explanations | length)')
+          HAS_PENDING=$(echo "$RESULT" | jq -r '.has_pending // ((.pending_explanations | length) > 0)')
+          REVIEW_CLEAN=$(echo "$RESULT" | jq -r '.review_clean // false')
           echo "fixed=$FIXED" >> "$GITHUB_OUTPUT"
           echo "push_blocked=$PUSH_BLOCKED" >> "$GITHUB_OUTPUT"
+          echo "pending_count=$PENDING_COUNT" >> "$GITHUB_OUTPUT"
+          echo "has_pending=$HAS_PENDING" >> "$GITHUB_OUTPUT"
+          echo "review_clean=$REVIEW_CLEAN" >> "$GITHUB_OUTPUT"
 
-      - name: 升级轮次标签 (基于 Skill 返回结果)
-        if: steps.round.outputs.current_round != 'gemini-review-round-max' && steps.codex.outputs.fixed == 'true'
-        run: |
-          CURRENT="${{ steps.round.outputs.current_round }}"
-          NEXT="gemini-review-round-max"
-
-          if [[ "$CURRENT" == "gemini-review-round-1" ]]; then
-            NEXT="gemini-review-round-2"
-          elif [[ "$CURRENT" == "gemini-review-round-2" ]]; then
-            NEXT="gemini-review-round-max"
-          fi
-
-          gh pr edit "${PR_NUMBER}" --remove-label "$CURRENT" || true
-          gh pr edit "${PR_NUMBER}" --add-label "$NEXT"
-          echo "🏷️ 标签升级: $CURRENT -> $NEXT"
-
-          if [[ "$NEXT" != "gemini-review-round-max" ]]; then
-            gh pr comment "${PR_NUMBER}" --body "/gemini review"
-            echo "🚀 已请求 Gemini 下一轮 Review"
-          else
-            echo "✅ 所有自动修复轮次已完成"
-          fi
+      - name: 推进 Review 状态机
+        if: steps.round.outputs.current_round != 'gemini-review-round-max'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 无需修复时通知
-        if: >
-          steps.round.outputs.current_round != 'gemini-review-round-max'
-          && steps.codex.outputs.fixed == 'false'
-          && steps.codex.outputs.push_blocked != 'true'
+          CURRENT_ROUND: ${{ steps.round.outputs.current_round }}
+          FIXED: ${{ steps.codex.outputs.fixed }}
+          PUSH_BLOCKED: ${{ steps.codex.outputs.push_blocked }}
+          PENDING_COUNT: ${{ steps.codex.outputs.pending_count }}
+          MAX_ROUNDS: ${{ env.MAX_ROUNDS }}
         run: |
-          gh pr comment "${PR_NUMBER}" \
-            --body "🤖 **Codex 分析：此轮无需代码修复。** Gemini 提出的建议可能已手动处理或不适用。建议人工 Review 或直接合并。"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          bash .github/scripts/codex-auto-fix-state.sh apply

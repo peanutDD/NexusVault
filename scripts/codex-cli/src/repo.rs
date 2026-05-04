@@ -281,7 +281,7 @@ pub fn apply_patch_safely_in(
 
 /// 提交并推送本轮修复。
 ///
-/// 注意：message 带 `[skip ci]`，避免自触发 CI/循环修复。
+/// 注意：自动修复提交必须触发 CI；Gemini kickoff 通过识别该提交消息避免重复请求 review。
 pub fn commit_and_push(fixed_files: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     commit_and_push_in(".", fixed_files, true)
 }
@@ -292,7 +292,7 @@ pub fn commit_and_push_in(
     push: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let msg = format!(
-        "[skip ci] 🤖 codex auto-fix: 修复 {} 个文件 (基于 Gemini Review)",
+        "🤖 codex auto-fix: 修复 {} 个文件 (基于 Gemini Review)",
         fixed_files.len()
     );
 

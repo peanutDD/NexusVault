@@ -124,6 +124,9 @@ async fn run_auto_fix_loop(
     let mut files = ctx.fixed_files.clone();
     files.sort();
     files.dedup();
+    let pending_count = ctx.pending_explanations.len();
+    let has_pending = pending_count > 0;
+    let review_clean = ctx.security_passed && !ctx.push_blocked && !has_pending;
 
     let output = PrAutoFixOutput {
         fixed: if ctx.auto_push {
@@ -136,6 +139,9 @@ async fn run_auto_fix_loop(
         quality_score_available: ctx.quality_score_available,
         security_passed: ctx.security_passed,
         push_blocked: ctx.push_blocked,
+        has_pending,
+        pending_count,
+        review_clean,
         summary,
         pending_explanations: ctx.pending_explanations,
     };

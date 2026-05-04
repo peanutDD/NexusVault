@@ -47,7 +47,7 @@
 6. `QualityScoreSkill`：对本轮修复打质量分（0-100）
 7. `DocumentationSkill`：可选把本轮修复落入 changelog（路径可配置、也可禁用）
 8. `DryRunFeedbackSkill`：未传 `--yes` 时，进入 Dry-Run（可选发 PR 评论说明）
-9. `FeedbackSkill`：在 `--yes` 时提交+推送，并可选发 PR 评论；若无修复，输出“无需修复”的总结
+9. `FeedbackSkill`：在 `--yes` 时提交+推送，并可选发 PR 评论；若无修复，按 clean / pending 状态输出总结
 
 ### 关键设计点
 
@@ -83,6 +83,9 @@
   "security_passed": true,
   "push_blocked": false,
   "pending_explanations": [],
+  "has_pending": false,
+  "pending_count": 0,
+  "review_clean": true,
   "summary": "..."
 }
 ```

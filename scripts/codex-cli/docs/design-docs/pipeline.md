@@ -53,6 +53,7 @@
 - `security_findings` 记录安全审计失败原因
 - `quality_score_available` 区分“评分为 0”和“评分不可用”
 - `pending_explanations` 记录 medium+ 未修复原因；禁用 PR 评论时会进入最终 JSON
+- `has_pending` / `pending_count` / `review_clean` 让 workflow 状态机区分 clean、pending 与安全阻断
 
 ### 如何新增 Skill（扩展点）
 

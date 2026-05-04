@@ -34,9 +34,9 @@
 系统通过 PR 标签 (`gemini-review-round-*`) 管理状态：
 - **默认轮次**: 2 轮。
 - **终止条件**: 
-  - 达到 2 轮上限。
-  - 无需修复的高/中优先级问题。
-  - 决策引擎过滤后无待修复项。
+  - 达到 2 轮上限并标记 `gemini-review-round-max`。
+  - 最终轮 `pending_explanations` 为空并标记 `gemini-review-clean`。
+  - 存在未自动修复的 Medium+ 问题时标记 `gemini-review-needs-human`，等待人工决策。
 - **人工干预**: 最后一轮结束后，由人类进行最终 Review 并决定是否合并。
 
 ## 4. 方案优势

@@ -409,7 +409,7 @@ CLI 与输出契约参考。它列出两个二进制入口、命令分类、stdo
 
 GitHub Actions 集成说明。它解释 `codex-auto-fix pr-auto-fix` 在 workflow 中的典型调用、stdout JSON 如何写入 `GITHUB_OUTPUT`、跨仓库参数化、`gh` 评论权限和 push 权限要求。
 
-适合维护 `.github/workflows/ai-auto-fix.yml` 或接入其他仓库的 CI 时阅读。
+适合维护 `.github/workflows/codex-auto-fix.yml`、`.github/workflows/gemini-review-kickoff.yml` 或接入其他仓库的 CI 时阅读。
 
 ## 构建产物目录
 

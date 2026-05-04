@@ -475,7 +475,7 @@ impl Skill for DryRunFeedbackSkill {
 
 /// 推送与反馈：提交/推送变更，并在 PR 下发布“修复完成”评论。
 ///
-/// 若本轮没有产生修改，则发布“无需修复”的总结。
+/// 若本轮没有产生修改，则按 clean / pending 状态发布对应总结。
 pub struct FeedbackSkill;
 #[async_trait::async_trait]
 impl Skill for FeedbackSkill {

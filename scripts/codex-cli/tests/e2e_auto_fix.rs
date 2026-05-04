@@ -33,6 +33,9 @@ fn auto_fix_local_applies_patch_with_local_codex_command() {
     assert_eq!(json["fixed"], true);
     assert_eq!(json["security_passed"], true);
     assert_eq!(json["push_blocked"], false);
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["pending_count"], 0);
+    assert_eq!(json["review_clean"], true);
     assert_eq!(json["quality_score"], 95);
     assert_eq!(json["files"][0], "src/lib.rs");
 
@@ -68,6 +71,9 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
     assert_eq!(json["fixed"], false);
     assert_eq!(json["security_passed"], false);
     assert_eq!(json["push_blocked"], true);
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["pending_count"], 0);
+    assert_eq!(json["review_clean"], false);
     assert_eq!(json["pending_explanations"].as_array().unwrap().len(), 0);
 
     let commit_count = workspace.git_stdout(&repo, &["rev-list", "--count", "HEAD"]);
@@ -106,6 +112,9 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
 
     let json = parse_stdout(&output);
     assert_eq!(json["fixed"], true);
+    assert_eq!(json["has_pending"], true);
+    assert_eq!(json["pending_count"], 1);
+    assert_eq!(json["review_clean"], false);
     let pending = json["pending_explanations"].as_array().unwrap();
     assert_eq!(pending.len(), 1);
     assert!(pending[0].as_str().unwrap().contains("`:5"));
@@ -138,6 +147,9 @@ fn auto_fix_local_retries_patch_generation_after_apply_failure() {
 
     let json = parse_stdout(&output);
     assert_eq!(json["fixed"], true);
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["pending_count"], 0);
+    assert_eq!(json["review_clean"], true);
     assert_eq!(json["pending_explanations"].as_array().unwrap().len(), 0);
 
     let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();

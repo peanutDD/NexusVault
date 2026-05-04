@@ -1,7 +1,7 @@
 ## 1. 高阶总结 (TL;DR)
 * **影响程度:** [高] - 本次更新为项目引入了一套完整的「AI 自动化代码审查与修复」闭环系统。深度整合了 GitHub Actions、Gemini Code Assist 和基于本地的 Codex 执行引擎，大幅提升了 PR Review 和修复的自动化水平。
 * **核心变更:**
-  * ✨ **新增自动化流水线:** 创建了 `.github/workflows/ai-auto-fix.yml`，能够监听 PR 中 Gemini 机器人的评论，并自动触发本地修复任务。
+  * ✨ **新增自动化流水线:** 创建了 `.github/workflows/codex-auto-fix.yml`，能够监听 PR 中 Gemini 机器人的评论，并自动触发本地修复任务。
   * ✨ **引入 Codex CLI 工具:** 使用 Rust 开发了 `scripts/codex-cli`（自动修复入口为 `codex-auto-fix`），用于解析 Gemini 建议、调用本地 Codex GPT-5.5 生成代码补丁并安全应用提交。
   * ✨ **制定 AI 约束规范:** 新增了自动化工作流的设计文档 (`auto-review-flow.md`) 及永久性安全约束 (`ai-auto-fix-rules.md`)，严禁修改敏感配置文件和锁文件。
   * ✨ **文档更新:** 更新了 `CHANGELOG.md`（记录了后端模块化等历史修改）及 `README.md`。
@@ -14,7 +14,7 @@ graph TD
     classDef script fill:#c8e6c9,stroke:#1a5e20,color:#1a5e20
     classDef doc fill:#fff3e0,stroke:#e65100,color:#e65100
 
-    subgraph Actions ["GitHub Actions (.github/workflows/ai-auto-fix.yml)"]
+    subgraph Actions ["GitHub Actions (.github/workflows/codex-auto-fix.yml)"]
         A["监听 issue_comment"]:::action --> B["解析 Gemini Review 评论"]:::action
         B --> C["轮次控制 (不超过 MAX_ROUNDS)"]:::action
         C --> D["触发 codex-auto-fix pr-auto-fix"]:::action
@@ -52,14 +52,14 @@ graph TD
 
 ### 🔄 CI/CD 工作流 (GitHub Actions)
 * **What Changed:** 
-  * 引入了 `ai-auto-fix.yml`，精准监听 PR 中的 `gemini-code-assist[bot]` 评论事件。
+  * 引入了 `codex-auto-fix.yml`，精准监听 PR 中的 `gemini-code-assist[bot]` 评论事件。
   * **状态机设计**: 利用 PR 的 `gemini-review-round-*` 标签控制修复轮次。一旦检测到到达最大轮次（`gemini-review-round-max`），自动熔断终止执行，防止大模型陷入无限修正循环。
   * **安全注入**: 借助 GitHub Actions 的 `EOF` 语法与中间环境变量，将多行的 Review 文本安全无缝地传递给底层 CLI。
 
 ### 📄 规范、文档与历史日志
 * **What Changed:**
   * 更新 `docs/README.md`，加入了关于代码审查和 AI 自动化的索引。
-  * 新增 `docs/constraints/ai-auto-fix-rules.md`：建立 AI 操作红线，明确指出严禁强制推送 (`push -f`)，且自动提交必须携带 `[skip ci]` 前缀。
+  * 新增 `docs/constraints/ai-auto-fix-rules.md`：建立 AI 操作红线，明确指出严禁强制推送 (`push -f`)，且自动提交必须触发 CI。
   * 新增架构设计与集成参考文档（`auto-review-flow.md` 等），清晰阐释了整个「双模型博弈」（Gemini 审查 + Codex GPT-5.5 修复）的工作链路。
   * 附带更新了 `CHANGELOG.md`，补充了近期关于后端配置拆分（`config.rs`）及健康检查超时机制优化的说明。
 

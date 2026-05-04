@@ -77,6 +77,9 @@ codex-auto-fix pr-auto-fix \
   "quality_score_available": true,
   "security_passed": true,
   "push_blocked": false,
+  "has_pending": false,
+  "pending_count": 0,
+  "review_clean": true,
   "summary": "Gemini 对本次 PR 的整体总结",
   "pending_explanations": []
 }

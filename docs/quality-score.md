@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-05 | auto review loop state machine | 96 | 将 Gemini/Codex 自动 Review 闭环升级为显式状态机：CLI 输出 pending/clean 字段，workflow 通过测试脚本区分 clean/pending/blocked/round-max；pending 不再误报无需修复，auto-fix commit 触发 CI，kickoff 跳过 auto-fix commit 避免重复 Gemini 请求。 |
 | 2026-05-04 | PR #12 backend CI fix | 95 | 修复 Backend (Rust) CI 的 `clippy::items_after_test_module`：将 `storage.rs` 的测试模块移动到生产 impl 之后，新增 C-026 永久约束；本地 fmt/clippy/定向测试通过。 |
 | 2026-05-04 | upload review follow-up | 95 | 修复 PR 遗留反馈：前端全文件与 worker SHA-256 改为分块增量读取，避免大文件整块 `arrayBuffer()`；S3 `copy_object` copy source 对对象 key 做百分号编码并保留 `/`；codex-cli 在 `git apply` 失败后带最新源码重试一次。新增回归测试与 C-025/ai-auto-fix 永久约束，定向前后端与 codex-cli 测试通过。 |
 | 2026-05-04 | settings page optimization | 95 | Settings 页面保守视觉与体验优化：新增 settings-local UI helper，统一表单/错误/按钮语义样式，改善移动端 email 与 API Token 标题换行，快速导航改为数据驱动；补充 Settings 回归测试并完成 test/lint/token/build/桌面+移动视觉检查。 |

@@ -27,6 +27,12 @@ jobs:
           set -euo pipefail
 
           LAST_COMMIT_AT="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.committer.date')"
+          LAST_COMMIT_MESSAGE="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.message')"
+
+          if [[ "$LAST_COMMIT_MESSAGE" == *"codex auto-fix"* ]]; then
+            echo "Skip: codex-auto-fix workflow owns the next Gemini request for this commit."
+            exit 0
+          fi
 
           LAST_REQUEST_AT="$(
             gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate --jq '
