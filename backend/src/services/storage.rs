@@ -469,19 +469,6 @@ impl S3Storage {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::S3Storage;
-
-    #[test]
-    fn s3_copy_source_url_encodes_object_key() {
-        assert_eq!(
-            S3Storage::copy_source_header("uploads", "user/a b/#report?中文%.txt"),
-            "uploads/user/a%20b/%23report%3F%E4%B8%AD%E6%96%87%25.txt"
-        );
-    }
-}
-
 #[async_trait]
 impl StorageBackend for S3Storage {
     async fn save_file(
@@ -755,5 +742,18 @@ impl StorageBackend for S3Storage {
             .await
             .map_err(|e| AppError::Storage(format!("S3 bucket not accessible: {}", e)))?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::S3Storage;
+
+    #[test]
+    fn s3_copy_source_url_encodes_object_key() {
+        assert_eq!(
+            S3Storage::copy_source_header("uploads", "user/a b/#report?中文%.txt"),
+            "uploads/user/a%20b/%23report%3F%E4%B8%AD%E6%96%87%25.txt"
+        );
     }
 }
