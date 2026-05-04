@@ -155,10 +155,15 @@ jobs:
         if: steps.round.outputs.current_round != 'gemini-review-round-max'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           CURRENT_ROUND: ${{ steps.round.outputs.current_round }}
           FIXED: ${{ steps.codex.outputs.fixed }}
           PUSH_BLOCKED: ${{ steps.codex.outputs.push_blocked }}
           PENDING_COUNT: ${{ steps.codex.outputs.pending_count }}
           MAX_ROUNDS: ${{ env.MAX_ROUNDS }}
+          WAIT_FOR_GEMINI_REVIEW: true
+          GEMINI_REVIEW_TIMEOUT_SECONDS: 600
+          GEMINI_REVIEW_POLL_INTERVAL_SECONDS: 15
         run: |
+          export PR_SHA="$(git rev-parse HEAD)"
           bash .github/scripts/codex-auto-fix-state.sh apply

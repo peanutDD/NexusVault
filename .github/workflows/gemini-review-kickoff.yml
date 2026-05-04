@@ -17,12 +17,17 @@ jobs:
   gemini-kickoff:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout 仓库
+        uses: actions/checkout@v4
+
       - name: 自动触发 Gemini Review（首轮/更新）
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
+          GEMINI_REVIEW_TIMEOUT_SECONDS: 600
+          GEMINI_REVIEW_POLL_INTERVAL_SECONDS: 15
         run: |
           set -euo pipefail
 
@@ -48,10 +53,13 @@ jobs:
             '
           )"
 
+          REQUESTED_AT="${LAST_REQUEST_AT}"
           if [[ -n "${LAST_REQUEST_AT}" && "${LAST_REQUEST_AT}" > "${LAST_COMMIT_AT}" ]]; then
-            echo "Skip: already requested after latest commit. last_request_at=${LAST_REQUEST_AT} last_commit_at=${LAST_COMMIT_AT}"
-            exit 0
+            echo "Already requested after latest commit. last_request_at=${LAST_REQUEST_AT} last_commit_at=${LAST_COMMIT_AT}"
+          else
+            REQUESTED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "Requesting Gemini review. last_request_at=${LAST_REQUEST_AT:-none} last_commit_at=${LAST_COMMIT_AT}"
+            gh pr comment "${PR_NUMBER}" --body "/gemini review"
           fi
 
-          echo "Requesting Gemini review. last_request_at=${LAST_REQUEST_AT:-none} last_commit_at=${LAST_COMMIT_AT}"
-          gh pr comment "${PR_NUMBER}" --body "/gemini review"
+          REVIEW_REQUESTED_AT="${REQUESTED_AT}" bash .github/scripts/gemini-review-watchdog.sh watch

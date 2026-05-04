@@ -143,7 +143,11 @@ apply_plan() {
       if [[ -n "$state_label" ]]; then
         add_label "$state_label"
       fi
+      review_requested_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
       gh pr comment "${PR_NUMBER:?}" --body "/gemini review"
+      if [[ "${WAIT_FOR_GEMINI_REVIEW:-false}" == "true" ]]; then
+        REVIEW_REQUESTED_AT="$review_requested_at" bash .github/scripts/gemini-review-watchdog.sh watch
+      fi
       if [[ "$action" == "advance_with_pending" ]]; then
         gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 已推送部分修复，并请求下一轮 Gemini Review。** 当前仍有 Medium+ 未自动修复说明，下一轮后仍存在则需要人工决策。"
       else
