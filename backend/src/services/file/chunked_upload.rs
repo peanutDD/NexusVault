@@ -62,7 +62,7 @@ impl FileService {
 
         let upload_id = Uuid::new_v4();
         // API 中 part 是从 1 开始；磁盘落盘使用 0-based（part_0..part_{n-1}）便于顺序合并。
-        let total_parts = req.total_size.div_ceil(CHUNK_SIZE as u64) as u32;
+        let total_parts = Self::chunked_total_parts(req.total_size);
         let temp_path = self.chunked_temp_dir(upload_id);
         tokio::fs::create_dir_all(&temp_path)
             .await
@@ -128,6 +128,12 @@ impl FileService {
         part_sha256: Option<&str>,
     ) -> Result<(), FileServiceError> {
         let s = self.get_upload_session(upload_id, user_id).await?;
+        let total_size = s.total_size as u64;
+        let total_parts = Self::chunked_total_parts(total_size);
+        if part_index == 0 || part_index > total_parts {
+            return Err(FileServiceError::InvalidChunkIndex { part_index });
+        }
+
         let part = part_index as i32;
         if s.uploaded_parts.contains(&part) {
             tracing::debug!(
@@ -137,13 +143,8 @@ impl FileService {
             );
             return Ok(());
         }
-        let total_parts = (s.total_size as u64).div_ceil(CHUNK_SIZE as u64) as i32;
-        if part < 1 || part > total_parts {
-            return Err(FileServiceError::InvalidChunkIndex { part_index });
-        }
 
-        let expected_size =
-            expected_chunk_size(s.total_size as u64, part_index, total_parts as u32);
+        let expected_size = Self::chunked_expected_part_size(total_size, part_index);
         let actual_size = data.len() as u64;
         if actual_size != expected_size {
             return Err(FileServiceError::InvalidChunkSize {
@@ -202,7 +203,7 @@ impl FileService {
         user_id: Uuid,
     ) -> Result<(Vec<i32>, u32), FileServiceError> {
         let s = self.get_upload_session(upload_id, user_id).await?;
-        let total_parts = (s.total_size as u64).div_ceil(CHUNK_SIZE as u64) as u32;
+        let total_parts = Self::chunked_total_parts(s.total_size as u64);
         tracing::debug!(
             upload_id = %upload_id,
             uploaded = s.uploaded_parts.len(),
@@ -224,7 +225,7 @@ impl FileService {
         use tokio::io::{copy, AsyncWriteExt};
 
         let s = self.get_upload_session(upload_id, user_id).await?;
-        let total_parts = (s.total_size as u64).div_ceil(CHUNK_SIZE as u64) as u32;
+        let total_parts = Self::chunked_total_parts(s.total_size as u64);
         if s.uploaded_parts.len() != total_parts as usize {
             return Err(FileServiceError::MissingUploadedChunks {
                 uploaded: s.uploaded_parts.len(),
@@ -346,12 +347,45 @@ impl FileService {
         );
         Ok(())
     }
+
+    fn chunked_total_parts(total_size: u64) -> u32 {
+        total_size.div_ceil(CHUNK_SIZE as u64) as u32
+    }
+
+    fn chunked_expected_part_size(total_size: u64, part_index: u32) -> u64 {
+        let total_parts = Self::chunked_total_parts(total_size);
+        if part_index == total_parts {
+            let consumed = CHUNK_SIZE as u64 * u64::from(total_parts.saturating_sub(1));
+            return total_size.saturating_sub(consumed);
+        }
+        CHUNK_SIZE as u64
+    }
 }
 
-fn expected_chunk_size(total_size: u64, part_index: u32, total_parts: u32) -> u64 {
-    if part_index == total_parts {
-        let consumed = CHUNK_SIZE as u64 * u64::from(total_parts.saturating_sub(1));
-        return total_size.saturating_sub(consumed);
+#[cfg(test)]
+mod tests {
+    use super::FileService;
+    use crate::constants::CHUNK_SIZE;
+
+    #[test]
+    fn chunked_part_dimensions_are_centralized_for_init_and_validation() {
+        let total_size = CHUNK_SIZE as u64 * 2 + 7;
+
+        assert_eq!(FileService::chunked_total_parts(total_size), 3);
+        assert_eq!(
+            FileService::chunked_expected_part_size(total_size, 1),
+            CHUNK_SIZE as u64
+        );
+        assert_eq!(
+            FileService::chunked_expected_part_size(total_size, 2),
+            CHUNK_SIZE as u64
+        );
+        assert_eq!(FileService::chunked_expected_part_size(total_size, 3), 7);
     }
-    CHUNK_SIZE as u64
+
+    #[test]
+    fn chunked_part_dimensions_handle_single_partial_part() {
+        assert_eq!(FileService::chunked_total_parts(13), 1);
+        assert_eq!(FileService::chunked_expected_part_size(13, 1), 13);
+    }
 }

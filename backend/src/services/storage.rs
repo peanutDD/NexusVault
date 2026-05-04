@@ -16,17 +16,6 @@ pub fn create_memory_backend() -> LocalStorage {
 
 const THUMBNAIL_DIR: &str = ".thumbnails";
 const THUMBNAIL_EXT: &str = "jpg";
-const S3_COPY_SOURCE_ENCODE_SET: &AsciiSet = &CONTROLS
-    .add(b' ')
-    .add(b'"')
-    .add(b'#')
-    .add(b'%')
-    .add(b'<')
-    .add(b'>')
-    .add(b'?')
-    .add(b'`')
-    .add(b'{')
-    .add(b'}');
 
 /// 将 S3 错误映射为 AppError：对象不存在时返回 NotFound(404)，其余为 File 错误。
 fn s3_to_app_error<E: std::fmt::Display>(e: &E, op: &str) -> AppError {
@@ -440,6 +429,18 @@ pub struct S3Storage {
 }
 
 impl S3Storage {
+    const COPY_SOURCE_ENCODE_SET: &'static AsciiSet = &CONTROLS
+        .add(b' ')
+        .add(b'"')
+        .add(b'#')
+        .add(b'%')
+        .add(b'<')
+        .add(b'>')
+        .add(b'?')
+        .add(b'`')
+        .add(b'{')
+        .add(b'}');
+
     pub async fn new(bucket: String, region: String) -> Result<Self, AppError> {
         let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
         let client = aws_sdk_s3::Client::new(&config);
@@ -464,7 +465,7 @@ impl S3Storage {
     }
 
     fn copy_source_header(bucket: &str, source_path: &str) -> String {
-        let source_path = utf8_percent_encode(source_path, S3_COPY_SOURCE_ENCODE_SET);
+        let source_path = utf8_percent_encode(source_path, Self::COPY_SOURCE_ENCODE_SET);
         format!("{}/{}", bucket, source_path)
     }
 }

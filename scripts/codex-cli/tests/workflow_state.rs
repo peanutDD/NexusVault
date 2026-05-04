@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -76,6 +77,30 @@ fn fail_closed_security_blocks_loop() {
     assert_eq!(output["human_block"], "true");
 }
 
+#[test]
+fn codex_auto_fix_concurrency_is_job_scoped() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+    let jobs_index = workflow
+        .find("jobs:")
+        .expect("codex auto-fix workflow should define jobs");
+    let top_level = &workflow[..jobs_index];
+    let jobs = &workflow[jobs_index..];
+
+    assert!(
+        !top_level.contains("\nconcurrency:"),
+        "workflow-level concurrency runs before job filters and can cancel actionable review events"
+    );
+    assert!(
+        jobs.contains("    concurrency:\n"),
+        "codex-fix job should serialize actionable runs after skipped events are filtered"
+    );
+    assert!(
+        jobs.contains("      cancel-in-progress: false"),
+        "codex-fix job should queue actionable review runs instead of canceling in-progress fixes"
+    );
+}
+
 fn plan(envs: &[(&str, &str)]) -> HashMap<String, String> {
     let script = workflow_script();
     let output = Command::new("bash")
@@ -105,4 +130,10 @@ fn workflow_script() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
         .join(".github/scripts/codex-auto-fix-state.sh")
+}
+
+fn codex_auto_fix_workflow() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(".github/workflows/codex-auto-fix.yml")
 }
