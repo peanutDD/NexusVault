@@ -37,7 +37,7 @@
         background: linear-gradient(
             180deg,
             rgba(var(--rgb-slate-950), 0.94),
-            rgba(8, 16, 34, 0.94)
+            rgba(var(--rgb-slate-900), 0.94)
         );
         border-color: var(--nav-btn-border);
         color: var(--nav-btn-text);
@@ -51,7 +51,7 @@
         background: linear-gradient(
             180deg,
             rgba(var(--rgb-slate-950), 0.98),
-            rgba(11, 22, 45, 0.98)
+            rgba(var(--rgb-slate-900), 0.98)
         );
         border-color: var(--nav-btn-border-hover);
     }

@@ -14,7 +14,7 @@ function readCssCustomProperties(fileName: string, selectorPattern: RegExp) {
     throw new Error(`Missing CSS selector: ${selectorPattern.source}`);
   }
 
-  const ruleBody = css.slice(selector.index + selector[0].length).match(/^[\s\S]*?(?=\n\s*})/)?.[0];
+  const ruleBody = css.slice(selector.index + selector[0].length).match(/^[\s\S]*?(?=\s*})/)?.[0];
   expect(ruleBody).toBeDefined();
 
   const properties = new Map<string, string>();
