@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// 从 Gemini Review 中抽取的单条问题。
 ///
@@ -18,6 +19,40 @@ pub struct ReviewIssue {
 pub struct ReviewData {
     pub summary: String,
     pub issues: Vec<ReviewIssue>,
+}
+
+fn review_severity_token(severity: &str) -> String {
+    severity
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>()
+        .to_ascii_lowercase()
+}
+
+pub fn is_review_severity_medium_or_higher(severity: &str) -> bool {
+    matches!(
+        review_severity_token(severity).as_str(),
+        "critical" | "high" | "medium+" | "medium"
+    )
+}
+
+pub fn review_severity_matches_allowed(severity: &str, allowed: &HashSet<String>) -> bool {
+    let severity = review_severity_token(severity);
+    allowed.contains(&severity) || (severity == "medium+" && allowed.contains("medium"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn medium_allowed_severity_includes_literal_medium_plus() {
+        let allowed = HashSet::from(["medium".to_string()]);
+
+        assert!(review_severity_matches_allowed("Medium", &allowed));
+        assert!(review_severity_matches_allowed("Medium+", &allowed));
+        assert!(!review_severity_matches_allowed("Low", &allowed));
+    }
 }
 
 /// 写入 `docs/CHANGELOG.md` 的条目输入（由 Pipeline 在运行期聚合）。

@@ -1,6 +1,6 @@
 use crate::llm::CodexClient;
 use crate::repo;
-use crate::types::{ChangelogEntryInput, ReviewData, ReviewIssue};
+use crate::types::{ChangelogEntryInput, ReviewData, ReviewIssue, review_severity_matches_allowed};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::env;
@@ -729,7 +729,7 @@ async fn read_gemini_review(
     repo_context: &str,
     client: &CodexClient,
 ) -> Result<ReviewData, Box<dyn std::error::Error>> {
-    let system_prompt = "你是代码审查专家。现在有一个 Gemini Code Assist 对 PR 的完整 Review 评论。\n请严格按以下 JSON Schema 解析，不要添加任何额外文字：\n\n{\n  \"summary\": \"Gemini 对本次 PR 的整体总结（1-2 句话）\",\n  \"issues\": [\n    {\n      \"severity\": \"Critical | High | Medium | Low\",\n      \"file\": \"具体文件路径（如果 Gemini 没给就填 unknown）\",\n      \"line\": 行号（整数，如果是多行就取起始行）, \n      \"description\": \"问题详细描述（保留 Gemini 原意）\",\n      \"suggestion\": \"Gemini 给出的修复建议代码（如果有 ```suggestion 块就完整保留，否则为空字符串）\",\n      \"reason\": \"Gemini 原评论中对应的原文片段（用于溯源）\"\n    }\n  ]\n}\n\n只输出合法 JSON，不要 markdown，不要解释。";
+    let system_prompt = "你是代码审查专家。现在有一个 Gemini Code Assist 对 PR 的完整 Review 评论。\n请严格按以下 JSON Schema 解析，不要添加任何额外文字：\n\n{\n  \"summary\": \"Gemini 对本次 PR 的整体总结（1-2 句话）\",\n  \"issues\": [\n    {\n      \"severity\": \"Critical | High | Medium+ | Medium | Low\",\n      \"file\": \"具体文件路径（如果 Gemini 没给就填 unknown）\",\n      \"line\": 行号（整数，如果是多行就取起始行）, \n      \"description\": \"问题详细描述（保留 Gemini 原意）\",\n      \"suggestion\": \"Gemini 给出的修复建议代码（如果有 ```suggestion 块就完整保留，否则为空字符串）\",\n      \"reason\": \"Gemini 原评论中对应的原文片段（用于溯源）\"\n    }\n  ]\n}\n\n只输出合法 JSON，不要 markdown，不要解释。";
 
     let user_prompt = format!(
         "Gemini 评论全文：\n--- START ---\n{}\n--- END ---\n\n仓库上下文: {}",
@@ -780,13 +780,17 @@ fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
         );
     }
 
-    let allowed =
-        env::var("CODEX_ALLOWED_SEVERITIES").unwrap_or_else(|_| "Critical,High,Medium".to_string());
+    let allowed = env::var("CODEX_ALLOWED_SEVERITIES")
+        .unwrap_or_else(|_| "Critical,High,Medium+,Medium".to_string());
     let allowed: HashSet<String> = allowed
         .split(',')
-        .map(|s| s.trim())
+        .map(|s| {
+            s.chars()
+                .filter(|c| !c.is_whitespace())
+                .collect::<String>()
+                .to_ascii_lowercase()
+        })
         .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
         .collect();
 
     let exclude_docs = env::var("CODEX_EXCLUDE_DOCS")
@@ -795,7 +799,7 @@ fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
 
     issues
         .iter()
-        .filter(|i| allowed.contains(&i.severity))
+        .filter(|i| review_severity_matches_allowed(&i.severity, &allowed))
         .filter(|i| !protected.iter().any(|p| i.file.contains(p)))
         .filter(|i| {
             if exclude_docs {
@@ -1029,5 +1033,41 @@ mod tests {
         };
 
         assert_ne!(review_issue_key(&first), review_issue_key(&second));
+    }
+
+    #[test]
+    fn decide_fix_or_skip_selects_medium_and_literal_medium_plus() {
+        let issues = vec![
+            ReviewIssue {
+                file: "src/a.rs".to_string(),
+                line: Some(10),
+                severity: "Medium".to_string(),
+                description: "medium".to_string(),
+                suggestion: String::new(),
+                reason: None,
+            },
+            ReviewIssue {
+                file: "src/b.rs".to_string(),
+                line: Some(20),
+                severity: "Medium+".to_string(),
+                description: "medium plus".to_string(),
+                suggestion: String::new(),
+                reason: None,
+            },
+            ReviewIssue {
+                file: "src/c.rs".to_string(),
+                line: Some(30),
+                severity: "Low".to_string(),
+                description: "low".to_string(),
+                suggestion: String::new(),
+                reason: None,
+            },
+        ];
+
+        let selected = decide_fix_or_skip(&issues);
+
+        assert_eq!(selected.len(), 2);
+        assert_eq!(selected[0].severity, "Medium");
+        assert_eq!(selected[1].severity, "Medium+");
     }
 }

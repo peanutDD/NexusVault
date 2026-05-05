@@ -51,14 +51,14 @@ CODEX_AGENT_COMMAND=codex exec --skip-git-repo-check --prompt-file {prompt_file}
 
 `DecisionSkill` 会对解析后的 issues 做“硬过滤”，默认行为是：
 
-- 仅处理 `Critical/High/Medium`
+- 仅处理 `Critical/High/Medium+/Medium`
 - 排除高风险文件（锁文件/配置文件/.env 等）
 - 默认排除 `docs/` 与 `.md`（避免自动改文档造成 review 噪声与误改）
 
 你可以用环境变量覆盖：
 
-- `CODEX_ALLOWED_SEVERITIES`：逗号分隔，默认 `Critical,High,Medium`
-  - 例：`CODEX_ALLOWED_SEVERITIES=High,Medium`
+- `CODEX_ALLOWED_SEVERITIES`：逗号分隔，默认 `Critical,High,Medium+,Medium`
+  - 例：`CODEX_ALLOWED_SEVERITIES=High,Medium`（仍包含字面量 `Medium+`）
 - `CODEX_PROTECTED_FILES`：额外受保护文件（逗号分隔），会追加到默认列表
   - 例：`CODEX_PROTECTED_FILES=go.mod,go.sum`
 - `CODEX_EXCLUDE_DOCS`：是否排除文档路径，默认 `true`

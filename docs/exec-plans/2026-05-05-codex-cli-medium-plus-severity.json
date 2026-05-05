@@ -1,0 +1,19 @@
+{
+  "task": "codex-cli-medium-plus-severity",
+  "date": "2026-05-05",
+  "goal": "Make scripts/codex-cli clean both literal Medium and literal Medium+ Gemini Code Assist findings.",
+  "assumptions": [
+    "Gemini can emit Medium+ as a literal severity label.",
+    "Medium+ findings must be selected for automatic fixing by default.",
+    "Unfixed Medium+ findings must create pending_explanations."
+  ],
+  "risks": [
+    "The automatic fix path and pending policy path can drift if they use separate severity checks.",
+    "Custom CODEX_ALLOWED_SEVERITIES values can accidentally exclude Medium+."
+  ],
+  "acceptance": [
+    "Medium and Medium+ are both selected by default.",
+    "Medium+ unfixed findings block clean status through pending output.",
+    "cargo test medium_plus passes."
+  ]
+}
