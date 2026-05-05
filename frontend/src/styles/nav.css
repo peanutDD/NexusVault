@@ -36,28 +36,28 @@
     .light .nav-panel .nav-btn {
         background: linear-gradient(
             180deg,
-            rgba(var(--rgb-slate-900), 0.94),
-            rgba(var(--rgb-slate-950), 0.92)
+            rgba(var(--rgb-slate-950), 0.94),
+            rgba(12, 18, 36, 0.92)
         );
-        border-color: rgba(var(--rgb-slate-950), 0.26);
-        color: rgba(var(--rgb-white), 0.92);
+        border-color: rgba(var(--rgb-sky-400), 0.36);
+        color: rgba(var(--rgb-white), 0.94);
         box-shadow:
-            0 1.125rem 3.75rem rgba(var(--rgb-slate-950), 0.14),
-            0 0.625rem 1.5rem rgba(var(--rgb-black), 0.12),
-            inset 0 1px 0 rgba(var(--rgb-white), 0.09);
+            0 1.125rem 3.75rem rgba(var(--rgb-sky-400), 0.16),
+            0 0.625rem 1.5rem rgba(var(--rgb-purple-500), 0.12),
+            inset 0 1px 0 rgba(var(--rgb-white), 0.12);
     }
 
     .light .nav-panel .nav-btn:hover {
         background: linear-gradient(
             180deg,
-            rgba(var(--rgb-slate-900), 0.98),
-            rgba(var(--rgb-slate-950), 0.96)
+            rgba(var(--rgb-slate-950), 0.98),
+            rgba(17, 24, 50, 0.96)
         );
-        border-color: rgba(var(--rgb-slate-950), 0.34);
+        border-color: rgba(var(--rgb-cyan-400), 0.44);
     }
 
     .light .nav-panel .nav-icon {
-        color: rgba(var(--rgb-white), 0.9);
+        color: rgba(var(--rgb-cyan-400), 0.94);
     }
 
     .light .nav-panel button[aria-label='Logout'] {

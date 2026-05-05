@@ -1,0 +1,52 @@
+{
+  "date": "2026-05-05",
+  "title": "Light Daylight Nebula Theme",
+  "style": "Daylight Nebula",
+  "implementationSurface": "Token-First Global",
+  "scope": {
+    "included": [
+      "frontend/src/styles/tokens.css light theme visual tokens",
+      "frontend/src/styles/nav.css light-only visual overrides if needed",
+      "docs/exec-plans verification record",
+      "light-mode screenshot evidence"
+    ],
+    "excluded": [
+      "React DOM structure changes",
+      "layout, spacing, sizing, route, prop, store, or persistence changes",
+      "new theme mode",
+      "animation-heavy overlay"
+    ]
+  },
+  "assumptions": [
+    "Layout must not change; only color, gradients, shadows, opacity, and existing pseudo-element visuals may change.",
+    "Theme storage remains light | dark | purple.",
+    "Daylight Nebula means pale readable surfaces with sky, cyan, violet, and pearl highlights."
+  ],
+  "risks": [
+    "High-glow token choices can reduce contrast on light backgrounds.",
+    "tokens.css has broad reach across files, settings, auth, upload, preview, and dialogs.",
+    "Fluid sizing checks can fail if fixed visible dimensions are introduced."
+  ],
+  "dependencies": [
+    "frontend/src/styles/tokens.css",
+    "frontend/src/store/themeStore.ts",
+    "frontend/src/styles/nav.css",
+    "frontend/src/components/files/list/FileListGlass.css",
+    "frontend/src/components/files/upload/UploadDialog.css"
+  ],
+  "verification": [
+    "npm run test -- src/styles/lightThemeTokens.test.ts",
+    "npm run test -- src/components/settings/SettingsPageRegression.test.tsx",
+    "npm run check:tokens:strict:layout",
+    "npm run check:fluid-sizing -- --scope=all",
+    "npm run lint",
+    "npm run test",
+    "npm run build"
+  ],
+  "screenshots": [
+    "docs/exec-plans/2026-05-05-light-daylight-nebula-files-desktop.png",
+    "docs/exec-plans/2026-05-05-light-daylight-nebula-files-mobile.png",
+    "docs/exec-plans/2026-05-05-light-daylight-nebula-settings-desktop.png",
+    "docs/exec-plans/2026-05-05-light-daylight-nebula-settings-mobile.png"
+  ]
+}
