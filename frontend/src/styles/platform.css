@@ -20,8 +20,14 @@
             rgba(var(--rgb-white), 0.65) 100%
         ) !important;
         
-        --macos-titlebar-bg: rgb(var(--rgb-white)) !important;
-        --nav-surface-bg: var(--macos-titlebar-bg) !important;
+        --macos-titlebar-bg: rgb(var(--rgb-slate-950)) !important;
+        --nav-surface-bg: linear-gradient(
+            135deg,
+            rgba(var(--rgb-slate-950), 0.98),
+            rgba(9, 18, 38, 0.98) 46%,
+            rgba(var(--rgb-purple-500), 0.32) 74%,
+            rgba(var(--rgb-cyan-400), 0.24)
+        ) !important;
         --nav-surface-blur: 0px !important;
     }
 

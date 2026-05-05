@@ -37,13 +37,13 @@
         background: linear-gradient(
             180deg,
             rgba(var(--rgb-slate-950), 0.94),
-            rgba(12, 18, 36, 0.92)
+            rgba(8, 16, 34, 0.94)
         );
-        border-color: rgba(var(--rgb-sky-400), 0.36);
+        border-color: rgba(var(--rgb-cyan-400), 0.34);
         color: rgba(var(--rgb-white), 0.94);
         box-shadow:
-            0 1.125rem 3.75rem rgba(var(--rgb-sky-400), 0.16),
-            0 0.625rem 1.5rem rgba(var(--rgb-purple-500), 0.12),
+            0 1.125rem 3.75rem rgba(var(--rgb-slate-950), 0.28),
+            0 0.625rem 1.5rem rgba(var(--rgb-cyan-400), 0.14),
             inset 0 1px 0 rgba(var(--rgb-white), 0.12);
     }
 
@@ -51,9 +51,9 @@
         background: linear-gradient(
             180deg,
             rgba(var(--rgb-slate-950), 0.98),
-            rgba(17, 24, 50, 0.96)
+            rgba(11, 22, 45, 0.98)
         );
-        border-color: rgba(var(--rgb-cyan-400), 0.44);
+        border-color: rgba(var(--rgb-cyan-400), 0.58);
     }
 
     .light .nav-panel .nav-icon {
