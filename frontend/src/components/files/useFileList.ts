@@ -498,34 +498,49 @@ export function useFileList() {
     [files, pendingDeleteFileIds],
   );
 
-  const getScrollStorageKey = useCallback(
-    (folderId: string | null) => {
-      const folderKey = folderId ?? 'root';
-      const q = (debouncedSearch ?? '').trim();
-      const mimeKey = mimeType || 'all';
-      return `fileListScroll:${folderKey}:${sortBy}:${mimeKey}:${q}`;
-    },
-    [debouncedSearch, mimeType, sortBy]
-  );
+  const scrollStorageContextRef = useRef({ currentFolderId, debouncedSearch, mimeType, sortBy });
+  scrollStorageContextRef.current = {
+    currentFolderId,
+    debouncedSearch,
+    mimeType,
+    sortBy,
+  };
+
+  const getScrollStorageKey = useCallback((folderId: string | null) => {
+    const {
+      debouncedSearch: storedSearch,
+      mimeType: storedMimeType,
+      sortBy: storedSortBy,
+    } = scrollStorageContextRef.current;
+    const folderKey = folderId ?? 'root';
+    const q = (storedSearch ?? '').trim();
+    const mimeKey = storedMimeType || 'all';
+    return `fileListScroll:${folderKey}:${storedSortBy}:${mimeKey}:${q}`;
+  }, []);
 
   const location = useLocation();
   const lastScrollAppliedLocationKeyRef = useRef<string | null>(null);
+  const pendingScrollRestoreStorageKeyRef = useRef<string | null>(null);
 
   const saveScrollPosition = useCallback(
-    (folderId: string | null = currentFolderId) => {
+    (folderId: string | null = scrollStorageContextRef.current.currentFolderId, force = false) => {
       try {
         const key = getScrollStorageKey(folderId);
+        if (!force && pendingScrollRestoreStorageKeyRef.current === key) {
+          return;
+        }
         const y = Math.max(0, Math.round(window.scrollY || 0));
         sessionStorage.setItem(key, String(y));
       } catch {
         /* ignore */
       }
     },
-    [currentFolderId, getScrollStorageKey],
+    [getScrollStorageKey],
   );
 
   const navigateToFolder = useCallback((folderId: string | null) => {
-    saveScrollPosition(currentFolderId);
+    saveScrollPosition(currentFolderId, true);
+    pendingScrollRestoreStorageKeyRef.current = getScrollStorageKey(folderId);
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -546,6 +561,7 @@ export function useFileList() {
     setSelectedFolders,
     currentFolderId,
     saveScrollPosition,
+    getScrollStorageKey,
   ]);
 
   useEffect(() => {
@@ -590,6 +606,25 @@ export function useFileList() {
     const key = getScrollStorageKey(currentFolderId);
     if (lastScrollAppliedLocationKeyRef.current === location.key) return;
     lastScrollAppliedLocationKeyRef.current = location.key;
+    pendingScrollRestoreStorageKeyRef.current = key;
+
+    let cancelled = false;
+    const clearPendingScrollRestore = () => {
+      if (pendingScrollRestoreStorageKeyRef.current === key) {
+        pendingScrollRestoreStorageKeyRef.current = null;
+      }
+    };
+    const restoreScroll = (top: number) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          window.scrollTo({ top, left: 0, behavior: 'auto' });
+          requestAnimationFrame(() => {
+            if (!cancelled) clearPendingScrollRestore();
+          });
+        });
+      });
+    };
 
     let raw: string | null = null;
     try {
@@ -598,20 +633,22 @@ export function useFileList() {
       raw = null;
     }
     if (!raw) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-        });
-      });
-      return;
+      restoreScroll(0);
+      return () => {
+        cancelled = true;
+        clearPendingScrollRestore();
+      };
     }
     const y = Number.parseInt(raw, 10);
-    if (!Number.isFinite(y) || y < 0) return;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: y, left: 0, behavior: 'auto' });
-      });
-    });
+    if (!Number.isFinite(y) || y < 0) {
+      clearPendingScrollRestore();
+      return;
+    }
+    restoreScroll(y);
+    return () => {
+      cancelled = true;
+      clearPendingScrollRestore();
+    };
   }, [currentFolderId, getScrollStorageKey, loadingFiles, loadingFolders, location.key]);
 
   const displayFolders = useMemo(() => {
