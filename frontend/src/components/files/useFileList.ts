@@ -447,7 +447,7 @@ export function useFileList() {
 
   // ── 即时 DOM 隐藏：确认删除时立刻把卡片从页面移除 ─────────────────────────────
   // 不依赖 React Query 缓存更新时机，用本地 state 直接驱动 filter，解决
-  // \"第二次删除 DOM 不立刻更新\"的 bug。
+  // "第二次删除 DOM 不立刻更新"的 bug。
   const [pendingDeleteFileIds, setPendingDeleteFileIds] = useState<Set<string>>(new Set());
   const [pendingDeleteFolderIds, setPendingDeleteFolderIds] = useState<Set<string>>(new Set());
 
@@ -519,7 +519,7 @@ export function useFileList() {
   }, []);
 
   const location = useLocation();
-  const lastScrollAppliedLocationKeyRef = useRef<string | null>(null);
+  const lastScrollAppliedKeyRef = useRef<string | null>(null);
   const pendingScrollRestoreStorageKeyRef = useRef<string | null>(null);
 
   const saveScrollPosition = useCallback(
@@ -604,8 +604,9 @@ export function useFileList() {
   useEffect(() => {
     if (loadingFiles || loadingFolders) return;
     const key = getScrollStorageKey(currentFolderId);
-    if (lastScrollAppliedLocationKeyRef.current === location.key) return;
-    lastScrollAppliedLocationKeyRef.current = location.key;
+    const scrollAppliedKey = `${location.key}:${key}`;
+    if (lastScrollAppliedKeyRef.current === scrollAppliedKey) return;
+    lastScrollAppliedKeyRef.current = scrollAppliedKey;
     pendingScrollRestoreStorageKeyRef.current = key;
 
     let cancelled = false;
@@ -649,7 +650,16 @@ export function useFileList() {
       cancelled = true;
       clearPendingScrollRestore();
     };
-  }, [currentFolderId, getScrollStorageKey, loadingFiles, loadingFolders, location.key]);
+  }, [
+    currentFolderId,
+    debouncedSearch,
+    getScrollStorageKey,
+    loadingFiles,
+    loadingFolders,
+    location.key,
+    mimeType,
+    sortBy,
+  ]);
 
   const displayFolders = useMemo(() => {
     if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];

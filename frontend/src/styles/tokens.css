@@ -2990,6 +2990,7 @@
 
     --filelist-tech-glow-purple: rgba(var(--rgb-purple-500), 0.4);
     --filelist-tech-glow-cyan: rgba(var(--rgb-cyan-400), 0.4);
+    /* Legacy token name: purple theme intentionally uses rose here after removing green accents. */
     --filelist-tech-glow-green: rgba(var(--rgb-rose-400), 0.32);
     --filelist-bar-border: rgb(var(--rgb-purple-900));
     --filelist-bar-bg-top: rgb(var(--rgb-purple-900));
