@@ -101,3 +101,20 @@ export async function sha256FileHex(file: File, signal?: AbortSignal): Promise<s
   }
   return hasher.hex();
 }
+
+export async function sha256BlobHex(blob: Blob, signal?: AbortSignal): Promise<string> {
+  throwIfAborted(signal);
+  const buffer = await blob.arrayBuffer();
+  throwIfAborted(signal);
+
+  if (isSha256Supported()) {
+    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buffer);
+    throwIfAborted(signal);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  const hasher = sha256.create();
+  hasher.update(new Uint8Array(buffer));
+  return hasher.hex();
+}

@@ -1,0 +1,28 @@
+{
+  "date": "2026-05-04",
+  "task": "themed-tech-dialogs",
+  "goal": "Upgrade file operation dialogs to premium theme-aware technology styling without changing behavior.",
+  "assumptions": [
+    "Most target dialogs use ConfirmDialog with glass appearance.",
+    "Single-file sharing uses Modal with glass variant.",
+    "Theme adaptation should stay inside CSS variables."
+  ],
+  "risks": [
+    "Shared dialog styling can affect non-target glass dialogs.",
+    "Visual effects can reduce readability if tokens are too strong.",
+    "Wider panels must remain mobile-safe."
+  ],
+  "dependencies": [
+    "frontend/src/components/common/dialog/ConfirmDialog.tsx",
+    "frontend/src/components/common/dialog/Modal.tsx",
+    "frontend/src/components/common/dialog/BaseDialog.tsx",
+    "frontend/src/styles/confirm-dialog.css",
+    "frontend/src/styles/tokens.css"
+  ],
+  "validation": [
+    "npm test -- --run src/components/common/dialog/ConfirmDialog.test.tsx src/components/common/dialog/Modal.test.tsx",
+    "npm run lint",
+    "npm test",
+    "npm run build"
+  ]
+}

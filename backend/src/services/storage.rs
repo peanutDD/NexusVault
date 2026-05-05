@@ -58,6 +58,14 @@ pub trait StorageBackend: Send + Sync {
         source_path: &Path,
     ) -> Result<String, AppError>;
 
+    async fn copy_file_to_user(
+        &self,
+        source_path: &str,
+        user_id: Uuid,
+        file_id: Uuid,
+        filename: &str,
+    ) -> Result<String, AppError>;
+
     async fn get_file(&self, file_path: &str) -> Result<Vec<u8>, AppError>;
 
     /// 打开一个用于下载/预览的流式读取源（避免一次性读入内存）。
@@ -264,6 +272,33 @@ impl StorageBackend for LocalStorage {
                 AppError::File(format!("Failed to read file: {}", e))
             }
         })
+    }
+
+    async fn copy_file_to_user(
+        &self,
+        source_path: &str,
+        user_id: Uuid,
+        file_id: Uuid,
+        filename: &str,
+    ) -> Result<String, AppError> {
+        let source = self.resolve_stored_path(source_path);
+        let file_path = self.get_file_path(user_id, file_id, filename);
+
+        if let Some(parent) = file_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| AppError::Storage(format!("Failed to create directory: {}", e)))?;
+        }
+
+        tokio::fs::copy(&source, &file_path).await.map_err(|e| {
+            if e.kind() == ErrorKind::NotFound {
+                AppError::NotFound
+            } else {
+                AppError::Storage(format!("Failed to copy file into storage: {}", e))
+            }
+        })?;
+
+        Ok(file_path.to_string_lossy().to_string())
     }
 
     async fn open_read_stream(&self, file_path: &str) -> Result<StorageReadStream, AppError> {
@@ -485,6 +520,28 @@ impl StorageBackend for S3Storage {
             .map_err(|e| AppError::File(format!("Failed to read S3 object: {}", e)))?;
 
         Ok(data.to_vec())
+    }
+
+    async fn copy_file_to_user(
+        &self,
+        source_path: &str,
+        user_id: Uuid,
+        file_id: Uuid,
+        filename: &str,
+    ) -> Result<String, AppError> {
+        let key = self.get_s3_key(user_id, file_id, filename);
+        let copy_source = format!("{}/{}", self.bucket, source_path);
+
+        self.client
+            .copy_object()
+            .bucket(&self.bucket)
+            .copy_source(copy_source)
+            .key(&key)
+            .send()
+            .await
+            .map_err(|e| AppError::Storage(format!("Failed to copy S3 object: {}", e)))?;
+
+        Ok(key)
     }
 
     async fn open_read_stream(&self, file_path: &str) -> Result<StorageReadStream, AppError> {

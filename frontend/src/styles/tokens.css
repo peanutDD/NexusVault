@@ -219,6 +219,25 @@
     --dialog-liquid-pink: 255, 196, 230;
     --dialog-liquid-shadow: 18, 24, 40;
     --dialog-liquid-glass: 255, 255, 255;
+    --dialog-tech-accent: rgba(var(--rgb-emerald-400), 0.72);
+    --dialog-tech-accent-soft: rgba(var(--rgb-emerald-400), 0.16);
+    --dialog-tech-secondary: rgba(var(--rgb-cyan-400), 0.58);
+    --dialog-tech-secondary-soft: rgba(var(--rgb-cyan-400), 0.12);
+    --dialog-tech-edge: rgba(var(--rgb-emerald-300), 0.34);
+    --dialog-tech-grid: rgba(var(--rgb-emerald-400), 0.16);
+    --dialog-tech-scanline: rgba(var(--rgb-white), 0.05);
+    --dialog-tech-backdrop-grid: rgba(var(--rgb-emerald-400), 0.06);
+    --dialog-tech-backdrop-start: rgba(var(--rgb-black), 0.1);
+    --dialog-tech-backdrop-end: rgba(var(--rgb-black), 0.26);
+    --dialog-tech-groove-top: rgba(var(--rgb-black), 0.36);
+    --dialog-tech-groove-bottom: rgba(var(--rgb-emerald-400), 0.07);
+    --dialog-tech-cancel-border: rgba(var(--rgb-emerald-300), 0.14);
+    --dialog-tech-cancel-hover-bg: rgba(var(--rgb-emerald-400), 0.1);
+    --dialog-tech-panel-shadow:
+        0 24px 90px rgba(var(--rgb-black), 0.54),
+        0 0 48px rgba(var(--rgb-emerald-400), 0.12),
+        0 0 96px rgba(var(--rgb-cyan-400), 0.08),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.12);
 
     /* Semantic text */
     --color-text-primary: rgba(var(--rgb-white), 0.92);
@@ -2811,6 +2830,25 @@
     --dialog-liquid-pink: 255, 210, 240;
     --dialog-liquid-shadow: 30, 40, 60;
     --dialog-liquid-glass: 255, 255, 255;
+    --dialog-tech-accent: rgba(var(--rgb-emerald-500), 0.62);
+    --dialog-tech-accent-soft: rgba(var(--rgb-emerald-500), 0.13);
+    --dialog-tech-secondary: rgba(var(--rgb-sky-400), 0.48);
+    --dialog-tech-secondary-soft: rgba(var(--rgb-sky-400), 0.11);
+    --dialog-tech-edge: rgba(var(--rgb-emerald-500), 0.24);
+    --dialog-tech-grid: rgba(var(--rgb-emerald-500), 0.1);
+    --dialog-tech-scanline: rgba(var(--rgb-slate-900), 0.05);
+    --dialog-tech-backdrop-grid: rgba(var(--rgb-emerald-500), 0.06);
+    --dialog-tech-backdrop-start: rgba(var(--rgb-white), 0.08);
+    --dialog-tech-backdrop-end: rgba(var(--rgb-white), 0.24);
+    --dialog-tech-groove-top: rgba(var(--rgb-white), 0.68);
+    --dialog-tech-groove-bottom: rgba(var(--rgb-emerald-300), 0.16);
+    --dialog-tech-cancel-border: rgba(var(--rgb-slate-900), 0.12);
+    --dialog-tech-cancel-hover-bg: rgba(var(--rgb-emerald-300), 0.14);
+    --dialog-tech-panel-shadow:
+        0 24px 82px rgba(var(--rgb-black), 0.18),
+        0 0 42px rgba(var(--rgb-emerald-500), 0.1),
+        0 0 90px rgba(var(--rgb-sky-400), 0.08),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.82);
 }
 
 [data-theme="purple"], .purple {
@@ -3318,6 +3356,25 @@
     --dialog-liquid-pink: 240, 180, 255;
     --dialog-liquid-shadow: 20, 16, 40;
     --dialog-liquid-glass: 255, 255, 255;
+    --dialog-tech-accent: rgba(var(--rgb-purple-500), 0.72);
+    --dialog-tech-accent-soft: rgba(var(--rgb-purple-500), 0.18);
+    --dialog-tech-secondary: rgba(var(--rgb-cyan-400), 0.6);
+    --dialog-tech-secondary-soft: rgba(var(--rgb-cyan-400), 0.14);
+    --dialog-tech-edge: rgba(var(--rgb-fuchsia-500), 0.32);
+    --dialog-tech-grid: rgba(var(--rgb-fuchsia-500), 0.14);
+    --dialog-tech-scanline: rgba(var(--rgb-white), 0.06);
+    --dialog-tech-backdrop-grid: rgba(var(--rgb-fuchsia-500), 0.06);
+    --dialog-tech-backdrop-start: rgba(var(--rgb-purple-950), 0.1);
+    --dialog-tech-backdrop-end: rgba(var(--rgb-slate-950), 0.24);
+    --dialog-tech-groove-top: rgba(var(--rgb-purple-950), 0.48);
+    --dialog-tech-groove-bottom: rgba(var(--rgb-purple-500), 0.12);
+    --dialog-tech-cancel-border: rgba(var(--rgb-fuchsia-500), 0.2);
+    --dialog-tech-cancel-hover-bg: rgba(var(--rgb-purple-500), 0.14);
+    --dialog-tech-panel-shadow:
+        0 24px 90px rgba(var(--rgb-black), 0.52),
+        0 0 50px rgba(var(--rgb-purple-500), 0.16),
+        0 0 98px rgba(var(--rgb-cyan-400), 0.1),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.12);
 }
 
 /* Light Mode Overrides for Action Buttons */

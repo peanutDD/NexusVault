@@ -41,8 +41,8 @@ use uuid::Uuid;
 use crate::config::Config;
 use crate::models::file::{FileResponse, RenameFileRequest};
 use crate::repositories::{
-    DynFileVersionsRepo, DynFilesRepo, DynUsersRepo, SqlxFileVersionsRepo, SqlxFilesRepo,
-    SqlxUsersRepo,
+    DynFileVersionsRepo, DynFilesRepo, DynUsersRepo, FoldersRepo, SqlxFileVersionsRepo,
+    SqlxFilesRepo, SqlxUsersRepo,
 };
 use crate::services::embeddings::EmbeddingService;
 use crate::services::storage::StorageBackend;
@@ -166,6 +166,25 @@ impl FileService {
             }
         }
         Ok(())
+    }
+
+    pub(super) async fn ensure_folder_belongs_to_user(
+        &self,
+        user_id: Uuid,
+        folder_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
+        let Some(folder_id) = folder_id else {
+            return Ok(());
+        };
+
+        if FoldersRepo::new(&self.pool)
+            .exists(folder_id, user_id)
+            .await?
+        {
+            return Ok(());
+        }
+
+        Err(AppError::Validation("无效的 folder_id".to_string()))
     }
 
     pub(super) fn chunked_temp_dir(&self, upload_id: Uuid) -> std::path::PathBuf {

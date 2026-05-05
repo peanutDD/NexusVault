@@ -151,13 +151,13 @@ export default function ConfirmDialog({
 
   if (!open) return null;
 
-  const isSciFi = isGlass && variant === "danger";
+  const isTechGlass = isGlass;
 
   return (
     <div
       className={cn(
         "fixed inset-0 z-50 flex items-center justify-center p-4",
-        isSciFi && "confirm-dialog-sci-fi",
+        isTechGlass && "confirm-dialog-tech",
       )}
       role="alertdialog"
       aria-modal="true"
@@ -172,7 +172,7 @@ export default function ConfirmDialog({
           isGlass
             ? "bg-[var(--confirm-backdrop-glass)] backdrop-blur-sm"
             : "bg-[var(--confirm-backdrop)]",
-          isSciFi && "confirm-dialog-sci-fi-backdrop",
+          isTechGlass && "confirm-dialog-tech-backdrop",
         )}
         onClick={() => !loading && onCancel()}
         data-oid="r8-ttbu"
@@ -181,35 +181,33 @@ export default function ConfirmDialog({
       {/* 对话框 */}
       <div
         className={cn(
-          "relative w-full max-w-xs overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-150",
+          "relative w-full overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-150",
           isGlass
             ? [
-                "glass-panel rounded-2xl ring-1",
+                "glass-panel max-w-md rounded-2xl ring-1",
                 "ring-[var(--confirm-surface-ring)] border border-[var(--confirm-surface-glass-border)] bg-[var(--confirm-surface-glass-bg)] text-[var(--confirm-title-text)] backdrop-blur-2xl backdrop-saturate-150",
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
                 "before:bg-[image:var(--confirm-surface-glass-highlight)]",
-                isSciFi && "confirm-dialog-sci-fi-panel",
+                isTechGlass && "confirm-dialog-tech-panel",
               ]
                 .filter(Boolean)
                 .join(" ")
-            : "rounded-lg bg-[var(--confirm-surface-bg)] ring-1 ring-[var(--confirm-surface-ring)] border border-[var(--confirm-surface-border)] text-[var(--confirm-title-text)]",
+            : "max-w-xs rounded-lg bg-[var(--confirm-surface-bg)] ring-1 ring-[var(--confirm-surface-ring)] border border-[var(--confirm-surface-border)] text-[var(--confirm-title-text)]",
         )}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         data-oid="6ko0hpy"
       >
-        {/* 科幻风：顶部红/青渐变光带（凹槽上缘高光） */}
-        {isSciFi && (
+        {isTechGlass && (
           <div
-            className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-[image:linear-gradient(to_right,transparent,var(--confirm-danger-sci-fi-a),transparent)] pointer-events-none"
+            className="confirm-dialog-tech-topline absolute inset-x-0 top-0 h-0.5 rounded-t-2xl pointer-events-none"
             aria-hidden
             data-oid="pylj62m"
           />
         )}
-        {/* 科幻风：微弱网格纹理 */}
-        {isSciFi && (
+        {isTechGlass && (
           <div
-            className="confirm-dialog-sci-fi-grid absolute inset-0 rounded-2xl pointer-events-none"
+            className="confirm-dialog-tech-grid absolute inset-0 rounded-2xl pointer-events-none"
             aria-hidden
             data-oid="vx:q17l"
           />
@@ -220,8 +218,8 @@ export default function ConfirmDialog({
           <div
             className={cn(
               "confirm-dialog-groove flex items-center gap-2.5 rounded-t-2xl border-b px-4 py-2.5 min-h-0 overflow-hidden",
-              isSciFi
-                ? "confirm-dialog-groove-sci-fi border-[var(--confirm-groove-border)]"
+              isTechGlass
+                ? "confirm-dialog-tech-groove border-[var(--confirm-groove-border)]"
                 : "bg-[var(--confirm-groove-bg)] border-[var(--confirm-groove-border)] shadow-[var(--confirm-groove-shadow)]",
             )}
             data-oid="0m-vx_c"
@@ -231,7 +229,7 @@ export default function ConfirmDialog({
                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
                 displayIconBg,
                 displayIconColor,
-                isSciFi && "confirm-dialog-sci-fi-icon",
+                isTechGlass && "confirm-dialog-tech-icon",
               )}
               data-oid=":w1nhqb"
             >
@@ -241,8 +239,7 @@ export default function ConfirmDialog({
               id={titleId}
               className={cn(
                 "min-w-0 flex-1 truncate text-sm font-semibold text-[var(--confirm-title-text)]",
-                isSciFi &&
-                  "tracking-wide drop-shadow-[0_0_12px_rgba(var(--rgb-malachite-500),0.2)]",
+                isTechGlass && "confirm-dialog-tech-title tracking-wide",
               )}
               data-oid="q.4_c_i"
             >
@@ -256,7 +253,7 @@ export default function ConfirmDialog({
               id={messageId}
               className={cn(
                 "max-w-full py-3 text-xs leading-relaxed break-words whitespace-pre-line",
-                isSciFi
+                isTechGlass
                   ? "text-[var(--confirm-message-text)]"
                   : "text-[var(--confirm-message-text-muted)]",
               )}
@@ -282,8 +279,7 @@ export default function ConfirmDialog({
                   isGlass
                     ? "glass-btn text-[var(--confirm-cancel-text)] hover:text-[var(--confirm-cancel-text-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--confirm-cancel-ring)]"
                     : "bg-[var(--confirm-cancel-bg)] text-[var(--confirm-cancel-text)] hover:bg-[var(--confirm-cancel-bg-hover)] hover:text-[var(--confirm-cancel-text-hover)]",
-                  isSciFi &&
-                    "border border-[var(--confirm-danger-sci-fi-b)] hover:border-[var(--confirm-danger-sci-fi-a)] hover:bg-[var(--confirm-danger-sci-fi-b)]",
+                  isTechGlass && "confirm-dialog-tech-cancel border",
                 )}
                 data-oid="n20odi3"
               >
@@ -300,7 +296,7 @@ export default function ConfirmDialog({
                     ? cn(
                         "glass-btn border text-[var(--confirm-title-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]",
                         glassConfirmClass,
-                        isSciFi && "confirm-dialog-sci-fi-confirm",
+                        isTechGlass && "confirm-dialog-tech-confirm",
                       )
                     : cn(
                         config.buttonBg,

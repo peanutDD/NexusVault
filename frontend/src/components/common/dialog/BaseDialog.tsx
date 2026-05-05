@@ -82,6 +82,7 @@ export function BaseDialog({
         variant === "glass" || isUploadVariant
           ? "bg-[var(--modal-backdrop-glass)]"
           : "bg-[var(--modal-backdrop)]",
+        variant === "glass" && "modal-dialog-tech",
       )}
       onClick={handleBackdropClick}
       role="dialog"
@@ -99,6 +100,7 @@ export function BaseDialog({
                 "backdrop-blur-xl backdrop-saturate-150",
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
                 "before:bg-[image:var(--modal-surface-glass-highlight)]",
+                "modal-dialog-tech-panel",
               ].join(" ")
             : isUploadVariant
               ? [
@@ -117,9 +119,21 @@ export function BaseDialog({
         onClick={(e) => e.stopPropagation()}
         data-oid="uliq6c0"
       >
+        {variant === "glass" && (
+          <>
+            <div
+              className="modal-dialog-tech-topline absolute inset-x-0 top-0 h-0.5 rounded-t-2xl pointer-events-none"
+              aria-hidden
+            />
+            <div
+              className="modal-dialog-tech-grid absolute inset-0 rounded-2xl pointer-events-none"
+              aria-hidden
+            />
+          </>
+        )}
         {/* Header */}
         <div
-          className="flex justify-between items-center mb-4"
+          className="relative flex justify-between items-center mb-4"
           data-oid=":fr4nb9"
         >
           <h2
@@ -158,7 +172,7 @@ export function BaseDialog({
           <p
             id={descriptionId}
             className={cn(
-              "mb-4 text-sm transition-colors duration-200",
+              "relative mb-4 text-sm transition-colors duration-200",
               "text-[var(--color-text-secondary)]",
             )}
             data-oid="cse44gn"
@@ -168,13 +182,13 @@ export function BaseDialog({
         )}
 
         {/* Content */}
-        <div className="dialog-content" data-oid="sruyu4.">
+        <div className="dialog-content relative" data-oid="sruyu4.">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="mt-6" data-oid="_mihut4">
+          <div className="relative mt-6" data-oid="_mihut4">
             {footer}
           </div>
         )}

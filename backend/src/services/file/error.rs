@@ -30,6 +30,13 @@ pub enum FileServiceError {
     #[error("chunk checksum mismatch")]
     ChunkChecksumMismatch { part_index: u32 },
 
+    #[error("invalid chunk size")]
+    InvalidChunkSize {
+        part_index: u32,
+        expected: u64,
+        actual: u64,
+    },
+
     #[error("insufficient disk space for chunk write")]
     InsufficientDiskSpaceForChunk,
 
@@ -89,6 +96,14 @@ impl From<FileServiceError> for AppError {
             FileServiceError::ChunkChecksumMismatch { part_index } => {
                 AppError::Validation(format!("分块 {} 校验失败: SHA-256 不匹配", part_index))
             }
+            FileServiceError::InvalidChunkSize {
+                part_index,
+                expected,
+                actual,
+            } => AppError::Validation(format!(
+                "分块 {} 大小不匹配: expected {} bytes, got {} bytes",
+                part_index, expected, actual
+            )),
             FileServiceError::InsufficientDiskSpaceForChunk => {
                 AppError::Storage("磁盘空间不足，请稍后重试".to_string())
             }
@@ -152,6 +167,21 @@ mod tests {
         assert!(matches!(
             app_error,
             AppError::Validation(message) if message == "缺少分块: 已上传 2/3"
+        ));
+    }
+
+    #[test]
+    fn invalid_chunk_size_maps_to_validation_error() {
+        let app_error = AppError::from(FileServiceError::InvalidChunkSize {
+            part_index: 1,
+            expected: 10,
+            actual: 5,
+        });
+
+        assert!(matches!(
+            app_error,
+            AppError::Validation(message)
+                if message == "分块 1 大小不匹配: expected 10 bytes, got 5 bytes"
         ));
     }
 

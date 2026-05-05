@@ -28,6 +28,7 @@ docs/
 │   ├── auto-review-usage-flow.md      # 自动审查使用流程
 │   ├── codex-pr-auto-fix-design.md    # PR自动修复设计
 │   ├── codex-cli-toolbox-extraction.md # codex-cli 独立工具箱改造设计
+│   ├── upload-completeness-hardening.md # 上传完整性与断点续传设计
 │   └── frontend-component-split-detail.md # 前端组件拆分详情
 ├── exec-plans/                        # 执行计划
 │   ├── 2026-04-27-error-boundary-unification.md # 错误边界统一计划
@@ -47,6 +48,7 @@ docs/
 | 文档 | 描述 |
 |------|------|
 | `design-docs/frontend-component-split-detail.md` | 前端组件大文件拆分详细设计 |
+| `design-docs/upload-completeness-hardening.md` | 上传 ownership、断点续传、分片完整性与秒传 copy 设计 |
 | `design-docs/codex-pr-auto-fix-design.md` | PR自动修复系统设计 |
 | `design-docs/codex-cli-toolbox-extraction.md` | codex-cli 独立工具箱改造设计 |
 | `design-docs/auto-review.md` | 自动代码审查系统设计 |

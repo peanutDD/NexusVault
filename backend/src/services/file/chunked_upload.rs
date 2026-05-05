@@ -142,6 +142,17 @@ impl FileService {
             return Err(FileServiceError::InvalidChunkIndex { part_index });
         }
 
+        let expected_size =
+            expected_chunk_size(s.total_size as u64, part_index, total_parts as u32);
+        let actual_size = data.len() as u64;
+        if actual_size != expected_size {
+            return Err(FileServiceError::InvalidChunkSize {
+                part_index,
+                expected: expected_size,
+                actual: actual_size,
+            });
+        }
+
         // 可选完整性校验：客户端通过 X-Part-SHA256 提供分块摘要，服务端校验通过才写入，
         // 用于防止断点续传状态错乱或传输中数据损坏。
         if let Some(expected_hex) = part_sha256 {
@@ -335,4 +346,12 @@ impl FileService {
         );
         Ok(())
     }
+}
+
+fn expected_chunk_size(total_size: u64, part_index: u32, total_parts: u32) -> u64 {
+    if part_index == total_parts {
+        let consumed = CHUNK_SIZE as u64 * u64::from(total_parts.saturating_sub(1));
+        return total_size.saturating_sub(consumed);
+    }
+    CHUNK_SIZE as u64
 }

@@ -15,5 +15,6 @@ Removing an uploading file from the UI without aborting the underlying request l
 - Create one `AbortController` per queued upload item.
 - Pass its signal through all upload service methods and request calls.
 - Treat queue cancellation and `AbortError`/`ERR_CANCELED` as user cancellation, not a user-visible upload failure.
-- Abort the server chunked upload session when a chunked upload fails or is cancelled after init.
+- Abort the server chunked upload session when a chunked upload is cancelled after init, or when a non-retryable client/server validation error means the persisted session cannot safely resume.
+- Preserve the server chunked upload session on retryable transport failures so the next attempt can resume from `chunked_upload_status`.
 - Add regression tests for signal propagation and chunked-session cleanup.

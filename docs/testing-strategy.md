@@ -5,7 +5,7 @@
 | 项目 | 文件数 | 覆盖率估算 |
 |------|--------|------------|
 | 后端测试 | 9 个（`auth_tests.rs`、`cursor_pagination_tests.rs`、`repository_tests.rs`、`service_file_tests.rs`、`service_cache_tests.rs`、`service_auth_tests.rs`、`service_storage_tests.rs`、`middleware_tests.rs`、`handler_files_upload_tests.rs`） | ~60% |
-| 前端测试 | 4 个（`pretextMeasure.test.ts`、`uploadValidation.test.ts`、`FileListFilters.test.tsx`、`useDebounce.test.ts`、`useThrottle.test.ts`、`useDialog.test.ts`） | ~35% |
+| 前端测试 | 覆盖 hooks、上传 service、UploadDialog controller、列表过滤、预览等核心行为 | ~35% |
 
 与 `AGENTS.md` 中 **"TDD 铁律：覆盖率 ≥ 90%"** 的规则严重不符。
 
@@ -17,12 +17,12 @@
 
 | 文件 | 模块 | 覆盖内容 |
 |------|------|----------|
-| `service_file_tests.rs` | 文件服务 | 文件重命名、列表查询、存储用量 |
+| `service_file_tests.rs` | 文件服务 | 文件重命名、列表查询、存储用量、分片上传、分片大小校验 |
 | `service_cache_tests.rs` | 缓存服务 | Redis 用户版本管理、文件列表缓存、缓存失效 |
 | `service_auth_tests.rs` | 认证服务 | 用户注册、登录、JWT 验证、Token 过期 |
 | `service_storage_tests.rs` | 存储服务 | 本地存储 CRUD、缩略图操作、流读取 |
 | `middleware_tests.rs` | 中间件层 | IP 限流、用户限流、Token 验证 |
-| `handler_files_upload_tests.rs` | Handler 层 | 上传、秒传、分块上传全链路集成测试（14 个测试用例） |
+| `handler_files_upload_tests.rs` | Handler 层 | 上传、秒传、分块上传全链路集成测试（19 个测试用例，使用 `#[serial(upload_handler_db)]` 隔离共享数据库） |
 
 ### 前端测试文件
 
@@ -31,6 +31,8 @@
 | `useDebounce.test.ts` | Hooks | 防抖逻辑、延迟更新、超时取消 |
 | `useThrottle.test.ts` | Hooks | 节流逻辑、频率限制、trailing 值 |
 | `useDialog.test.ts` | Hooks | ESC 关闭、背景点击、自动聚焦 |
+| `fileUploadService.test.ts` | 上传服务 | AbortSignal 传递、分片取消、分片 SHA、断点续传 session 保留 |
+| `useUploadDialogController.test.tsx` | 上传弹窗 controller | 当前 folder 传递、移除上传项时中止请求 |
 
 ---
 
@@ -42,8 +44,8 @@
 - 上传 happy path + error path
 - 下载 happy path + error path
 - 删除 happy path + error path
-- 断点续传失败重试
-- 秒传边界条件
+- 断点续传失败重试、分片 SHA 与分片大小校验
+- 秒传边界条件、跨用户 folder ownership
 
 #### `auth/` 模块
 - JWT 过期/刷新
@@ -56,7 +58,7 @@
 ### Handler 层（`handlers/`）
 - 每个 API endpoint 至少 1 个 happy path + 1 个 error path
 - 重点覆盖：分片上传、断点续传、批量操作
-- **进度**：✅ PR2a 完成（upload / instant / chunked 14 个测试）；⏳ PR2b 待完成（list / batch / download / delete / rename / storage / categories）
+- **进度**：✅ PR2a+ 完成（upload / instant / chunked 19 个测试，含 folder ownership、分片 SHA、分片大小）；⏳ PR2b 待完成（list / batch / download / delete / rename / storage / categories）
 
 ### Middleware 层（`middleware/`）
 - 认证中间件（缺失 token、过期 token、无效 token）
@@ -68,11 +70,11 @@
 
 ### 核心 Hooks
 
-#### `useFileUpload`
-- 拖拽上传
-- URL 上传
-- 分片进度
-- 断点续传
+#### `useUploadDialogController`
+- 当前 folder 参数传递
+- 上传项移除与取消
+- 上传队列状态
+- URL 上传入口协调
 
 #### `useFileList`
 - 无限滚动
@@ -92,6 +94,7 @@
 - 上传队列
 - 进度条
 - 错误提示
+- controller 行为通过 `useUploadDialogController.test.tsx` 覆盖
 
 #### `FilePreviewContent`
 - 图片预览
