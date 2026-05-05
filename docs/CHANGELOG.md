@@ -263,6 +263,13 @@ Jaeger UI 访问地址：http://localhost:16686
 - 质量评分：72 / 100
 - 变更文件：
   - `frontend/src/components/files/useFileList.ts`
+#### 🤖 Codex Auto-Fix (PR #14, round 1) — ts=1777975852
+
+- 安全扫描：通过
+- 质量评分：0 / 100
+- 变更文件：
+  - `frontend/src/components/layout/NavBar.tsx`
+  - `scripts/codex-cli/src/skills.rs`
 
 #### 🤖 Codex Auto-Fix (PR #14, round 1) — ts=1777972130
 
