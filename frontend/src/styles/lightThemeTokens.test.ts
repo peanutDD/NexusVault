@@ -53,11 +53,19 @@ describe("light theme tokens", () => {
   it("uses premium dark chrome for the light nav and footer bars", () => {
     const tokens = readCssCustomProperties("tokens.css", /\[data-theme="light"\]\s*,\s*\.light\s*\{/);
     const navSurface = readToken(tokens, "--nav-surface-bg");
+    const navButton = readToken(tokens, "--nav-btn-bg");
+    const navButtonHover = readToken(tokens, "--nav-btn-bg-hover");
+    const navButtonShadow = readToken(tokens, "--nav-btn-shadow");
     const footerSurface = readToken(tokens, "--footer-surface-bg");
 
     expect(navSurface).toMatch(/\blinear-gradient\s*\(/);
+    expect(navButton).toMatch(/\blinear-gradient\s*\(/);
+    expect(navButtonHover).toMatch(/\blinear-gradient\s*\(/);
     expect(footerSurface).toMatch(/\blinear-gradient\s*\(/);
     expectTokenValueToUseRgbTokens(navSurface, ["--rgb-slate-950", "--rgb-cyan-400", "--rgb-purple-500"]);
+    expectTokenValueToUseRgbTokens(navButton, ["--rgb-slate-950", "--rgb-slate-900"]);
+    expectTokenValueToUseRgbTokens(navButtonHover, ["--rgb-slate-950", "--rgb-slate-900"]);
+    expectTokenValueToUseRgbTokens(navButtonShadow, ["--rgb-slate-950", "--rgb-cyan-400", "--rgb-white"]);
     expectTokenValueToUseRgbTokens(footerSurface, ["--rgb-slate-950", "--rgb-cyan-400", "--rgb-purple-500"]);
   });
 
