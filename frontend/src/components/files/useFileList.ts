@@ -449,7 +449,7 @@ export function useFileList() {
 
   // ── 即时 DOM 隐藏：确认删除时立刻把卡片从页面移除 ─────────────────────────────
   // 不依赖 React Query 缓存更新时机，用本地 state 直接驱动 filter，解决
-  // \"第二次删除 DOM 不立刻更新\"的 bug。
+  // "第二次删除 DOM 不立刻更新"的 bug。
   const [pendingDeleteFileIds, setPendingDeleteFileIds] = useState<Set<string>>(new Set());
   const [pendingDeleteFolderIds, setPendingDeleteFolderIds] = useState<Set<string>>(new Set());
 
@@ -500,15 +500,25 @@ export function useFileList() {
     [files, pendingDeleteFileIds],
   );
 
-  const getScrollStorageKey = useCallback(
-    (folderId: string | null) => {
-      const folderKey = folderId ?? 'root';
-      const q = (debouncedSearch ?? '').trim();
-      const mimeKey = mimeType || 'all';
-      return `fileListScroll:${folderKey}:${sortBy}:${mimeKey}:${q}`;
-    },
-    [debouncedSearch, mimeType, sortBy]
-  );
+  const scrollStorageContextRef = useRef({ currentFolderId, debouncedSearch, mimeType, sortBy });
+  scrollStorageContextRef.current = {
+    currentFolderId,
+    debouncedSearch,
+    mimeType,
+    sortBy,
+  };
+
+  const getScrollStorageKey = useCallback((folderId: string | null) => {
+    const {
+      debouncedSearch: storedSearch,
+      mimeType: storedMimeType,
+      sortBy: storedSortBy,
+    } = scrollStorageContextRef.current;
+    const folderKey = folderId ?? 'root';
+    const q = (storedSearch ?? '').trim();
+    const mimeKey = storedMimeType || 'all';
+    return `fileListScroll:${folderKey}:${storedSortBy}:${mimeKey}:${q}`;
+  }, []);
 
   const location = useLocation();
   const lastScrollAppliedLocationKeyRef = useRef<string | null>(null);
@@ -518,6 +528,16 @@ export function useFileList() {
     (folderId: string | null = currentFolderId) => {
       try {
         const key = getScrollStorageKey(folderId);
+  const lastScrollAppliedKeyRef = useRef<string | null>(null);
+  const pendingScrollRestoreStorageKeyRef = useRef<string | null>(null);
+
+  const saveScrollPosition = useCallback(
+    (folderId: string | null = scrollStorageContextRef.current.currentFolderId, force = false) => {
+      try {
+        const key = getScrollStorageKey(folderId);
+        if (!force && pendingScrollRestoreStorageKeyRef.current === key) {
+          return;
+        }
         const y = Math.max(0, Math.round(window.scrollY || 0));
         sessionStorage.setItem(key, String(y));
       } catch {
@@ -529,6 +549,12 @@ export function useFileList() {
 
   const navigateToFolder = useCallback((folderId: string | null) => {
     saveScrollPosition(currentFolderId);
+    [getScrollStorageKey],
+  );
+
+  const navigateToFolder = useCallback((folderId: string | null) => {
+    saveScrollPosition(currentFolderId, true);
+    pendingScrollRestoreStorageKeyRef.current = getScrollStorageKey(folderId);
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -549,6 +575,7 @@ export function useFileList() {
     setSelectedFolders,
     currentFolderId,
     saveScrollPosition,
+    getScrollStorageKey,
   ]);
 
   useEffect(() => {
@@ -584,6 +611,14 @@ export function useFileList() {
     window.addEventListener('beforeunload', saveNow);
     window.addEventListener('pagehide', saveNow);
     window.addEventListener(FILE_LIST_SAVE_SCROLL_EVENT, saveBeforeRouteChange);
+    const saveWhenHidden = () => {
+      if (document.visibilityState === 'hidden') {
+        saveNow();
+      }
+    };
+
+    window.addEventListener('scroll', scheduleSave, { passive: true });
+    window.addEventListener('pagehide', saveNow);
     document.addEventListener('visibilitychange', saveWhenHidden);
 
     return () => {
@@ -598,6 +633,8 @@ export function useFileList() {
         skipNextCleanupSaveRef.current = false;
         return;
       }
+      window.removeEventListener('pagehide', saveNow);
+      document.removeEventListener('visibilitychange', saveWhenHidden);
       saveNow();
     };
   }, [saveScrollPosition]);
@@ -616,13 +653,28 @@ export function useFileList() {
 
     if (!raw) {
       lastScrollAppliedLocationKeyRef.current = location.key;
+    const scrollAppliedKey = `${location.key}:${key}`;
+    if (lastScrollAppliedKeyRef.current === scrollAppliedKey) return;
+    lastScrollAppliedKeyRef.current = scrollAppliedKey;
+    pendingScrollRestoreStorageKeyRef.current = key;
+
+    let cancelled = false;
+    const clearPendingScrollRestore = () => {
+      if (pendingScrollRestoreStorageKeyRef.current === key) {
+        pendingScrollRestoreStorageKeyRef.current = null;
+      }
+    };
+    const restoreScroll = (top: number) => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+          if (cancelled) return;
+          window.scrollTo({ top, left: 0, behavior: 'auto' });
+          requestAnimationFrame(() => {
+            if (!cancelled) clearPendingScrollRestore();
+          });
         });
       });
-      return;
-    }
+    };
 
     const y = Number.parseInt(raw, 10);
     if (!Number.isFinite(y) || y < 0) return;
@@ -654,6 +706,38 @@ export function useFileList() {
     loadingFolders,
     loadingMore,
     location.key,
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem(key);
+    } catch {
+      raw = null;
+    }
+    if (!raw) {
+      restoreScroll(0);
+      return () => {
+        cancelled = true;
+        clearPendingScrollRestore();
+      };
+    }
+    const y = Number.parseInt(raw, 10);
+    if (!Number.isFinite(y) || y < 0) {
+      clearPendingScrollRestore();
+      return;
+    }
+    restoreScroll(y);
+    return () => {
+      cancelled = true;
+      clearPendingScrollRestore();
+    };
+  }, [
+    currentFolderId,
+    debouncedSearch,
+    getScrollStorageKey,
+    loadingFiles,
+    loadingFolders,
+    location.key,
+    mimeType,
+    sortBy,
   ]);
 
   const displayFolders = useMemo(() => {
