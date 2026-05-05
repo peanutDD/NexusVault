@@ -1970,7 +1970,7 @@
     --nav-surface-bg: linear-gradient(
         135deg,
         rgba(var(--rgb-slate-950), 0.96),
-        rgba(11, 19, 38, 0.96) 42%,
+        rgba(var(--rgb-slate-900), 0.96) 42%,
         rgba(var(--rgb-purple-500), 0.28) 72%,
         rgba(var(--rgb-cyan-400), 0.2)
     );
@@ -2028,7 +2028,7 @@
         linear-gradient(
             135deg,
             rgba(var(--rgb-slate-950), 0.98),
-            rgba(10, 18, 36, 0.98),
+            rgba(var(--rgb-slate-900), 0.98),
             rgba(var(--rgb-slate-950), 0.96)
         );
     --footer-grid-bg-image: linear-gradient(rgba(var(--rgb-cyan-400), 0.24) 1px, transparent 1px),
