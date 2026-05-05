@@ -6,6 +6,24 @@
 
 ## [未发布] — 2026 年（当前会话）
 
+### 🐛 `/files` 路由刷新滚动位置恢复（2026-05-06）
+
+- 修复刷新浏览器后 `/files` 文件浏览页强制回到顶部、丢失浏览位置的问题。
+- 删除 `frontend/src/router/ScrollRestoration.tsx#scopeFor()` 中对 `/files` 的路径排除，让主文件浏览页与 `/settings` 共享同一套 history-entry + URL fallback 持久化。
+- `restore(y)` 对非零目标改为 RAF 重试循环（≤120 帧 ≈ 2s，容差 ±2px），首帧文档高度不足时持续重试；`y === 0` 保留原双 RAF 快速路径。
+- 监听 `wheel` / `touchmove` / `keydown`，用户一旦手动滚动立即放弃恢复，绝不抢夺用户控制权。
+- 与 `useFileListScrollRestoration` 的「按需补页」恢复路径互不冲突：路由层只负责 window scroll；列表层继续按 `hasMore` 拉页。
+- 新增两条红绿回归测试：`/files` 同 history key 刷新、`key` 变化刷新；`vitest run src/router/ScrollRestoration.test.tsx` 6/6 通过。
+- 扩展 `docs/constraints/C-036-navigation-scroll-restoration.md`：禁止 `scopeFor()` 路径白/黑名单，强制非零目标走 RAF 重试 + 用户输入退出策略。
+- 新增 `docs/exec-plans/2026-05-06-files-route-refresh-scroll.{md,json}`。
+
+### 🐛 虚拟列表刷新滚动位置冲突（2026-05-06）
+
+- 修复进入文件夹刷新后滚动位置丢失：延长 `RESTORE_MAX_ATTEMPTS` 从 60 到 120（约 2 秒），给虚拟列表挂载和 `loadMore` 补页足够时间。
+- 根因：`ScrollRestoration` 的 RAF 重试预算（1s）不足，虚拟列表 `prefixSums` 计算和 `loadMore` 补页需要额外时间。
+- 解决：`RESTORE_MAX_ATTEMPTS = 120`，帧预算延长至约 2 秒，足够虚拟列表挂载 + `loadMore` 补页。
+- `tsc -b`、`eslint` 通过。
+
 ### Settings 页面外观与体验优化（2026-05-04）
 
 - 新增 Settings 本地 UI helper，统一账户、密码、API Token 表单的 label、input、error、helper、button、panel 样式。

@@ -1,0 +1,44 @@
+import type { ReactNode } from "react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import Settings from "./Settings";
+
+vi.mock("../components/layout/PageLayout", () => ({
+  default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("../components/settings/UserInfoSection", () => ({ default: () => <section id="profile" /> }));
+vi.mock("../components/settings/StorageUsageSection", () => ({ default: () => <section id="storage" /> }));
+vi.mock("../components/settings/ThemeSection", () => ({ default: () => <section id="appearance" /> }));
+vi.mock("../components/settings/PasswordChangeSection", () => ({ default: () => <section id="security" /> }));
+vi.mock("../components/settings/ApiTokenSection", () => ({ default: () => <section id="api-tokens" /> }));
+vi.mock("../store/authStore", () => ({ useAuthStore: (selector: (state: unknown) => unknown) => selector({ user: { username: "alice" }, clearAuth: vi.fn() }) }));
+vi.mock("../hooks/useStorageUsage", () => ({ useStorageUsage: () => ({ data: { file_count: 12, total_size: 4096 } }) }));
+vi.mock("../hooks/useApiTokens", () => ({ useApiTokens: () => ({ data: [] }) }));
+
+function LocationProbe() {
+  const { pathname, search, hash } = useLocation();
+  return <output data-testid="location">{pathname}{search}{hash}</output>;
+}
+
+beforeEach(() => {
+  window.history.replaceState(null, "", "/");
+});
+
+describe("Settings navigation", () => {
+  it("returns to the previous history entry instead of hardcoding the files root", async () => {
+    render(<MemoryRouter initialEntries={["/files?folder=folder-1", "/settings"]} initialIndex={1}><Settings /><LocationProbe /></MemoryRouter>);
+    await userEvent.click(screen.getByRole("button", { name: /^Back$/i }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/files?folder=folder-1");
+  });
+
+  it("does not render Quick nav anchors that can create same-page history", () => {
+    render(<MemoryRouter initialEntries={["/settings"]}><Settings /></MemoryRouter>);
+    expect(screen.queryByText("Quick nav")).not.toBeInTheDocument();
+    for (const name of ["Account", "Storage", "Appearance", "Security", "Tokens"]) {
+      expect(screen.queryByRole("link", { name: `Jump to ${name}` })).not.toBeInTheDocument();
+    }
+  });
+});

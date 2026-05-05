@@ -10,6 +10,12 @@
         background: transparent;
     }
 
+    .virtualized-scroll-stability,
+    .virtualized-row,
+    .virtualized-spacer {
+        overflow-anchor: none;
+    }
+
     /* 存储进度条 */
     .storage-progress-fill {
         width: var(--storage-progress-pct, 0%);
