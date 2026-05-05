@@ -25,6 +25,12 @@
         --preview-magenta: var(--preview-magenta-rgb);
         --preview-ink: var(--preview-ink-rgb);
         --preview-grid: var(--preview-grid-rgb);
+        --preview-scanline-step: clamp(0.25rem, 0.6vw, 0.3125rem);
+        --preview-scanline-step-tight: clamp(0.2rem, 0.5vw, 0.25rem);
+        --preview-glow-sm: clamp(1.125rem, 2vw, 1.375rem);
+        --preview-glow-md: clamp(1.375rem, 2.4vw, 1.625rem);
+        --preview-glow-lg: clamp(1.5rem, 3vw, 1.75rem);
+        --preview-glow-xl: clamp(1.75rem, 3.4vw, 2.125rem);
     }
 
     .preview-static-bg {
@@ -85,7 +91,7 @@
             rgba(var(--preview-grid), 0.1) 0px,
             rgba(var(--preview-grid), 0.1) 1px,
             transparent 1px,
-            transparent 5px
+            transparent var(--preview-scanline-step)
         );
     }
 
@@ -175,7 +181,7 @@
             rgba(var(--preview-grid), 0.16) 0px,
             rgba(var(--preview-grid), 0.16) 1px,
             transparent 1px,
-            transparent 4px
+            transparent var(--preview-scanline-step-tight)
         );
     }
 
@@ -216,8 +222,9 @@
             rgba(244, 114, 182, 0.54)
         );
         --preview-neck-front-shadow:
-            0 10px 24px rgba(129, 140, 248, 0.32),
-            0 0 22px rgba(244, 114, 182, 0.24);
+            0 clamp(0.5rem, 1vw, 0.625rem) var(--preview-glow-lg)
+                rgba(129, 140, 248, 0.32),
+            0 0 var(--preview-glow-sm) rgba(244, 114, 182, 0.24);
         --preview-neck-inner-border: rgba(255, 255, 255, 0.66);
         --preview-neck-inner-bg: linear-gradient(
             135deg,
@@ -234,8 +241,9 @@
             rgba(244, 114, 182, 0.52)
         );
         --preview-base-shadow:
-            0 12px 26px rgba(34, 211, 238, 0.28),
-            0 0 26px rgba(244, 114, 182, 0.24);
+            0 clamp(0.625rem, 1.2vw, 0.75rem) var(--preview-glow-md)
+                rgba(34, 211, 238, 0.28),
+            0 0 var(--preview-glow-md) rgba(244, 114, 182, 0.24);
         --preview-base-inner-border: rgba(255, 255, 255, 0.7);
         --preview-base-inner-bg: linear-gradient(
             90deg,
@@ -245,28 +253,28 @@
         );
         --preview-base-top-glow: rgba(244, 114, 182, 0.4);
         --preview-base-ambient: rgba(34, 211, 238, 0.36);
-        filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.3))
-            drop-shadow(0 0 22px rgba(244, 114, 182, 0.24));
+        filter: drop-shadow(0 0 var(--preview-glow-sm) rgba(34, 211, 238, 0.3))
+            drop-shadow(0 0 var(--preview-glow-sm) rgba(244, 114, 182, 0.24));
     }
 
     .preview-neon-frame {
         border: 1px solid rgba(var(--preview-green), 0.45);
-        box-shadow: 0 0 28px rgba(var(--preview-green), 0.45);
+        box-shadow: 0 0 var(--preview-glow-lg) rgba(var(--preview-green), 0.45);
     }
 
     .preview-neon-frame.alt {
         border-color: rgba(var(--preview-purple), 0.45);
-        box-shadow: 0 0 28px rgba(var(--preview-purple), 0.45);
+        box-shadow: 0 0 var(--preview-glow-lg) rgba(var(--preview-purple), 0.45);
     }
 
     .preview-neon-frame.soft {
         border-color: rgba(var(--preview-green), 0.28);
-        box-shadow: 0 0 22px rgba(var(--preview-green), 0.35);
+        box-shadow: 0 0 var(--preview-glow-sm) rgba(var(--preview-green), 0.35);
     }
 
     .preview-neon-ring {
         border: 1px solid rgba(var(--preview-magenta), 0.35);
-        box-shadow: 0 0 34px rgba(var(--preview-magenta), 0.45);
+        box-shadow: 0 0 var(--preview-glow-xl) rgba(var(--preview-magenta), 0.45);
     }
 
     .preview-progress-fill {

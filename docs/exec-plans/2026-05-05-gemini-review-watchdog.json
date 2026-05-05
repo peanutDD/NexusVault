@@ -1,0 +1,18 @@
+{
+  "task": "gemini-review-watchdog",
+  "date": "2026-05-05",
+  "goal": "Fail closed when /gemini review does not produce a Gemini review for the latest PR head commit.",
+  "assumptions": [
+    "Gemini responses can be delayed or absent.",
+    "GitHub Actions can inspect PR reviews and issue comments with gh api."
+  ],
+  "risks": [
+    "Timeout duration can be too short for slow Gemini responses.",
+    "Polling holds a runner while waiting."
+  ],
+  "acceptance": [
+    "No Gemini review after timeout adds gemini-review-needs-human and fails.",
+    "A Gemini review on the latest commit passes.",
+    "Regression tests cover found and timeout planning."
+  ]
+}

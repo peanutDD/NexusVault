@@ -29,10 +29,12 @@ docs/
 │   ├── codex-pr-auto-fix-design.md    # PR自动修复设计
 │   ├── codex-cli-toolbox-extraction.md # codex-cli 独立工具箱改造设计
 │   ├── upload-completeness-hardening.md # 上传完整性与断点续传设计
+│   ├── 2026-05-04-settings-page-optimization.md # Settings 页面优化设计
 │   └── frontend-component-split-detail.md # 前端组件拆分详情
 ├── exec-plans/                        # 执行计划
 │   ├── 2026-04-27-error-boundary-unification.md # 错误边界统一计划
-│   └── 2026-04-30-frontend-file-service-split.md # 前端服务拆分计划
+│   ├── 2026-04-30-frontend-file-service-split.md # 前端服务拆分计划
+│   └── 2026-05-04-settings-page-optimization.md # Settings 页面优化执行计划
 ├── product/                           # 产品文档
 │   ├── COMMERCIALIZATION_PLAN.md      # 商业化计划
 │   └── COMMERCIALIZATION_PLAN_RAW.md  # 商业化计划草稿
@@ -48,6 +50,7 @@ docs/
 | 文档 | 描述 |
 |------|------|
 | `design-docs/frontend-component-split-detail.md` | 前端组件大文件拆分详细设计 |
+| `design-docs/2026-05-04-settings-page-optimization.md` | Settings 页面外观、移动端布局、表单样式与回归测试设计 |
 | `design-docs/upload-completeness-hardening.md` | 上传 ownership、断点续传、分片完整性与秒传 copy 设计 |
 | `design-docs/codex-pr-auto-fix-design.md` | PR自动修复系统设计 |
 | `design-docs/codex-cli-toolbox-extraction.md` | codex-cli 独立工具箱改造设计 |

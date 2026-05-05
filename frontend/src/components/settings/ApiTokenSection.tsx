@@ -8,6 +8,13 @@ import type { ApiToken } from "../../services/apiTokens";
 import ErrorMessage from "../common/feedback/ErrorMessage";
 import ConfirmDialog from "../common/dialog/ConfirmDialog";
 import SettingsCard from "./SettingsCard";
+import {
+  settingsErrorClass,
+  settingsInputClass,
+  settingsLabelClass,
+  settingsPanelClass,
+  settingsPrimaryButtonClass,
+} from "./settingsUi";
 import { useApiTokens, useCreateApiToken, useDeleteApiToken } from "../../hooks/useApiTokens";
 import { useClipboard } from "../../hooks/useClipboard";
 import { getErrorMessage } from "../../utils/error";
@@ -161,17 +168,17 @@ const ApiTokenSection = memo(function ApiTokenSection() {
 
       <div className="mb-6" data-oid="5zclh.n">
         <div
-          className="mb-3 flex flex-nowrap items-center justify-between gap-3"
+          className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
           data-oid="_4sfcnc"
         >
           <h3
-            className="min-w-0 font-brand text-[clamp(0.8rem,2.4vw,0.95rem)] font-semibold tracking-wide text-[var(--settings-section-title)] whitespace-nowrap"
+            className="min-w-0 font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-[var(--settings-section-title)]"
             data-oid=".j4zxhs"
           >
             Create new token
           </h3>
           <span
-            className="min-w-0 font-brand text-[clamp(0.65rem,2.1vw,0.75rem)] font-normal tracking-wide text-[var(--settings-section-subtitle)] whitespace-nowrap truncate"
+            className="min-w-0 font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-section-subtitle)]"
             data-oid="92qic3q"
           >
             Use separate tokens for different purposes
@@ -186,7 +193,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
           <div data-oid="gier:.r">
             <label
               htmlFor="new-token-name"
-              className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
+              className={settingsLabelClass()}
               data-oid="k-qxt_h"
             >
               Token name
@@ -197,23 +204,17 @@ const ApiTokenSection = memo(function ApiTokenSection() {
               {...register("name")}
               placeholder="e.g. My script, CI/CD"
               required
-              className={cn(
-                "w-full rounded-xl px-4 py-2.5",
-                "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
-                "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
-                "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
-                errors.name && "border-red-500 focus:ring-red-500"
-              )}
+              className={settingsInputClass(Boolean(errors.name))}
               data-oid="e_5:s9m"
             />
             {errors.name && (
-              <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>
+              <p className={settingsErrorClass()}>{errors.name.message}</p>
             )}
           </div>
           <div data-oid="332s4jl">
             <label
               htmlFor="new-token-expires"
-              className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
+              className={settingsLabelClass()}
               data-oid="573ccvh"
             >
               Expires in (days, optional)
@@ -224,28 +225,17 @@ const ApiTokenSection = memo(function ApiTokenSection() {
               {...register("expires", { valueAsNumber: true })}
               min="1"
               placeholder="Leave empty for never"
-              className={cn(
-                "w-full rounded-xl px-4 py-2.5",
-                "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
-                "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
-                "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
-                errors.expires && "border-red-500 focus:ring-red-500"
-              )}
+              className={settingsInputClass(Boolean(errors.expires))}
               data-oid="aziv6r_"
             />
             {errors.expires && (
-              <p className="mt-1 text-sm text-red-500">{errors.expires.message}</p>
+              <p className={settingsErrorClass()}>{errors.expires.message}</p>
             )}
           </div>
           <button
             type="submit"
             disabled={loading}
-            className={cn(
-              "font-brand sm:col-span-2 w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide",
-              "border border-[var(--settings-action-border)] bg-[var(--settings-action-bg)] text-[var(--settings-action-text)] shadow-[var(--settings-action-shadow)]",
-              "hover:bg-[image:var(--settings-action-bg-hover)]",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-            )}
+            className={settingsPrimaryButtonClass("w-full sm:col-span-2")}
             data-oid="qabeet7"
           >
             {createTokenMutation.isPending ? "Creating..." : "Create token"}
@@ -327,21 +317,27 @@ const ApiTokenSection = memo(function ApiTokenSection() {
           Existing tokens
         </h3>
         {tokensLoading ? (
-           <p className="text-[var(--settings-panel-muted)]">Loading tokens...</p>
+          <div className={settingsPanelClass()}>
+            <p className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-panel-muted)]">
+              Loading tokens...
+            </p>
+          </div>
         ) : apiTokens.length === 0 ? (
-          <p
-            className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-panel-muted)]"
+          <div
+            className={settingsPanelClass("border-dashed")}
             data-oid="g_46r9y"
           >
-            No API tokens yet
-          </p>
+            <p className="font-brand text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-panel-muted)]">
+              No API tokens yet
+            </p>
+          </div>
         ) : (
           <div className="space-y-3" data-oid="aqr55vy">
             {apiTokens.map((token) => (
               <div
                 key={token.id}
                 className={cn(
-                  "rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4",
+                  settingsPanelClass(),
                   "hover:border-[var(--settings-panel-border-hover)] transition-colors",
                 )}
                 data-oid="r:tjzmm"

@@ -74,6 +74,7 @@ coverage/
 *.tmp
 *.temp
 .cache/
+.superpowers/
 
 # GitHub Actions Runner
 actions-runner/

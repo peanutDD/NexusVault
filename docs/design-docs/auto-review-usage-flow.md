@@ -18,7 +18,7 @@
 - **Runner 启动**: 启动 GitHub Self-hosted Runner，确保其能够接收 `file-server` 标签的任务。
 
 ### 1.2 云端 (GitHub Actions)
-- 确保 `.github/workflows/ai-auto-fix.yml` 已存在于默认分支。
+- 确保 `.github/workflows/codex-auto-fix.yml` 与 `.github/workflows/gemini-review-kickoff.yml` 已存在于默认分支。
 - 确保项目 Secrets 中配置了 `GITHUB_TOKEN`（通常自动提供）。
 
 ---
@@ -43,18 +43,19 @@
    - **Score**: 对修复结果做质量评分（0-100）。
    - **Doc**: 将本次变更摘要写入 `docs/CHANGELOG.md`（可审计/可追溯）。
    - **DryRun**: 未传 `--yes` 时，仅在 PR 留评论说明“已生成但未推送”，不执行提交与推送。
-4. **推送更新**: 自动提交并推送代码（附带 `[skip ci]`），并在 PR 下方发布结果评论。
+4. **推送更新**: 自动提交并推送代码（不使用 `[skip ci]`，必须触发 CI），并在 PR 下方发布结果评论。
 
 ### 第三阶段：循环与迭代
-1. **自动复审**: 修复推送后，Action 会自动再次调用 `/gemini review` 请求 Gemini 对修复后的代码进行复审。
+1. **自动复审**: 修复推送后，`codex-auto-fix` 状态机按轮次调用 `/gemini review` 请求 Gemini 对修复后的代码进行复审；`gemini-review-kickoff` 会跳过 `codex auto-fix` 提交，避免重复请求。
 2. **轮次递增**: 
-   - 如果 Gemini 仍有意见，进入 `round-2`。
-   - 达到 `MAX_ROUNDS (2)` 后，标签变为 `round-max`。
+   - 第一轮清洁或已推送修复后进入 `round-2`。
+   - `pending_explanations` 非空且没有任何修复时，标签变为 `gemini-review-needs-human`，不得误报“无需修复”。
+   - 达到 `MAX_ROUNDS (2)` 后，标签变为 `round-max`；若无 pending，同时添加 `gemini-review-clean`。
 
 ---
 
 ## 3. 人工干预与合并 (Final Review)
-1. **状态检查**: 看到 `gemini-review-round-max` 标签或 AI 留言「未发现高优先级问题」。
+1. **状态检查**: 看到 `gemini-review-round-max` + `gemini-review-clean` 标签，或确认 `gemini-review-needs-human` 中的问题已人工接受/处理。
 2. **人工 Review**: 开发者查看 AI 修复后的 Diff。
 3. **最终决策**:
    - **通过**: 点击 Merge 合并 PR。

@@ -42,6 +42,9 @@ pub struct PrAutoFixOutput {
     pub quality_score_available: bool,
     pub security_passed: bool,
     pub push_blocked: bool,
+    pub has_pending: bool,
+    pub pending_count: usize,
+    pub review_clean: bool,
     pub summary: Option<String>,
     pub pending_explanations: Vec<String>,
 }

@@ -39,7 +39,7 @@ const FileListPagination = memo(function FileListPagination({
         if (!entry?.isIntersecting) return;
         onLoadMore?.();
       },
-      { root: null, rootMargin: "600px 0px 600px 0px", threshold: 0 },
+      { root: null, rootMargin: "600px 0px 600px 0px", threshold: 0 }, // fluid-sizing-allow: observer prefetch window
     );
 
     observer.observe(el);

@@ -1,0 +1,22 @@
+{
+  "date": "2026-05-05",
+  "goal": "Recover PR #12's second Gemini/Codex review round and clear Medium+ feedback.",
+  "assumptions": [
+    "Gemini has produced a review for the latest PR head commit.",
+    "Unrelated local frontend and documentation edits are user-owned and must not be staged.",
+    "The automation remains GitHub Actions event-driven on a self-hosted runner."
+  ],
+  "risks": [
+    "GitHub Actions concurrency behavior needs real PR observation after push.",
+    "Backend upload validation and S3 copy-source changes need targeted tests.",
+    "The settings UI token comment is stale against current HEAD."
+  ],
+  "steps": [
+    "Confirm latest Gemini review and cancelled Codex run.",
+    "Move Codex Auto Fix concurrency from workflow scope to job scope.",
+    "Centralize chunked upload part-size calculations.",
+    "Move S3 copy-source encoding set into S3Storage.",
+    "Add regression tests and a permanent constraint.",
+    "Verify, commit scoped files, push, and observe PR #12."
+  ]
+}

@@ -182,7 +182,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
 
       // 以容器宽度为基准计算适配缩放
       const baseViewport = page.getViewport({ scale: 1 });
-      const containerW = container.clientWidth - 8; // 留 4px 每侧间距
+      const containerW = container.clientWidth - Math.max(4, container.clientWidth * 0.01);
       const fitScale = Math.max(MIN_SCALE, containerW / baseViewport.width);
       const finalScale = fitScale * scale;
 
@@ -304,7 +304,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
         {/* 文档加载中 */}
         {docLoading && (
           <div
-            className="flex h-full w-full min-h-[200px] items-center justify-center"
+            className="flex h-full w-full min-h-[12.5rem] items-center justify-center"
             data-oid="ev5n:_x"
           >
             <div
@@ -326,7 +326,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
         {/* 出错 */}
         {error && !docLoading && (
           <div
-            className="flex h-full w-full min-h-[200px] items-center justify-center px-6"
+            className="flex h-full w-full min-h-[12.5rem] items-center justify-center px-6"
             data-oid="8s9gc03"
           >
             <div
@@ -483,7 +483,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
               {numPages}
             </span>
             <span
-              className="text-[10px] text-[var(--preview-pdf-page-subtext)] tabular-nums"
+              className="text-[0.625rem] text-[var(--preview-pdf-page-subtext)] tabular-nums"
               data-oid="pbarn28"
             >
               {Math.round(userScale * 100)}%

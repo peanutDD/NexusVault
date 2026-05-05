@@ -2,6 +2,7 @@
 //!
 //! 骨架屏组件，用于加载状态的占位显示。
 
+import type { CSSProperties } from "react";
 import { cn } from "../../../utils/cn";
 
 interface SkeletonProps {
@@ -19,7 +20,7 @@ interface SkeletonProps {
  *
  * @example
  * ```tsx
- * <Skeleton variant="text" width="100%" height="20px" />
+ * <Skeleton variant="text" width="100%" height="1.25rem" />
  * <Skeleton variant="circular" width={40} height={40} />
  * <Skeleton variant="rectangular" width="100%" height={200} />
  * ```
@@ -45,13 +46,12 @@ export default function Skeleton({
     none: "",
   };
 
-  // 使用 Tailwind 任意值类替代内联样式
-  const widthClass = width
-    ? `w-[${typeof width === "number" ? `${width}px` : width}]`
-    : "";
-  const heightClass = height
-    ? `h-[${typeof height === "number" ? `${height}px` : height}]`
-    : "";
+  const toCssSize = (value?: string | number) =>
+    typeof value === "number" ? `${value / 16}rem` : value;
+  const style: CSSProperties = {
+    width: toCssSize(width),
+    height: toCssSize(height),
+  };
 
   return (
     <div
@@ -59,10 +59,9 @@ export default function Skeleton({
         baseClasses,
         variantClasses[variant],
         animationClasses[animation],
-        widthClass,
-        heightClass,
         className,
       )}
+      style={style}
       aria-hidden="true"
       data-oid="b:vgq1i"
     />
@@ -120,7 +119,7 @@ function FileRowSkeleton() {
 export function FileListSkeleton({ count = 5 }: { count?: number }) {
   return (
     <div
-      className="min-w-[960px] overflow-hidden rounded-lg bg-[var(--skeleton-surface-bg-strong)]"
+      className="min-w-[60rem] overflow-hidden rounded-lg bg-[var(--skeleton-surface-bg-strong)]"
       data-oid="rzzj7yc"
     >
       <table className="w-full table-fixed border-collapse" data-oid="by7hc9y">
@@ -130,8 +129,8 @@ export function FileListSkeleton({ count = 5 }: { count?: number }) {
             data-oid="4yuyl-a"
           >
             <th className="w-12 px-3 py-3" data-oid="xklb.0q" />
-            <th className="w-[72px] px-2 py-3" data-oid="itq1s5-" />
-            <th className="min-w-[180px] px-3 py-3" data-oid="vi91p5d" />
+            <th className="w-[4.5rem] px-2 py-3" data-oid="itq1s5-" />
+            <th className="min-w-[11.25rem] px-3 py-3" data-oid="vi91p5d" />
             <th className="w-20 px-3 py-3" data-oid="._zf406" />
             <th className="w-28 px-3 py-3" data-oid="5wyw3nr" />
             <th className="w-24 px-3 py-3" data-oid="5kdefrh" />

@@ -24,6 +24,7 @@
     "check:tokens:strict": "node scripts/check-semantic-tokens.mjs --strict",
     "check:tokens:layout": "node scripts/check-semantic-tokens.mjs --scope=layout",
     "check:tokens:strict:layout": "node scripts/check-semantic-tokens.mjs --scope=layout --strict",
+    "check:fluid-sizing": "node scripts/check-fluid-sizing.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

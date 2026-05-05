@@ -1,0 +1,19 @@
+{
+  "task": "corrupt-patch-fallback",
+  "date": "2026-05-05",
+  "goal": "Recover from malformed model-generated unified diffs by falling back to bounded full-file replacement.",
+  "assumptions": [
+    "git apply should remain the first patch path.",
+    "Full-file replacement is acceptable only after both diff attempts fail.",
+    "Security and quality gates still run after fallback writes."
+  ],
+  "risks": [
+    "Full-file replacement can change more context than intended.",
+    "The model can return explanatory text instead of complete file content."
+  ],
+  "acceptance": [
+    "Gemini script maintainability suggestions are implemented.",
+    "A corrupt diff e2e test is fixed by fallback.",
+    "Full codex-cli tests pass."
+  ]
+}

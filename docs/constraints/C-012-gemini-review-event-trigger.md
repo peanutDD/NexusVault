@@ -18,7 +18,7 @@ review rather than a top-level issue comment.
 2026-05-03
 
 ## Related Files
-- `.github/workflows/ai-auto-fix.yml`
+- `.github/workflows/codex-auto-fix.yml`
 
 ## Exceptions
 None.

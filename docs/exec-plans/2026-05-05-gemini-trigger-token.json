@@ -1,0 +1,17 @@
+{
+  "task": "gemini-trigger-token",
+  "date": "2026-05-05",
+  "goal": "Prefer a user-capable token when posting /gemini review from automation.",
+  "assumptions": [
+    "Gemini Code Assist may ignore github-actions[bot] comments.",
+    "A GEMINI_REVIEW_TOKEN repository secret can be configured by a human."
+  ],
+  "risks": [
+    "Credential setup requires explicit human approval.",
+    "A token with insufficient permissions still causes watchdog failure."
+  ],
+  "acceptance": [
+    "Gemini trigger comments prefer secrets.GEMINI_REVIEW_TOKEN.",
+    "GITHUB_TOKEN fallback remains fail-closed through the watchdog."
+  ]
+}

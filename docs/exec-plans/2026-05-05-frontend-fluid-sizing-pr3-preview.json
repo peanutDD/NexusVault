@@ -1,0 +1,27 @@
+{
+  "task": "frontend-fluid-sizing-pr3-preview",
+  "date": "2026-05-05",
+  "intent": "Extend fluid sizing governance to file preview components and convert fixed visible dimensions there to responsive sizing.",
+  "assumptions": [
+    "PR3 covers src/components/files/preview and src/styles/preview.css.",
+    "Thumbnail sizes can use rem-based media lengths.",
+    "Preview observer rootMargin remains a non-visual prefetch exception."
+  ],
+  "risks": [
+    "Preview 3D transforms and PDF canvas sizing need type and browser checks.",
+    "Visual proof depends on current file data and logged-in app state.",
+    "Remaining dialogs are follow-up phases."
+  ],
+  "dependencies": [
+    "check-fluid-sizing.mjs",
+    "Vitest",
+    "In-app browser"
+  ],
+  "steps": [
+    "Add a failing test for --scope=preview.",
+    "Implement preview scope in the sizing checker.",
+    "Convert preview fixed visible dimensions to rem/clamp.",
+    "Mark observer rootMargin as an explicit exception.",
+    "Run preview sizing check, tests, lint, build, and browser visual verification."
+  ]
+}

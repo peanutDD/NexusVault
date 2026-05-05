@@ -1,0 +1,20 @@
+{
+  "task": "auto-review-loop-state-machine",
+  "date": "2026-05-05",
+  "goal": "Make the Gemini/Codex auto-review loop explicitly handle clean, pending, blocked, and two-round states.",
+  "assumptions": [
+    "codex-cli handles one Gemini review payload at a time.",
+    "GitHub Actions labels own cross-review loop state.",
+    "Auto-fix commits must trigger CI.",
+    "Duplicate Gemini requests are prevented by skipping codex auto-fix commits in gemini-review-kickoff."
+  ],
+  "risks": [
+    "Gemini may not respond to every review request.",
+    "Self-hosted runners may have stale globally installed codex-auto-fix binaries."
+  ],
+  "verification": [
+    "cargo test in scripts/codex-cli",
+    "bash -n .github/scripts/codex-auto-fix-state.sh",
+    "workflow_state integration tests"
+  ]
+}

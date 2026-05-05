@@ -39,6 +39,12 @@
   --tech-glow-purple: var(--filelist-tech-glow-purple);
   --tech-glow-cyan: var(--filelist-tech-glow-cyan);
   --tech-glow-green: var(--filelist-tech-glow-green);
+  --filelist-soft-blur-reduction: clamp(0.25rem, 0.5vw, 0.3125rem);
+  --filelist-panel-glow-sm: clamp(0.75rem, 1.4vw, 0.9375rem);
+  --filelist-panel-glow-md: clamp(1rem, 2vw, 1.25rem);
+  --filelist-panel-glow-lg: clamp(2rem, 4vw, 2.5rem);
+  --filelist-icon-radius: clamp(0.625rem, 1vw, 0.75rem);
+  --filelist-hover-lift: -0.03125rem;
 }
 
 /* 公用：保证高光层不影响交互 */
@@ -103,8 +109,8 @@
   box-shadow: 
     var(--glass-shadow),
     /* 科技感外发光 */
-    0 0 20px rgba(168, 85, 247, 0.14),
-    0 0 40px rgba(34, 211, 238, 0.09);
+    0 0 var(--filelist-panel-glow-md) rgba(168, 85, 247, 0.14),
+    0 0 var(--filelist-panel-glow-lg) rgba(34, 211, 238, 0.09);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   position: relative;
@@ -194,9 +200,9 @@
     var(--glass-shadow-soft),
     inset 0 1px 0 var(--bar-inset),
     /* 科技感微光 */
-    0 0 15px var(--bar-glow);
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) - 5px)) saturate(var(--glass-sat));
-  backdrop-filter: blur(calc(var(--glass-blur) - 5px)) saturate(var(--glass-sat));
+    0 0 var(--filelist-panel-glow-sm) var(--bar-glow);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) - var(--filelist-soft-blur-reduction))) saturate(var(--glass-sat));
+  backdrop-filter: blur(calc(var(--glass-blur) - var(--filelist-soft-blur-reduction))) saturate(var(--glass-sat));
 }
 
 /* 卡片（用于：文件/文件夹卡片） */
@@ -213,7 +219,7 @@
 }
 
 .fileListGlassScope .glass-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-0.0625rem);
   z-index: 1;
   border-color: var(--filelist-card-border-hover);
   box-shadow: none;
@@ -257,7 +263,7 @@
 
 /* 图标按钮 */
 .fileListGlassScope .glass-iconbtn {
-  border-radius: 12px;
+  border-radius: var(--filelist-icon-radius);
   border: 1px solid var(--filelist-iconbtn-border);
   background: var(--filelist-iconbtn-bg);
   -webkit-backdrop-filter: none;
@@ -268,7 +274,7 @@
 .fileListGlassScope .glass-iconbtn:hover {
   background: var(--filelist-iconbtn-bg-hover);
   border-color: var(--filelist-iconbtn-border-hover);
-  transform: translateY(-0.5px);
+  transform: translateY(var(--filelist-hover-lift));
 }
 
 /* 单文件操作按钮：更“玻璃”，但不引入重 blur/纹理 */
@@ -279,7 +285,7 @@
     radial-gradient(90% 70% at 15% 0%, rgba(16, 185, 129, 0.10), transparent 60%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 12px 30px rgba(16, 185, 129, 0.10);
+    0 clamp(0.625rem, 1.2vw, 0.75rem) clamp(1.5rem, 2.8vw, 1.875rem) rgba(16, 185, 129, 0.10);
 }
 
 .fileListGlassScope .glass-iconbtn.glass-iconbtn-share::before {
@@ -315,7 +321,7 @@
     radial-gradient(90% 70% at 15% 0%, rgba(16, 185, 129, 0.14), transparent 60%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 14px 34px rgba(16, 185, 129, 0.14);
+    0 clamp(0.75rem, 1.4vw, 0.875rem) clamp(1.75rem, 3.2vw, 2.125rem) rgba(16, 185, 129, 0.14);
 }
 
 .fileListGlassScope .glass-iconbtn.glass-iconbtn-delete {
@@ -325,7 +331,7 @@
     radial-gradient(90% 70% at 15% 0%, rgba(244, 63, 94, 0.10), transparent 60%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 12px 30px rgba(244, 63, 94, 0.10);
+    0 clamp(0.625rem, 1.2vw, 0.75rem) clamp(1.5rem, 2.8vw, 1.875rem) rgba(244, 63, 94, 0.10);
 }
 
 .fileListGlassScope .glass-iconbtn.glass-iconbtn-delete::before {
@@ -361,7 +367,7 @@
     radial-gradient(90% 70% at 15% 0%, rgba(244, 63, 94, 0.14), transparent 60%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 14px 34px rgba(244, 63, 94, 0.14);
+    0 clamp(0.75rem, 1.4vw, 0.875rem) clamp(1.75rem, 3.2vw, 2.125rem) rgba(244, 63, 94, 0.14);
 }
 
 /* 主按钮（用于：批量操作按钮、分页按钮等） */
@@ -386,14 +392,14 @@
   border-color: var(--filelist-toolbar-btn-border);
   background: var(--filelist-toolbar-btn-bg);
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.35),
+    0 clamp(0.5rem, 1vw, 0.625rem) clamp(1.5rem, 2.8vw, 1.75rem) rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .fileListGlassScope .glass-btn.toolbarActionBtn:hover {
   background: var(--filelist-toolbar-btn-bg-hover);
   border-color: var(--filelist-toolbar-btn-border-hover);
-  transform: translateY(-1px);
+  transform: translateY(-0.0625rem);
 }
 
 .fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber {
@@ -430,8 +436,8 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.12));
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow:
-    0 8px 32px rgba(168, 85, 247, 0.2),
-    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 clamp(0.375rem, 0.8vw, 0.5rem) clamp(1.5rem, 3vw, 2rem) rgba(168, 85, 247, 0.2),
+    0 clamp(0.1875rem, 0.45vw, 0.25rem) clamp(0.75rem, 1.5vw, 1rem) rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -442,10 +448,10 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.15));
   border-color: rgba(255, 255, 255, 0.32);
   box-shadow:
-    0 12px 40px rgba(168, 85, 247, 0.25),
-    0 6px 20px rgba(0, 0, 0, 0.35),
+    0 clamp(0.625rem, 1.2vw, 0.75rem) clamp(2rem, 4vw, 2.5rem) rgba(168, 85, 247, 0.25),
+    0 clamp(0.25rem, 0.6vw, 0.375rem) clamp(1rem, 2vw, 1.25rem) rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
+  transform: translateY(-0.0625rem);
 }
 
 /* All Files 按钮高亮样式：柔和的蓝绿色调 + 保持玻璃质感 */
@@ -455,8 +461,8 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.12));
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow:
-    0 8px 32px rgba(16, 185, 129, 0.2),
-    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 clamp(0.375rem, 0.8vw, 0.5rem) clamp(1.5rem, 3vw, 2rem) rgba(16, 185, 129, 0.2),
+    0 clamp(0.1875rem, 0.45vw, 0.25rem) clamp(0.75rem, 1.5vw, 1rem) rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -467,19 +473,19 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.15));
   border-color: rgba(255, 255, 255, 0.32);
   box-shadow:
-    0 12px 40px rgba(16, 185, 129, 0.25),
-    0 6px 20px rgba(0, 0, 0, 0.35),
+    0 clamp(0.625rem, 1.2vw, 0.75rem) clamp(2rem, 4vw, 2.5rem) rgba(16, 185, 129, 0.25),
+    0 clamp(0.25rem, 0.6vw, 0.375rem) clamp(1rem, 2vw, 1.25rem) rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
+  transform: translateY(-0.0625rem);
 }
 
 /* 卡片勾选框：外圈水晶效果 */
 .fileListGlassScope .card-checkbox-outer-crystal {
-  border: 0.75px solid var(--selection-check-crystal-border);
+  border: 0.046875rem solid var(--selection-check-crystal-border);
   box-shadow: none;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(clamp(0.25rem, 0.6vw, 0.375rem));
+  backdrop-filter: blur(clamp(0.25rem, 0.6vw, 0.375rem));
 }
 
 .fileListGlassScope .group:hover .card-checkbox-outer-crystal {
@@ -516,7 +522,7 @@
 .fileListGlassScope .glass-btn:hover {
   background: var(--filelist-btn-bg-hover);
   border-color: var(--filelist-btn-border-hover);
-  transform: translateY(-0.5px);
+  transform: translateY(var(--filelist-hover-lift));
 }
 
 .fileListGlassScope .glass-btn:disabled {

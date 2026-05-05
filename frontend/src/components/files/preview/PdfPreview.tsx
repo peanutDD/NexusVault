@@ -116,7 +116,7 @@ function PdfPreview({ blobUrl, title }: PdfPreviewProps) {
           <Suspense
             fallback={
               <div
-                className="flex h-full w-full min-h-[200px] items-center justify-center"
+                className="flex h-full w-full min-h-[12.5rem] items-center justify-center"
                 data-oid="y4swyuy"
               >
                 <div

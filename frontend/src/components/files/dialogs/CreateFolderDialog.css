@@ -8,6 +8,16 @@
   --liquid-pink: var(--dialog-liquid-pink);
   --liquid-shadow: var(--dialog-liquid-shadow);
   --liquid-glass: var(--dialog-liquid-glass);
+  --liquid-shadow-y: clamp(1.75rem, 5vw, 2.25rem);
+  --liquid-shadow-blur: clamp(4.5rem, 10vw, 5.625rem);
+  --liquid-glow-md: clamp(2.25rem, 6vw, 2.75rem);
+  --liquid-glow-xl: clamp(5.5rem, 12vw, 6.875rem);
+  --liquid-blur-lg: clamp(1.5rem, 4vw, 1.875rem);
+  --liquid-blur-md: clamp(0.75rem, 3vw, 0.875rem);
+  --liquid-blur-sm: clamp(0.625rem, 2.5vw, 0.75rem);
+  --liquid-button-shadow-y: clamp(0.625rem, 3vw, 0.875rem);
+  --liquid-button-shadow-blur: clamp(1.75rem, 5vw, 2.125rem);
+  --liquid-button-glow: clamp(2rem, 5vw, 2.5rem);
 }
 
 .liquidDialogPanel {
@@ -18,12 +28,12 @@
     rgba(var(--liquid-glass), 0.28) 100%
   );
   box-shadow:
-    0 36px 90px rgba(var(--liquid-shadow), 0.6),
-    0 0 44px rgba(var(--liquid-lavender), 0.38),
-    0 0 110px rgba(var(--liquid-cyan), 0.4),
+    0 var(--liquid-shadow-y) var(--liquid-shadow-blur) rgba(var(--liquid-shadow), 0.6),
+    0 0 var(--liquid-glow-md) rgba(var(--liquid-lavender), 0.38),
+    0 0 var(--liquid-glow-xl) rgba(var(--liquid-cyan), 0.4),
     inset 0 1px 0 rgba(var(--liquid-glass), 0.7);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--liquid-blur-lg)) saturate(180%);
+  backdrop-filter: blur(var(--liquid-blur-lg)) saturate(180%);
 }
 
 .liquidDialogHighlight {
@@ -41,8 +51,8 @@
     rgba(var(--liquid-glass), 0.48),
     rgba(var(--liquid-ice), 0.18)
   );
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(var(--liquid-blur-md));
+  backdrop-filter: blur(var(--liquid-blur-md));
 }
 
 .liquidDialogCancelBtn {
@@ -51,8 +61,8 @@
     rgba(var(--liquid-glass), 0.45),
     rgba(var(--liquid-ice), 0.18)
   );
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--liquid-blur-sm));
+  backdrop-filter: blur(var(--liquid-blur-sm));
 }
 
 .liquidDialogSubmitBtn {
@@ -62,7 +72,7 @@
     rgba(var(--liquid-cyan), 0.95)
   );
   box-shadow:
-    0 14px 34px rgba(var(--liquid-lavender), 0.4),
-    0 0 40px rgba(var(--liquid-cyan), 0.35),
+    0 var(--liquid-button-shadow-y) var(--liquid-button-shadow-blur) rgba(var(--liquid-lavender), 0.4),
+    0 0 var(--liquid-button-glow) rgba(var(--liquid-cyan), 0.35),
     inset 0 1px 0 rgba(var(--liquid-glass), 0.7);
 }

@@ -1,0 +1,27 @@
+{
+  "task": "frontend-fluid-sizing-pr2-filelist",
+  "date": "2026-05-05",
+  "intent": "Extend fluid sizing governance to the file list and grid domains and convert fixed visible dimensions there to responsive units.",
+  "assumptions": [
+    "PR2 only covers src/components/files/list and src/components/files/grid.",
+    "IntersectionObserver rootMargin is not user-visible and can be explicitly allowed.",
+    "Clamp upper bounds preserve current desktop density."
+  ],
+  "risks": [
+    "Dense file list visuals need browser verification after CSS changes.",
+    "Card hover spacing and menu offsets must keep C-020/C-021 behavior intact.",
+    "Preview and remaining dialog domains are follow-up phases."
+  ],
+  "dependencies": [
+    "check-fluid-sizing.mjs",
+    "Vitest",
+    "In-app browser at /files"
+  ],
+  "steps": [
+    "Add a failing test for --scope=filelist.",
+    "Implement filelist scope in the sizing checker.",
+    "Convert list/grid fixed visible dimensions to clamp/rem.",
+    "Mark non-visual observer rootMargin as an explicit exception.",
+    "Run filelist sizing check, tests, lint, build, and browser visual verification."
+  ]
+}

@@ -17,35 +17,29 @@ jobs:
   gemini-kickoff:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout 仓库
+        uses: actions/checkout@v4
+
       - name: 自动触发 Gemini Review（首轮/更新）
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GEMINI_REVIEW_TOKEN || secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
+          GEMINI_REVIEW_TIMEOUT_SECONDS: 600
+          GEMINI_REVIEW_POLL_INTERVAL_SECONDS: 15
         run: |
           set -euo pipefail
 
-          LAST_COMMIT_AT="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.committer.date')"
+          LAST_COMMIT_MESSAGE="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.message')"
 
-          LAST_REQUEST_AT="$(
-            gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate --jq '
-              [
-                .[]
-                | select(.body | startswith("/gemini review"))
-                | select(.user.login == "github-actions[bot]")
-                | .created_at
-              ]
-              | sort
-              | last
-              // ""
-            '
-          )"
-
-          if [[ -n "${LAST_REQUEST_AT}" && "${LAST_REQUEST_AT}" > "${LAST_COMMIT_AT}" ]]; then
-            echo "Skip: already requested after latest commit. last_request_at=${LAST_REQUEST_AT} last_commit_at=${LAST_COMMIT_AT}"
+          if [[ "$LAST_COMMIT_MESSAGE" == *"codex auto-fix"* ]]; then
+            echo "Skip: codex-auto-fix workflow owns the next Gemini request for this commit."
             exit 0
           fi
 
-          echo "Requesting Gemini review. last_request_at=${LAST_REQUEST_AT:-none} last_commit_at=${LAST_COMMIT_AT}"
+          REQUESTED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "Requesting Gemini review for ${PR_SHA} at ${REQUESTED_AT}"
           gh pr comment "${PR_NUMBER}" --body "/gemini review"
+
+          REVIEW_REQUESTED_AT="${REQUESTED_AT}" bash .github/scripts/gemini-review-watchdog.sh watch

@@ -42,10 +42,10 @@
     .cta-btn-primary:hover {
         border-color: rgba(110, 231, 183, 0.68);
         filter: brightness(1.06);
-        transform: translateY(-1px);
+        transform: translateY(-0.0625rem);
         box-shadow:
             0 0 0 1px rgba(16, 185, 129, 0.18),
-            0 18px 55px rgba(16, 185, 129, 0.18);
+            0 1.125rem 3.4375rem rgba(16, 185, 129, 0.18);
     }
 
     .cta-btn-secondary {
@@ -58,9 +58,9 @@
     .cta-btn-secondary:hover {
         border-color: rgba(110, 231, 183, 0.44);
         filter: brightness(1.04);
-        transform: translateY(-1px);
+        transform: translateY(-0.0625rem);
         box-shadow:
             0 0 0 1px rgba(16, 185, 129, 0.1),
-            0 14px 40px rgba(16, 185, 129, 0.1);
+            0 0.875rem 2.5rem rgba(16, 185, 129, 0.1);
     }
 }

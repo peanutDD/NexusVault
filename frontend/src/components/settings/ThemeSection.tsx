@@ -36,10 +36,11 @@ export default function ThemeSection() {
             onClick={() => setTheme(opt.value)}
             className={cn(
               "rounded-xl border px-4 py-3 text-left transition-colors",
-              "bg-[var(--glass-bg-soft)] border-[var(--color-border-soft)] text-[var(--color-text-primary)]",
+              "min-h-[5.75rem]",
+              "bg-[var(--settings-panel-bg)] border-[var(--settings-panel-border)] text-[var(--color-text-primary)]",
               "hover:bg-[var(--glass-bg-strong)] hover:border-[var(--color-border-medium)]",
               theme === opt.value &&
-                "bg-[var(--glass-bg-strong)] border-[var(--cta-primary-border)] shadow-[var(--shadow-glass-card)]",
+                "bg-[var(--settings-chip-bg-hover)] border-[var(--cta-primary-border)] shadow-[var(--shadow-glass-card)]",
             )}
             aria-pressed={theme === opt.value}
             data-oid="uxa2l.x"
@@ -61,17 +62,17 @@ export default function ThemeSection() {
       </div>
 
       <div
-        className="mt-4 rounded-xl border border-[var(--color-border-soft)] bg-[var(--glass-bg-soft)] p-4"
+        className="mt-4 rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4"
         data-oid="t8wonjh"
       >
         <div
-          className="font-brand text-[length:var(--settings-text-xs)] tracking-wide text-[var(--color-text-muted)]"
+          className="font-brand text-[length:var(--settings-text-xs)] tracking-wide text-[var(--settings-panel-label)]"
           data-oid="k60k6cl"
         >
           Current
         </div>
         <div
-          className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--color-text-primary)]"
+          className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
           data-oid="48opr-f"
         >
           {effectiveTheme}

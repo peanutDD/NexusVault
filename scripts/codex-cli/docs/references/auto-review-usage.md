@@ -6,7 +6,7 @@
 
 1. 开发者提交 PR。
 2. Gemini Code Assist 在 PR 中生成 Review 评论。
-3. `.github/workflows/ai-auto-fix.yml` 监听 Gemini 评论。
+3. `.github/workflows/codex-auto-fix.yml` 监听 Gemini 评论。
 4. self-hosted runner 拉取 PR 分支，调用 `codex-auto-fix pr-auto-fix`。
 5. `scripts/codex-cli` 解析 Review，筛选 `Critical/High/Medium` 问题。
 6. 本地 Codex GPT-5.5 生成 unified diff，`git apply` 应用补丁。
@@ -66,7 +66,8 @@ CODEX_AGENT_COMMAND="/usr/local/bin/codex-gpt55 exec --skip-git-repo-check -"
 主 workflow 是：
 
 ```text
-.github/workflows/ai-auto-fix.yml
+.github/workflows/codex-auto-fix.yml
+.github/workflows/gemini-review-kickoff.yml
 ```
 
 关键配置：
@@ -113,8 +114,9 @@ workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
 2. workflow 会自动评论 `/gemini review` 请求第一轮 Gemini Review。
 3. Gemini 发布 Review 后，`codex-fix` job 自动启动。
 4. 如果有可修复的 `Critical/High/Medium` 问题，Codex 修复并 push。
-5. 第一次成功修复后，workflow 将标签推进到 `gemini-review-round-2`，并再次评论 `/gemini review`。
-6. 第二次成功修复后，workflow 将标签推进到 `gemini-review-round-max`。
+5. 第一轮清洁或成功推送修复后，workflow 将标签推进到 `gemini-review-round-2`，并再次评论 `/gemini review`。
+6. 第二轮清洁或成功推送修复后，workflow 将标签推进到 `gemini-review-round-max`；若没有 pending，同时添加 `gemini-review-clean`。
+7. 如果 `pending_explanations` 非空且本轮没有任何修复，workflow 添加 `gemini-review-needs-human`，不会发布“无需修复/建议合并”的误导评论。
 7. 人类做最终 Review 并决定是否 merge。
 
 ## 自动修复策略
@@ -153,6 +155,9 @@ CODEX_EXCLUDE_DOCS=true
   "quality_score_available": true,
   "security_passed": true,
   "push_blocked": false,
+  "has_pending": false,
+  "pending_count": 0,
+  "review_clean": true,
   "summary": "Gemini review summary",
   "pending_explanations": []
 }
@@ -163,6 +168,8 @@ CODEX_EXCLUDE_DOCS=true
 - `fixed=true`：本轮有变更且已允许进入后续轮次。
 - `fixed=false`：没有变更，或变更被安全门禁拦截。
 - `push_blocked=true`：生成了变更，但安全审计 fail-closed，未 commit/push。
+- `has_pending=true` / `pending_count>0`：仍有 `Medium` 及以上问题没有自动修复，PR 不可视为 clean。
+- `review_clean=true`：当前 Codex 解析出的 Medium+ 问题全部修复或不存在，且未被安全门禁阻断。
 - `pending_explanations`：`Medium` 及以上问题未修复时的原因。
 - `quality_score_available=false`：质量评分不可用，不等于真实 0 分。
 
@@ -175,12 +182,14 @@ CODEX_EXCLUDE_DOCS=true
 - `git` / `gh` 命令非零退出码会直接失败。
 - 安全审计输出必须是严格 JSON；解析失败视为未通过。
 - `security_passed=false` 时，不允许 commit/push，只能评论原因。
+- 自动修复提交不得使用 `[skip ci]`，必须触发 CI；`gemini-review-kickoff` 会跳过 `codex auto-fix` 提交，避免重复 Gemini 请求。
 
 ## 人工合并标准
 
 建议满足以下条件再合并：
 
-- Gemini 第二轮没有新的 `Medium` 及以上问题。
+- PR 带有 `gemini-review-round-max` 和 `gemini-review-clean`，或 `gemini-review-needs-human` 中的问题已人工接受/处理。
+- Gemini 第二轮没有新的 `Medium` 及以上问题，或第二轮发现的问题已被 Codex/人工处理。
 - PR 没有 `push_blocked=true` 的 Codex 评论。
 - `pending_explanations` 中的问题都被接受，或已经人工处理。
 - CI 通过。

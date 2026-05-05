@@ -3,9 +3,16 @@ import { UserCircle2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { cn } from "../../utils/cn";
 import ErrorMessage from "../common/feedback/ErrorMessage";
 import SettingsCard from "./SettingsCard";
+import {
+  settingsErrorClass,
+  settingsInputClass,
+  settingsLabelClass,
+  settingsPanelClass,
+  settingsPrimaryButtonClass,
+  settingsSecondaryButtonClass,
+} from "./settingsUi";
 import { useAuthStore } from "../../store/authStore";
 import { authService } from "../../services/auth";
 import { getErrorMessage } from "../../utils/error";
@@ -232,7 +239,7 @@ const UserInfoSection = memo(function UserInfoSection() {
         <div data-oid="pqfg1l8">
           <label
             htmlFor="profile-username"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
+            className={settingsLabelClass()}
             data-oid="m6ngi28"
           >
             Username
@@ -244,39 +251,27 @@ const UserInfoSection = memo(function UserInfoSection() {
             minLength={3}
             maxLength={50}
             placeholder="3–50 characters"
-            className={cn(
-              "w-full rounded-xl px-4 py-2.5",
-              "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
-              "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
-              errors.username && "border-red-500 focus:ring-red-500"
-            )}
+            className={settingsInputClass(Boolean(errors.username))}
             data-oid="nrlh9g1"
           />
           {errors.username && (
-            <p className="mt-1 text-sm text-red-500">{errors.username.message}</p>
+            <p className={settingsErrorClass()}>{errors.username.message}</p>
           )}
         </div>
         <div data-oid="lz88_h5">
           <label
             htmlFor="profile-email"
-            className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
+            className={settingsLabelClass()}
             data-oid="vaeuha7"
           >
             Email
           </label>
-          <div className="flex gap-2" data-oid="wvivq7f">
+          <div className="flex flex-col gap-2 sm:flex-row" data-oid="wvivq7f">
             <input
               id="profile-email"
               type="email"
               {...register("email")}
-              className={cn(
-                "flex-1 rounded-xl px-4 py-2.5",
-                "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
-                "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
-                "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
-                errors.email && "border-red-500 focus:ring-red-500"
-              )}
+              className={settingsInputClass(Boolean(errors.email), "sm:flex-1")}
               data-oid=":o6py4z"
             />
 
@@ -286,12 +281,7 @@ const UserInfoSection = memo(function UserInfoSection() {
               disabled={
                 !canSendCode || sendingCode || sendCodeCooldown > 0 || loading
               }
-              className={cn(
-                "font-brand shrink-0 rounded-xl px-4 py-2.5 text-[length:var(--settings-text-sm)] font-semibold tracking-wide whitespace-nowrap",
-                "border border-[var(--settings-secondary-border)] bg-[var(--settings-secondary-bg)] text-[var(--settings-secondary-text)]",
-                "hover:bg-[var(--settings-secondary-bg-hover)] hover:border-[var(--settings-secondary-border-hover)]",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
+              className={settingsSecondaryButtonClass("shrink-0 whitespace-nowrap")}
               data-oid="zvpvalp"
             >
               {sendCodeCooldown > 0
@@ -302,14 +292,14 @@ const UserInfoSection = memo(function UserInfoSection() {
             </button>
           </div>
           {errors.email && (
-            <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
+            <p className={settingsErrorClass()}>{errors.email.message}</p>
           )}
           
           {user?.email && emailValue?.trim() !== user.email && (
             <div className="mt-2" data-oid="y9w43uk">
               <label
                 htmlFor="profile-email-code"
-                className="font-brand block text-[length:var(--settings-text-sm)] font-medium tracking-wide text-[var(--settings-form-label)] mb-2"
+                className={settingsLabelClass()}
                 data-oid="z-oab7l"
               >
                 Verification code
@@ -322,23 +312,21 @@ const UserInfoSection = memo(function UserInfoSection() {
                 {...register("emailVerificationCode")}
                 placeholder="6 digits"
                 maxLength={6}
-                className={cn(
-                  "w-full rounded-xl px-4 py-2.5",
-                  "bg-[var(--settings-form-input-bg)] border border-[var(--settings-form-input-border)]",
-                  "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
-                  "focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] focus:border-[var(--settings-form-input-border-focus)]",
-                  errors.emailVerificationCode && "border-red-500 focus:ring-red-500"
+                className={settingsInputClass(
+                  Boolean(errors.emailVerificationCode),
                 )}
                 data-oid="ku82zss"
               />
               {errors.emailVerificationCode && (
-                <p className="mt-1 text-sm text-red-500">{errors.emailVerificationCode.message}</p>
+                <p className={settingsErrorClass()}>
+                  {errors.emailVerificationCode.message}
+                </p>
               )}
             </div>
           )}
         </div>
         <div
-          className="rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4"
+          className={settingsPanelClass()}
           data-oid="gjqcw3z"
         >
           <p
@@ -359,12 +347,7 @@ const UserInfoSection = memo(function UserInfoSection() {
         <button
           type="submit"
           disabled={loading}
-          className={cn(
-            "font-brand w-full rounded-xl px-4 py-2.5 font-semibold tracking-wide",
-            "border border-[var(--settings-action-border)] bg-[var(--settings-action-bg)] text-[var(--settings-action-text)] shadow-[var(--settings-action-shadow)]",
-            "hover:bg-[image:var(--settings-action-bg-hover)]",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-          )}
+          className={settingsPrimaryButtonClass("w-full")}
           data-oid="-o5ufhh"
         >
           {loading ? "Saving..." : "Save"}

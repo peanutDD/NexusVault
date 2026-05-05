@@ -216,7 +216,7 @@ git:
   commit: false
   push: false
   branch: null
-  commit_message_template: "[skip ci] codex auto-fix: fix {file_count} files"
+  commit_message_template: "codex auto-fix: fix {file_count} files"
 
 agent:
   command_env: CODEX_AGENT_COMMAND

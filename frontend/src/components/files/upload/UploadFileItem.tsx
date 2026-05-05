@@ -564,7 +564,7 @@ function ErrorTooltip({
           {/* 错误内容 */}
           <div className="max-h-32 overflow-y-auto" data-oid="jx7jgkh">
             <p
-              className="whitespace-pre-line text-[11px] leading-relaxed text-[var(--upload-tooltip-text)]"
+              className="whitespace-pre-line text-[clamp(0.625rem,1.6vw,0.6875rem)] leading-relaxed text-[var(--upload-tooltip-text)]"
               data-oid="hj.49bw"
             >
               {error}

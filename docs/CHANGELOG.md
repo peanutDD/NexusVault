@@ -6,6 +6,15 @@
 
 ## [未发布] — 2026 年（当前会话）
 
+### Settings 页面外观与体验优化（2026-05-04）
+
+- 新增 Settings 本地 UI helper，统一账户、密码、API Token 表单的 label、input、error、helper、button、panel 样式。
+- 设置页快速导航改为数据驱动渲染，并改善桌面/移动端的按钮排列与 focus ring。
+- 修复窄屏下邮箱输入 + `Get code` 按钮、API Token 创建标题区的挤压风险。
+- Appearance 区块使用 Settings 语义 panel token，选中态更清晰且保持 `dark` / `light` / `purple` 主题值不变。
+- 新增 Settings 回归测试，覆盖主题切换、邮箱变更验证码展示、API Token 创建 payload、删除确认打开前不触发删除。
+- 新增 `docs/design-docs/2026-05-04-settings-page-optimization.md` 与 `docs/exec-plans/2026-05-04-settings-page-optimization.md`。
+
 ### 上传链路完整性补强（2026-05-04）
 
 - 普通上传、秒传、分片完成统一校验 `folder_id` 是否属于当前用户，防止跨用户写入文件夹。

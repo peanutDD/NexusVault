@@ -204,7 +204,7 @@ export default function BatchMoveDialog({
             {errorDetails.map((item, index) => (
               <li
                 key={`${item}-${index}`}
-                className="text-[10px] text-[var(--notice-error)]"
+                className="text-[0.625rem] text-[var(--notice-error)]"
                 data-oid="tz5pq6a"
               >
                 {`${index + 1}. ${item}`}
