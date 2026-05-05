@@ -1969,80 +1969,110 @@
 
     --nav-surface-bg: linear-gradient(
         135deg,
-        rgba(246, 250, 255, 0.92),
-        rgba(234, 244, 255, 0.94),
-        rgba(219, 232, 255, 0.92)
+        rgba(var(--rgb-slate-950), 0.96),
+        rgba(var(--rgb-slate-900), 0.96) 42%,
+        rgba(var(--rgb-purple-500), 0.28) 72%,
+        rgba(var(--rgb-cyan-400), 0.2)
     );
-    --nav-top-glow: linear-gradient(90deg, transparent, rgba(var(--rgb-fuchsia-500), 0.5), rgba(var(--rgb-cyan-400), 0.52), transparent);
-    --nav-bottom-line: rgba(var(--rgb-sky-400), 0.46);
+    --nav-top-glow: linear-gradient(90deg, transparent, rgba(var(--rgb-purple-500), 0.62), rgba(var(--rgb-cyan-400), 0.72), transparent);
+    --nav-bottom-line: rgba(var(--rgb-cyan-400), 0.72);
     --nav-side-ambience: linear-gradient(
         90deg,
-        rgba(var(--rgb-purple-500), 0.12),
+        rgba(var(--rgb-purple-500), 0.24),
         transparent,
-        rgba(var(--rgb-cyan-400), 0.16)
+        rgba(var(--rgb-cyan-400), 0.22)
     );
 
-    --nav-btn-text: rgba(var(--rgb-slate-950), 0.9);
-    --nav-btn-bg: rgba(var(--rgb-white), 0.62);
-    --nav-btn-bg-hover: rgba(var(--rgb-white), 0.8);
-    --nav-btn-border: rgba(var(--rgb-sky-400), 0.28);
-    --nav-btn-border-hover: rgba(var(--rgb-purple-500), 0.28);
-    --nav-btn-icon: rgba(var(--rgb-sky-400), 0.95);
+    --nav-btn-text: rgba(var(--rgb-white), 0.9);
+    --nav-btn-bg: linear-gradient(
+        180deg,
+        rgba(var(--rgb-slate-950), 0.94),
+        rgba(var(--rgb-slate-900), 0.94)
+    );
+    --nav-btn-bg-hover: linear-gradient(
+        180deg,
+        rgba(var(--rgb-slate-950), 0.98),
+        rgba(var(--rgb-slate-900), 0.98)
+    );
+    --nav-btn-shadow:
+        0 1.125rem 3.75rem rgba(var(--rgb-slate-950), 0.28),
+        0 0.625rem 1.5rem rgba(var(--rgb-cyan-400), 0.14),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.12);
+    --nav-btn-border: rgba(var(--rgb-cyan-400), 0.32);
+    --nav-btn-border-hover: rgba(var(--rgb-cyan-400), 0.5);
+    --nav-btn-icon: rgba(var(--rgb-cyan-400), 0.95);
     --nav-btn-border-danger-hover: rgba(var(--rgb-rose-400), 0.4);
     --nav-btn-icon-danger: rgba(var(--rgb-rose-400), 0.92);
 
-    --nav-title-text: rgba(var(--rgb-slate-950), 0.78);
+    --nav-title-text: rgba(var(--rgb-white), 0.9);
 
-    --nav-panel-bg: rgba(var(--rgb-white), 0.56);
-    --nav-panel-border: rgba(var(--rgb-sky-400), 0.26);
+    --nav-panel-bg: rgba(var(--rgb-slate-950), 0.5);
+    --nav-panel-border: rgba(var(--rgb-cyan-400), 0.28);
     --nav-panel-shadow: 0 0 0 1px rgba(var(--rgb-white), 0.08),
-        0 1.125rem 4.375rem rgba(var(--rgb-sky-400), 0.12),
-        0 0 2.25rem rgba(var(--rgb-purple-500), 0.08);
+        0 1.125rem 4.375rem rgba(var(--rgb-slate-950), 0.42),
+        0 0 2.25rem rgba(var(--rgb-cyan-400), 0.16),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.12);
     --nav-panel-edge-glow: linear-gradient(
         90deg,
-        rgba(var(--rgb-fuchsia-500), 0.14),
+        rgba(var(--rgb-purple-500), 0.22),
         transparent,
-        rgba(var(--rgb-cyan-400), 0.2)
+        rgba(var(--rgb-cyan-400), 0.24)
     );
 
-    --nav-chip-bg: rgba(var(--rgb-white), 0.62);
-    --nav-chip-border: rgba(var(--rgb-sky-400), 0.24);
-    --nav-chip-text: rgba(var(--rgb-slate-950), 0.82);
+    --nav-chip-bg: rgba(var(--rgb-white), 0.1);
+    --nav-chip-border: rgba(var(--rgb-purple-500), 0.32);
+    --nav-chip-text: rgba(var(--rgb-white), 0.9);
     --nav-user-dot-bg: rgba(var(--rgb-cyan-400), 0.8);
-    --nav-user-dot-shadow: 0 0 0.875rem rgba(var(--rgb-cyan-400), 0.34);
+    --nav-user-dot-shadow: 0 0 0.875rem rgba(var(--rgb-cyan-400), 0.55);
 
-    --footer-border: rgba(var(--rgb-white), 0.05);
-    --footer-surface-bg: var(--surface-page-gradient);
-    --footer-grid-bg-image: linear-gradient(rgba(var(--rgb-sky-400), 0.34) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(var(--rgb-purple-500), 0.22) 1px, transparent 1px);
+    --footer-border: rgba(var(--rgb-cyan-400), 0.24);
+    --footer-surface-bg:
+        radial-gradient(
+            42rem circle at 18% 0%,
+            rgba(var(--rgb-purple-500), 0.24),
+            transparent 62%
+        ),
+        radial-gradient(
+            48rem circle at 86% 12%,
+            rgba(var(--rgb-cyan-400), 0.2),
+            transparent 64%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-slate-950), 0.98),
+            rgba(var(--rgb-slate-900), 0.98),
+            rgba(var(--rgb-slate-950), 0.96)
+        );
+    --footer-grid-bg-image: linear-gradient(rgba(var(--rgb-cyan-400), 0.24) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-purple-500), 0.2) 1px, transparent 1px);
     --footer-bg-gradient: linear-gradient(
         to bottom,
         transparent,
-        rgba(var(--rgb-purple-500), 0.06),
-        rgba(var(--rgb-cyan-400), 0.12)
+        rgba(var(--rgb-purple-500), 0.12),
+        rgba(var(--rgb-cyan-400), 0.1)
     );
     --footer-top-line: linear-gradient(
         90deg,
         transparent,
-        rgba(var(--rgb-purple-500), 0.42),
-        rgba(var(--rgb-cyan-400), 0.5),
+        rgba(var(--rgb-purple-500), 0.62),
+        rgba(var(--rgb-cyan-400), 0.7),
         transparent
     );
-    --footer-bottom-line: linear-gradient(90deg, transparent, rgba(var(--rgb-sky-400), 0.38), transparent);
+    --footer-bottom-line: linear-gradient(90deg, transparent, rgba(var(--rgb-cyan-400), 0.44), transparent);
     --footer-shimmer-bg: linear-gradient(
         90deg,
         transparent,
-        rgba(var(--rgb-fuchsia-500), 0.62),
-        rgba(var(--rgb-cyan-400), 0.72),
-        rgba(var(--rgb-sky-400), 0.58),
+        rgba(var(--rgb-purple-500), 0.72),
+        rgba(var(--rgb-cyan-400), 0.88),
+        rgba(var(--rgb-sky-400), 0.7),
         transparent
     );
-    --footer-title-text: rgba(var(--rgb-slate-950), 0.78);
-    --footer-copy-text: rgba(var(--rgb-slate-700), 0.72);
-    --footer-divider-left: linear-gradient(90deg, transparent, rgba(var(--rgb-fuchsia-500), 0.3));
-    --footer-divider-right: linear-gradient(90deg, transparent, rgba(var(--rgb-cyan-400), 0.3));
-    --footer-dot-bg: rgba(var(--rgb-cyan-400), 0.72);
-    --footer-dot-shadow: 0 0 0.75rem rgba(var(--rgb-cyan-400), 0.52);
+    --footer-title-text: rgba(var(--rgb-white), 0.86);
+    --footer-copy-text: rgba(var(--rgb-slate-300), 0.78);
+    --footer-divider-left: linear-gradient(90deg, transparent, rgba(var(--rgb-purple-500), 0.44));
+    --footer-divider-right: linear-gradient(90deg, transparent, rgba(var(--rgb-cyan-400), 0.44));
+    --footer-dot-bg: rgba(var(--rgb-cyan-400), 0.82);
+    --footer-dot-shadow: 0 0 0.75rem rgba(var(--rgb-cyan-400), 0.68);
 
     --settings-surface-bg: rgba(248, 252, 255, 0.78);
     --settings-surface-border: rgba(var(--rgb-sky-400), 0.18);

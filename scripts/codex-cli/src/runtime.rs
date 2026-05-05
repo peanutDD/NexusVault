@@ -6,7 +6,7 @@ use crate::skills::{
     QualityScoreSkill, ReadReviewSkill, SecurityCheckSkill, SkillContext, SkillContextInit,
     review_issue_key,
 };
-use crate::types::PrAutoFixOutput;
+use crate::types::{PrAutoFixOutput, is_review_severity_medium_or_higher};
 use std::env;
 
 #[derive(Debug, Clone)]
@@ -168,7 +168,7 @@ pub(crate) fn enforce_review_policy(ctx: &mut SkillContext) {
     for issue in data
         .issues
         .iter()
-        .filter(|i| is_medium_or_above(&i.severity))
+        .filter(|i| is_review_severity_medium_or_higher(&i.severity))
     {
         let issue_key = review_issue_key(issue);
         if fixed.contains(&issue_key) {
@@ -203,10 +203,6 @@ pub(crate) fn enforce_review_policy(ctx: &mut SkillContext) {
             ctx.pending_explanations.len()
         );
     }
-}
-
-fn is_medium_or_above(severity: &str) -> bool {
-    matches!(severity, "Critical" | "High" | "Medium")
 }
 
 pub async fn run_skill_pack_skill(
@@ -289,6 +285,27 @@ mod tests {
 
         assert_eq!(ctx.pending_explanations.len(), 1);
         assert!(ctx.pending_explanations[0].contains("empty patch"));
+    }
+
+    #[test]
+    fn enforce_review_policy_records_literal_medium_plus_as_pending() {
+        let mut ctx = test_ctx();
+        ctx.parsed_data = Some(ReviewData {
+            summary: "summary".to_string(),
+            issues: vec![ReviewIssue {
+                file: "src/a.rs".to_string(),
+                line: Some(10),
+                severity: "Medium+".to_string(),
+                description: "bug".to_string(),
+                suggestion: "fix".to_string(),
+                reason: Some("review text".to_string()),
+            }],
+        });
+
+        enforce_review_policy(&mut ctx);
+
+        assert_eq!(ctx.pending_explanations.len(), 1);
+        assert!(ctx.pending_explanations[0].contains("[Medium+]"));
     }
 
     #[test]

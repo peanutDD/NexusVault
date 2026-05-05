@@ -96,7 +96,7 @@ workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `CODEX_ALLOWED_SEVERITIES` | 允许自动修复的严重级别 | `Critical,High,Medium` |
+| `CODEX_ALLOWED_SEVERITIES` | 允许自动修复的严重级别 | `Critical,High,Medium+,Medium` |
 | `CODEX_PROTECTED_FILES` | 额外受保护文件（逗号分隔） | 空 |
 | `CODEX_EXCLUDE_DOCS` | 是否排除文档路径 | `true` |
 
@@ -113,7 +113,7 @@ workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
 1. 打开 PR。
 2. workflow 会自动评论 `/gemini review` 请求第一轮 Gemini Review。
 3. Gemini 发布 Review 后，`codex-fix` job 自动启动。
-4. 如果有可修复的 `Critical/High/Medium` 问题，Codex 修复并 push。
+4. 如果有可修复的 `Critical/High/Medium+/Medium` 问题，Codex 修复并 push。
 5. 第一轮清洁或成功推送修复后，workflow 将标签推进到 `gemini-review-round-2`，并再次评论 `/gemini review`。
 6. 第二轮清洁或成功推送修复后，workflow 将标签推进到 `gemini-review-round-max`；若没有 pending，同时添加 `gemini-review-clean`。
 7. 如果 `pending_explanations` 非空且本轮没有任何修复，workflow 添加 `gemini-review-needs-human`，不会发布“无需修复/建议合并”的误导评论。
@@ -125,6 +125,7 @@ workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
 
 - `Critical`
 - `High`
+- `Medium+`
 - `Medium`
 
 默认跳过：
@@ -138,7 +139,7 @@ workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
 可用环境变量调整：
 
 ```bash
-CODEX_ALLOWED_SEVERITIES=Critical,High,Medium
+CODEX_ALLOWED_SEVERITIES=Critical,High,Medium+,Medium
 CODEX_PROTECTED_FILES=go.mod,go.sum
 CODEX_EXCLUDE_DOCS=true
 ```

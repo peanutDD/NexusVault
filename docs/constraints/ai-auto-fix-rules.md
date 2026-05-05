@@ -3,7 +3,7 @@
 版本：v1.1 | 最后更新：2026-05-03
 
 ## 1. 决策边界 (Decision Boundaries)
-1. **优先级限制**: 严禁修复 `Low` 级别问题。AI 必须将精力集中在影响架构稳定性或安全性的 `Medium` 及以上问题。
+1. **优先级限制**: 严禁修复 `Low` 级别问题。AI 必须将精力集中在影响架构稳定性或安全性的 `Medium`、字面量 `Medium+` 及以上问题。
 2. **文件黑名单**:
     - 禁止修改锁文件: `Cargo.lock`, `package-lock.json`, `bun.lock`, `pnpm-lock.yaml`。
     - 禁止修改敏感配置: `.env`, `*.secret`, `config/*.yaml`。

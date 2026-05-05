@@ -5,29 +5,78 @@ import { describe, expect, it } from "vitest";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-function readLightThemeBlock() {
-  const css = readFileSync(resolve(__dirname, "tokens.css"), "utf8");
-  const start = css.indexOf('[data-theme="light"], .light {');
-  expect(start).toBeGreaterThanOrEqual(0);
+function readCssCustomProperties(fileName: string, selectorPattern: RegExp) {
+  const css = readFileSync(resolve(__dirname, fileName), "utf8");
+  const selector = selectorPattern.exec(css);
+  expect(selector).not.toBeNull();
 
-  const end = css.indexOf("\n}", start);
-  expect(end).toBeGreaterThan(start);
+  if (!selector) {
+    throw new Error(`Missing CSS selector: ${selectorPattern.source}`);
+  }
 
-  return css.slice(start, end);
+  const ruleBody = css.slice(selector.index + selector[0].length).match(/^[\s\S]*?(?=\s*})/)?.[0];
+  expect(ruleBody).toBeDefined();
+
+  const properties = new Map<string, string>();
+  for (const [, name, value] of (ruleBody ?? "").matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+    properties.set(name, value.trim());
+  }
+
+  return properties;
+}
+
+function readToken(tokens: Map<string, string>, name: string) {
+  const value = tokens.get(name);
+  expect(value).toBeDefined();
+  return value ?? "";
+}
+
+function expectTokenValueToUseRgbTokens(value: string, rgbTokens: string[]) {
+  for (const rgbToken of rgbTokens) {
+    expect(value).toContain(`rgba(var(${rgbToken})`);
+  }
 }
 
 describe("light theme tokens", () => {
   it("uses the Daylight Nebula palette for the page surface", () => {
-    const block = readLightThemeBlock();
-    const surfaceStart = block.indexOf("--surface-page-gradient:");
-    const surfaceEnd = block.indexOf("--glass-bg-strong:", surfaceStart);
-    expect(surfaceStart).toBeGreaterThanOrEqual(0);
-    expect(surfaceEnd).toBeGreaterThan(surfaceStart);
+    const tokens = readCssCustomProperties("tokens.css", /\[data-theme="light"\]\s*,\s*\.light\s*\{/);
+    const surface = readToken(tokens, "--surface-page-gradient");
 
-    const surface = block.slice(surfaceStart, surfaceEnd);
-    expect(surface).toContain("rgba(var(--rgb-sky-400)");
-    expect(surface).toContain("rgba(var(--rgb-cyan-400)");
-    expect(surface).toContain("rgba(var(--rgb-purple-500)");
-    expect(surface).toContain("rgba(var(--rgb-fuchsia-500)");
+    expectTokenValueToUseRgbTokens(surface, [
+      "--rgb-sky-400",
+      "--rgb-cyan-400",
+      "--rgb-purple-500",
+      "--rgb-fuchsia-500",
+    ]);
+  });
+
+  it("uses premium dark chrome for the light nav and footer bars", () => {
+    const tokens = readCssCustomProperties("tokens.css", /\[data-theme="light"\]\s*,\s*\.light\s*\{/);
+    const navSurface = readToken(tokens, "--nav-surface-bg");
+    const navButton = readToken(tokens, "--nav-btn-bg");
+    const navButtonHover = readToken(tokens, "--nav-btn-bg-hover");
+    const navButtonShadow = readToken(tokens, "--nav-btn-shadow");
+    const footerSurface = readToken(tokens, "--footer-surface-bg");
+
+    expect(navSurface).toMatch(/\blinear-gradient\s*\(/);
+    expect(navButton).toMatch(/\blinear-gradient\s*\(/);
+    expect(navButtonHover).toMatch(/\blinear-gradient\s*\(/);
+    expect(footerSurface).toMatch(/\blinear-gradient\s*\(/);
+    expectTokenValueToUseRgbTokens(navSurface, ["--rgb-slate-950", "--rgb-cyan-400", "--rgb-purple-500"]);
+    expectTokenValueToUseRgbTokens(navButton, ["--rgb-slate-950", "--rgb-slate-900"]);
+    expectTokenValueToUseRgbTokens(navButtonHover, ["--rgb-slate-950", "--rgb-slate-900"]);
+    expectTokenValueToUseRgbTokens(navButtonShadow, ["--rgb-slate-950", "--rgb-cyan-400", "--rgb-white"]);
+    expectTokenValueToUseRgbTokens(footerSurface, ["--rgb-slate-950", "--rgb-cyan-400", "--rgb-purple-500"]);
+  });
+
+  it("keeps macOS light title bars in premium dark chrome instead of plain white", () => {
+    const tokens = readCssCustomProperties("platform.css", /(?:^|\})\s*\.platform-macos\s*\{/m);
+    const titlebar = readToken(tokens, "--macos-titlebar-bg");
+    const navSurface = readToken(tokens, "--nav-surface-bg");
+
+    expect(titlebar).toContain("rgb(var(--rgb-slate-950))");
+    expect(titlebar).not.toContain("rgb(var(--rgb-white))");
+    expect(navSurface).toMatch(/\blinear-gradient\s*\(/);
+    expect(navSurface).toContain("rgba(var(--rgb-cyan-400)");
   });
 });
