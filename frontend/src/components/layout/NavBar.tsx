@@ -3,7 +3,6 @@ import { APP_NAME } from "../../config/env";
 import { cn } from "../../utils/cn";
 import { ArrowLeft, LogOut, Settings } from "lucide-react";
 import ThemeToggle from "../common/ThemeToggle";
-import { FILE_LIST_SAVE_SCROLL_EVENT } from "../../constants/navigationScroll";
 
 interface NavBarProps {
   title?: string;
@@ -27,10 +26,6 @@ export default function NavBar({
     event.preventDefault();
     event.stopPropagation();
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-  const handleSettingsClick = () => {
-    window.dispatchEvent(new Event(FILE_LIST_SAVE_SCROLL_EVENT));
-    navigate("/settings");
   };
 
   return (
@@ -162,7 +157,7 @@ export default function NavBar({
               {showSettings && (
                 <button
                   type="button"
-                  onClick={handleSettingsClick}
+                  onClick={() => navigate("/settings")}
                   aria-label="Settings"
                   className={cn(
                     "nav-btn inline-flex items-center justify-center whitespace-nowrap",
