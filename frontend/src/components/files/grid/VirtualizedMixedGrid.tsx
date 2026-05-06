@@ -202,12 +202,17 @@ export default function VirtualizedMixedGrid({
   return (
     <div
       ref={containerRef}
-      className="w-full"
+      className="virtualized-scroll-stability w-full"
       aria-label="文件列表"
       data-oid="op1m421"
     >
       {topSpacerHeight > 0 && (
-        <div ref={topSpacerRef} aria-hidden="true" data-oid="j-f01-:" />
+        <div
+          ref={topSpacerRef}
+          className="virtualized-spacer"
+          aria-hidden="true"
+          data-oid="j-f01-:"
+        />
       )}
 
       {visibleRange.endRow >= visibleRange.startRow &&
@@ -293,7 +298,12 @@ export default function VirtualizedMixedGrid({
         )}
 
       {bottomSpacerHeight > 0 && (
-        <div ref={bottomSpacerRef} aria-hidden="true" data-oid="wn2oua8" />
+        <div
+          ref={bottomSpacerRef}
+          className="virtualized-spacer"
+          aria-hidden="true"
+          data-oid="wn2oua8"
+        />
       )}
     </div>
   );

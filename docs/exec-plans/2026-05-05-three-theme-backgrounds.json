@@ -1,0 +1,45 @@
+{
+  "date": "2026-05-05",
+  "title": "Three Theme Backgrounds",
+  "style": "Distinct token-driven visual backgrounds",
+  "scope": {
+    "included": [
+      "dark theme page background",
+      "light theme page background",
+      "purple theme page background",
+      "file list themed background rendering",
+      "token regression coverage",
+      "quality score update"
+    ],
+    "excluded": [
+      "new theme modes",
+      "routing changes",
+      "theme persistence changes",
+      "component hierarchy changes",
+      "animation-heavy background components"
+    ]
+  },
+  "assumptions": [
+    "The request targets the existing dark, light, and purple themes.",
+    "Token-first CSS changes are the lowest-risk way to affect all pages.",
+    "The files page should no longer stay flat when a theme has a rich background."
+  ],
+  "risks": [
+    "Gradient opacity can harm text contrast.",
+    "macOS platform overrides can flatten the background.",
+    "Gradient tokens must be consumed through background-image/background shorthand."
+  ],
+  "dependencies": [
+    "frontend/src/styles/tokens.css",
+    "frontend/src/components/layout/PageLayout.tsx",
+    "frontend/src/styles/lightThemeTokens.test.ts",
+    "docs/quality-score.md"
+  ],
+  "verification": [
+    "npm run test -- src/styles/lightThemeTokens.test.ts",
+    "npm run check:tokens:strict:layout",
+    "npm run lint",
+    "git diff --check",
+    "npm run build"
+  ]
+}

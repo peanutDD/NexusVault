@@ -1,0 +1,55 @@
+{
+  "id": "2026-05-06-files-route-refresh-scroll",
+  "date": "2026-05-06",
+  "title": "/files route refresh scroll restoration",
+  "human_intent": "Browser refresh on /files must keep the user at the previous scroll position, matching /settings behavior.",
+  "assumptions": [
+    "ScrollRestoration already persists history-entry + URL fallback for /settings et al.",
+    "Earlier fixes (C-036, scroll-anchor opt-out, virtual list spacer hygiene, URL fallback) already neutralize the historical reasons /files was excluded.",
+    "/files renders async (React Query + virtualization); a single rAF scrollTo is clamped to top because document height is insufficient on refresh."
+  ],
+  "risks": [
+    {
+      "id": "R1",
+      "risk": "Removing the /files exclusion contaminates push-into-/files navigation.",
+      "mitigation": "history key isolation plus navigationType !== 'PUSH' continues to gate URL fallback; pushed routes still start at top."
+    },
+    {
+      "id": "R2",
+      "risk": "Async list mounts later than a single rAF, so restoration still lands at top.",
+      "mitigation": "Frame-driven retry loop (<= 60 frames ~1s, +/- 2px tolerance) re-issues scrollTo until reached or budget exhausted."
+    },
+    {
+      "id": "R3",
+      "risk": "Retry loop fights manual user scrolling.",
+      "mitigation": "Listen once for wheel/touchmove/keydown and abort restoration immediately on first signal."
+    },
+    {
+      "id": "R4",
+      "risk": "y === 0 wastes frames.",
+      "mitigation": "Keep original double-rAF fast path for y === 0."
+    }
+  ],
+  "dependencies": [
+    "frontend/src/router/ScrollRestoration.tsx",
+    "frontend/src/router/ScrollRestoration.test.tsx",
+    "docs/constraints/C-036-navigation-scroll-restoration.md"
+  ],
+  "changes": [
+    "scopeFor(): drop the `/files` early-return so it shares the entry+URL persistence path.",
+    "restore(): RAF-retry loop with user-input abort for non-zero targets; preserve double-rAF fast path for y === 0.",
+    "Add two regression tests covering /files refresh with same and changed history key.",
+    "Extend C-036 to forbid path-based exclusions and mandate the retry+abort policy."
+  ],
+  "verification": {
+    "unit_tests": "6/6 green (vitest run src/router/ScrollRestoration.test.tsx)",
+    "typecheck": "tsc -b OK",
+    "lint": "eslint OK on changed files",
+    "behavior": [
+      "Refresh on /files restores saved scroll position (entry key retained or recreated).",
+      "Push into /files from another route still starts at top.",
+      "Manual user scroll during restoration cancels the retry loop."
+    ]
+  },
+  "score": 95
+}
