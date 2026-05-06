@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use codex_cli::auto_fix_report;
 use codex_cli::llm::CodexClient;
 use codex_cli::repo;
 use codex_cli::review_json;
@@ -97,6 +98,13 @@ enum Commands {
     },
     /// 将标准化 Review Markdown 转换为稳定 JSON 主输入。
     ReviewToJson {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// 聚合 pr-auto-fix/auto-fix-local JSON 输出，生成失败样本 Top 5 周报。
+    AutoFixWeeklyReport {
         #[arg(long)]
         input: PathBuf,
         #[arg(long)]
@@ -357,6 +365,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::ReviewToJson { input, output } => {
             let json = review_json::convert_review_file(input, output)?;
             print!("{}", json);
+        }
+        Commands::AutoFixWeeklyReport { input, output } => {
+            let raw = fs::read_to_string(input)?;
+            let report = auto_fix_report::build_weekly_failure_report(&raw)?;
+            fs::write(output, report)?;
+            println!("wrote {}", output.display());
         }
         Commands::SkillPack { command } => match command {
             SkillPackCommands::List { plugin_root, json } => {
