@@ -12,11 +12,13 @@ import { useFiles } from '../../hooks/files/useFiles';
 import { useFolderContents } from '../../hooks/folders/useFolders';
 import { useFileUI } from '../../hooks/files/useFileUI';
 import { useFileActions } from '../../hooks/files/useFileActions';
+import { FILE_LIST_SAVE_SCROLL_EVENT } from '../../constants/navigationScroll';
 
 // 重新导出 FILE_TYPE_LABELS 以保持向后兼容
 export { FILE_TYPE_LABELS };
 
 const GROUP_FILES_WORKER_THRESHOLD = 50;
+const SCROLL_RESTORE_HEIGHT_TOLERANCE = 80;
 
 function getTypeKey(mime: string): string {
   if (mime.toLowerCase().startsWith('image/gif')) return 'gif';
@@ -519,6 +521,13 @@ export function useFileList() {
   }, []);
 
   const location = useLocation();
+  const lastScrollAppliedLocationKeyRef = useRef<string | null>(null);
+  const skipNextCleanupSaveRef = useRef(false);
+
+  const saveScrollPosition = useCallback(
+    (folderId: string | null = currentFolderId) => {
+      try {
+        const key = getScrollStorageKey(folderId);
   const lastScrollAppliedKeyRef = useRef<string | null>(null);
   const pendingScrollRestoreStorageKeyRef = useRef<string | null>(null);
 
@@ -535,6 +544,11 @@ export function useFileList() {
         /* ignore */
       }
     },
+    [currentFolderId, getScrollStorageKey],
+  );
+
+  const navigateToFolder = useCallback((folderId: string | null) => {
+    saveScrollPosition(currentFolderId);
     [getScrollStorageKey],
   );
 
@@ -579,10 +593,24 @@ export function useFileList() {
       if (frame !== null) return;
       frame = requestAnimationFrame(() => {
         frame = null;
+        skipNextCleanupSaveRef.current = false;
         saveScrollPosition();
       });
     };
 
+    const saveBeforeRouteChange = () => {
+      saveScrollPosition();
+      skipNextCleanupSaveRef.current = true;
+    };
+
+    const saveWhenHidden = () => {
+      if (document.visibilityState === 'hidden') saveNow();
+    };
+
+    window.addEventListener('scroll', scheduleSave, { passive: true });
+    window.addEventListener('beforeunload', saveNow);
+    window.addEventListener('pagehide', saveNow);
+    window.addEventListener(FILE_LIST_SAVE_SCROLL_EVENT, saveBeforeRouteChange);
     const saveWhenHidden = () => {
       if (document.visibilityState === 'hidden') {
         saveNow();
@@ -595,6 +623,16 @@ export function useFileList() {
 
     return () => {
       window.removeEventListener('scroll', scheduleSave);
+      window.removeEventListener('beforeunload', saveNow);
+      window.removeEventListener('pagehide', saveNow);
+      window.removeEventListener(FILE_LIST_SAVE_SCROLL_EVENT, saveBeforeRouteChange);
+      document.removeEventListener('visibilitychange', saveWhenHidden);
+      if (skipNextCleanupSaveRef.current) {
+        if (frame !== null) cancelAnimationFrame(frame);
+        frame = null;
+        skipNextCleanupSaveRef.current = false;
+        return;
+      }
       window.removeEventListener('pagehide', saveNow);
       document.removeEventListener('visibilitychange', saveWhenHidden);
       saveNow();
@@ -604,6 +642,17 @@ export function useFileList() {
   useEffect(() => {
     if (loadingFiles || loadingFolders) return;
     const key = getScrollStorageKey(currentFolderId);
+    if (lastScrollAppliedLocationKeyRef.current === location.key) return;
+
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem(key);
+    } catch {
+      raw = null;
+    }
+
+    if (!raw) {
+      lastScrollAppliedLocationKeyRef.current = location.key;
     const scrollAppliedKey = `${location.key}:${key}`;
     if (lastScrollAppliedKeyRef.current === scrollAppliedKey) return;
     lastScrollAppliedKeyRef.current = scrollAppliedKey;
@@ -627,6 +676,36 @@ export function useFileList() {
       });
     };
 
+    const y = Number.parseInt(raw, 10);
+    if (!Number.isFinite(y) || y < 0) return;
+    const documentHeight = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight,
+    );
+    const reachableY = Math.max(0, documentHeight - window.innerHeight);
+    const needsMoreHeight = y > reachableY + SCROLL_RESTORE_HEIGHT_TOLERANCE;
+    if (needsMoreHeight && hasMore) {
+      if (!loadingMore) void loadMore();
+      return;
+    }
+
+    lastScrollAppliedLocationKeyRef.current = location.key;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+      });
+    });
+  }, [
+    currentFolderId,
+    files.length,
+    folders.length,
+    getScrollStorageKey,
+    hasMore,
+    loadMore,
+    loadingFiles,
+    loadingFolders,
+    loadingMore,
+    location.key,
     let raw: string | null = null;
     try {
       raw = sessionStorage.getItem(key);

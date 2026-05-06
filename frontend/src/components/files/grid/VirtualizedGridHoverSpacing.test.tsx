@@ -81,6 +81,9 @@ describe("virtualized grid hover spacing", () => {
       "pt-1",
       "mb-2",
     );
+    expect(container.querySelector("[aria-label='文件列表']")).toHaveClass(
+      "virtualized-scroll-stability",
+    );
   });
 
   it("keeps hover headroom inside mixed plain-sort rows", () => {
@@ -114,6 +117,9 @@ describe("virtualized grid hover spacing", () => {
     expect(container.querySelector(".virtualized-row")).toHaveClass(
       "pt-1",
       "mb-2",
+    );
+    expect(container.querySelector("[aria-label='文件列表']")).toHaveClass(
+      "virtualized-scroll-stability",
     );
   });
 });

@@ -1,0 +1,4 @@
+const __vite_ssr_import_0__ = await __vite_ssr_import__("/node_modules/@testing-library/jest-dom/dist/vitest.mjs");
+
+//# sourceMappingSource=vite-node
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJtYXBwaW5ncyI6IkFBQUEiLCJuYW1lcyI6W10sImlnbm9yZUxpc3QiOltdLCJzb3VyY2VzIjpbInNldHVwVGVzdHMudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0ICdAdGVzdGluZy1saWJyYXJ5L2plc3QtZG9tL3ZpdGVzdCc7XG5cbiJdLCJmaWxlIjoiL1VzZXJzL3R5b25lL2dpdGh1Yi91cGxvYWQtZG93bmxvYWQtdXRpbC9mcm9udGVuZC9zcmMvdGVzdC9zZXR1cFRlc3RzLnRzIn0=
