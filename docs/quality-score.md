@@ -2,6 +2,9 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-06 | auto-fix weekly failure report and reviewer template | 95 | 新增 `codex-auto-fix auto-fix-weekly-report`，从自动修复 JSON/JSONL 聚合 `apply_fail_reason`、文件路径、`fallback_used`、`final_status` Top 5；Review 指南固化自动修复友好模板；新增 C-040，明确没有真实失败样本前不得默认增加 `git apply --check`。 |
+| 2026-05-06 | codex-cli review JSON shell wrapper and PR handoff | 95 | 补齐 `scripts/codex-cli/tools/review_to_json.sh` 兼容入口，委托给 `codex-auto-fix review-to-json`，避免第二套 parser；新增红绿测试验证 wrapper 输出与 CLI 输出一致，新增 C-039 永久约束，并准备随 review JSON 主输入改动一起提交 PR。 |
+| 2026-05-06 | codex-cli review JSON primary input and auto-fix hardening | 95 | 将 `review-to-json` 产物升级为默认 `pr-auto-fix --review-json` 主输入，并保留 `USE_REVIEW_JSON=false` Markdown 回滚；`StructuredReview` 转为 `ReviewData` 时保留 constraints，`ReadReviewSkill` 复用预解析数据。`git apply` 失败现在分类并把真实 stderr、最新源码、max hunks/changed-lines 预算注入重试 prompt；full-file fallback 增加允许前缀、保护文件、300 行默认上限；stdout 增加 `apply_fail_reason`、`retry_count`、`fallback_used`、`final_status`。新增 C-038、e2e/workflow/review JSON 覆盖。 |
 | 2026-05-06 | /files route refresh scroll restoration | 95 | 移除 `ScrollRestoration.scopeFor()` 中对 `/files` 的路径排除，让主文件浏览页与 `/settings` 共享 history-entry + URL fallback 持久化；`restore()` 对非零目标改为帧驱动重试循环（≤120 帧≈2s、容差 ±2px），并监听 `wheel`/`touchmove`/`keydown` 一次触发即放弃，避免与异步列表/用户手动滚动竞争。新增两条 `/files` 刷新红绿测试（同 history key 与 key 变化），扩展 C-036 禁止路径白/黑名单并强制重试+用户输入退出策略，新增 exec-plan 双件。`vitest` 6/6、`tsc -b`、`eslint` 通过。 |
 | 2026-05-06 | extend virtual list frame budget | 95 | 修复进入文件夹刷新后滚动位置丢失：延长 `RESTORE_MAX_ATTEMPTS` 从 60 到 120（约 2 秒），给虚拟列表挂载和 `loadMore` 补页足够时间。`tsc -b`、`eslint` 通过。 |
 | 2026-05-06 | refresh deep file-list scroll | 95 | 修复刷新文件列表深位置不生效：识别刷新后 infinite query 可能只加载第一页，保存位置超过当前 document 高度时浏览器会夹住 `scrollTo`；恢复逻辑改为高度不够且 `hasMore` 时先 `loadMore`，列表变长后继续重试，达到高度或无更多页时再标记已恢复。新增深位置刷新补页与多轮补页回归测试；导航聚焦测试、lint、全量 test、build 通过。 |

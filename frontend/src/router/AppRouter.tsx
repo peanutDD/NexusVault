@@ -2,7 +2,6 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { RequireAuth } from "../providers/AuthProvider";
 import Spinner from "../components/common/feedback/Spinner";
-import ScrollRestoration from "./ScrollRestoration";
 
 const Login = lazy(() => import("../components/auth/Login"));
 const Register = lazy(() => import("../components/auth/Register"));
@@ -27,7 +26,6 @@ function LazyRoute({ children }: { children: ReactNode }) {
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <ScrollRestoration />
       <Routes>
         <Route
           path="/login"

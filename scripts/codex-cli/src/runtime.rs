@@ -6,7 +6,7 @@ use crate::skills::{
     QualityScoreSkill, ReadReviewSkill, SecurityCheckSkill, SkillContext, SkillContextInit,
     review_issue_key,
 };
-use crate::types::{PrAutoFixOutput, is_review_severity_medium_or_higher};
+use crate::types::{PrAutoFixOutput, ReviewData, is_review_severity_medium_or_higher};
 use std::env;
 
 #[derive(Debug, Clone)]
@@ -52,9 +52,30 @@ pub async fn pr_auto_fix_with_options(
     options: AutoFixOptions,
     client: &CodexClient,
 ) -> Result<String, Box<dyn std::error::Error>> {
+    pr_auto_fix_with_options_and_review_data(
+        pr_number,
+        gemini_review,
+        max_rounds,
+        yes,
+        options,
+        None,
+        client,
+    )
+    .await
+}
+
+pub async fn pr_auto_fix_with_options_and_review_data(
+    pr_number: u32,
+    gemini_review: &str,
+    max_rounds: u8,
+    yes: bool,
+    options: AutoFixOptions,
+    initial_review_data: Option<ReviewData>,
+    client: &CodexClient,
+) -> Result<String, Box<dyn std::error::Error>> {
     let repo_name = env::var("GITHUB_REPOSITORY").unwrap_or_default();
     let rules_text = repo::read_rules(Some(&options.repo_root), options.rules_file.as_deref());
-    let ctx = SkillContext::new(SkillContextInit {
+    let mut ctx = SkillContext::new(SkillContextInit {
         pr_number,
         repo: repo_name,
         repo_root: options.repo_root,
@@ -66,6 +87,7 @@ pub async fn pr_auto_fix_with_options(
         changelog_path: options.changelog_path,
         disable_changelog: options.disable_changelog,
     });
+    ctx.parsed_data = initial_review_data;
     run_auto_fix_loop(ctx, client).await
 }
 
@@ -76,8 +98,19 @@ pub async fn auto_fix_local(
     options: AutoFixOptions,
     client: &CodexClient,
 ) -> Result<String, Box<dyn std::error::Error>> {
+    auto_fix_local_with_review_data(review_text, max_rounds, yes, options, None, client).await
+}
+
+pub async fn auto_fix_local_with_review_data(
+    review_text: &str,
+    max_rounds: u8,
+    yes: bool,
+    options: AutoFixOptions,
+    initial_review_data: Option<ReviewData>,
+    client: &CodexClient,
+) -> Result<String, Box<dyn std::error::Error>> {
     let rules_text = repo::read_rules(Some(&options.repo_root), options.rules_file.as_deref());
-    let ctx = SkillContext::new(SkillContextInit {
+    let mut ctx = SkillContext::new(SkillContextInit {
         pr_number: 0,
         repo: String::new(),
         repo_root: options.repo_root,
@@ -89,6 +122,7 @@ pub async fn auto_fix_local(
         changelog_path: options.changelog_path,
         disable_changelog: options.disable_changelog,
     });
+    ctx.parsed_data = initial_review_data;
     run_auto_fix_loop(ctx, client).await
 }
 
@@ -127,6 +161,7 @@ async fn run_auto_fix_loop(
     let pending_count = ctx.pending_explanations.len();
     let has_pending = pending_count > 0;
     let review_clean = ctx.security_passed && !ctx.push_blocked && !has_pending;
+    let final_status = final_status(ctx.push_blocked, has_pending, review_clean);
 
     let output = PrAutoFixOutput {
         fixed: if ctx.auto_push {
@@ -142,11 +177,57 @@ async fn run_auto_fix_loop(
         has_pending,
         pending_count,
         review_clean,
+        apply_fail_reason: apply_fail_reason(&ctx.fix_attempts),
+        retry_count: retry_count(&ctx.fix_attempts),
+        fallback_used: fallback_used(&ctx.fix_attempts),
+        final_status,
         summary,
         pending_explanations: ctx.pending_explanations,
     };
 
     Ok(serde_json::to_string(&output)?)
+}
+
+fn apply_fail_reason(attempts: &[crate::skills::FixAttempt]) -> Option<String> {
+    attempts
+        .iter()
+        .filter(|attempt| {
+            !attempt.success
+                && matches!(attempt.stage.as_str(), "patch_apply" | "patch_apply_retry")
+        })
+        .filter_map(|attempt| attempt.reason.as_deref())
+        .find_map(|reason| {
+            ["malformed_diff", "context_mismatch", "drift", "unknown"]
+                .iter()
+                .find(|classification| reason.contains(**classification))
+                .map(|classification| classification.to_string())
+        })
+}
+
+fn retry_count(attempts: &[crate::skills::FixAttempt]) -> usize {
+    attempts
+        .iter()
+        .filter(|attempt| attempt.stage == "patch_apply_retry")
+        .count()
+}
+
+fn fallback_used(attempts: &[crate::skills::FixAttempt]) -> bool {
+    attempts
+        .iter()
+        .any(|attempt| attempt.stage == "file_replacement_fallback" && attempt.success)
+}
+
+fn final_status(push_blocked: bool, has_pending: bool, review_clean: bool) -> String {
+    if push_blocked {
+        "needs-human"
+    } else if has_pending {
+        "pending"
+    } else if review_clean {
+        "clean"
+    } else {
+        "needs-human"
+    }
+    .to_string()
 }
 
 pub(crate) fn enforce_review_policy(ctx: &mut SkillContext) {
@@ -269,6 +350,7 @@ mod tests {
                 severity: "Medium".to_string(),
                 description: "bug".to_string(),
                 suggestion: "fix".to_string(),
+                constraints: Vec::new(),
                 reason: Some("review text".to_string()),
             }],
         });
@@ -298,6 +380,7 @@ mod tests {
                 severity: "Medium+".to_string(),
                 description: "bug".to_string(),
                 suggestion: "fix".to_string(),
+                constraints: Vec::new(),
                 reason: Some("review text".to_string()),
             }],
         });
@@ -320,6 +403,7 @@ mod tests {
                     severity: "Medium".to_string(),
                     description: "first".to_string(),
                     suggestion: "fix".to_string(),
+                    constraints: Vec::new(),
                     reason: None,
                 },
                 ReviewIssue {
@@ -328,6 +412,7 @@ mod tests {
                     severity: "Medium".to_string(),
                     description: "second".to_string(),
                     suggestion: "fix".to_string(),
+                    constraints: Vec::new(),
                     reason: None,
                 },
             ],

@@ -101,6 +101,31 @@
 
 审查时尽量附上：**条款出处（本指南章节或 rule 链接）+ 建议改法或参考文件**，便于作者一次改对。
 
+#### 自动修复友好的 Review 模板
+
+需要交给 `codex-auto-fix` 自动处理的评论，优先使用下面的固定结构。每条评论只描述一个文件里的一个小范围问题，避免把命名、逻辑、重构混在同一条反馈里。
+
+```markdown
+- Severity: Medium
+- File: src/example.rs
+- Line: 42
+- Rule: file-sql-user-scope
+- Problem: 当前查询缺少 user_id 条件，可能跨用户读取数据。
+- Expected: 在同一查询里增加 user_id 过滤，保持现有函数签名不变。
+- Constraints:
+  - only modify src/example.rs
+  - no signature change
+```
+
+字段要求：
+
+- `Severity` 必须使用 `Critical`、`High`、`Medium+`、`Medium`、`Low` 之一。
+- `File` 必须是仓库相对路径，且单条评论只允许一个文件。
+- `Line` 指向最接近问题的当前行号。
+- `Problem` 写清楚实际风险，不写泛泛评价。
+- `Expected` 写可执行的目标行为，不要求大重构。
+- `Constraints` 写自动修复边界，例如禁止改签名、只改测试、只改当前文件。
+
 ### 2.7 审查优先级与耗时参考
 
 | 优先级 | 含义 | 典型条款 |
@@ -863,4 +888,4 @@ A: 参考 CODE_REVIEW_GUIDE §11.5「可度量与闭环」，定期统计 Review
 ---
 
 **文档版本**: v2.2  
-**最后更新**: 2026-05-01
+**最后更新**: 2026-05-06

@@ -11,6 +11,8 @@ pub struct ReviewIssue {
     pub severity: String,
     pub description: String,
     pub suggestion: String,
+    #[serde(default)]
+    pub constraints: Vec<String>,
     pub reason: Option<String>,
 }
 
@@ -19,6 +21,28 @@ pub struct ReviewIssue {
 pub struct ReviewData {
     pub summary: String,
     pub issues: Vec<ReviewIssue>,
+}
+
+/// Deterministic JSON produced from a standardized Markdown review.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+pub struct StructuredReview {
+    pub review_id: String,
+    pub summary: String,
+    pub issues: Vec<StructuredReviewIssue>,
+}
+
+/// Single actionable issue in the review JSON input.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+pub struct StructuredReviewIssue {
+    pub id: String,
+    pub severity: String,
+    pub file: String,
+    pub line: u32,
+    pub rule: String,
+    pub problem: String,
+    pub expected: String,
+    pub constraints: Vec<String>,
+    pub acceptance: Vec<String>,
 }
 
 fn review_severity_token(severity: &str) -> String {
@@ -80,6 +104,10 @@ pub struct PrAutoFixOutput {
     pub has_pending: bool,
     pub pending_count: usize,
     pub review_clean: bool,
+    pub apply_fail_reason: Option<String>,
+    pub retry_count: usize,
+    pub fallback_used: bool,
+    pub final_status: String,
     pub summary: Option<String>,
     pub pending_explanations: Vec<String>,
 }

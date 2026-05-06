@@ -212,18 +212,13 @@ export default function VirtualizedFileGrid({
   return (
     <div
       ref={containerRef}
-      className="virtualized-scroll-stability w-full"
+      className="w-full"
       aria-label="文件列表"
       data-oid="l.ic_.p"
     >
       {/* 顶部占位，保证滚动高度接近真实高度 */}
       {topSpacerHeight > 0 && (
-        <div
-          ref={topSpacerRef}
-          className="virtualized-spacer"
-          aria-hidden="true"
-          data-oid="cp-0vp-"
-        />
+        <div ref={topSpacerRef} aria-hidden="true" data-oid="cp-0vp-" />
       )}
 
       {visibleRange.endRow >= visibleRange.startRow &&
@@ -271,12 +266,7 @@ export default function VirtualizedFileGrid({
 
       {/* 底部占位，补齐剩余高度 */}
       {bottomSpacerHeight > 0 && (
-        <div
-          ref={bottomSpacerRef}
-          className="virtualized-spacer"
-          aria-hidden="true"
-          data-oid="badkmi9"
-        />
+        <div ref={bottomSpacerRef} aria-hidden="true" data-oid="badkmi9" />
       )}
     </div>
   );

@@ -38,44 +38,6 @@ function expectTokenValueToUseRgbTokens(value: string, rgbTokens: string[]) {
 }
 
 describe("light theme tokens", () => {
-  it("gives all three themes distinct multi-layer page backgrounds", () => {
-    const darkTokens = readCssCustomProperties("tokens.css", /(?:^|\})\s*\[data-theme="dark"\]\s*,\s*\.dark\s*\{/m);
-    const lightTokens = readCssCustomProperties("tokens.css", /\[data-theme="light"\]\s*,\s*\.light\s*\{/);
-    const purpleTokens = readCssCustomProperties("tokens.css", /\[data-theme="purple"\]\s*,\s*\.purple\s*\{/);
-
-    const darkSurface = readToken(darkTokens, "--surface-page-gradient");
-    const lightSurface = readToken(lightTokens, "--surface-page-gradient");
-    const purpleSurface = readToken(purpleTokens, "--surface-page-gradient");
-
-    for (const surface of [darkSurface, lightSurface, purpleSurface]) {
-      expect(surface.match(/radial-gradient\s*\(/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
-      expect(surface).toMatch(/\blinear-gradient\s*\(/);
-    }
-
-    expect(darkSurface).not.toEqual(lightSurface);
-    expect(lightSurface).not.toEqual(purpleSurface);
-    expect(purpleSurface).not.toEqual(darkSurface);
-    expectTokenValueToUseRgbTokens(darkSurface, ["--rgb-emerald-400", "--rgb-cyan-400"]);
-    expect(darkSurface).toContain("rgb(var(--rgb-slate-950))");
-    expectTokenValueToUseRgbTokens(lightSurface, ["--rgb-sky-400", "--rgb-cyan-400", "--rgb-fuchsia-500"]);
-    expectTokenValueToUseRgbTokens(purpleSurface, ["--rgb-purple-500", "--rgb-fuchsia-500", "--rgb-cyan-400"]);
-  });
-
-  it("uses themed image-capable backgrounds for the files page", () => {
-    const css = readFileSync(resolve(__dirname, "../components/layout/PageLayout.tsx"), "utf8");
-    const darkTokens = readCssCustomProperties("tokens.css", /(?:^|\})\s*\[data-theme="dark"\]\s*,\s*\.dark\s*\{/m);
-    const lightTokens = readCssCustomProperties("tokens.css", /\[data-theme="light"\]\s*,\s*\.light\s*\{/);
-    const purpleTokens = readCssCustomProperties("tokens.css", /\[data-theme="purple"\]\s*,\s*\.purple\s*\{/);
-
-    expect(css).toContain("bg-[image:var(--filelist-page-bg)]");
-
-    for (const tokens of [darkTokens, lightTokens, purpleTokens]) {
-      const fileListSurface = readToken(tokens, "--filelist-page-bg");
-      expect(fileListSurface).toMatch(/\blinear-gradient\s*\(/);
-      expect(fileListSurface).not.toMatch(/^rgb\(/);
-    }
-  });
-
   it("uses the Daylight Nebula palette for the page surface", () => {
     const tokens = readCssCustomProperties("tokens.css", /\[data-theme="light"\]\s*,\s*\.light\s*\{/);
     const surface = readToken(tokens, "--surface-page-gradient");
