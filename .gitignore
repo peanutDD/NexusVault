@@ -74,6 +74,8 @@ coverage/
 *.tmp
 *.temp
 .cache/
+.corust-tmp/
+**/.corust-tmp/
 .superpowers/
 
 # GitHub Actions Runner

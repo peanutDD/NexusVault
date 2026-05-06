@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import type { FileMetadata } from '../../types/files';
 import type { Folder } from '../../types/folders';
 import { MIME_FILTER_FOLDERS } from '../../constants';
@@ -12,13 +12,11 @@ import { useFiles } from '../../hooks/files/useFiles';
 import { useFolderContents } from '../../hooks/folders/useFolders';
 import { useFileUI } from '../../hooks/files/useFileUI';
 import { useFileActions } from '../../hooks/files/useFileActions';
-import { FILE_LIST_SAVE_SCROLL_EVENT } from '../../constants/navigationScroll';
 
 // 重新导出 FILE_TYPE_LABELS 以保持向后兼容
 export { FILE_TYPE_LABELS };
 
 const GROUP_FILES_WORKER_THRESHOLD = 50;
-const SCROLL_RESTORE_HEIGHT_TOLERANCE = 80;
 
 function getTypeKey(mime: string): string {
   if (mime.toLowerCase().startsWith('image/gif')) return 'gif';
@@ -449,7 +447,7 @@ export function useFileList() {
 
   // ── 即时 DOM 隐藏：确认删除时立刻把卡片从页面移除 ─────────────────────────────
   // 不依赖 React Query 缓存更新时机，用本地 state 直接驱动 filter，解决
-  // "第二次删除 DOM 不立刻更新"的 bug。
+  // \"第二次删除 DOM 不立刻更新\"的 bug。
   const [pendingDeleteFileIds, setPendingDeleteFileIds] = useState<Set<string>>(new Set());
   const [pendingDeleteFolderIds, setPendingDeleteFolderIds] = useState<Set<string>>(new Set());
 
@@ -500,61 +498,27 @@ export function useFileList() {
     [files, pendingDeleteFileIds],
   );
 
-  const scrollStorageContextRef = useRef({ currentFolderId, debouncedSearch, mimeType, sortBy });
-  scrollStorageContextRef.current = {
-    currentFolderId,
-    debouncedSearch,
-    mimeType,
-    sortBy,
-  };
+  const getScrollStorageKey = useCallback(
+    (folderId: string | null) => {
+      const folderKey = folderId ?? 'root';
+      const q = (debouncedSearch ?? '').trim();
+      const mimeKey = mimeType || 'all';
+      return `fileListScroll:${folderKey}:${sortBy}:${mimeKey}:${q}`;
+    },
+    [debouncedSearch, mimeType, sortBy]
+  );
 
-  const getScrollStorageKey = useCallback((folderId: string | null) => {
-    const {
-      debouncedSearch: storedSearch,
-      mimeType: storedMimeType,
-      sortBy: storedSortBy,
-    } = scrollStorageContextRef.current;
-    const folderKey = folderId ?? 'root';
-    const q = (storedSearch ?? '').trim();
-    const mimeKey = storedMimeType || 'all';
-    return `fileListScroll:${folderKey}:${storedSortBy}:${mimeKey}:${q}`;
-  }, []);
-
+  const navType = useNavigationType();
   const location = useLocation();
   const lastScrollAppliedLocationKeyRef = useRef<string | null>(null);
-  const skipNextCleanupSaveRef = useRef(false);
-
-  const saveScrollPosition = useCallback(
-    (folderId: string | null = currentFolderId) => {
-      try {
-        const key = getScrollStorageKey(folderId);
-  const lastScrollAppliedKeyRef = useRef<string | null>(null);
-  const pendingScrollRestoreStorageKeyRef = useRef<string | null>(null);
-
-  const saveScrollPosition = useCallback(
-    (folderId: string | null = scrollStorageContextRef.current.currentFolderId, force = false) => {
-      try {
-        const key = getScrollStorageKey(folderId);
-        if (!force && pendingScrollRestoreStorageKeyRef.current === key) {
-          return;
-        }
-        const y = Math.max(0, Math.round(window.scrollY || 0));
-        sessionStorage.setItem(key, String(y));
-      } catch {
-        /* ignore */
-      }
-    },
-    [currentFolderId, getScrollStorageKey],
-  );
 
   const navigateToFolder = useCallback((folderId: string | null) => {
-    saveScrollPosition(currentFolderId);
-    [getScrollStorageKey],
-  );
-
-  const navigateToFolder = useCallback((folderId: string | null) => {
-    saveScrollPosition(currentFolderId, true);
-    pendingScrollRestoreStorageKeyRef.current = getScrollStorageKey(folderId);
+    try {
+      const key = getScrollStorageKey(currentFolderId);
+      sessionStorage.setItem(key, String(window.scrollY || 0));
+    } catch {
+      /* ignore */
+    }
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -569,80 +533,33 @@ export function useFileList() {
     );
     setSelectedFiles(new Set());
     setSelectedFolders(new Set());
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      });
+    });
   }, [
     setSearchParams,
     setSelectedFiles,
     setSelectedFolders,
     currentFolderId,
-    saveScrollPosition,
     getScrollStorageKey,
   ]);
-
-  useEffect(() => {
-    let frame: number | null = null;
-
-    const saveNow = () => {
-      if (frame !== null) {
-        cancelAnimationFrame(frame);
-        frame = null;
-      }
-      saveScrollPosition();
-    };
-
-    const scheduleSave = () => {
-      if (frame !== null) return;
-      frame = requestAnimationFrame(() => {
-        frame = null;
-        skipNextCleanupSaveRef.current = false;
-        saveScrollPosition();
-      });
-    };
-
-    const saveBeforeRouteChange = () => {
-      saveScrollPosition();
-      skipNextCleanupSaveRef.current = true;
-    };
-
-    const saveWhenHidden = () => {
-      if (document.visibilityState === 'hidden') saveNow();
-    };
-
-    window.addEventListener('scroll', scheduleSave, { passive: true });
-    window.addEventListener('beforeunload', saveNow);
-    window.addEventListener('pagehide', saveNow);
-    window.addEventListener(FILE_LIST_SAVE_SCROLL_EVENT, saveBeforeRouteChange);
-    const saveWhenHidden = () => {
-      if (document.visibilityState === 'hidden') {
-        saveNow();
-      }
-    };
-
-    window.addEventListener('scroll', scheduleSave, { passive: true });
-    window.addEventListener('pagehide', saveNow);
-    document.addEventListener('visibilitychange', saveWhenHidden);
-
-    return () => {
-      window.removeEventListener('scroll', scheduleSave);
-      window.removeEventListener('beforeunload', saveNow);
-      window.removeEventListener('pagehide', saveNow);
-      window.removeEventListener(FILE_LIST_SAVE_SCROLL_EVENT, saveBeforeRouteChange);
-      document.removeEventListener('visibilitychange', saveWhenHidden);
-      if (skipNextCleanupSaveRef.current) {
-        if (frame !== null) cancelAnimationFrame(frame);
-        frame = null;
-        skipNextCleanupSaveRef.current = false;
-        return;
-      }
-      window.removeEventListener('pagehide', saveNow);
-      document.removeEventListener('visibilitychange', saveWhenHidden);
-      saveNow();
-    };
-  }, [saveScrollPosition]);
 
   useEffect(() => {
     if (loadingFiles || loadingFolders) return;
     const key = getScrollStorageKey(currentFolderId);
     if (lastScrollAppliedLocationKeyRef.current === location.key) return;
+    lastScrollAppliedLocationKeyRef.current = location.key;
+
+    if (navType !== 'POP') {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        });
+      });
+      return;
+    }
 
     let raw: string | null = null;
     try {
@@ -650,95 +567,15 @@ export function useFileList() {
     } catch {
       raw = null;
     }
-
-    if (!raw) {
-      lastScrollAppliedLocationKeyRef.current = location.key;
-    const scrollAppliedKey = `${location.key}:${key}`;
-    if (lastScrollAppliedKeyRef.current === scrollAppliedKey) return;
-    lastScrollAppliedKeyRef.current = scrollAppliedKey;
-    pendingScrollRestoreStorageKeyRef.current = key;
-
-    let cancelled = false;
-    const clearPendingScrollRestore = () => {
-      if (pendingScrollRestoreStorageKeyRef.current === key) {
-        pendingScrollRestoreStorageKeyRef.current = null;
-      }
-    };
-    const restoreScroll = (top: number) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (cancelled) return;
-          window.scrollTo({ top, left: 0, behavior: 'auto' });
-          requestAnimationFrame(() => {
-            if (!cancelled) clearPendingScrollRestore();
-          });
-        });
-      });
-    };
-
+    if (!raw) return;
     const y = Number.parseInt(raw, 10);
     if (!Number.isFinite(y) || y < 0) return;
-    const documentHeight = Math.max(
-      document.documentElement.scrollHeight,
-      document.body.scrollHeight,
-    );
-    const reachableY = Math.max(0, documentHeight - window.innerHeight);
-    const needsMoreHeight = y > reachableY + SCROLL_RESTORE_HEIGHT_TOLERANCE;
-    if (needsMoreHeight && hasMore) {
-      if (!loadingMore) void loadMore();
-      return;
-    }
-
-    lastScrollAppliedLocationKeyRef.current = location.key;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         window.scrollTo({ top: y, left: 0, behavior: 'auto' });
       });
     });
-  }, [
-    currentFolderId,
-    files.length,
-    folders.length,
-    getScrollStorageKey,
-    hasMore,
-    loadMore,
-    loadingFiles,
-    loadingFolders,
-    loadingMore,
-    location.key,
-    let raw: string | null = null;
-    try {
-      raw = sessionStorage.getItem(key);
-    } catch {
-      raw = null;
-    }
-    if (!raw) {
-      restoreScroll(0);
-      return () => {
-        cancelled = true;
-        clearPendingScrollRestore();
-      };
-    }
-    const y = Number.parseInt(raw, 10);
-    if (!Number.isFinite(y) || y < 0) {
-      clearPendingScrollRestore();
-      return;
-    }
-    restoreScroll(y);
-    return () => {
-      cancelled = true;
-      clearPendingScrollRestore();
-    };
-  }, [
-    currentFolderId,
-    debouncedSearch,
-    getScrollStorageKey,
-    loadingFiles,
-    loadingFolders,
-    location.key,
-    mimeType,
-    sortBy,
-  ]);
+  }, [currentFolderId, getScrollStorageKey, loadingFiles, loadingFolders, navType, location.key]);
 
   const displayFolders = useMemo(() => {
     if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
