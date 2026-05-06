@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use codex_cli::llm::CodexClient;
 use codex_cli::repo;
+use codex_cli::review_json;
 use codex_cli::runtime;
 use std::env;
 use std::fs;
@@ -49,7 +50,9 @@ enum Commands {
         #[arg(long)]
         pr_number: u32,
         #[arg(long)]
-        gemini_review: String,
+        gemini_review: Option<String>,
+        #[arg(long)]
+        review_json: Option<PathBuf>,
         #[arg(long, default_value = "2")]
         max_rounds: u8,
         #[arg(long, default_value = "false")]
@@ -78,7 +81,9 @@ enum Commands {
         #[arg(long)]
         repo_root: PathBuf,
         #[arg(long)]
-        review_file: PathBuf,
+        review_file: Option<PathBuf>,
+        #[arg(long)]
+        review_json: Option<PathBuf>,
         #[arg(long, default_value = "2")]
         max_rounds: u8,
         #[arg(long, default_value = "false")]
@@ -89,6 +94,13 @@ enum Commands {
         changelog_path: Option<PathBuf>,
         #[arg(long, default_value_t = false)]
         disable_changelog: bool,
+    },
+    /// 将标准化 Review Markdown 转换为稳定 JSON 主输入。
+    ReviewToJson {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
     },
     /// 加载本地 Skill Pack：自动发现 `skills/*/SKILL.md` 并可执行。
     SkillPack {
@@ -190,6 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::PrAutoFix {
             pr_number,
             gemini_review,
+            review_json: review_json_path,
             max_rounds,
             yes,
             repo_root,
@@ -205,6 +218,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let client = CodexClient::new()?;
             // 日志走 stderr；stdout 只输出 JSON 结果（供 workflow 解析）。
             eprintln!("🤖 启动 PR Auto-Fix #{}", pr_number);
+            if gemini_review.is_none() && review_json_path.is_none() {
+                eprintln!("❌ 需要提供 --review-json 或 --gemini-review");
+                std::process::exit(2);
+            }
+            let initial_review_data = review_json_path
+                .as_deref()
+                .map(review_json::read_review_data_file)
+                .transpose()?;
             let root = repo_root
                 .as_ref()
                 .map(|p| p.to_string_lossy().to_string())
@@ -212,8 +233,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::env::var("GITHUB_WORKSPACE").unwrap_or_else(|_| ".".into())
                 });
 
-            let mut effective_review = gemini_review.to_string();
+            let mut effective_review = gemini_review.clone().unwrap_or_default();
             if let Some(pre_skill) = pre_skill.as_deref() {
+                if effective_review.is_empty() {
+                    eprintln!("❌ --pre-skill 需要 --gemini-review 作为输入");
+                    std::process::exit(2);
+                }
                 let plugin_root = pre_skill_pack_root
                     .as_ref()
                     .map(|p| p.to_string_lossy().to_string())
@@ -254,12 +279,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 disable_changelog: *disable_changelog,
                 enable_pr_comments: !*no_pr_comments,
             };
-            let result = runtime::pr_auto_fix_with_options(
+            let result = runtime::pr_auto_fix_with_options_and_review_data(
                 *pr_number,
                 &effective_review,
                 *max_rounds,
                 *yes,
                 options,
+                initial_review_data,
                 &client,
             )
             .await;
@@ -274,6 +300,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::AutoFixLocal {
             repo_root,
             review_file,
+            review_json: review_json_path,
             max_rounds,
             yes,
             rules_file,
@@ -282,10 +309,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let client = CodexClient::new()?;
             eprintln!(
-                "🤖 启动本地 Auto-Fix: repo_root={:?}, review_file={:?}",
-                repo_root, review_file
+                "🤖 启动本地 Auto-Fix: repo_root={:?}, review_file={:?}, review_json={:?}",
+                repo_root, review_file, review_json_path
             );
-            let review_text = fs::read_to_string(review_file)?;
+            if review_file.is_none() && review_json_path.is_none() {
+                eprintln!("❌ 需要提供 --review-json 或 --review-file");
+                std::process::exit(2);
+            }
+            let review_text = review_file
+                .as_ref()
+                .map(fs::read_to_string)
+                .transpose()?
+                .unwrap_or_default();
+            let initial_review_data = review_json_path
+                .as_deref()
+                .map(review_json::read_review_data_file)
+                .transpose()?;
             let root = repo_root.to_string_lossy().to_string();
             let rules_file_path = rules_file.as_ref().map(|p| p.to_string_lossy().to_string());
             let changelog_path_str = changelog_path
@@ -298,8 +337,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 disable_changelog: *disable_changelog,
                 enable_pr_comments: false,
             };
-            let result =
-                runtime::auto_fix_local(&review_text, *max_rounds, *yes, options, &client).await;
+            let result = runtime::auto_fix_local_with_review_data(
+                &review_text,
+                *max_rounds,
+                *yes,
+                options,
+                initial_review_data,
+                &client,
+            )
+            .await;
             match result {
                 Ok(output) => println!("{}", output),
                 Err(e) => {
@@ -307,6 +353,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::process::exit(1);
                 }
             }
+        }
+        Commands::ReviewToJson { input, output } => {
+            let json = review_json::convert_review_file(input, output)?;
+            print!("{}", json);
         }
         Commands::SkillPack { command } => match command {
             SkillPackCommands::List { plugin_root, json } => {

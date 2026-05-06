@@ -2,6 +2,8 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-06 | codex-cli review JSON shell wrapper and PR handoff | 95 | 补齐 `scripts/codex-cli/tools/review_to_json.sh` 兼容入口，委托给 `codex-auto-fix review-to-json`，避免第二套 parser；新增红绿测试验证 wrapper 输出与 CLI 输出一致，新增 C-039 永久约束，并准备随 review JSON 主输入改动一起提交 PR。 |
+| 2026-05-06 | codex-cli review JSON primary input and auto-fix hardening | 95 | 将 `review-to-json` 产物升级为默认 `pr-auto-fix --review-json` 主输入，并保留 `USE_REVIEW_JSON=false` Markdown 回滚；`StructuredReview` 转为 `ReviewData` 时保留 constraints，`ReadReviewSkill` 复用预解析数据。`git apply` 失败现在分类并把真实 stderr、最新源码、max hunks/changed-lines 预算注入重试 prompt；full-file fallback 增加允许前缀、保护文件、300 行默认上限；stdout 增加 `apply_fail_reason`、`retry_count`、`fallback_used`、`final_status`。新增 C-038、e2e/workflow/review JSON 覆盖。 |
 | 2026-05-05 | codex-cli medium plus severity | 95 | 修复 Gemini Review 字面量 `Medium+` 未进入自动修复/pending 的漏洞：severity 判定集中到 `types.rs`，默认 allow-list 扩展为 `Critical,High,Medium+,Medium`，`CODEX_ALLOWED_SEVERITIES=Medium` 仍覆盖 `Medium+`；新增红绿回归测试、C-035 约束与使用文档。 |
 | 2026-05-05 | light tech chrome nav footer | 95 | Light 模式顶部标题栏与底部展示栏改为深色高级科技 chrome：nav/footer token 使用 slate/cyan/purple 发光层，macOS titlebar light override 不再回退白色，NavBar 改用 background shorthand 正确渲染渐变；补充 token 回归测试、桌面/移动截图证据，目标测试、lint、build 与布局治理通过。 |
 | 2026-05-05 | frontend fluid sizing PR5 global | 95 | 将 `check:fluid-sizing` 扩展 `--scope=global` 和 signed px 检测；全局 tokens、CTA/nav shadow、devtools min-height、preview text calc 与 hover translate 固定视觉尺寸收敛为 `rem`，observer/clipboard 非视觉例外显式标注；补充 in-app browser `/files` 截图证明。 |

@@ -14,6 +14,7 @@ permissions:
 
 env:
   MAX_ROUNDS: 2
+  USE_REVIEW_JSON: true
 
 jobs:
   codex-fix:
@@ -102,10 +103,36 @@ jobs:
             fi
           fi
 
+          printf '%s\n' "$REVIEW_TEXT" > /tmp/review.md
+
           DELIM="REVIEW_BODY_$(date +%s%N)_${RANDOM}"
           echo "REVIEW_BODY<<${DELIM}" >> "$GITHUB_ENV"
           echo "$REVIEW_TEXT" >> "$GITHUB_ENV"
           echo "${DELIM}" >> "$GITHUB_ENV"
+
+      - name: Convert review markdown to JSON primary input
+        if: steps.round.outputs.current_round != 'gemini-review-round-max' && env.USE_REVIEW_JSON == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if ! cargo run --manifest-path scripts/codex-cli/Cargo.toml --bin codex-auto-fix -- \
+            review-to-json \
+            --input /tmp/review.md \
+            --output /tmp/review.json; then
+            gh label create "gemini-review-needs-human" \
+              --color "b60205" \
+              --description "Automated review loop requires human decision" || true
+            gh pr edit "${PR_NUMBER}" --add-label "gemini-review-needs-human"
+            gh pr comment "${PR_NUMBER}" \
+              --body "🤖 **Codex 自动修复暂停**：Review JSON 转换失败，已切换为人工兜底。若需临时回滚到 Markdown 输入，请设置 `USE_REVIEW_JSON=false` 后重跑 workflow。"
+            exit 1
+          fi
+
+          jq -e '.issues and (.issues | type == "array")' /tmp/review.json >/dev/null
+          echo "REVIEW_JSON_PATH=/tmp/review.json" >> "$GITHUB_ENV"
+          echo "review_issue_count=$(jq '.issues | length' /tmp/review.json)"
 
       - name: 调用 codex-auto-fix pr-auto-fix
         if: steps.round.outputs.current_round != 'gemini-review-round-max'
@@ -129,9 +156,16 @@ jobs:
             exit 1
           fi
 
+          REVIEW_ARGS=()
+          if [[ "${USE_REVIEW_JSON}" == "true" ]]; then
+            REVIEW_ARGS=(--review-json "$REVIEW_JSON_PATH")
+          else
+            REVIEW_ARGS=(--gemini-review "$REVIEW_BODY")
+          fi
+
           RESULT=$(cargo run --manifest-path scripts/codex-cli/Cargo.toml --bin codex-auto-fix -- pr-auto-fix \
             --pr-number "${PR_NUMBER}" \
-            --gemini-review "$REVIEW_BODY" \
+            "${REVIEW_ARGS[@]}" \
             --max-rounds ${{ env.MAX_ROUNDS }} \
             --yes)
 

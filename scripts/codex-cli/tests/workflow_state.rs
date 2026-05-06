@@ -101,6 +101,76 @@ fn codex_auto_fix_concurrency_is_job_scoped() {
     );
 }
 
+#[test]
+fn codex_auto_fix_passes_review_json_to_auto_fix() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    let extract_index = workflow
+        .find("name: 提取 Gemini Review 完整内容")
+        .expect("workflow should extract the complete Gemini review first");
+    let json_index = workflow
+        .find("name: Convert review markdown to JSON primary input")
+        .expect("workflow should convert extracted review markdown to primary JSON input");
+    let auto_fix_index = workflow
+        .find("name: 调用 codex-auto-fix pr-auto-fix")
+        .expect("workflow should run codex-auto-fix after JSON validation");
+
+    assert!(
+        extract_index < json_index && json_index < auto_fix_index,
+        "review extraction should feed JSON validation before auto-fix runs"
+    );
+    assert!(
+        workflow.contains("printf '%s\\n' \"$REVIEW_TEXT\" > /tmp/review.md"),
+        "workflow should persist the exact extracted review body for JSON conversion"
+    );
+    assert!(
+        workflow.contains("review-to-json")
+            && workflow.contains("--input /tmp/review.md")
+            && workflow.contains("--output /tmp/review.json"),
+        "workflow should call codex-auto-fix review-to-json on the extracted markdown"
+    );
+    assert!(
+        workflow.contains("REVIEW_JSON_PATH=/tmp/review.json"),
+        "workflow should expose the JSON path for downstream observability"
+    );
+    assert!(
+        workflow.contains("--review-json \"$REVIEW_JSON_PATH\""),
+        "workflow should drive pr-auto-fix from the validated JSON input"
+    );
+}
+
+#[test]
+fn codex_auto_fix_supports_markdown_rollback_switch() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        workflow.contains("USE_REVIEW_JSON: true"),
+        "workflow should default to JSON review input"
+    );
+    assert!(
+        workflow.contains("env.USE_REVIEW_JSON == 'true'"),
+        "JSON conversion should be skipped when USE_REVIEW_JSON=false"
+    );
+    assert!(
+        workflow.contains("if [[ \"${USE_REVIEW_JSON}\" == \"true\" ]]"),
+        "auto-fix step should branch on the rollback switch"
+    );
+    assert!(
+        workflow.contains("--review-json \"$REVIEW_JSON_PATH\""),
+        "JSON branch should pass the validated review JSON"
+    );
+    assert!(
+        workflow.contains("--gemini-review \"$REVIEW_BODY\""),
+        "Markdown rollback branch should preserve the previous input path"
+    );
+    assert!(
+        workflow.contains("gemini-review-needs-human"),
+        "JSON conversion failures should route to the human fallback label/comment"
+    );
+}
+
 fn plan(envs: &[(&str, &str)]) -> HashMap<String, String> {
     let script = workflow_script();
     let output = Command::new("bash")

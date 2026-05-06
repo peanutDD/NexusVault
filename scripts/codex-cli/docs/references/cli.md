@@ -9,6 +9,7 @@
 
 - 本地单文件辅助：`review` / `refactor` / `doc`
 - 自动修复流水线：`pr-auto-fix` / `auto-fix-local`
+- 结构化转换：`review-to-json`
 
 命令定义见：[codex.rs](file:///Users/tyone/github/upload-download-util/scripts/codex-cli/src/bin/codex.rs)
 
@@ -49,7 +50,7 @@ codex doc --path src/lib.rs --kind api
 ```bash
 codex-auto-fix pr-auto-fix \
   --pr-number 123 \
-  --gemini-review "$GEMINI_REVIEW" \
+  --review-json /tmp/review.json \
   --max-rounds 2 \
   --yes \
   --repo-root "$GITHUB_WORKSPACE"
@@ -58,7 +59,8 @@ codex-auto-fix pr-auto-fix \
 参数说明：
 
 - `--pr-number`：PR 号（用于评论与 changelog 记录）
-- `--gemini-review`：Gemini Review 的完整文本（通常是 Markdown）
+- `--review-json`：结构化 Review JSON 文件，主修复链路优先使用该输入
+- `--gemini-review`：Gemini Review 的完整文本（Markdown 兼容输入）
 - `--max-rounds`：外层 Gemini Review 轮次上限提示；单次命令只处理当前这一条 Gemini Review
 - `--yes`：允许提交/推送（未传则 Dry-Run）
 - `--repo-root`：仓库根目录（默认取 `GITHUB_WORKSPACE` 或当前目录）
@@ -92,7 +94,7 @@ codex-auto-fix pr-auto-fix \
 ```bash
 codex-auto-fix auto-fix-local \
   --repo-root /abs/path/to/any-repo \
-  --review-file /abs/path/to/review.md \
+  --review-json /abs/path/to/review.json \
   --max-rounds 2 \
   --yes
 ```
@@ -100,8 +102,75 @@ codex-auto-fix auto-fix-local \
 参数说明：
 
 - `--repo-root`：目标仓库根目录（必须是 git 仓库，且能执行 `git apply`）
-- `--review-file`：包含 review 文本的文件
+- `--review-json`：结构化 Review JSON 文件，主修复链路优先使用该输入
+- `--review-file`：包含 review 文本的文件（Markdown 兼容输入）
 - `--yes`：允许提交/推送（未传则 Dry-Run，不会提交/推送）
 - `--rules-file / --changelog-path / --disable-changelog`：同 `pr-auto-fix`
 
 输出（stdout）：同 `pr-auto-fix`。
+
+### pr-auto-fix 输出观测字段
+
+stdout 只输出一份 JSON，workflow 可直接用 `jq` 读取。关键字段包括：
+
+- `fixed`：本轮是否产生修复（Dry-Run 下表示本地已改动）。
+- `pending_count` / `pending_explanations`：未自动修复的问题数量与原因。
+- `apply_fail_reason`：`git apply` 失败分类，可能为 `malformed_diff`、
+  `context_mismatch`、`drift`、`unknown` 或 `null`。
+- `retry_count`：重试 apply 的次数。
+- `fallback_used`：是否成功使用 full-file fallback。
+- `final_status`：`clean`、`pending` 或 `needs-human`。
+
+GitHub Actions 默认使用 `USE_REVIEW_JSON=true` 和 `--review-json`。临时回滚时
+设置 `USE_REVIEW_JSON=false`，workflow 会跳过 JSON 转换并使用
+`--gemini-review "$REVIEW_BODY"`。
+
+### review-to-json
+
+把标准化 Gemini Review Markdown 转成稳定 JSON。GitHub Actions 主链路会把该
+JSON 作为 `pr-auto-fix --review-json` 输入，避免在修复前再次依赖 LLM 解析 Markdown。
+
+```bash
+codex-auto-fix review-to-json \
+  --input /tmp/review.md \
+  --output /tmp/review.json
+```
+
+兼容 shell 入口保留在 `scripts/codex-cli/tools/review_to_json.sh`，用于沿用早期
+workflow 片段；该脚本委托给同一个 Rust 子命令，不维护第二套 parser。
+
+输入 Markdown 支持重复的问题块：
+
+```markdown
+- Severity: Medium
+- File: src/lib.rs
+- Line: 42
+- Rule: no-unused-branch
+- Problem: 条件恒为 true。
+- Expected: 基于输入判断，避免死分支。
+- Constraints:
+  - only modify src/lib.rs
+  - no signature change
+```
+
+输出文件与 stdout 都是相同的 JSON；过程日志只写 stderr。
+
+```json
+{
+  "review_id": "",
+  "summary": "1 actionable issues",
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "severity": "Medium",
+      "file": "src/lib.rs",
+      "line": 42,
+      "rule": "no-unused-branch",
+      "problem": "条件恒为 true。",
+      "expected": "基于输入判断，避免死分支。",
+      "constraints": ["only modify src/lib.rs", "no signature change"],
+      "acceptance": []
+    }
+  ]
+}
+```

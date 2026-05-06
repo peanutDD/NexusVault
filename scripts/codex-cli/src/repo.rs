@@ -5,6 +5,13 @@ use std::process::Command as StdCommand;
 use std::process::Output;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PatchApplyResult {
+    pub applied: bool,
+    pub stderr: String,
+    pub fail_reason: Option<String>,
+}
+
 /// 从大模型输出中提取第一个代码块内容。
 ///
 /// 为什么需要：
@@ -269,6 +276,14 @@ pub fn apply_patch_safely_in(
     file_path: &str,
     patch: &str,
 ) -> Result<bool, Box<dyn std::error::Error>> {
+    Ok(apply_patch_with_details_in(repo_root, file_path, patch)?.applied)
+}
+
+pub fn apply_patch_with_details_in(
+    repo_root: &str,
+    file_path: &str,
+    patch: &str,
+) -> Result<PatchApplyResult, Box<dyn std::error::Error>> {
     let tmp = std::env::temp_dir().join(format!("codex-cli-{}.patch", file_path.replace('/', "_")));
     fs::write(&tmp, patch)?;
 
@@ -279,14 +294,35 @@ pub fn apply_patch_safely_in(
         .output()?;
 
     let _ = fs::remove_file(&tmp);
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
     if !output.status.success() {
-        eprintln!(
-            "git apply failed for {}: {}",
-            file_path,
-            String::from_utf8_lossy(&output.stderr).trim()
-        );
+        eprintln!("git apply failed for {}: {}", file_path, stderr);
     }
-    Ok(output.status.success())
+    Ok(PatchApplyResult {
+        applied: output.status.success(),
+        fail_reason: (!output.status.success()).then(|| classify_apply_failure(&stderr)),
+        stderr,
+    })
+}
+
+pub fn classify_apply_failure(stderr: &str) -> String {
+    let lower = stderr.to_ascii_lowercase();
+    if lower.contains("corrupt patch")
+        || lower.contains("malformed")
+        || lower.contains("unrecognized input")
+        || lower.contains("patch fragment without header")
+    {
+        "malformed_diff".to_string()
+    } else if lower.contains("patch does not apply") || lower.contains("patch failed") {
+        "context_mismatch".to_string()
+    } else if lower.contains("no such file")
+        || lower.contains("does not exist")
+        || lower.contains("not in index")
+    {
+        "drift".to_string()
+    } else {
+        "unknown".to_string()
+    }
 }
 
 /// 提交并推送本轮修复。

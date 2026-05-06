@@ -8,6 +8,7 @@
 pub mod llm;
 pub mod pipeline;
 pub mod repo;
+pub mod review_json;
 pub mod runtime;
 pub mod skills;
 pub mod types;

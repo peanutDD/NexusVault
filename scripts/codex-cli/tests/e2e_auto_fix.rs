@@ -44,6 +44,57 @@ fn auto_fix_local_applies_patch_with_local_codex_command() {
 }
 
 #[test]
+fn auto_fix_local_uses_review_json_as_primary_input() {
+    let workspace = TestWorkspace::new("json-primary");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review JSON 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review_json = workspace.path.join("review.json");
+    fs::write(
+        &review_json,
+        r#"{
+  "review_id": "",
+  "summary": "1 actionable issues",
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "severity": "Medium",
+      "file": "src/lib.rs",
+      "line": 1,
+      "rule": "test-json-primary",
+      "problem": "fix value",
+      "expected": "return 2",
+      "constraints": ["only modify src/lib.rs"],
+      "acceptance": []
+    }
+  ]
+}
+"#,
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("json_primary");
+
+    let output = run_auto_fix_json(&repo, &review_json, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["summary"], "1 actionable issues");
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["pending_count"], 0);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
 fn auto_fix_local_blocks_push_when_security_audit_fails() {
     let workspace = TestWorkspace::new("blocked");
     let repo = workspace.create_repo();
@@ -162,6 +213,115 @@ fn auto_fix_local_retries_patch_generation_after_apply_failure() {
 }
 
 #[test]
+fn retry_prompt_includes_apply_stderr_latest_source_and_budget() {
+    let workspace = TestWorkspace::new("retry-prompt-context");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("retry_prompt_context");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["retry_count"], 1);
+    assert_eq!(json["apply_fail_reason"], "context_mismatch");
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
+fn full_file_fallback_is_blocked_for_large_files() {
+    let workspace = TestWorkspace::new("large-fallback-blocked");
+    let repo = workspace.create_repo();
+    let mut large_file = String::new();
+    large_file.push_str("pub fn value() -> i32 {\n    1\n}\n");
+    for i in 0..301 {
+        large_file.push_str(&format!("// filler {i}\n"));
+    }
+    write_repo_file(&repo, "src/lib.rs", &large_file);
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("full_file_fallback_large");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], false);
+    assert_eq!(json["fallback_used"], false);
+    assert_eq!(json["final_status"], "pending");
+    assert!(
+        json["pending_explanations"][0]
+            .as_str()
+            .unwrap()
+            .contains("完整文件兜底被阻止")
+    );
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, large_file);
+}
+
+#[test]
+fn output_json_exposes_retry_fallback_and_final_status_metrics() {
+    let workspace = TestWorkspace::new("metrics");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("full_file_fallback");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["retry_count"], 1);
+    assert_eq!(json["fallback_used"], true);
+    assert_eq!(json["final_status"], "clean");
+    assert_eq!(json["apply_fail_reason"], "malformed_diff");
+}
+
+#[test]
 fn auto_fix_local_falls_back_to_full_file_after_corrupt_patch_retry() {
     let workspace = TestWorkspace::new("full-file-fallback");
     let repo = workspace.create_repo();
@@ -209,6 +369,32 @@ fn run_auto_fix(repo: &Path, review: &Path, fake_agent: &Path, yes: bool) -> std
             repo.to_str().unwrap(),
             "--review-file",
             review.to_str().unwrap(),
+            "--disable-changelog",
+            "--max-rounds",
+            "2",
+        ])
+        .env("CODEX_AGENT_COMMAND", fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30");
+    if yes {
+        command.arg("--yes");
+    }
+    command.output().unwrap()
+}
+
+fn run_auto_fix_json(
+    repo: &Path,
+    review_json: &Path,
+    fake_agent: &Path,
+    yes: bool,
+) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    command
+        .args([
+            "auto-fix-local",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--review-json",
+            review_json.to_str().unwrap(),
             "--disable-changelog",
             "--max-rounds",
             "2",
@@ -321,6 +507,10 @@ mode="{mode}"
 
 case "$prompt" in
   *"代码审查专家"*)
+    if [ "$mode" = "json_primary" ]; then
+      printf '%s\n' 'json_primary mode must not invoke Markdown review parsing' >&2
+      exit 42
+    fi
     if [ "$mode" = "same_file_partial" ]; then
       printf '%s\n' '{{"summary":"two same-file issues","issues":[{{"severity":"Medium","file":"src/lib.rs","line":1,"description":"fix value","suggestion":"","reason":"first"}},{{"severity":"Medium","file":"src/lib.rs","line":5,"description":"fix other","suggestion":"","reason":"second"}}]}}'
     else
@@ -369,6 +559,59 @@ diff --git a/src/lib.rs b/src/lib.rs
 @@ -1,3 +1,3 @@
  pub fn value() -> i32 {{
 -    99
++    2
+ }}
+PATCH
+      fi
+      exit 0
+    fi
+    if [ "$mode" = "retry_prompt_context" ]; then
+      if printf '%s' "$prompt" | grep -q "上一版补丁应用失败"; then
+        printf '%s' "$prompt" | grep -q "git apply stderr:" || exit 43
+        printf '%s' "$prompt" | grep -q "patch does not apply" || exit 44
+        printf '%s' "$prompt" | grep -q "Allowed file: src/lib.rs" || exit 45
+        printf '%s' "$prompt" | grep -q "max hunks: 3" || exit 46
+        printf '%s' "$prompt" | grep -q "max changed lines: 80" || exit 47
+        printf '%s' "$prompt" | grep -q "pub fn value() -> i32" || exit 48
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3 @@
+ pub fn value() -> i32 {{
+-    1
++    2
+ }}
+PATCH
+      else
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3 @@
+ pub fn value() -> i32 {{
+-    99
++    2
+ }}
+PATCH
+      fi
+      exit 0
+    fi
+    if [ "$mode" = "full_file_fallback_large" ]; then
+      if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
+        cat <<'FILE'
+pub fn value() -> i32 {{
+    2
+}}
+FILE
+      else
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3
+ pub fn value() -> i32 {{
+-    1
 +    2
  }}
 PATCH
