@@ -7,8 +7,12 @@ human shorthand for "Medium and higher".
 default:
 
 - `DecisionSkill` must select both severities for automatic fixes.
-- `enforce_review_policy` must mark unfixed `Medium+` findings as pending.
+- `enforce_review_policy` must mark unfixed `Medium` and `Medium+`
+  findings as pending.
 - `CODEX_ALLOWED_SEVERITIES=Medium` must still include literal `Medium+`
   findings unless the filtering contract is explicitly redesigned.
+- Workflow labels, comments, and docs must describe the actionable pending
+  scope as `Medium/Medium+`, not only `Medium+`, so human reviewers do not
+  assume plain `Medium` findings are ignored.
 
 `Low` findings remain excluded by default.
