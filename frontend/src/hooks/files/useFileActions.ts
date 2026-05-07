@@ -182,62 +182,61 @@ export function useFileActions({
     fileIds: string[],
     folderIds: string[],
   ) => {
-    const uniqueFileIds = [...new Set(fileIds)].filter(Boolean);
-    const uniqueFolderIds = [...new Set(folderIds)].filter(
-      (folderId) => folderId && folderId !== targetFolderId,
-    );
-    if (uniqueFileIds.length === 0 && uniqueFolderIds.length === 0) return;
-
-    try {
-      if (uniqueFileIds.length > 0) {
-        await folderService.moveFilesToFolder(uniqueFileIds, targetFolderId);
-      }
-      if (uniqueFolderIds.length > 0) {
-        await folderService.moveFolders(uniqueFolderIds, targetFolderId);
-      }
-      setSelectedFiles(new Set());
-      setSelectedFolders(new Set());
-      await refreshListsAfterMove();
-    } catch (err) {
-      setError(getErrorMessage(err, '移动失败'));
-    }
-  }, [
-    refreshListsAfterMove,
-    setError,
-    setSelectedFiles,
-    setSelectedFolders,
-  ]);
-
-  const resolveSelectedDragPayload = useCallback((
-    fileIds: string[],
-    folderIds: string[],
-  ) => {
     const draggedSelectedFile = fileIds.some((id) => selectedFiles.has(id));
     const draggedSelectedFolder = folderIds.some((id) =>
       selectedFolders.has(id),
     );
     const shouldMoveSelection = draggedSelectedFile || draggedSelectedFolder;
+    const resolvedFileIds = shouldMoveSelection ? selectedFileIds : fileIds;
+    const resolvedFolderIds = shouldMoveSelection ? selectedFolderIds : folderIds;
+    if (targetFolderId && resolvedFolderIds.includes(targetFolderId)) return;
 
-    return {
-      fileIds: shouldMoveSelection ? selectedFileIds : fileIds,
-      folderIds: shouldMoveSelection ? selectedFolderIds : folderIds,
-    };
-  }, [selectedFileIds, selectedFiles, selectedFolderIds, selectedFolders]);
+    const uniqueFileIds = [...new Set(resolvedFileIds)].filter(Boolean);
+    const uniqueFolderIds = [...new Set(resolvedFolderIds)].filter(
+      (folderId) => folderId && folderId !== targetFolderId,
+    );
+    if (uniqueFileIds.length === 0 && uniqueFolderIds.length === 0) return;
+
+    let movedAnything = false;
+    try {
+      if (uniqueFileIds.length > 0) {
+        await folderService.moveFilesToFolder(uniqueFileIds, targetFolderId);
+        movedAnything = true;
+      }
+      if (uniqueFolderIds.length > 0) {
+        await folderService.moveFolders(uniqueFolderIds, targetFolderId);
+        movedAnything = true;
+      }
+      setSelectedFiles(new Set());
+      setSelectedFolders(new Set());
+    } catch (err) {
+      setError(getErrorMessage(err, '移动失败'));
+    } finally {
+      if (movedAnything) {
+        await refreshListsAfterMove();
+      }
+    }
+  }, [
+    refreshListsAfterMove,
+    selectedFileIds,
+    selectedFiles,
+    selectedFolderIds,
+    selectedFolders,
+    setError,
+    setSelectedFiles,
+    setSelectedFolders,
+  ]);
 
   const handleDropOnBreadcrumb = useCallback(async (targetFolderId: string | null, e: React.DragEvent) => {
     e.preventDefault();
     const fileId = e.dataTransfer.getData('application/file-id');
     const folderId = e.dataTransfer.getData('application/folder-id');
-    const payload = resolveSelectedDragPayload(
+    await handleDropOnFolder(
+      targetFolderId,
       fileId ? [fileId] : [],
       folderId ? [folderId] : [],
     );
-    await handleDropOnFolder(
-      targetFolderId,
-      payload.fileIds,
-      payload.folderIds,
-    );
-  }, [handleDropOnFolder, resolveSelectedDragPayload]);
+  }, [handleDropOnFolder]);
 
   return {
     deleteLoading,

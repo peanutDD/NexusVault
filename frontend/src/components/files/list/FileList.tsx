@@ -134,24 +134,10 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     fileIds: string[],
     folderIds: string[],
   ) => {
-    const draggedSelectedFile = fileIds.some((id) => selectedFiles.has(id));
-    const draggedSelectedFolder = folderIds.some((id) =>
-      selectedFolders.has(id),
-    );
-    const shouldMoveSelection = draggedSelectedFile || draggedSelectedFolder;
-    const resolvedFileIds = shouldMoveSelection ? selectedFileIds : fileIds;
-    const resolvedFolderIds = shouldMoveSelection ? selectedFolderIds : folderIds;
-
-    if (resolvedFileIds.length > 0 || resolvedFolderIds.length > 0) {
-      void handleDropOnFolder(folderId, resolvedFileIds, resolvedFolderIds);
+    if (fileIds.length > 0 || folderIds.length > 0) {
+      void handleDropOnFolder(folderId, fileIds, folderIds);
     }
-  }, [
-    handleDropOnFolder,
-    selectedFileIds,
-    selectedFiles,
-    selectedFolderIds,
-    selectedFolders,
-  ]);
+  }, [handleDropOnFolder]);
 
   return (
     <div

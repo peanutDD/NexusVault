@@ -45,7 +45,7 @@ function renderActions() {
         files: [],
         selectedFiles: new Set(["file-1"]),
         selectedFolders: new Set(["folder-source"]),
-        selectedFileIds: ["file-1"],
+        selectedFileIds: ["file-1", "file-2"],
         selectedFolderIds: ["folder-source"],
         setSelectedFiles,
         setSelectedFolders,
@@ -86,7 +86,7 @@ describe("useFileActions drag move", () => {
     ]);
 
     expect(folderService.moveFilesToFolder).toHaveBeenCalledWith(
-      ["file-1"],
+      ["file-1", "file-2"],
       "folder-target",
     );
     expect(folderService.moveFolders).toHaveBeenCalledWith(
@@ -130,12 +130,28 @@ describe("useFileActions drag move", () => {
     await result.current.handleDropOnBreadcrumb(null, event);
 
     expect(folderService.moveFilesToFolder).toHaveBeenCalledWith(
-      ["file-1"],
+      ["file-1", "file-2"],
       null,
     );
     expect(folderService.moveFolders).toHaveBeenCalledWith(
       ["folder-source"],
       null,
     );
+  });
+
+  it("refreshes lists when a later move operation fails after files moved", async () => {
+    vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
+    vi.mocked(folderService.moveFolders).mockRejectedValue(new Error("boom"));
+    const { result, refetchFiles, refetchFolders, setError } = renderActions();
+
+    await result.current.handleDropOnFolder("folder-target", ["file-1"], [
+      "folder-source",
+    ]);
+
+    expect(setError).toHaveBeenCalledWith("boom");
+    await waitFor(() => {
+      expect(refetchFiles).toHaveBeenCalledTimes(1);
+      expect(refetchFolders).toHaveBeenCalledTimes(1);
+    });
   });
 });

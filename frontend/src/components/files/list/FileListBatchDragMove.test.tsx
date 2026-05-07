@@ -139,7 +139,7 @@ vi.mock("./FileListContent", () => ({
 }));
 
 describe("FileList batch drag move", () => {
-  it("expands a selected dragged file into the full current selection", async () => {
+  it("forwards dragged file ids to the action layer", async () => {
     handleDropOnFolder.mockClear();
     const user = userEvent.setup();
     render(<FileList />);
@@ -149,13 +149,13 @@ describe("FileList batch drag move", () => {
     await waitFor(() => {
       expect(handleDropOnFolder).toHaveBeenCalledWith(
         "target-folder",
-        ["file-1", "file-2"],
-        ["folder-1"],
+        ["file-1"],
+        [],
       );
     });
   });
 
-  it("expands a selected dragged folder into the full current selection", async () => {
+  it("forwards dragged folder ids to the action layer", async () => {
     handleDropOnFolder.mockClear();
     const user = userEvent.setup();
     render(<FileList />);
@@ -165,7 +165,7 @@ describe("FileList batch drag move", () => {
     await waitFor(() => {
       expect(handleDropOnFolder).toHaveBeenCalledWith(
         "target-folder",
-        ["file-1", "file-2"],
+        [],
         ["folder-1"],
       );
     });
