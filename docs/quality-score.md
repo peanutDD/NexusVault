@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-08 | auto review status list comments | 95 | 修复全自动 review 输出层缺口：状态机所有 clean/pending/blocked/round-max 评论都会指向上方 `Medium/Medium+/High/Critical 对应状态` 表；Gemini watchdog quota/timeout 评论明确说明没有新的 Gemini Review 输入，因此无法生成新的问题清单。新增红绿测试覆盖 workflow state 与 watchdog 文案，避免再靠人工补发清单。 |
 | 2026-05-08 | codex-cli priority severity closure | 95 | 全自动 review 明确覆盖 `medium priority`、`medium+ priority`、`high priority`、`critical priority` 四档写法：severity 归一化剥离 `priority` 后缀，inline badge alt 文本同样支持 `high priority`，DecisionSkill 会选择四档进入自动修复，PR 评论表头改为 `Medium/Medium+/High/Critical 对应状态`。 |
 | 2026-05-08 | codex-cli one-to-one review status | 95 | 将 PR #24 的人工 Medium/Medium+ 对应表固化进通用 codex-cli：stdout JSON 新增 `issue_statuses`，PR 评论默认渲染一一对应状态表，每个 Gemini issue 一一标记 resolved/pending/blocked；workflow needs-human 提示改为指向一一对应状态。新增 C-049 并扩展 C-046，红绿测试覆盖 JSON 与评论块。 |
 | 2026-05-07 | review fallback cleanup | 95 | 继续清理 PR #24 最新 Gemini 反馈：Settings Back 优先用 router-managed history index 判断是否有应用内上一页，直接打开 `/settings` 时 `replace` 到 `/files`，避免把用户带出应用；拖拽移动把 root/absent `""` sentinel 显式归一，source payload 不再靠 truthy filter 且不会把 `""` 传给 `moveFolders`，拖动未选中项不会清空已有 selection；Grouped/Virtual file-list 的 FileGrid drop/preview/share adapters 改为稳定引用，`handleDropOnFolder` 用 ref 读取最新 selection 以保持 callback 稳定；review-to-json 支持 `file:line: summary` inline heading。新增 C-048，扩展 C-036/C-043/C-044/C-045，目标回归测试通过。 |

@@ -193,8 +193,12 @@ fn state_script_names_medium_and_medium_plus_as_pending_scope() {
         "pending comments should cover both Medium and Medium+ findings"
     );
     assert!(
-        script.contains("按 Gemini 问题一一对应列出状态"),
-        "needs-human comment should point humans to one-to-one review status sections"
+        script.contains("问题清单见上方 Codex 分析评论"),
+        "state comments should always tell reviewers where the automatic issue list is"
+    );
+    assert!(
+        script.contains("Medium/Medium+/High/Critical 对应状态"),
+        "state comments should point humans to the automatic one-to-one status table"
     );
     assert!(
         !script.contains("medium+ review items"),

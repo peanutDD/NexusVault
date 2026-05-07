@@ -22,6 +22,17 @@ fn watchdog_plan_marks_missing_review_as_human_block() {
     assert_eq!(output["timeout_seconds"], "120");
 }
 
+#[test]
+fn watchdog_timeout_comment_explains_no_new_issue_list() {
+    let script =
+        std::fs::read_to_string(workflow_script()).expect("watchdog script should be readable");
+
+    assert!(
+        script.contains("无法生成新的 Medium/Medium+/High/Critical 问题清单"),
+        "quota or timeout comments must explain why no new issue list was generated"
+    );
+}
+
 fn plan(envs: &[(&str, &str)]) -> HashMap<String, String> {
     let script = workflow_script();
     let output = Command::new("bash")
