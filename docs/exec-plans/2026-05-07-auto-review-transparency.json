@@ -5,15 +5,20 @@
   "assumptions": [
     "The latest unresolved Medium is mobile drag target detection in FileCard.tsx.",
     "FolderCard shares the same hit-stack risk and should use the same helper.",
-    "Existing full-file fallback line limits remain conservative."
+    "Existing full-file fallback line limits remain conservative.",
+    "Settings Back should fall back to /files only when there is no previous in-app route.",
+    "Empty string drag folder ids are root/absent sentinels, not backend folder ids."
   ],
   "risks": [
     "Pointer hit stack behavior can differ by browser.",
     "PrAutoFixOutput additions must preserve existing workflow fields.",
-    "Self-drop filtering must not block valid selected file moves into the target folder."
+    "Self-drop filtering must not block valid selected file moves into the target folder.",
+    "Settings direct-entry fallback must not break previous-route query restoration.",
+    "Explicit drag id filtering must preserve root target moves."
   ],
   "verification": [
     "npm test -- FileCardMobileDragMove.test.tsx FolderCardDragMove.test.tsx useFileActionsDragMove.test.tsx",
+    "npm test -- SettingsPageRegression.test.tsx useFileActionsDragMove.test.tsx",
     "cargo test --manifest-path scripts/codex-cli/Cargo.toml review_status_block_lists_fixed_and_unfixed_medium_items",
     "cargo test --manifest-path scripts/codex-cli/Cargo.toml auto_fix_local_reports_unfixed_same_file_issue_independently",
     "cargo fmt --manifest-path scripts/codex-cli/Cargo.toml --check && cargo test --manifest-path scripts/codex-cli/Cargo.toml",

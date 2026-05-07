@@ -15,6 +15,10 @@ which Medium/Medium+ issues were fixed versus left unresolved.
   helper.
 - Existing full-file fallback line limits should remain conservative; the
   reviewer-facing gap is lack of clear fixed/unfixed issue reporting.
+- Settings Back should keep history semantics when app history exists, but direct
+  `/settings` entry needs an in-app fallback.
+- Empty string folder ids in drag/drop are root/absent sentinels in this app;
+  source payloads must not pass `""` into folder move services.
 
 ## Risks
 
@@ -22,6 +26,9 @@ which Medium/Medium+ issues were fixed versus left unresolved.
   `elementFromPoint` fallback.
 - Changing `PrAutoFixOutput` must preserve existing fields consumed by the
   workflow.
+- Detecting direct Settings entry must not break previous-route restoration with
+  query parameters.
+- Making drag payload id filtering explicit must preserve root target moves.
 
 ## Steps
 
@@ -32,4 +39,6 @@ which Medium/Medium+ issues were fixed versus left unresolved.
    comments.
 5. Fix the follow-up High self-drop guard by filtering the target folder out of
    folder moves without blocking selected files.
-6. Verify frontend and codex-cli tests, lint, build, and PR review state.
+6. Fix the follow-up Settings Back fallback and make root/absent drag sentinel
+   handling explicit.
+7. Verify frontend and codex-cli tests, lint, build, and PR review state.

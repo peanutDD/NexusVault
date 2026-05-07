@@ -26,6 +26,16 @@ interface UseFileActionsProps {
   refetchFolders: () => Promise<unknown>;
 }
 
+const ROOT_FOLDER_SENTINEL = "";
+
+function normalizeDropTargetFolderId(targetFolderId: string | null) {
+  return targetFolderId === ROOT_FOLDER_SENTINEL ? null : targetFolderId;
+}
+
+function uniquePayloadIds(ids: string[]) {
+  return [...new Set(ids)].filter((id) => id !== ROOT_FOLDER_SENTINEL);
+}
+
 export function useFileActions({
   files,
   selectedFiles,
@@ -182,7 +192,7 @@ export function useFileActions({
     fileIds: string[],
     folderIds: string[],
   ) => {
-    const normalizedTargetFolderId = targetFolderId === "" ? null : targetFolderId;
+    const normalizedTargetFolderId = normalizeDropTargetFolderId(targetFolderId);
     const draggedSelectedFile = fileIds.some((id) => selectedFiles.has(id));
     const draggedSelectedFolder = folderIds.some((id) =>
       selectedFolders.has(id),
@@ -191,9 +201,9 @@ export function useFileActions({
     const resolvedFileIds = shouldMoveSelection ? selectedFileIds : fileIds;
     const resolvedFolderIds = shouldMoveSelection ? selectedFolderIds : folderIds;
 
-    const uniqueFileIds = [...new Set(resolvedFileIds)].filter(Boolean);
-    const uniqueFolderIds = [...new Set(resolvedFolderIds)].filter(
-      (folderId) => folderId && folderId !== normalizedTargetFolderId,
+    const uniqueFileIds = uniquePayloadIds(resolvedFileIds);
+    const uniqueFolderIds = uniquePayloadIds(resolvedFolderIds).filter(
+      (folderId) => folderId !== normalizedTargetFolderId,
     );
     if (uniqueFileIds.length === 0 && uniqueFolderIds.length === 0) return;
 

@@ -212,6 +212,21 @@ describe("Settings page regressions", () => {
     );
   });
 
+  it("falls back to files home when there is no previous app route", async () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/files" element={<LocationProbe />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Back/i }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent("/files");
+  });
+
   it("does not render Settings quick nav links", () => {
     render(
       <MemoryRouter initialEntries={["/settings"]}>

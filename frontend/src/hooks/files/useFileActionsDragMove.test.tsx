@@ -150,6 +150,20 @@ describe("useFileActions drag move", () => {
     );
   });
 
+  it("does not pass the root folder sentinel as a source folder id", async () => {
+    const { result } = renderActions({
+      selectedFiles: new Set(),
+      selectedFolders: new Set(),
+      selectedFileIds: [],
+      selectedFolderIds: [],
+    });
+
+    await result.current.handleDropOnFolder("folder-target", [], [""]);
+
+    expect(folderService.moveFolders).not.toHaveBeenCalled();
+    expect(folderService.moveFilesToFolder).not.toHaveBeenCalled();
+  });
+
   it("expands selected drag payloads when dropping on breadcrumbs", async () => {
     vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
     vi.mocked(folderService.moveFolders).mockResolvedValue(1);

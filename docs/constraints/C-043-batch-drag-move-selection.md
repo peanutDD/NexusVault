@@ -22,6 +22,8 @@ and folders once, then move the group directly.
 - When the target folder is part of the selected folder payload, exclude only
   that folder from `moveFolders`; do not block selected files or other folders
   from moving into the target.
+- Treat `""` in drag payloads as the root-folder/absent-value sentinel. Normalize
+  target `""` to `null`, and never pass source `""` into `moveFolders`.
 - Use the shared `handleDropOnFolder` action path for desktop and mobile drops.
 - Keep mobile drag gated behind the long-press rule from C-042.
 - Include mobile drag callbacks in memo comparison when callbacks carry current

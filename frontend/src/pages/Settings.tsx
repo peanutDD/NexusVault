@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { formatBytes } from "../utils/format";
 import PageLayout from "../components/layout/PageLayout";
@@ -14,6 +14,7 @@ import { useApiTokens } from "../hooks/useApiTokens";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   
@@ -24,6 +25,14 @@ export default function Settings() {
     clearAuth();
     navigate("/login");
   }, [clearAuth, navigate]);
+
+  const handleBack = useCallback(() => {
+    if (location.key === "default") {
+      navigate("/files", { replace: true });
+      return;
+    }
+    navigate(-1);
+  }, [location.key, navigate]);
 
   return (
     <PageLayout
@@ -60,7 +69,7 @@ export default function Settings() {
             <div className="min-w-0" data-oid="tc3yanx">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={handleBack}
                 className="font-brand mb-4 inline-flex items-center rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:bg-[var(--settings-chip-bg-hover)] hover:border-[var(--settings-chip-border-hover)]"
                 data-oid="li-ft82"
               >
