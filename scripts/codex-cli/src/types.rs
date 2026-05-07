@@ -121,6 +121,17 @@ pub struct ChangelogEntryInput {
     pub quality_score: u8,
 }
 
+/// 写入 `docs/auto-review-ledger.md` 的 Gemini Review 问题处理记录。
+#[derive(Debug, Clone)]
+pub struct ReviewLedgerEntryInput {
+    pub pr_number: u32,
+    pub round: u8,
+    pub unix_ts: u64,
+    pub summary: Option<String>,
+    pub files: Vec<String>,
+    pub statuses: Vec<ReviewIssueStatus>,
+}
+
 /// `codex-auto-fix pr-auto-fix` 的机器可读输出（供 GitHub Actions 解析）。
 ///
 /// 约定：stdout 只输出该 JSON（日志请走 stderr），避免破坏 workflow 里的 `jq` 解析。
@@ -140,6 +151,7 @@ pub struct PrAutoFixOutput {
     pub fallback_used: bool,
     pub final_status: String,
     pub summary: Option<String>,
+    pub review_record_path: Option<String>,
     pub fixed_explanations: Vec<String>,
     pub pending_explanations: Vec<String>,
     pub issue_statuses: Vec<ReviewIssueStatus>,

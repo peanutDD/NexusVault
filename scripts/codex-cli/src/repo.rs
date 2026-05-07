@@ -1,4 +1,6 @@
-use crate::types::{ChangelogEntryInput, SkillPackResolvedSkill, SkillPackSkillMeta};
+use crate::types::{
+    ChangelogEntryInput, ReviewLedgerEntryInput, SkillPackResolvedSkill, SkillPackSkillMeta,
+};
 use std::fs;
 use std::path::Path;
 use std::process::Command as StdCommand;
@@ -222,6 +224,93 @@ pub fn append_ai_changelog_in(
     }
 
     Ok(())
+}
+
+/// 构建自动 Review 台账条目，保留每条 Gemini 问题的处理答案。
+pub fn build_auto_review_ledger_entry(input: &ReviewLedgerEntryInput) -> String {
+    let mut files = input.files.clone();
+    files.sort();
+    files.dedup();
+
+    let pr_label = if input.pr_number == 0 {
+        "local".to_string()
+    } else {
+        format!("#{}", input.pr_number)
+    };
+    let mut entry = format!(
+        "## Codex Auto Review - PR {} round {} - ts={}\n\n",
+        pr_label, input.round, input.unix_ts
+    );
+
+    if let Some(summary) = input.summary.as_deref().filter(|s| !s.trim().is_empty()) {
+        entry.push_str(&format!("总结：{}\n\n", markdown_table_cell(summary)));
+    }
+
+    entry.push_str("修改文件：\n");
+    if files.is_empty() {
+        entry.push_str("- 无代码或文档文件变更\n");
+    } else {
+        for file in &files {
+            entry.push_str(&format!("- `{}`\n", file));
+        }
+    }
+
+    entry.push_str("\n| # | Severity | File:line | Gemini 问题 | 状态 | 解决答案 / 未解决原因 |\n");
+    entry.push_str("|---|---|---|---|---|---|\n");
+    for (index, status) in input.statuses.iter().enumerate() {
+        entry.push_str(&format!(
+            "| {} | {} | `{}`:{} | {} | {} | {} |\n",
+            index + 1,
+            markdown_table_cell(&status.severity),
+            markdown_table_cell(&status.file),
+            status.line,
+            markdown_table_cell(&status.description),
+            markdown_table_cell(&status.status),
+            markdown_table_cell(&status.explanation)
+        ));
+    }
+    entry.push('\n');
+    entry
+}
+
+/// 在 repo 根目录下写入 `docs/auto-review-ledger.md`，并把该文件加入本轮提交列表。
+pub fn append_auto_review_ledger_in(
+    repo_root: &str,
+    fixed_files: &mut Vec<String>,
+    input: &ReviewLedgerEntryInput,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    if input.statuses.is_empty() {
+        return Ok(None);
+    }
+
+    let rel_path = "docs/auto-review-ledger.md";
+    let abs_path = Path::new(repo_root).join(rel_path);
+    if let Some(parent) = abs_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let entry = build_auto_review_ledger_entry(input);
+    let next = if abs_path.exists() {
+        let original = fs::read_to_string(&abs_path)?;
+        format!("{}\n{}", original.trim_end(), entry.trim_end())
+    } else {
+        format!("# Auto Review Ledger\n\n{}", entry.trim_end())
+    };
+    fs::write(&abs_path, format!("{}\n", next.trim_end()))?;
+
+    if !fixed_files.iter().any(|f| f == rel_path) {
+        fixed_files.push(rel_path.to_string());
+    }
+
+    Ok(Some(rel_path.to_string()))
+}
+
+fn markdown_table_cell(value: &str) -> String {
+    value
+        .replace('|', "\\|")
+        .replace('\n', " ")
+        .trim()
+        .to_string()
 }
 
 /// 获取当前 Unix 时间戳（秒）。

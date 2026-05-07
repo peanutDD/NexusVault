@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-08 | auto review local ledger | 95 | 修复 Gemini Review 问题解决后缺少本地可追溯记录的设计缺口：`codex-auto-fix` 在提交/反馈前写入 `docs/auto-review-ledger.md`，逐条记录 Gemini 问题、状态、解决答案/未解决原因和修改文件；stdout JSON 新增 `review_record_path`。新增 C-050、exec-plan 双件和 e2e 红绿测试。 |
 | 2026-05-08 | auto review status list comments | 95 | 修复全自动 review 输出层缺口：状态机所有 clean/pending/blocked/round-max 评论都会指向上方 `Medium/Medium+/High/Critical 对应状态` 表；Gemini watchdog quota/timeout 评论明确说明没有新的 Gemini Review 输入，因此无法生成新的问题清单。新增红绿测试覆盖 workflow state 与 watchdog 文案，避免再靠人工补发清单。 |
 | 2026-05-08 | codex-cli priority severity closure | 95 | 全自动 review 明确覆盖 `medium priority`、`medium+ priority`、`high priority`、`critical priority` 四档写法：severity 归一化剥离 `priority` 后缀，inline badge alt 文本同样支持 `high priority`，DecisionSkill 会选择四档进入自动修复，PR 评论表头改为 `Medium/Medium+/High/Critical 对应状态`。 |
 | 2026-05-08 | codex-cli one-to-one review status | 95 | 将 PR #24 的人工 Medium/Medium+ 对应表固化进通用 codex-cli：stdout JSON 新增 `issue_statuses`，PR 评论默认渲染一一对应状态表，每个 Gemini issue 一一标记 resolved/pending/blocked；workflow needs-human 提示改为指向一一对应状态。新增 C-049 并扩展 C-046，红绿测试覆盖 JSON 与评论块。 |

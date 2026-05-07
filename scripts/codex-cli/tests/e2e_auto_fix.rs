@@ -95,6 +95,50 @@ fn auto_fix_local_uses_review_json_as_primary_input() {
 }
 
 #[test]
+fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
+    let workspace = TestWorkspace::new("review-ledger");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题，并记录每条问题的解决状态。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("success");
+
+    let output = run_auto_fix_with_docs(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["review_record_path"], "docs/auto-review-ledger.md");
+    assert!(
+        json["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|file| { file.as_str() == Some("docs/auto-review-ledger.md") })
+    );
+
+    let ledger = fs::read_to_string(repo.join("docs/auto-review-ledger.md")).unwrap();
+    assert!(ledger.contains("Medium"));
+    assert!(ledger.contains("fix value"));
+    assert!(ledger.contains("resolved"));
+    assert!(ledger.contains("已自动修复"));
+    assert!(ledger.contains("src/lib.rs"));
+    assert!(ledger.contains("修改文件"));
+}
+
+#[test]
 fn auto_fix_local_blocks_push_when_security_audit_fails() {
     let workspace = TestWorkspace::new("blocked");
     let repo = workspace.create_repo();
@@ -400,6 +444,31 @@ fn run_auto_fix(repo: &Path, review: &Path, fake_agent: &Path, yes: bool) -> std
             "--review-file",
             review.to_str().unwrap(),
             "--disable-changelog",
+            "--max-rounds",
+            "2",
+        ])
+        .env("CODEX_AGENT_COMMAND", fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30");
+    if yes {
+        command.arg("--yes");
+    }
+    command.output().unwrap()
+}
+
+fn run_auto_fix_with_docs(
+    repo: &Path,
+    review: &Path,
+    fake_agent: &Path,
+    yes: bool,
+) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    command
+        .args([
+            "auto-fix-local",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--review-file",
+            review.to_str().unwrap(),
             "--max-rounds",
             "2",
         ])

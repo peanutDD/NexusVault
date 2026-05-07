@@ -8,11 +8,12 @@
 2. Gemini Code Assist 在 PR 中生成 Review 评论。
 3. `.github/workflows/codex-auto-fix.yml` 监听 Gemini 评论。
 4. self-hosted runner 拉取 PR 分支，调用 `codex-auto-fix pr-auto-fix`。
-5. `scripts/codex-cli` 解析 Review，筛选 `Critical/High/Medium` 问题。
+5. `scripts/codex-cli` 解析 Review，筛选 `Critical/High/Medium+/Medium` 问题。
 6. 本地 Codex GPT-5.5 生成 unified diff，`git apply` 应用补丁。
 7. 安全审计、质量评分、changelog 记录通过后，自动 commit/push。
-8. workflow 根据标签最多请求第二轮 Gemini Review。
-9. 人类查看最终 diff 与评论，决定 merge 或重跑。
+8. 若本轮解决了 `Critical/High/Medium+/Medium` 问题，写入 `docs/auto-review-ledger.md`，逐条记录 Gemini 问题、Codex 状态、解决答案和修改文件。
+9. workflow 根据标签最多请求第二轮 Gemini Review。
+10. 人类查看最终 diff、评论和本地 ledger，决定 merge 或重跑。
 
 ## 前置条件
 
@@ -117,7 +118,7 @@ workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
 5. 第一轮清洁或成功推送修复后，workflow 将标签推进到 `gemini-review-round-2`，并再次评论 `/gemini review`。
 6. 第二轮清洁或成功推送修复后，workflow 将标签推进到 `gemini-review-round-max`；若没有 pending，同时添加 `gemini-review-clean`。
 7. 如果 `pending_explanations` 非空且本轮没有任何修复，workflow 添加 `gemini-review-needs-human`，不会发布“无需修复/建议合并”的误导评论。
-7. 人类做最终 Review 并决定是否 merge。
+8. 人类做最终 Review 并决定是否 merge。
 
 ## 自动修复策略
 
@@ -160,6 +161,7 @@ CODEX_EXCLUDE_DOCS=true
   "pending_count": 0,
   "review_clean": true,
   "summary": "Gemini review summary",
+  "review_record_path": "docs/auto-review-ledger.md",
   "fixed_explanations": [],
   "pending_explanations": [],
   "issue_statuses": [
@@ -178,6 +180,21 @@ CODEX_EXCLUDE_DOCS=true
 字段含义：
 
 - `fixed=true`：本轮有变更且已允许进入后续轮次。
+- `review_record_path`：本轮写入的本地逐项处理台账；无可记录问题或禁用文档记录时为 `null`。
+- `issue_statuses`：Gemini 每条 `Medium/Medium+/High/Critical` 问题的一一对应状态。
+
+## 本地处理台账
+
+默认情况下，`codex-auto-fix` 会在修复提交前追加 `docs/auto-review-ledger.md`。该文件不是汇总 changelog，而是逐项诊断记录：
+
+- Gemini 提出的问题是什么。
+- 问题位于哪个文件和行。
+- Codex 标记为 `resolved`、`pending` 还是 `blocked`。
+- 已解决时的答案，例如“已自动修复”。
+- 未解决或阻塞时的原因。
+- 本轮修改了哪些文件。
+
+`--disable-changelog` 会同时关闭 changelog 和 ledger 写入，主要用于测试或不希望产生文档变更的本地运行。
 - `fixed=false`：没有变更，或变更被安全门禁拦截。
 - `push_blocked=true`：生成了变更，但安全审计 fail-closed，未 commit/push。
 - `has_pending=true` / `pending_count>0`：仍有 `Medium/Medium+/High/Critical` 问题没有自动修复，PR 不可视为 clean。
