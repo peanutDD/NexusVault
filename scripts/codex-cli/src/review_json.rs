@@ -226,11 +226,16 @@ fn flush_inline_issue(
         return;
     };
 
-    if issue.severity.is_empty() || issue.file.is_empty() || issue.body_lines.is_empty() {
+    if issue.severity.is_empty() || issue.file.is_empty() {
         return;
     }
 
-    let problem = issue.body_lines.join("\n");
+    let problem = if issue.body_lines.is_empty() {
+        "Actionable review comment has no body text; inspect the referenced line and apply the finding."
+            .to_string()
+    } else {
+        issue.body_lines.join("\n")
+    };
     let expected = if issue.suggestion_lines.is_empty() {
         "Address the review comment.".to_string()
     } else {

@@ -130,7 +130,7 @@ const FolderCard = memo(function FolderCard({
             ?.closest<HTMLElement>("[data-folder-id]")
         : null;
       const targetFolderId = target?.dataset.folderId;
-      if (targetFolderId && targetFolderId !== folder.id) {
+      if (targetFolderId !== undefined && targetFolderId !== folder.id) {
         onMobileFolderDrop?.(targetFolderId, folder.id);
       }
       onMobileFolderDragEnd?.();

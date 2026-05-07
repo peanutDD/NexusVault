@@ -7,6 +7,8 @@ image badge markdown such as `![medium]` or `![high]` under headings like
 `scripts/codex-cli review-to-json` must parse those inline badge comments into
 structured issues. It must not return `0 actionable issues` when the review body
 contains `Medium`, `Medium+`, `High`, or `Critical` inline badge findings.
+Badge findings are actionable even when Gemini omits body text and only provides
+a severity badge, heading, and optional suggestion block.
 
 If an actionable inline badge finding is parsed but not fixed, the auto-fix
 result must surface it through `pending_explanations` / `pending_count` instead

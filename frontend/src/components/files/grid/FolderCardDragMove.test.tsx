@@ -137,4 +137,37 @@ describe("FolderCard drag move", () => {
     expect(onMobileFolderDragStart).not.toHaveBeenCalled();
     expect(onMobileFolderDrop).not.toHaveBeenCalled();
   });
+
+  it("drops mobile folders onto the root folder sentinel", () => {
+    const onMobileFolderDrop = vi.fn();
+    renderFolder(sourceFolder, onMobileFolderDrop);
+    const sourceCard = screen.getByTitle(sourceFolder.name).closest("[data-folder-id]");
+    const rootTarget = document.createElement("div");
+    rootTarget.dataset.folderId = "";
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => rootTarget),
+    });
+
+    fireEvent.pointerDown(sourceCard as Element, {
+      pointerId: 3,
+      pointerType: "touch",
+      clientX: 16,
+      clientY: 16,
+      isPrimary: true,
+    });
+    act(() => {
+      vi.advanceTimersByTime(450);
+    });
+    fireEvent.pointerUp(sourceCard as Element, {
+      pointerId: 3,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 120,
+      isPrimary: true,
+    });
+
+    expect(onMobileFolderDrop).toHaveBeenCalledWith("", sourceFolder.id);
+  });
 });

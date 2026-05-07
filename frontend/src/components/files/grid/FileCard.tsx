@@ -126,7 +126,7 @@ const FileCard = memo(
               ?.closest<HTMLElement>("[data-folder-id]")
           : null;
         const targetFolderId = target?.dataset.folderId;
-        if (targetFolderId) {
+        if (targetFolderId !== undefined) {
           onMobileFileDrop?.(targetFolderId, file.id);
         }
         onMobileFileDragEnd?.();
@@ -433,9 +433,18 @@ const FileCard = memo(
     prev.isSelected === next.isSelected &&
     prev.isMenuOpen === next.isMenuOpen &&
     prev.thumbnailPriority === next.thumbnailPriority &&
+    prev.onSelect === next.onSelect &&
+    prev.onPreview === next.onPreview &&
+    prev.onShare === next.onShare &&
+    prev.onDownload === next.onDownload &&
+    prev.onRename === next.onRename &&
+    prev.onDelete === next.onDelete &&
+    prev.onDragStart === next.onDragStart &&
     prev.onMobileFileDrop === next.onMobileFileDrop &&
     prev.onMobileFileDragStart === next.onMobileFileDragStart &&
-    prev.onMobileFileDragEnd === next.onMobileFileDragEnd,
+    prev.onMobileFileDragEnd === next.onMobileFileDragEnd &&
+    prev.onToggleMenu === next.onToggleMenu &&
+    prev.onCloseMenu === next.onCloseMenu,
 );
 
 export default FileCard;

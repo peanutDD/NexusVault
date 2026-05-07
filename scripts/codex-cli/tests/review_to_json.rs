@@ -119,6 +119,34 @@ Reset the preview suppression flag on every pointer interaction.
 }
 
 #[test]
+fn parses_gemini_inline_badge_comments_without_body_text() {
+    let review = r#"## Code Review
+
+### frontend/src/components/files/grid/FileCard.tsx:130
+![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+```suggestion
+if (targetFolderId !== undefined) {
+  onMobileFileDrop?.(targetFolderId, file.id);
+}
+```
+"#;
+
+    let parsed = parse_structured_review(review);
+
+    assert_eq!(parsed.summary, "1 actionable issues");
+    assert_eq!(parsed.issues.len(), 1);
+    assert_eq!(parsed.issues[0].severity, "Medium");
+    assert_eq!(
+        parsed.issues[0].file,
+        "frontend/src/components/files/grid/FileCard.tsx"
+    );
+    assert_eq!(parsed.issues[0].line, 130);
+    assert!(parsed.issues[0].problem.contains("review comment"));
+    assert!(parsed.issues[0].expected.contains("targetFolderId"));
+}
+
+#[test]
 fn review_to_json_cli_writes_output_file_and_stdout_json() {
     let workspace = TestWorkspace::new("review-to-json");
     let input = workspace.path.join("review.md");

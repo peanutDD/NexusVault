@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FileMetadata } from "../../../types/files";
 import FileCard from "./FileCard";
@@ -18,30 +19,27 @@ const file: FileMetadata = {
   created_at: "2026-05-07T08:00:00.000Z",
 };
 
-function renderFile(
-  onMobileFileDrop = vi.fn(),
-  onMobileFileDragStart = vi.fn(),
-  onMobileFileDragEnd = vi.fn(),
-  onPreview = vi.fn(),
+function fileCardProps(
+  overrides: Partial<ComponentProps<typeof FileCard>> = {},
 ) {
-  return render(
-    <FileCard
-      file={file}
-      isSelected={false}
-      onSelect={vi.fn()}
-      onPreview={onPreview}
-      onShare={vi.fn()}
-      onDownload={vi.fn()}
-      onRename={vi.fn()}
-      onDelete={vi.fn()}
-      isMenuOpen={false}
-      onToggleMenu={vi.fn()}
-      onCloseMenu={vi.fn()}
-      onMobileFileDrop={onMobileFileDrop}
-      onMobileFileDragStart={onMobileFileDragStart}
-      onMobileFileDragEnd={onMobileFileDragEnd}
-    />,
-  );
+  return {
+    file,
+    isSelected: false,
+    onSelect: vi.fn(),
+    onPreview: vi.fn(),
+    onShare: vi.fn(),
+    onDownload: vi.fn(),
+    onRename: vi.fn(),
+    onDelete: vi.fn(),
+    isMenuOpen: false,
+    onToggleMenu: vi.fn(),
+    onCloseMenu: vi.fn(),
+    ...overrides,
+  };
+}
+
+function renderFile(overrides: Partial<ComponentProps<typeof FileCard>> = {}) {
+  return render(<FileCard {...fileCardProps(overrides)} />);
 }
 
 describe("FileCard mobile drag move", () => {
@@ -58,11 +56,11 @@ describe("FileCard mobile drag move", () => {
     const onMobileFileDrop = vi.fn();
     const onMobileFileDragStart = vi.fn();
     const onMobileFileDragEnd = vi.fn();
-    const { container } = renderFile(
+    const { container } = renderFile({
       onMobileFileDrop,
       onMobileFileDragStart,
       onMobileFileDragEnd,
-    );
+    });
     const targetFolder = document.createElement("div");
     targetFolder.dataset.folderId = "folder-target";
     document.body.appendChild(targetFolder);
@@ -109,7 +107,7 @@ describe("FileCard mobile drag move", () => {
 
   it("resets suppressed preview state on the next pointer interaction", () => {
     const onPreview = vi.fn();
-    renderFile(vi.fn(), vi.fn(), vi.fn(), onPreview);
+    renderFile({ onPreview });
     const sourceCard = screen.getByTitle(file.original_filename).closest("[data-file-id]");
     const thumbnail = screen.getByTestId("thumbnail").parentElement;
     const targetFolder = document.createElement("div");
@@ -149,5 +147,57 @@ describe("FileCard mobile drag move", () => {
     fireEvent.click(thumbnail as Element);
 
     expect(onPreview).toHaveBeenCalledWith(file);
+  });
+
+  it("uses updated callback props after parent rerender", () => {
+    const firstPreview = vi.fn();
+    const secondPreview = vi.fn();
+    const { rerender } = renderFile({ onPreview: firstPreview });
+    const thumbnail = screen.getByTestId("thumbnail").parentElement;
+
+    rerender(
+      <FileCard
+        {...fileCardProps({
+          onPreview: secondPreview,
+        })}
+      />,
+    );
+    fireEvent.click(thumbnail as Element);
+
+    expect(firstPreview).not.toHaveBeenCalled();
+    expect(secondPreview).toHaveBeenCalledWith(file);
+  });
+
+  it("drops mobile files onto the root folder sentinel", () => {
+    const onMobileFileDrop = vi.fn();
+    renderFile({ onMobileFileDrop });
+    const sourceCard = screen.getByTitle(file.original_filename).closest("[data-file-id]");
+    const rootTarget = document.createElement("div");
+    rootTarget.dataset.folderId = "";
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => rootTarget),
+    });
+
+    fireEvent.pointerDown(sourceCard as Element, {
+      pointerId: 3,
+      pointerType: "touch",
+      clientX: 16,
+      clientY: 16,
+      isPrimary: true,
+    });
+    act(() => {
+      vi.advanceTimersByTime(450);
+    });
+    fireEvent.pointerUp(sourceCard as Element, {
+      pointerId: 3,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 120,
+      isPrimary: true,
+    });
+
+    expect(onMobileFileDrop).toHaveBeenCalledWith("", file.id);
   });
 });
