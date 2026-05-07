@@ -22,13 +22,14 @@ function renderFile(
   onMobileFileDrop = vi.fn(),
   onMobileFileDragStart = vi.fn(),
   onMobileFileDragEnd = vi.fn(),
+  onPreview = vi.fn(),
 ) {
   return render(
     <FileCard
       file={file}
       isSelected={false}
       onSelect={vi.fn()}
-      onPreview={vi.fn()}
+      onPreview={onPreview}
       onShare={vi.fn()}
       onDownload={vi.fn()}
       onRename={vi.fn()}
@@ -90,7 +91,9 @@ describe("FileCard mobile drag move", () => {
       vi.advanceTimersByTime(1);
     });
     expect(onMobileFileDragStart).toHaveBeenCalledWith(file.id);
-    expect(container.querySelector("[data-mobile-file-dragging='true']")).toBeTruthy();
+    const draggingCard = container.querySelector("[data-mobile-file-dragging='true']");
+    expect(draggingCard).toBeTruthy();
+    expect(draggingCard).toHaveClass("pointer-events-none");
 
     fireEvent.pointerUp(sourceCard as Element, {
       pointerId: 1,
@@ -102,5 +105,49 @@ describe("FileCard mobile drag move", () => {
 
     expect(onMobileFileDrop).toHaveBeenCalledWith("folder-target", file.id);
     expect(onMobileFileDragEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets suppressed preview state on the next pointer interaction", () => {
+    const onPreview = vi.fn();
+    renderFile(vi.fn(), vi.fn(), vi.fn(), onPreview);
+    const sourceCard = screen.getByTitle(file.original_filename).closest("[data-file-id]");
+    const thumbnail = screen.getByTestId("thumbnail").parentElement;
+    const targetFolder = document.createElement("div");
+    targetFolder.dataset.folderId = "folder-target";
+    document.body.appendChild(targetFolder);
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => targetFolder),
+    });
+
+    fireEvent.pointerDown(sourceCard as Element, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 16,
+      clientY: 16,
+      isPrimary: true,
+    });
+    act(() => {
+      vi.advanceTimersByTime(450);
+    });
+    fireEvent.pointerUp(sourceCard as Element, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 120,
+      isPrimary: true,
+    });
+
+    fireEvent.pointerDown(sourceCard as Element, {
+      pointerId: 2,
+      pointerType: "touch",
+      clientX: 16,
+      clientY: 16,
+      isPrimary: true,
+    });
+    fireEvent.click(thumbnail as Element);
+
+    expect(onPreview).toHaveBeenCalledWith(file);
   });
 });

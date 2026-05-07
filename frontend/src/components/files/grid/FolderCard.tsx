@@ -204,7 +204,8 @@ const FolderCard = memo(function FolderCard({
         "glass-card group relative cursor-pointer rounded-md transition-colors",
         isSelected && "border-[var(--cta-primary-border)]",
         isDragOver && "border-[var(--color-border-strong)]",
-        isMobileDragging && "border-[var(--color-border-strong)] opacity-80",
+        isMobileDragging &&
+          "border-[var(--color-border-strong)] opacity-80 pointer-events-none",
       )}
       data-folder-id={folder.id}
       data-mobile-folder-dragging={isMobileDragging ? "true" : undefined}

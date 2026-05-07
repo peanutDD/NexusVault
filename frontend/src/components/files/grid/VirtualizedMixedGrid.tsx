@@ -197,6 +197,19 @@ export default function VirtualizedMixedGrid({
     if (el) el.style.setProperty("height", `${bottomSpacerHeight}px`);
   }, [bottomSpacerHeight]);
 
+  const handleMobileFolderDrop = useCallback(
+    (targetFolderId: string, sourceFolderId: string) => {
+      onDropOnFolder(targetFolderId, [], [sourceFolderId]);
+    },
+    [onDropOnFolder],
+  );
+  const handleMobileFileDrop = useCallback(
+    (targetFolderId: string, sourceFileId: string) => {
+      onDropOnFolder(targetFolderId, [sourceFileId], []);
+    },
+    [onDropOnFolder],
+  );
+
   if (items.length === 0) return null;
 
   return (
@@ -256,9 +269,7 @@ export default function VirtualizedMixedGrid({
                               folderId ? [folderId] : [],
                             );
                           }}
-                          onMobileFolderDrop={(targetFolderId, sourceFolderId) => {
-                            onDropOnFolder(targetFolderId, [], [sourceFolderId]);
-                          }}
+                          onMobileFolderDrop={handleMobileFolderDrop}
                           isMenuOpen={openFolderMenuId === folder.id}
                           onToggleMenu={onToggleFolderMenu}
                           onCloseMenu={onCloseMenu}
@@ -282,9 +293,7 @@ export default function VirtualizedMixedGrid({
                         onRename={() => onRenameFile(file)}
                         onDelete={() => onDelete(file, "file")}
                         onDragStart={(e) => onFileDragStart(file.id, e)}
-                        onMobileFileDrop={(targetFolderId, sourceFileId) => {
-                          onDropOnFolder(targetFolderId, [sourceFileId], []);
-                        }}
+                        onMobileFileDrop={handleMobileFileDrop}
                         isMenuOpen={openFileMenuId === file.id}
                         onToggleMenu={onToggleFileMenu}
                         onCloseMenu={onCloseMenu}

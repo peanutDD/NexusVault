@@ -144,6 +144,7 @@ const FileCard = memo(
         if (e.pointerType === "mouse" || !e.isPrimary) return;
         if (isInteractivePointerTarget(e.target)) return;
 
+        suppressNextPreviewRef.current = false;
         clearLongPressTimer();
         pointerStartRef.current = { x: e.clientX, y: e.clientY };
         longPressTimerRef.current = setTimeout(() => {
@@ -195,7 +196,8 @@ const FileCard = memo(
         className={cn(
           "glass-card group relative rounded-md transition-colors",
           isSelected && "border-[var(--cta-primary-border)]",
-          isMobileDragging && "border-[var(--color-border-strong)] opacity-80",
+          isMobileDragging &&
+            "border-[var(--color-border-strong)] opacity-80 pointer-events-none",
         )}
         data-file-id={file.id}
         data-mobile-file-dragging={isMobileDragging ? "true" : undefined}

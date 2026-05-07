@@ -93,7 +93,9 @@ describe("FolderCard drag move", () => {
       vi.advanceTimersByTime(1);
     });
     expect(onMobileFolderDragStart).toHaveBeenCalledWith(sourceFolder.id);
-    expect(container.querySelector("[data-mobile-folder-dragging='true']")).toBeTruthy();
+    const draggingCard = container.querySelector("[data-mobile-folder-dragging='true']");
+    expect(draggingCard).toBeTruthy();
+    expect(draggingCard).toHaveClass("pointer-events-none");
 
     fireEvent.pointerUp(sourceCard as Element, {
       pointerId: 1,

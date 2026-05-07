@@ -111,4 +111,31 @@ describe("useFileActions drag move", () => {
     expect(folderService.moveFolders).not.toHaveBeenCalled();
     expect(folderService.moveFilesToFolder).not.toHaveBeenCalled();
   });
+
+  it("expands selected drag payloads when dropping on breadcrumbs", async () => {
+    vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
+    vi.mocked(folderService.moveFolders).mockResolvedValue(1);
+    const { result } = renderActions();
+    const event = {
+      preventDefault: vi.fn(),
+      dataTransfer: {
+        getData: vi.fn((type: string) => {
+          if (type === "application/file-id") return "file-1";
+          if (type === "application/folder-id") return "";
+          return "";
+        }),
+      },
+    } as unknown as React.DragEvent;
+
+    await result.current.handleDropOnBreadcrumb(null, event);
+
+    expect(folderService.moveFilesToFolder).toHaveBeenCalledWith(
+      ["file-1"],
+      null,
+    );
+    expect(folderService.moveFolders).toHaveBeenCalledWith(
+      ["folder-source"],
+      null,
+    );
+  });
 });

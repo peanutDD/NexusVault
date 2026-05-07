@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import type { DragEvent } from "react";
 import type { FileMetadata } from "../../../types/files";
 import type { Folder } from "../../../types/folders";
@@ -55,6 +56,19 @@ export default function MixedGrid({
   onToggleFolderMenu,
   onCloseMenu,
 }: MixedGridProps) {
+  const handleMobileFolderDrop = useCallback(
+    (targetFolderId: string, sourceFolderId: string) => {
+      onDropOnFolder(targetFolderId, [], [sourceFolderId]);
+    },
+    [onDropOnFolder],
+  );
+  const handleMobileFileDrop = useCallback(
+    (targetFolderId: string, sourceFileId: string) => {
+      onDropOnFolder(targetFolderId, [sourceFileId], []);
+    },
+    [onDropOnFolder],
+  );
+
   if (items.length === 0) return null;
 
   return (
@@ -85,9 +99,7 @@ export default function MixedGrid({
                   folderId ? [folderId] : [],
                 );
               }}
-              onMobileFolderDrop={(targetFolderId, sourceFolderId) => {
-                onDropOnFolder(targetFolderId, [], [sourceFolderId]);
-              }}
+              onMobileFolderDrop={handleMobileFolderDrop}
               isMenuOpen={openFolderMenuId === folder.id}
               onToggleMenu={onToggleFolderMenu}
               onCloseMenu={onCloseMenu}
@@ -109,9 +121,7 @@ export default function MixedGrid({
             onRename={() => onRenameFile(file)}
             onDelete={() => onDelete(file, "file")}
             onDragStart={(e) => onFileDragStart(file.id, e)}
-            onMobileFileDrop={(targetFolderId, sourceFileId) => {
-              onDropOnFolder(targetFolderId, [sourceFileId], []);
-            }}
+            onMobileFileDrop={handleMobileFileDrop}
             isMenuOpen={openFileMenuId === file.id}
             onToggleMenu={onToggleFileMenu}
             onCloseMenu={onCloseMenu}

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useCallback } from "react";
 import "./FileListGlass.css";
 import { useFileList } from "../useFileList";
 import { useThrottledCallback } from "../../../hooks/useThrottledCallback";
@@ -93,20 +93,23 @@ export default function FileList({ onOpenUpload }: FileListProps) {
   }, 400);
 
   // 适配器函数，处理类型不匹配问题
-  const handleSortChangeAdapter = (value: string) =>
-    handleSortChange(value as import("./FileListFilters").SortOption);
-  const handleOpenFolderAdapter = (folderId: string) => {
+  const handleSortChangeAdapter = useCallback(
+    (value: string) =>
+      handleSortChange(value as import("./FileListFilters").SortOption),
+    [handleSortChange],
+  );
+  const handleOpenFolderAdapter = useCallback((folderId: string) => {
     // 由于 FileListContent 期望 folderId 字符串，但 handleOpenFolder 需要 Folder 对象
     // 这里简化处理，直接导航到文件夹
     navigateToFolder(folderId);
-  };
-  const handleDropOnBreadcrumbAdapter = (
+  }, [navigateToFolder]);
+  const handleDropOnBreadcrumbAdapter = useCallback((
     e: React.DragEvent,
     folderId: string | null,
   ) => {
     handleDropOnBreadcrumb(folderId, e);
-  };
-  const handleDeleteAdapter = (
+  }, [handleDropOnBreadcrumb]);
+  const handleDeleteAdapter = useCallback((
     item: { id: string; name?: string; original_filename?: string },
     type: "file" | "folder",
   ) => {
@@ -119,14 +122,14 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         name: item.name || "文件夹",
       });
     }
-  };
-  const handleFileDragStartAdapter = (fileId: string, e: React.DragEvent) => {
+  }, [handleDelete, setDeleteConfirm]);
+  const handleFileDragStartAdapter = useCallback((fileId: string, e: React.DragEvent) => {
     // 由于 FileListContent 期望 fileId 字符串和 e，而 handleFileDragStart 需要 e 和 file 对象
     // 这里简化处理，只设置 dataTransfer
     e.dataTransfer.setData("application/file-id", fileId);
     e.dataTransfer.effectAllowed = "move";
-  };
-  const handleDropOnFolderAdapter = (
+  }, []);
+  const handleDropOnFolderAdapter = useCallback((
     folderId: string,
     fileIds: string[],
     folderIds: string[],
@@ -142,7 +145,13 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     if (resolvedFileIds.length > 0 || resolvedFolderIds.length > 0) {
       void handleDropOnFolder(folderId, resolvedFileIds, resolvedFolderIds);
     }
-  };
+  }, [
+    handleDropOnFolder,
+    selectedFileIds,
+    selectedFiles,
+    selectedFolderIds,
+    selectedFolders,
+  ]);
 
   return (
     <div

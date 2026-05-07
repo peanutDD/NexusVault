@@ -208,16 +208,36 @@ export function useFileActions({
     setSelectedFolders,
   ]);
 
+  const resolveSelectedDragPayload = useCallback((
+    fileIds: string[],
+    folderIds: string[],
+  ) => {
+    const draggedSelectedFile = fileIds.some((id) => selectedFiles.has(id));
+    const draggedSelectedFolder = folderIds.some((id) =>
+      selectedFolders.has(id),
+    );
+    const shouldMoveSelection = draggedSelectedFile || draggedSelectedFolder;
+
+    return {
+      fileIds: shouldMoveSelection ? selectedFileIds : fileIds,
+      folderIds: shouldMoveSelection ? selectedFolderIds : folderIds,
+    };
+  }, [selectedFileIds, selectedFiles, selectedFolderIds, selectedFolders]);
+
   const handleDropOnBreadcrumb = useCallback(async (targetFolderId: string | null, e: React.DragEvent) => {
     e.preventDefault();
     const fileId = e.dataTransfer.getData('application/file-id');
     const folderId = e.dataTransfer.getData('application/folder-id');
-    await handleDropOnFolder(
-      targetFolderId,
+    const payload = resolveSelectedDragPayload(
       fileId ? [fileId] : [],
       folderId ? [folderId] : [],
     );
-  }, [handleDropOnFolder]);
+    await handleDropOnFolder(
+      targetFolderId,
+      payload.fileIds,
+      payload.folderIds,
+    );
+  }, [handleDropOnFolder, resolveSelectedDragPayload]);
 
   return {
     deleteLoading,

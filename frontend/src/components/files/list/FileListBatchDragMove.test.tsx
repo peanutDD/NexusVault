@@ -4,6 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import FileList from "./FileList";
 
 const handleDropOnFolder = vi.fn();
+const selectedFiles = new Set(["file-1", "file-2"]);
+const selectedFolders = new Set(["folder-1"]);
+const selectedFileIds = ["file-1", "file-2"];
+const selectedFolderIds = ["folder-1"];
+const observedDropHandlers: Array<
+  (folderId: string, fileIds: string[], folderIds: string[]) => void
+> = [];
 
 vi.mock("../useFileList", () => ({
   useFileList: () => ({
@@ -12,10 +19,10 @@ vi.mock("../useFileList", () => ({
     search: "",
     mimeType: "all",
     sortBy: "created_at_desc",
-    selectedFiles: new Set(["file-1", "file-2"]),
-    selectedFolders: new Set(["folder-1"]),
-    selectedFileIds: ["file-1", "file-2"],
-    selectedFolderIds: ["folder-1"],
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
     currentFolderId: null,
     error: null,
     clearError: vi.fn(),
@@ -102,30 +109,33 @@ vi.mock("./FileListContent", () => ({
       fileIds: string[],
       folderIds: string[],
     ) => void;
-  }) => (
-    <div>
-      <button
-        type="button"
-        onClick={() => handleDropOnFolder("target-folder", ["file-1"], [])}
-      >
-        drop selected file
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          handleDropOnFolder("target-folder", [], ["folder-1"])
-        }
-      >
-        drop selected folder
-      </button>
-      <button
-        type="button"
-        onClick={() => handleDropOnFolder("target-folder", ["file-3"], [])}
-      >
-        drop unselected file
-      </button>
-    </div>
-  ),
+  }) => {
+    observedDropHandlers.push(handleDropOnFolder);
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => handleDropOnFolder("target-folder", ["file-1"], [])}
+        >
+          drop selected file
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            handleDropOnFolder("target-folder", [], ["folder-1"])
+          }
+        >
+          drop selected folder
+        </button>
+        <button
+          type="button"
+          onClick={() => handleDropOnFolder("target-folder", ["file-3"], [])}
+        >
+          drop unselected file
+        </button>
+      </div>
+    );
+  },
 }));
 
 describe("FileList batch drag move", () => {
@@ -175,5 +185,14 @@ describe("FileList batch drag move", () => {
         [],
       );
     });
+  });
+
+  it("keeps the folder drop adapter stable across parent renders", () => {
+    observedDropHandlers.length = 0;
+    const { rerender } = render(<FileList />);
+    rerender(<FileList />);
+
+    expect(observedDropHandlers).toHaveLength(2);
+    expect(observedDropHandlers[1]).toBe(observedDropHandlers[0]);
   });
 });
