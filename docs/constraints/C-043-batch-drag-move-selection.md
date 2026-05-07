@@ -24,6 +24,9 @@ and folders once, then move the group directly.
   from moving into the target.
 - Treat `""` in drag payloads as the root-folder/absent-value sentinel. Normalize
   target `""` to `null`, and never pass source `""` into `moveFolders`.
+- Keep the shared drop handler reference stable across selection changes; store
+  latest selection state in refs instead of adding selection sets/arrays to the
+  handler dependency list.
 - Use the shared `handleDropOnFolder` action path for desktop and mobile drops.
 - Keep mobile drag gated behind the long-press rule from C-042.
 - Include mobile drag callbacks in memo comparison when callbacks carry current

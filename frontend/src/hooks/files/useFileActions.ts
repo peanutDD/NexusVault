@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { fileService } from '../../services/files';
 import { folderService } from '../../services/folders';
@@ -55,6 +55,18 @@ export function useFileActions({
   const queryClient = useQueryClient();
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [batchDownloading, setBatchDownloading] = useState(false);
+  const selectionRef = useRef({
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
+  });
+  selectionRef.current = {
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
+  };
 
   const {
     deleteFile: deleteFileMutation,
@@ -193,13 +205,23 @@ export function useFileActions({
     folderIds: string[],
   ) => {
     const normalizedTargetFolderId = normalizeDropTargetFolderId(targetFolderId);
-    const draggedSelectedFile = fileIds.some((id) => selectedFiles.has(id));
+    const {
+      selectedFiles: latestSelectedFiles,
+      selectedFolders: latestSelectedFolders,
+      selectedFileIds: latestSelectedFileIds,
+      selectedFolderIds: latestSelectedFolderIds,
+    } = selectionRef.current;
+    const draggedSelectedFile = fileIds.some((id) =>
+      latestSelectedFiles.has(id),
+    );
     const draggedSelectedFolder = folderIds.some((id) =>
-      selectedFolders.has(id),
+      latestSelectedFolders.has(id),
     );
     const shouldMoveSelection = draggedSelectedFile || draggedSelectedFolder;
-    const resolvedFileIds = shouldMoveSelection ? selectedFileIds : fileIds;
-    const resolvedFolderIds = shouldMoveSelection ? selectedFolderIds : folderIds;
+    const resolvedFileIds = shouldMoveSelection ? latestSelectedFileIds : fileIds;
+    const resolvedFolderIds = shouldMoveSelection
+      ? latestSelectedFolderIds
+      : folderIds;
 
     const uniqueFileIds = uniquePayloadIds(resolvedFileIds);
     const uniqueFolderIds = uniquePayloadIds(resolvedFolderIds).filter(
@@ -234,10 +256,6 @@ export function useFileActions({
     }
   }, [
     refreshListsAfterMove,
-    selectedFileIds,
-    selectedFiles,
-    selectedFolderIds,
-    selectedFolders,
     setError,
     setSelectedFiles,
     setSelectedFolders,

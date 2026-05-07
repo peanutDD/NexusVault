@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { folderService } from "../../services/folders";
 import { useFileActions } from "./useFileActions";
@@ -23,10 +23,16 @@ vi.mock("../../services/files", () => ({
   },
 }));
 
-function wrapper({ children }: { children: ReactNode }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+function HookWrapper({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      }),
+  );
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
@@ -67,7 +73,7 @@ function renderActions({
         refetchFiles,
         refetchFolders,
       }),
-    { wrapper },
+    { wrapper: HookWrapper },
   );
 
   return {
@@ -78,6 +84,53 @@ function renderActions({
     setSelectedFolders,
     setError,
   };
+}
+
+function renderActionsWithChangingSelection() {
+  const refetchFiles = vi.fn().mockResolvedValue(undefined);
+  const refetchFolders = vi.fn().mockResolvedValue(undefined);
+  const setSelectedFiles = vi.fn();
+  const setSelectedFolders = vi.fn();
+  const setError = vi.fn();
+
+  return renderHook(
+    ({
+      selectedFiles,
+      selectedFolders,
+      selectedFileIds,
+      selectedFolderIds,
+    }: {
+      selectedFiles: Set<string>;
+      selectedFolders: Set<string>;
+      selectedFileIds: string[];
+      selectedFolderIds: string[];
+    }) =>
+      useFileActions({
+        files: [],
+        selectedFiles,
+        selectedFolders,
+        selectedFileIds,
+        selectedFolderIds,
+        setSelectedFiles,
+        setSelectedFolders,
+        setError,
+        setDeleteConfirm: vi.fn(),
+        deleteConfirm: null,
+        setRenamingFolder: vi.fn(),
+        setRenamingFile: vi.fn(),
+        refetchFiles,
+        refetchFolders,
+      }),
+    {
+      initialProps: {
+        selectedFiles: new Set(["file-1"]),
+        selectedFolders: new Set<string>(),
+        selectedFileIds: ["file-1"],
+        selectedFolderIds: [],
+      },
+      wrapper: HookWrapper,
+    },
+  );
 }
 
 describe("useFileActions drag move", () => {
@@ -136,6 +189,28 @@ describe("useFileActions drag move", () => {
       "folder-source",
     );
     expect(folderService.moveFolders).not.toHaveBeenCalled();
+  });
+
+  it("keeps the drop handler stable while using the latest selection state", async () => {
+    vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
+    const { result, rerender } = renderActionsWithChangingSelection();
+    const firstDropHandler = result.current.handleDropOnFolder;
+
+    rerender({
+      selectedFiles: new Set(["file-2"]),
+      selectedFolders: new Set<string>(),
+      selectedFileIds: ["file-2", "file-3"],
+      selectedFolderIds: [],
+    });
+
+    expect(result.current.handleDropOnFolder).toBe(firstDropHandler);
+
+    await result.current.handleDropOnFolder("folder-target", ["file-2"], []);
+
+    expect(folderService.moveFilesToFolder).toHaveBeenCalledWith(
+      ["file-2", "file-3"],
+      "folder-target",
+    );
   });
 
   it("normalizes the root folder sentinel to null before moving", async () => {

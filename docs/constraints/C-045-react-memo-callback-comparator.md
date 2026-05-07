@@ -18,3 +18,7 @@ List-level adapters that feed grids or virtual grids must follow the same rule.
 Do not pass inline pass-through callbacks such as preview/share/mobile-drop into
 `FileGrid`, `VirtualizedFileGrid`, `MixedGrid`, or `VirtualizedMixedGrid` when
 those props flow through to memoized cards.
+
+Shared action callbacks that feed those list adapters must also remain stable
+across high-frequency UI state changes such as selection updates. Use refs for
+latest state when the callback must stay stable but still act on current data.

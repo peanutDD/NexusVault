@@ -23,6 +23,8 @@ which Medium/Medium+ issues were fixed versus left unresolved.
   into memoized file/folder cards.
 - Gemini inline headings can include trailing `: summary` text after the line
   number; review-to-json must still parse the path and line.
+- Shared drag drop action callbacks should remain stable across selection
+  changes while still reading the latest selection values.
 
 ## Risks
 
@@ -36,6 +38,7 @@ which Medium/Medium+ issues were fixed versus left unresolved.
 - Stabilizing list adapters must preserve existing grouped, plain, and
   virtualized file-list behavior.
 - Relaxing inline heading parsing must not misread colons inside file paths.
+- Ref-backed selection reads must not make drag-to-move use stale selections.
 
 ## Steps
 
@@ -52,4 +55,6 @@ which Medium/Medium+ issues were fixed versus left unresolved.
    file-list paths.
 8. Fix the follow-up review-to-json inline heading parser for trailing colon
    summaries.
-9. Verify frontend and codex-cli tests, lint, build, and PR review state.
+9. Fix the follow-up shared drop handler stability by reading latest selection
+   state from refs.
+10. Verify frontend and codex-cli tests, lint, build, and PR review state.
