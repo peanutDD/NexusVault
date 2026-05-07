@@ -12,6 +12,16 @@ import { Settings2, ArrowLeft } from "lucide-react";
 import { useStorageUsage } from "../hooks/useStorageUsage";
 import { useApiTokens } from "../hooks/useApiTokens";
 
+function hasPreviousAppHistoryEntry(locationKey: string) {
+  if (typeof window !== "undefined") {
+    const historyIndex = window.history.state?.idx;
+    if (typeof historyIndex === "number") {
+      return historyIndex > 0;
+    }
+  }
+  return locationKey !== "default";
+}
+
 export default function Settings() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,11 +37,11 @@ export default function Settings() {
   }, [clearAuth, navigate]);
 
   const handleBack = useCallback(() => {
-    if (location.key === "default") {
+    if (hasPreviousAppHistoryEntry(location.key)) {
+      navigate(-1);
+    } else {
       navigate("/files", { replace: true });
-      return;
     }
-    navigate(-1);
   }, [location.key, navigate]);
 
   return (

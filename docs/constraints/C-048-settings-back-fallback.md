@@ -16,7 +16,8 @@ shortcut; the Back button should be history-based only when app history exists.
 ## Required Pattern
 
 - Use router history for normal Settings Back behavior.
-- Detect a direct initial Settings entry and navigate to `/files` with
-  `replace`.
+- Prefer the router-managed browser history index when available; fall back to
+  the initial route key only in test/non-browser routers.
+- Detect a direct initial Settings entry and navigate to `/files` with `replace`.
 - Keep a regression test for both previous-route preservation and direct-entry
   fallback.
