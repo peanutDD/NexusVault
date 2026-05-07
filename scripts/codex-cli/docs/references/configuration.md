@@ -104,7 +104,7 @@ PR 模式默认会发布评论：
 
 - Dry-Run：说明已生成并应用补丁，但未推送
 - Push：说明已修复文件、质量评分、安全扫描结果
-- 未修复：medium+ 问题必须说明原因；禁用评论时写入最终 JSON 的 `pending_explanations`
+- 未修复：`Medium/Medium+` 及以上问题必须说明原因；禁用评论时写入最终 JSON 的 `pending_explanations`
 
 禁用方式：
 

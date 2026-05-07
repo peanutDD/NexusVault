@@ -171,6 +171,33 @@ fn codex_auto_fix_supports_markdown_rollback_switch() {
     );
 }
 
+#[test]
+fn state_script_names_medium_and_medium_plus_as_pending_scope() {
+    let script =
+        fs::read_to_string(workflow_script()).expect("workflow state script should be readable");
+
+    assert!(
+        script.contains("pending Medium/Medium+ review items"),
+        "pending label description should not imply Medium findings are ignored"
+    );
+    assert!(
+        script.contains("no pending Medium/Medium+ findings"),
+        "clean label description should cover both Medium and Medium+"
+    );
+    assert!(
+        script.contains("Gemini Review 的 Medium/Medium+ 问题"),
+        "needs-human comment should tell reviewers Medium findings are actionable"
+    );
+    assert!(
+        script.contains("Medium/Medium+ 未自动修复说明"),
+        "pending comments should cover both Medium and Medium+ findings"
+    );
+    assert!(
+        !script.contains("medium+ review items"),
+        "state labels must not narrow the loop to Medium+ only"
+    );
+}
+
 fn plan(envs: &[(&str, &str)]) -> HashMap<String, String> {
     let script = workflow_script();
     let output = Command::new("bash")
