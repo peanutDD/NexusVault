@@ -190,12 +190,6 @@ export function useFileActions({
     const shouldMoveSelection = draggedSelectedFile || draggedSelectedFolder;
     const resolvedFileIds = shouldMoveSelection ? selectedFileIds : fileIds;
     const resolvedFolderIds = shouldMoveSelection ? selectedFolderIds : folderIds;
-    if (
-      normalizedTargetFolderId &&
-      resolvedFolderIds.includes(normalizedTargetFolderId)
-    ) {
-      return;
-    }
 
     const uniqueFileIds = [...new Set(resolvedFileIds)].filter(Boolean);
     const uniqueFolderIds = [...new Set(resolvedFolderIds)].filter(

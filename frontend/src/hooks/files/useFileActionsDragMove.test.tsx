@@ -32,7 +32,17 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-function renderActions() {
+function renderActions({
+  selectedFiles = new Set(["file-1"]),
+  selectedFolders = new Set(["folder-source"]),
+  selectedFileIds = ["file-1", "file-2"],
+  selectedFolderIds = ["folder-source"],
+}: {
+  selectedFiles?: Set<string>;
+  selectedFolders?: Set<string>;
+  selectedFileIds?: string[];
+  selectedFolderIds?: string[];
+} = {}) {
   const refetchFiles = vi.fn().mockResolvedValue(undefined);
   const refetchFolders = vi.fn().mockResolvedValue(undefined);
   const setSelectedFiles = vi.fn();
@@ -43,10 +53,10 @@ function renderActions() {
     () =>
       useFileActions({
         files: [],
-        selectedFiles: new Set(["file-1"]),
-        selectedFolders: new Set(["folder-source"]),
-        selectedFileIds: ["file-1", "file-2"],
-        selectedFolderIds: ["folder-source"],
+        selectedFiles,
+        selectedFolders,
+        selectedFileIds,
+        selectedFolderIds,
         setSelectedFiles,
         setSelectedFolders,
         setError,
@@ -102,7 +112,10 @@ describe("useFileActions drag move", () => {
   });
 
   it("ignores a folder dropped onto itself", async () => {
-    const { result } = renderActions();
+    const { result } = renderActions({
+      selectedFiles: new Set(),
+      selectedFileIds: [],
+    });
 
     await result.current.handleDropOnFolder("folder-source", [], [
       "folder-source",
@@ -110,6 +123,19 @@ describe("useFileActions drag move", () => {
 
     expect(folderService.moveFolders).not.toHaveBeenCalled();
     expect(folderService.moveFilesToFolder).not.toHaveBeenCalled();
+  });
+
+  it("moves selected files when the target folder is also selected", async () => {
+    vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
+    const { result } = renderActions();
+
+    await result.current.handleDropOnFolder("folder-source", ["file-1"], []);
+
+    expect(folderService.moveFilesToFolder).toHaveBeenCalledWith(
+      ["file-1", "file-2"],
+      "folder-source",
+    );
+    expect(folderService.moveFolders).not.toHaveBeenCalled();
   });
 
   it("normalizes the root folder sentinel to null before moving", async () => {

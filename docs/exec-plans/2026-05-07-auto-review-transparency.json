@@ -9,10 +9,11 @@
   ],
   "risks": [
     "Pointer hit stack behavior can differ by browser.",
-    "PrAutoFixOutput additions must preserve existing workflow fields."
+    "PrAutoFixOutput additions must preserve existing workflow fields.",
+    "Self-drop filtering must not block valid selected file moves into the target folder."
   ],
   "verification": [
-    "npm test -- FileCardMobileDragMove.test.tsx FolderCardDragMove.test.tsx",
+    "npm test -- FileCardMobileDragMove.test.tsx FolderCardDragMove.test.tsx useFileActionsDragMove.test.tsx",
     "cargo test --manifest-path scripts/codex-cli/Cargo.toml review_status_block_lists_fixed_and_unfixed_medium_items",
     "cargo test --manifest-path scripts/codex-cli/Cargo.toml auto_fix_local_reports_unfixed_same_file_issue_independently",
     "cargo fmt --manifest-path scripts/codex-cli/Cargo.toml --check && cargo test --manifest-path scripts/codex-cli/Cargo.toml",

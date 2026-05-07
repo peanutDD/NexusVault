@@ -30,4 +30,6 @@ which Medium/Medium+ issues were fixed versus left unresolved.
 3. Implement shared pointer hit-stack target lookup.
 4. Add `fixed_explanations` and review status blocks to codex-cli output and PR
    comments.
-5. Verify frontend and codex-cli tests, lint, build, and PR review state.
+5. Fix the follow-up High self-drop guard by filtering the target folder out of
+   folder moves without blocking selected files.
+6. Verify frontend and codex-cli tests, lint, build, and PR review state.
