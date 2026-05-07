@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileMetadata } from "../../../types/files";
 import type { Folder } from "../../../types/folders";
 import { fileService } from "../../../services/files";
@@ -52,6 +52,10 @@ export default function FileGrid({
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [priorityCount, setPriorityCount] = useState(6);
   const preheatedRef = useRef(new Set<string>());
+  const handleDeleteFile = useCallback(
+    (file: FileMetadata) => onDelete(file, "file"),
+    [onDelete],
+  );
 
   useEffect(() => {
     const calc = () => {
@@ -138,13 +142,13 @@ export default function FileGrid({
           key={file.id}
           file={file}
           isSelected={selectedFiles.has(file.id)}
-          onSelect={(id) => onSelect(id, !selectedFiles.has(id))}
+          onSelect={onSelect}
           onPreview={onPreview}
           onShare={onShare}
           onDownload={onDownload}
-          onRename={() => onRename(file)}
-          onDelete={() => onDelete(file, "file")}
-          onDragStart={(e) => onDragStart(file.id, e)}
+          onRename={onRename}
+          onDelete={handleDeleteFile}
+          onDragStart={onDragStart}
           onMobileFileDrop={onMobileFileDrop}
           isMenuOpen={openFileMenuId === file.id}
           onToggleMenu={onToggleMenu}

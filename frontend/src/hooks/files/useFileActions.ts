@@ -182,6 +182,7 @@ export function useFileActions({
     fileIds: string[],
     folderIds: string[],
   ) => {
+    const normalizedTargetFolderId = targetFolderId === "" ? null : targetFolderId;
     const draggedSelectedFile = fileIds.some((id) => selectedFiles.has(id));
     const draggedSelectedFolder = folderIds.some((id) =>
       selectedFolders.has(id),
@@ -189,22 +190,33 @@ export function useFileActions({
     const shouldMoveSelection = draggedSelectedFile || draggedSelectedFolder;
     const resolvedFileIds = shouldMoveSelection ? selectedFileIds : fileIds;
     const resolvedFolderIds = shouldMoveSelection ? selectedFolderIds : folderIds;
-    if (targetFolderId && resolvedFolderIds.includes(targetFolderId)) return;
+    if (
+      normalizedTargetFolderId &&
+      resolvedFolderIds.includes(normalizedTargetFolderId)
+    ) {
+      return;
+    }
 
     const uniqueFileIds = [...new Set(resolvedFileIds)].filter(Boolean);
     const uniqueFolderIds = [...new Set(resolvedFolderIds)].filter(
-      (folderId) => folderId && folderId !== targetFolderId,
+      (folderId) => folderId && folderId !== normalizedTargetFolderId,
     );
     if (uniqueFileIds.length === 0 && uniqueFolderIds.length === 0) return;
 
     let movedAnything = false;
     try {
       if (uniqueFileIds.length > 0) {
-        await folderService.moveFilesToFolder(uniqueFileIds, targetFolderId);
+        await folderService.moveFilesToFolder(
+          uniqueFileIds,
+          normalizedTargetFolderId,
+        );
         movedAnything = true;
       }
       if (uniqueFolderIds.length > 0) {
-        await folderService.moveFolders(uniqueFolderIds, targetFolderId);
+        await folderService.moveFolders(
+          uniqueFolderIds,
+          normalizedTargetFolderId,
+        );
         movedAnything = true;
       }
       setSelectedFiles(new Set());

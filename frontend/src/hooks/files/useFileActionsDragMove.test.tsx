@@ -112,6 +112,18 @@ describe("useFileActions drag move", () => {
     expect(folderService.moveFilesToFolder).not.toHaveBeenCalled();
   });
 
+  it("normalizes the root folder sentinel to null before moving", async () => {
+    vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
+    const { result } = renderActions();
+
+    await result.current.handleDropOnFolder("", ["file-3"], []);
+
+    expect(folderService.moveFilesToFolder).toHaveBeenCalledWith(
+      ["file-3"],
+      null,
+    );
+  });
+
   it("expands selected drag payloads when dropping on breadcrumbs", async () => {
     vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
     vi.mocked(folderService.moveFolders).mockResolvedValue(1);

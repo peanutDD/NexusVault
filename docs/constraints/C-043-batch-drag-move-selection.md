@@ -16,8 +16,8 @@ and folders once, then move the group directly.
 
 ## Required Pattern
 
-- Expand the payload at the list adapter boundary where selected file and folder
-  ids are both available.
+- Expand the payload in the shared action layer so list, grid, mobile, and
+  breadcrumb drops follow the same selection semantics.
 - Keep unselected drags as single-item moves.
 - Use the shared `handleDropOnFolder` action path for desktop and mobile drops.
 - Keep mobile drag gated behind the long-press rule from C-042.

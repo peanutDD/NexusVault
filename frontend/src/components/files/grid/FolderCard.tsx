@@ -7,14 +7,14 @@ import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 interface FolderCardProps {
   folder: Folder;
   isSelected: boolean;
-  onSelect: (id: string) => void;
-  onOpen: (folder: Folder) => void;
+  onSelect: (id: string, selected: boolean) => void;
+  onOpen: (folderId: string) => void;
   onRename: (folder: Folder) => void;
-  onDelete: (id: string) => void;
+  onDelete: (folder: Folder) => void;
   onDragStart?: (e: React.DragEvent, folder: Folder) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDragLeave?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent, targetFolder: Folder) => void;
+  onDrop?: (targetFolderId: string, fileIds: string[], folderIds: string[]) => void;
   onMobileFolderDragStart?: (folderId: string) => void;
   onMobileFolderDragEnd?: () => void;
   onMobileFolderDrop?: (targetFolderId: string, sourceFolderId: string) => void;
@@ -77,7 +77,7 @@ const FolderCard = memo(function FolderCard({
   };
 
   const handleDoubleClick = () => {
-    onOpen(folder);
+    onOpen(folder.id);
   };
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -108,7 +108,13 @@ const FolderCard = memo(function FolderCard({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    onDrop?.(e, folder);
+    const fileId = e.dataTransfer.getData("application/file-id");
+    const folderId = e.dataTransfer.getData("application/folder-id");
+    onDrop?.(
+      folder.id,
+      fileId ? [fileId] : [],
+      folderId ? [folderId] : [],
+    );
   };
 
   const finishMobileFolderDrag = useCallback(
@@ -195,8 +201,8 @@ const FolderCard = memo(function FolderCard({
   }, [clearLongPressTimer, onMobileFolderDragEnd]);
 
   const handleSelect = useCallback(() => {
-    onSelect(folder.id);
-  }, [folder.id, onSelect]);
+    onSelect(folder.id, !isSelected);
+  }, [folder.id, isSelected, onSelect]);
 
   return (
     <div
@@ -217,7 +223,7 @@ const FolderCard = memo(function FolderCard({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === "Enter") onOpen(folder);
+        if (e.key === "Enter") onOpen(folder.id);
       }}
       data-oid="y3sabdy"
     >
@@ -292,7 +298,7 @@ const FolderCard = memo(function FolderCard({
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
-                      onOpen(folder);
+                      onOpen(folder.id);
                     }}
                     data-oid="ishdm9z"
                   >
@@ -335,7 +341,7 @@ const FolderCard = memo(function FolderCard({
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
-                      onDelete(folder.id);
+                      onDelete(folder);
                     }}
                     data-oid="j2_pyh."
                   >

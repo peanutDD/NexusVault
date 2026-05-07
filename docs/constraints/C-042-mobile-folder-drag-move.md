@@ -21,4 +21,6 @@ navigation unreliable.
 - Cancel the pending drag if the pointer moves beyond the scroll threshold before
   the long press fires.
 - Ignore drops where the source and target folder are the same.
+- Treat an empty `data-folder-id` as the root-folder sentinel and normalize it to
+  `null` before calling folder move services.
 - Keep menus, buttons, and selection controls excluded from drag startup.

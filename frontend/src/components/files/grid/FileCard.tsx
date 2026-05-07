@@ -18,13 +18,13 @@ import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 interface FileCardProps {
   file: FileMetadata;
   isSelected: boolean;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, selected: boolean) => void;
   onPreview: (file: FileMetadata) => void;
   onShare: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
   onRename: (file: FileMetadata) => void;
-  onDelete: (id: string) => void;
-  onDragStart?: (e: React.DragEvent, file: FileMetadata) => void;
+  onDelete: (file: FileMetadata) => void;
+  onDragStart?: (fileId: string, e: React.DragEvent) => void;
   onMobileFileDragStart?: (fileId: string) => void;
   onMobileFileDragEnd?: () => void;
   onMobileFileDrop?: (targetFolderId: string, sourceFileId: string) => void;
@@ -205,7 +205,7 @@ const FileCard = memo(
         onDragStart={(e) => {
           e.dataTransfer.setData("application/file-id", file.id);
           e.dataTransfer.effectAllowed = "move";
-          onDragStart?.(e, file);
+          onDragStart?.(file.id, e);
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -231,7 +231,7 @@ const FileCard = memo(
           >
             <SelectionCheckbox
               isSelected={isSelected}
-              onClick={() => onSelect(file.id)}
+              onClick={() => onSelect(file.id, !isSelected)}
               size="responsive"
               positionClassName="absolute left-[clamp(0.15rem,0.35vw,0.25rem)] top-[clamp(0.15rem,0.35vw,0.25rem)]"
               data-oid="jgxtjef"
@@ -403,7 +403,7 @@ const FileCard = memo(
                       onClick={(e) => {
                         e.stopPropagation();
                         onCloseMenu();
-                        onDelete(file.id);
+                        onDelete(file);
                       }}
                       data-oid="opuf8vv"
                     >
