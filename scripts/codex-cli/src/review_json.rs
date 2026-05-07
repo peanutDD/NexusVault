@@ -195,13 +195,33 @@ fn parse_inline_review_comments(markdown: &str) -> Vec<StructuredReviewIssue> {
 
 fn parse_inline_heading(line: &str) -> Option<(String, u32)> {
     let heading = line.trim().strip_prefix("### ")?;
-    let (file, line_number) = heading.rsplit_once(':')?;
-    let line_number = line_number.trim().parse::<u32>().ok()?;
-    let file = file.trim();
-    if file.is_empty() {
-        return None;
+
+    for (index, _) in heading.match_indices(':').rev() {
+        let suffix = heading[index + 1..].trim_start();
+        let digit_len = suffix
+            .chars()
+            .take_while(|char| char.is_ascii_digit())
+            .map(char::len_utf8)
+            .sum::<usize>();
+        if digit_len == 0 {
+            continue;
+        }
+
+        let rest = suffix[digit_len..].trim_start();
+        if !rest.is_empty() && !rest.starts_with(':') {
+            continue;
+        }
+
+        let file = heading[..index].trim();
+        if file.is_empty() {
+            continue;
+        }
+
+        let line_number = suffix[..digit_len].parse::<u32>().ok()?;
+        return Some((file.to_string(), line_number));
     }
-    Some((file.to_string(), line_number))
+
+    None
 }
 
 fn parse_severity_badge(line: &str) -> Option<String> {

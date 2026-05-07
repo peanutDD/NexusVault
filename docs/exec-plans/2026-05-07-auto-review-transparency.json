@@ -8,7 +8,8 @@
     "Existing full-file fallback line limits remain conservative.",
     "Settings Back should fall back to /files only when there is no previous in-app route.",
     "Empty string drag folder ids are root/absent sentinels, not backend folder ids.",
-    "List-level grid adapters should keep callbacks stable when they flow into memoized cards."
+    "List-level grid adapters should keep callbacks stable when they flow into memoized cards.",
+    "Gemini inline headings may include trailing colon summaries after the line number."
   ],
   "risks": [
     "Pointer hit stack behavior can differ by browser.",
@@ -16,12 +17,14 @@
     "Self-drop filtering must not block valid selected file moves into the target folder.",
     "Settings direct-entry fallback must not break previous-route query restoration.",
     "Explicit drag id filtering must preserve root target moves.",
-    "Stabilizing list adapters must preserve grouped, plain, and virtualized file-list behavior."
+    "Stabilizing list adapters must preserve grouped, plain, and virtualized file-list behavior.",
+    "Relaxed inline heading parsing must not misread colons inside file paths."
   ],
   "verification": [
     "npm test -- FileCardMobileDragMove.test.tsx FolderCardDragMove.test.tsx useFileActionsDragMove.test.tsx",
     "npm test -- SettingsPageRegression.test.tsx useFileActionsDragMove.test.tsx",
     "npm test -- FileListStableCallbacks.test.tsx",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml parses_inline_headings_with_colon_suffix_after_line_number",
     "cargo test --manifest-path scripts/codex-cli/Cargo.toml review_status_block_lists_fixed_and_unfixed_medium_items",
     "cargo test --manifest-path scripts/codex-cli/Cargo.toml auto_fix_local_reports_unfixed_same_file_issue_independently",
     "cargo fmt --manifest-path scripts/codex-cli/Cargo.toml --check && cargo test --manifest-path scripts/codex-cli/Cargo.toml",

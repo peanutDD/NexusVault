@@ -21,6 +21,8 @@ which Medium/Medium+ issues were fixed versus left unresolved.
   source payloads must not pass `""` into folder move services.
 - List-level grid adapters must also keep callback props stable when they flow
   into memoized file/folder cards.
+- Gemini inline headings can include trailing `: summary` text after the line
+  number; review-to-json must still parse the path and line.
 
 ## Risks
 
@@ -33,6 +35,7 @@ which Medium/Medium+ issues were fixed versus left unresolved.
 - Making drag payload id filtering explicit must preserve root target moves.
 - Stabilizing list adapters must preserve existing grouped, plain, and
   virtualized file-list behavior.
+- Relaxing inline heading parsing must not misread colons inside file paths.
 
 ## Steps
 
@@ -47,4 +50,6 @@ which Medium/Medium+ issues were fixed versus left unresolved.
    handling explicit.
 7. Fix the follow-up list-level memo callback adapters in grouped and virtual
    file-list paths.
-8. Verify frontend and codex-cli tests, lint, build, and PR review state.
+8. Fix the follow-up review-to-json inline heading parser for trailing colon
+   summaries.
+9. Verify frontend and codex-cli tests, lint, build, and PR review state.

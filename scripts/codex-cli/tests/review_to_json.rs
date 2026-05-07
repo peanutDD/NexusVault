@@ -147,6 +147,29 @@ if (targetFolderId !== undefined) {
 }
 
 #[test]
+fn parses_inline_headings_with_colon_suffix_after_line_number() {
+    let review = r#"## Code Review
+
+### frontend/src/components/files/list/FileListGroupedView.tsx:136: Prefer a stable callback: useCallback
+![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+The mobile drop adapter is recreated on unrelated parent renders.
+"#;
+
+    let parsed = parse_structured_review(review);
+
+    assert_eq!(parsed.summary, "1 actionable issues");
+    assert_eq!(parsed.issues.len(), 1);
+    assert_eq!(parsed.issues[0].severity, "Medium");
+    assert_eq!(
+        parsed.issues[0].file,
+        "frontend/src/components/files/list/FileListGroupedView.tsx"
+    );
+    assert_eq!(parsed.issues[0].line, 136);
+    assert!(parsed.issues[0].problem.contains("mobile drop adapter"));
+}
+
+#[test]
 fn review_to_json_cli_writes_output_file_and_stdout_json() {
     let workspace = TestWorkspace::new("review-to-json");
     let input = workspace.path.join("review.md");
