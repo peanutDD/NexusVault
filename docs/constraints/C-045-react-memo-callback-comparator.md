@@ -13,3 +13,8 @@ When passing props into memoized card components from grids or virtual grids,
 prefer stable component-level handlers. Let the card provide its own file/folder
 identity back to the handler instead of allocating inline closures inside every
 map row.
+
+List-level adapters that feed grids or virtual grids must follow the same rule.
+Do not pass inline pass-through callbacks such as preview/share/mobile-drop into
+`FileGrid`, `VirtualizedFileGrid`, `MixedGrid`, or `VirtualizedMixedGrid` when
+those props flow through to memoized cards.

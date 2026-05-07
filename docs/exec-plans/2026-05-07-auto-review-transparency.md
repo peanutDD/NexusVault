@@ -19,6 +19,8 @@ which Medium/Medium+ issues were fixed versus left unresolved.
   `/settings` entry needs an in-app fallback.
 - Empty string folder ids in drag/drop are root/absent sentinels in this app;
   source payloads must not pass `""` into folder move services.
+- List-level grid adapters must also keep callback props stable when they flow
+  into memoized file/folder cards.
 
 ## Risks
 
@@ -29,6 +31,8 @@ which Medium/Medium+ issues were fixed versus left unresolved.
 - Detecting direct Settings entry must not break previous-route restoration with
   query parameters.
 - Making drag payload id filtering explicit must preserve root target moves.
+- Stabilizing list adapters must preserve existing grouped, plain, and
+  virtualized file-list behavior.
 
 ## Steps
 
@@ -41,4 +45,6 @@ which Medium/Medium+ issues were fixed versus left unresolved.
    folder moves without blocking selected files.
 6. Fix the follow-up Settings Back fallback and make root/absent drag sentinel
    handling explicit.
-7. Verify frontend and codex-cli tests, lint, build, and PR review state.
+7. Fix the follow-up list-level memo callback adapters in grouped and virtual
+   file-list paths.
+8. Verify frontend and codex-cli tests, lint, build, and PR review state.
