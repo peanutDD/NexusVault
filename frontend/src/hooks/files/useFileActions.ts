@@ -169,23 +169,55 @@ export function useFileActions({
     }
   }, [selectedFiles.size, selectedFolders.size, selectedFileIds, selectedFolderIds, setError]);
 
-  const handleDropOnBreadcrumb = useCallback(async (targetFolderId: string | null, e: React.DragEvent) => {
-    e.preventDefault();
-    const fileId = e.dataTransfer.getData('application/file-id');
-    if (!fileId) return;
+  const refreshListsAfterMove = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['files'] }),
+      queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
+    ]);
+    await Promise.all([refetchFiles(), refetchFolders()]);
+  }, [queryClient, refetchFiles, refetchFolders]);
+
+  const handleDropOnFolder = useCallback(async (
+    targetFolderId: string | null,
+    fileIds: string[],
+    folderIds: string[],
+  ) => {
+    const uniqueFileIds = [...new Set(fileIds)].filter(Boolean);
+    const uniqueFolderIds = [...new Set(folderIds)].filter(
+      (folderId) => folderId && folderId !== targetFolderId,
+    );
+    if (uniqueFileIds.length === 0 && uniqueFolderIds.length === 0) return;
 
     try {
-      await folderService.moveFilesToFolder([fileId], targetFolderId);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['files'] }),
-        queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
-      ]);
-      refetchFiles();
-      refetchFolders();
+      if (uniqueFileIds.length > 0) {
+        await folderService.moveFilesToFolder(uniqueFileIds, targetFolderId);
+      }
+      if (uniqueFolderIds.length > 0) {
+        await folderService.moveFolders(uniqueFolderIds, targetFolderId);
+      }
+      setSelectedFiles(new Set());
+      setSelectedFolders(new Set());
+      await refreshListsAfterMove();
     } catch (err) {
       setError(getErrorMessage(err, '移动失败'));
     }
-  }, [queryClient, refetchFiles, refetchFolders, setError]);
+  }, [
+    refreshListsAfterMove,
+    setError,
+    setSelectedFiles,
+    setSelectedFolders,
+  ]);
+
+  const handleDropOnBreadcrumb = useCallback(async (targetFolderId: string | null, e: React.DragEvent) => {
+    e.preventDefault();
+    const fileId = e.dataTransfer.getData('application/file-id');
+    const folderId = e.dataTransfer.getData('application/folder-id');
+    await handleDropOnFolder(
+      targetFolderId,
+      fileId ? [fileId] : [],
+      folderId ? [folderId] : [],
+    );
+  }, [handleDropOnFolder]);
 
   return {
     deleteLoading,
@@ -197,6 +229,7 @@ export function useFileActions({
     handleRenameFileSubmit,
     handleDownload,
     handleBatchDownload,
+    handleDropOnFolder,
     handleDropOnBreadcrumb,
   };
 }

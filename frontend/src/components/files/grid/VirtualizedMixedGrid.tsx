@@ -256,6 +256,9 @@ export default function VirtualizedMixedGrid({
                               folderId ? [folderId] : [],
                             );
                           }}
+                          onMobileFolderDrop={(targetFolderId, sourceFolderId) => {
+                            onDropOnFolder(targetFolderId, [], [sourceFolderId]);
+                          }}
                           isMenuOpen={openFolderMenuId === folder.id}
                           onToggleMenu={onToggleFolderMenu}
                           onCloseMenu={onCloseMenu}
@@ -279,6 +282,9 @@ export default function VirtualizedMixedGrid({
                         onRename={() => onRenameFile(file)}
                         onDelete={() => onDelete(file, "file")}
                         onDragStart={(e) => onFileDragStart(file.id, e)}
+                        onMobileFileDrop={(targetFolderId, sourceFileId) => {
+                          onDropOnFolder(targetFolderId, [sourceFileId], []);
+                        }}
                         isMenuOpen={openFileMenuId === file.id}
                         onToggleMenu={onToggleFileMenu}
                         onCloseMenu={onCloseMenu}

@@ -60,6 +60,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     handleBatchDelete,
     handleShowBatchMove,
     handleShowBatchShare,
+    handleDropOnFolder,
     handleDropOnBreadcrumb,
     refreshListsAfterMove,
     clearSelection,
@@ -126,14 +127,20 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     e.dataTransfer.effectAllowed = "move";
   };
   const handleDropOnFolderAdapter = (
-    _folderId: string,
+    folderId: string,
     fileIds: string[],
     folderIds: string[],
   ) => {
-    // 由于 FileListContent 期望 folderId、fileIds 和 folderIds，而 handleDropOnFolder 需要 e 和 folder 对象
-    // 这里简化处理，只处理单个文件的情况
-    if (fileIds.length > 0 || folderIds.length > 0) {
-      void _folderId;
+    const draggedSelectedFile = fileIds.some((id) => selectedFiles.has(id));
+    const draggedSelectedFolder = folderIds.some((id) =>
+      selectedFolders.has(id),
+    );
+    const shouldMoveSelection = draggedSelectedFile || draggedSelectedFolder;
+    const resolvedFileIds = shouldMoveSelection ? selectedFileIds : fileIds;
+    const resolvedFolderIds = shouldMoveSelection ? selectedFolderIds : folderIds;
+
+    if (resolvedFileIds.length > 0 || resolvedFolderIds.length > 0) {
+      void handleDropOnFolder(folderId, resolvedFileIds, resolvedFolderIds);
     }
   };
 

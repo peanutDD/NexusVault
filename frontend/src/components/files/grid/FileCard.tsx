@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   Download,
   Send,
@@ -25,10 +25,25 @@ interface FileCardProps {
   onRename: (file: FileMetadata) => void;
   onDelete: (id: string) => void;
   onDragStart?: (e: React.DragEvent, file: FileMetadata) => void;
+  onMobileFileDragStart?: (fileId: string) => void;
+  onMobileFileDragEnd?: () => void;
+  onMobileFileDrop?: (targetFolderId: string, sourceFileId: string) => void;
   isMenuOpen: boolean;
   onToggleMenu: (id: string) => void;
   onCloseMenu: () => void;
   thumbnailPriority?: "high" | "low";
+}
+
+const MOBILE_FILE_DRAG_LONG_PRESS_MS = 450;
+const MOBILE_FILE_DRAG_CANCEL_DISTANCE_PX = 10;
+
+function isInteractivePointerTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      'button, input, select, textarea, a, [role="checkbox"], [data-file-menu]',
+    ),
+  );
 }
 
 /**
@@ -45,11 +60,31 @@ const FileCard = memo(
     onRename,
     onDelete,
     onDragStart,
+    onMobileFileDragStart,
+    onMobileFileDragEnd,
+    onMobileFileDrop,
     isMenuOpen,
     onToggleMenu,
     onCloseMenu,
     thumbnailPriority,
   }: FileCardProps) {
+    const [isMobileDragging, setIsMobileDragging] = useState(false);
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+      null,
+    );
+    const mobileDragActiveRef = useRef(false);
+    const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+    const suppressNextPreviewRef = useRef(false);
+
+    const clearLongPressTimer = useCallback(() => {
+      if (longPressTimerRef.current !== null) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }, []);
+
+    useEffect(() => clearLongPressTimer, [clearLongPressTimer]);
+
     const handleToggleMenu = (e: React.MouseEvent) => {
       e.stopPropagation();
       onToggleMenu(file.id);
@@ -71,18 +106,109 @@ const FileCard = memo(
       schedulePreload(file.id);
     };
 
+    const finishMobileFileDrag = useCallback(
+      (e: React.PointerEvent<HTMLElement>) => {
+        const wasDragging = mobileDragActiveRef.current;
+        clearLongPressTimer();
+        pointerStartRef.current = null;
+
+        if (!wasDragging) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        mobileDragActiveRef.current = false;
+        suppressNextPreviewRef.current = true;
+        setIsMobileDragging(false);
+
+        const target = document.elementFromPoint
+          ? document
+              .elementFromPoint(e.clientX, e.clientY)
+              ?.closest<HTMLElement>("[data-folder-id]")
+          : null;
+        const targetFolderId = target?.dataset.folderId;
+        if (targetFolderId) {
+          onMobileFileDrop?.(targetFolderId, file.id);
+        }
+        onMobileFileDragEnd?.();
+      },
+      [
+        clearLongPressTimer,
+        file.id,
+        onMobileFileDragEnd,
+        onMobileFileDrop,
+      ],
+    );
+
+    const handlePointerDown = useCallback(
+      (e: React.PointerEvent<HTMLElement>) => {
+        if (e.pointerType === "mouse" || !e.isPrimary) return;
+        if (isInteractivePointerTarget(e.target)) return;
+
+        clearLongPressTimer();
+        pointerStartRef.current = { x: e.clientX, y: e.clientY };
+        longPressTimerRef.current = setTimeout(() => {
+          mobileDragActiveRef.current = true;
+          setIsMobileDragging(true);
+          onMobileFileDragStart?.(file.id);
+        }, MOBILE_FILE_DRAG_LONG_PRESS_MS);
+
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+      },
+      [clearLongPressTimer, file.id, onMobileFileDragStart],
+    );
+
+    const handlePointerMove = useCallback(
+      (e: React.PointerEvent<HTMLElement>) => {
+        if (e.pointerType === "mouse") return;
+        const start = pointerStartRef.current;
+        if (!start) return;
+
+        const distance = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+        if (
+          !mobileDragActiveRef.current &&
+          distance > MOBILE_FILE_DRAG_CANCEL_DISTANCE_PX
+        ) {
+          clearLongPressTimer();
+          pointerStartRef.current = null;
+          return;
+        }
+
+        if (mobileDragActiveRef.current) {
+          e.preventDefault();
+        }
+      },
+      [clearLongPressTimer],
+    );
+
+    const handlePointerCancel = useCallback(() => {
+      clearLongPressTimer();
+      pointerStartRef.current = null;
+      if (mobileDragActiveRef.current) {
+        mobileDragActiveRef.current = false;
+        setIsMobileDragging(false);
+        onMobileFileDragEnd?.();
+      }
+    }, [clearLongPressTimer, onMobileFileDragEnd]);
+
     return (
       <article
         className={cn(
           "glass-card group relative rounded-md transition-colors",
           isSelected && "border-[var(--cta-primary-border)]",
+          isMobileDragging && "border-[var(--color-border-strong)] opacity-80",
         )}
+        data-file-id={file.id}
+        data-mobile-file-dragging={isMobileDragging ? "true" : undefined}
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData("application/file-id", file.id);
           e.dataTransfer.effectAllowed = "move";
           onDragStart?.(e, file);
         }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishMobileFileDrag}
+        onPointerCancel={handlePointerCancel}
         onMouseEnter={handleMouseEnter}
         data-oid="vkt8wq9"
       >
@@ -90,7 +216,15 @@ const FileCard = memo(
           {/* 缩略图区域 */}
           <div
             className="relative mb-3 aspect-square cursor-pointer overflow-hidden rounded-sm bg-[var(--file-card-thumb-bg)]"
-            onClick={() => onPreview(file)}
+            onClick={(e) => {
+              if (suppressNextPreviewRef.current) {
+                suppressNextPreviewRef.current = false;
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
+              onPreview(file);
+            }}
             data-oid="ota.b1o"
           >
             <SelectionCheckbox
@@ -190,11 +324,13 @@ const FileCard = memo(
                 <div
                   className="fixed inset-0 z-40"
                   onClick={onCloseMenu}
+                  data-file-menu="true"
                   data-oid="gtgz8t7"
                 />
 
                 <div
                   className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--file-card-menu-border)] bg-[var(--file-card-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
+                  data-file-menu="true"
                   data-oid="qo212qm"
                 >
                     <button
@@ -294,7 +430,10 @@ const FileCard = memo(
     prev.file.mime_type === next.file.mime_type &&
     prev.isSelected === next.isSelected &&
     prev.isMenuOpen === next.isMenuOpen &&
-    prev.thumbnailPriority === next.thumbnailPriority,
+    prev.thumbnailPriority === next.thumbnailPriority &&
+    prev.onMobileFileDrop === next.onMobileFileDrop &&
+    prev.onMobileFileDragStart === next.onMobileFileDragStart &&
+    prev.onMobileFileDragEnd === next.onMobileFileDragEnd,
 );
 
 export default FileCard;

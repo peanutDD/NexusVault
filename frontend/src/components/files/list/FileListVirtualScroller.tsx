@@ -147,6 +147,9 @@ export default function FileListVirtualScroller({
           onRename={onRenameFile}
           onDelete={onDelete}
           onDragStart={onFileDragStart}
+          onMobileFileDrop={(targetFolderId, sourceFileId) => {
+            onDropOnFolder(targetFolderId, [sourceFileId], []);
+          }}
           openFileMenuId={openFileMenuId}
           onToggleMenu={onToggleFileMenu}
           onCloseMenu={onCloseMenu}
@@ -163,6 +166,9 @@ export default function FileListVirtualScroller({
           onRename={onRenameFile}
           onDelete={onDelete}
           onDragStart={onFileDragStart}
+          onMobileFileDrop={(targetFolderId, sourceFileId) => {
+            onDropOnFolder(targetFolderId, [sourceFileId], []);
+          }}
           openFileMenuId={openFileMenuId}
           onToggleMenu={onToggleFileMenu}
           onCloseMenu={onCloseMenu}

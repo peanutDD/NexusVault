@@ -2,6 +2,10 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-07 | settings quick nav home icon | 95 | Settings 删除 Quick nav/sidebar 与所有 `Jump to ...` hash 链接；标题左侧 `Settings2` 图标改为可访问按钮 `Go to files home` 并导航 `/files`，原 `Back` 继续 `navigate(-1)` 保留上一级历史。新增红绿 routed regressions；聚焦测试先红后绿，lint、全量前端测试、build 通过，build 仅保留既有大 chunk 警告；补充 Settings 截图证明 Quick nav 不存在。 |
+| 2026-05-07 | settings back history | 95 | Settings header action 从硬编码 `navigate(\"/files\")` / `Back to Home` 改为历史 `navigate(-1)` / `Back`，保留来源页面 query（例如 `/files?folder=folder-1`）。新增 Settings routed regression，复用 C-036 约束；聚焦测试、lint、全量前端测试、build 通过，build 仅保留既有大 chunk 警告。 |
+| 2026-05-07 | batch drag move | 95 | 多选文件/文件夹后，拖动任意已选文件或文件夹到目标文件夹会扩展为当前全部选中项；拖动未选项保持单项移动。文件卡片新增移动端长按拖拽并抑制长按后的预览点击，普通/虚拟/混排/分组网格均接入移动端 file drop；补充 C-043、exec-plan 双件、移动视口截图和红绿测试。聚焦测试、相关回归、lint、全量前端测试、build 通过，build 仅保留既有大 chunk 警告。 |
+| 2026-05-07 | folder drag move | 95 | 文件夹卡片支持移动端长按拖拽，普通短按不触发移动；FolderGrid/MixedGrid/VirtualizedMixedGrid 均把移动端 drop 接到统一动作层。修复 FileList 文件夹 drop adapter 空实现，`useFileActions` 统一处理文件/文件夹拖到目标文件夹和面包屑，拖到自身 no-op。新增红绿测试、C-042、exec-plan JSON/MD 与移动视口截图；聚焦测试、相关回归、全量前端测试、lint、build 通过，build 仅保留既有大 chunk 警告。 |
 | 2026-05-07 | parallel chunked upload worker pool | 96 | 分片上传调度从固定批次 barrier 改为有界 worker pool，默认每文件 4 路并行；任一 lane 完成后立即补下一个 pending part，并用完成集合避免并发进度重复计数。新增红绿测试覆盖即时补位，新增 C-041 和 exec-plan 双件；目标测试、lint、全量前端测试、build 通过，build 仅保留既有大 chunk 提示。 |
 | 2026-05-06 | auto-fix weekly failure report and reviewer template | 95 | 新增 `codex-auto-fix auto-fix-weekly-report`，从自动修复 JSON/JSONL 聚合 `apply_fail_reason`、文件路径、`fallback_used`、`final_status` Top 5；Review 指南固化自动修复友好模板；新增 C-040，明确没有真实失败样本前不得默认增加 `git apply --check`。 |
 | 2026-05-06 | codex-cli review JSON shell wrapper and PR handoff | 95 | 补齐 `scripts/codex-cli/tools/review_to_json.sh` 兼容入口，委托给 `codex-auto-fix review-to-json`，避免第二套 parser；新增红绿测试验证 wrapper 输出与 CLI 输出一致，新增 C-039 永久约束，并准备随 review JSON 主输入改动一起提交 PR。 |

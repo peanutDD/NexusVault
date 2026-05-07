@@ -133,6 +133,9 @@ export default function FileListGroupedView({
               onRename={onRenameFile}
               onDelete={onDelete}
               onDragStart={onFileDragStart}
+              onMobileFileDrop={(targetFolderId, sourceFileId) => {
+                onDropOnFolder(targetFolderId, [sourceFileId], []);
+              }}
               openFileMenuId={openFileMenuId}
               onToggleMenu={onToggleFileMenu}
               onCloseMenu={onCloseMenu}

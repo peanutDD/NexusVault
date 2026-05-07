@@ -427,6 +427,7 @@ export function useFileList() {
     handleRenameFileSubmit,
     handleDownload,
     handleBatchDownload,
+    handleDropOnFolder,
     handleDropOnBreadcrumb,
   } = useFileActions({
     files,
@@ -761,6 +762,7 @@ export function useFileList() {
     handleBatchDelete,
     handleShowBatchMove,
     handleShowBatchShare,
+    handleDropOnFolder,
     handleDropOnBreadcrumb,
     loadFiles: refetchFiles,
     loadFolders: refetchFolders,

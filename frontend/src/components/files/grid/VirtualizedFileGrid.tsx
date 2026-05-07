@@ -28,6 +28,7 @@ interface VirtualizedFileGridProps {
   onRename: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
   onDragStart: (fileId: string, e: React.DragEvent) => void;
+  onMobileFileDrop?: (targetFolderId: string, sourceFileId: string) => void;
   openFileMenuId: string | null;
   onToggleMenu: (id: string) => void;
   onCloseMenu: () => void;
@@ -53,6 +54,7 @@ export default function VirtualizedFileGrid({
   onRename,
   onDelete,
   onDragStart,
+  onMobileFileDrop,
   openFileMenuId,
   onToggleMenu,
   onCloseMenu,
@@ -252,6 +254,7 @@ export default function VirtualizedFileGrid({
                       onRename={() => onRename(file)}
                       onDelete={() => onDelete(file, "file")}
                       onDragStart={(e, file) => onDragStart(file.id, e)}
+                      onMobileFileDrop={onMobileFileDrop}
                       isMenuOpen={openFileMenuId === file.id}
                       onToggleMenu={onToggleMenu}
                       onCloseMenu={onCloseMenu}

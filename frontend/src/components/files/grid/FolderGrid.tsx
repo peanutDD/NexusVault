@@ -59,6 +59,9 @@ export default function FolderGrid({
               folderId ? [folderId] : [],
             );
           }}
+          onMobileFolderDrop={(targetFolderId, sourceFolderId) => {
+            onDrop(targetFolderId, [], [sourceFolderId]);
+          }}
           isMenuOpen={openFolderMenuId === folder.id}
           onToggleMenu={onToggleMenu}
           onCloseMenu={onCloseMenu}
