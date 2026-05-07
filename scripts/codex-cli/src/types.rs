@@ -111,6 +111,18 @@ pub struct PrAutoFixOutput {
     pub summary: Option<String>,
     pub fixed_explanations: Vec<String>,
     pub pending_explanations: Vec<String>,
+    pub issue_statuses: Vec<ReviewIssueStatus>,
+}
+
+/// One-to-one status for a Medium/Medium+ review issue in the PR feedback.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ReviewIssueStatus {
+    pub severity: String,
+    pub file: String,
+    pub line: u32,
+    pub description: String,
+    pub status: String,
+    pub explanation: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]

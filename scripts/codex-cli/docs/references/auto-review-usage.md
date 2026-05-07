@@ -161,7 +161,17 @@ CODEX_EXCLUDE_DOCS=true
   "review_clean": true,
   "summary": "Gemini review summary",
   "fixed_explanations": [],
-  "pending_explanations": []
+  "pending_explanations": [],
+  "issue_statuses": [
+    {
+      "severity": "Medium",
+      "file": "src/a.rs",
+      "line": 12,
+      "description": "Gemini issue text",
+      "status": "resolved",
+      "explanation": "已自动修复"
+    }
+  ]
 }
 ```
 
@@ -172,6 +182,7 @@ CODEX_EXCLUDE_DOCS=true
 - `push_blocked=true`：生成了变更，但安全审计 fail-closed，未 commit/push。
 - `has_pending=true` / `pending_count>0`：仍有 `Medium` 及以上问题没有自动修复，PR 不可视为 clean。
 - `review_clean=true`：当前 Codex 解析出的 `Medium/Medium+` 及以上问题全部修复或不存在，且未被安全门禁阻断。
+- `issue_statuses`：当前 Gemini Review 中每个 `Medium/Medium+` 及以上问题的一一对应状态；PR 评论会用同一份数据渲染 `Medium/Medium+ 对应状态` 表。
 - `fixed_explanations`：`Medium` 及以上问题已自动修复时的 issue 级说明。
 - `pending_explanations`：`Medium` 及以上问题未修复时的原因。
 - `quality_score_available=false`：质量评分不可用，不等于真实 0 分。

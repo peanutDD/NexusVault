@@ -1,8 +1,8 @@
 use crate::llm::CodexClient;
 use crate::repo;
 use crate::types::{
-    ChangelogEntryInput, ReviewData, ReviewIssue, is_review_severity_medium_or_higher,
-    review_severity_matches_allowed,
+    ChangelogEntryInput, ReviewData, ReviewIssue, ReviewIssueStatus,
+    is_review_severity_medium_or_higher, review_severity_matches_allowed,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -667,6 +667,10 @@ fn build_dry_run_comment(ctx: &SkillContext) -> String {
 }
 
 pub(crate) fn fixed_explanations(ctx: &SkillContext) -> Vec<String> {
+    if ctx.push_blocked {
+        return Vec::new();
+    }
+
     let fixed = fixed_issue_keys(ctx);
     let Some(data) = &ctx.parsed_data else {
         return Vec::new();
@@ -707,19 +711,7 @@ fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
             if fixed.contains(&issue_key) {
                 return None;
             }
-            let latest_attempt = ctx
-                .fix_attempts
-                .iter()
-                .rev()
-                .find(|attempt| attempt.issue_key == issue_key && !attempt.success)
-                .and_then(|attempt| attempt.reason.as_deref());
-            let reason = latest_attempt.unwrap_or_else(|| {
-                if selected.contains(&issue_key) {
-                    "未产生可应用补丁"
-                } else {
-                    "策略过滤或受保护路径，未自动修复"
-                }
-            });
+            let reason = pending_reason_for_issue(ctx, &issue_key, selected.contains(&issue_key));
             Some(format!(
                 "[{}] `{}`:{} 未自动修复：{}",
                 issue.severity,
@@ -729,6 +721,61 @@ fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
             ))
         })
         .collect()
+}
+
+pub(crate) fn review_issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus> {
+    let Some(data) = &ctx.parsed_data else {
+        return Vec::new();
+    };
+
+    let fixed = fixed_issue_keys(ctx);
+    let selected: HashSet<String> = ctx.selected_issues.iter().map(review_issue_key).collect();
+
+    data.issues
+        .iter()
+        .filter(|issue| is_review_severity_medium_or_higher(&issue.severity))
+        .map(|issue| {
+            let issue_key = review_issue_key(issue);
+            let line = issue.line.unwrap_or(0);
+            let (status, explanation) = if fixed.contains(&issue_key) && ctx.push_blocked {
+                (
+                    "blocked".to_string(),
+                    "已生成修复，但安全扫描 fail-closed 阻止推送".to_string(),
+                )
+            } else if fixed.contains(&issue_key) {
+                ("resolved".to_string(), "已自动修复".to_string())
+            } else {
+                (
+                    "pending".to_string(),
+                    pending_reason_for_issue(ctx, &issue_key, selected.contains(&issue_key)),
+                )
+            };
+
+            ReviewIssueStatus {
+                severity: issue.severity.clone(),
+                file: issue.file.clone(),
+                line,
+                description: issue.description.clone(),
+                status,
+                explanation,
+            }
+        })
+        .collect()
+}
+
+fn pending_reason_for_issue(ctx: &SkillContext, issue_key: &str, selected: bool) -> String {
+    ctx.fix_attempts
+        .iter()
+        .rev()
+        .find(|attempt| attempt.issue_key == issue_key && !attempt.success)
+        .and_then(|attempt| attempt.reason.clone())
+        .unwrap_or_else(|| {
+            if selected {
+                "未产生可应用补丁".to_string()
+            } else {
+                "策略过滤或受保护路径，未自动修复".to_string()
+            }
+        })
 }
 
 fn fixed_issue_keys(ctx: &SkillContext) -> HashSet<String> {
@@ -741,35 +788,80 @@ fn fixed_issue_keys(ctx: &SkillContext) -> HashSet<String> {
 }
 
 fn review_status_block(ctx: &SkillContext) -> String {
-    let fixed = fixed_explanations(ctx);
-    let pending = pending_explanations(ctx);
-    if fixed.is_empty() && pending.is_empty() {
+    let Some(_) = &ctx.parsed_data else {
         return String::new();
+    };
+
+    let statuses = review_issue_statuses(ctx);
+    if statuses.is_empty() {
+        return "\n\n📋 Medium/Medium+ 对应状态：\n- 本轮 Gemini Review 未解析到 Medium/Medium+ 及以上问题。".to_string();
     }
 
-    let mut sections = Vec::new();
-    if !fixed.is_empty() {
-        sections.push(format!(
-            "✅ 已自动修复问题：\n{}",
+    let rows = statuses
+        .iter()
+        .enumerate()
+        .map(|(index, status)| {
+            format!(
+                "| {} | [{}] `{}`:{} {} | {} | {} |",
+                index + 1,
+                markdown_table_cell(&status.severity),
+                markdown_table_cell(&status.file),
+                status.line,
+                markdown_table_cell(&status.description),
+                markdown_table_cell(status_label(&status.status)),
+                markdown_table_cell(&status.explanation)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let fixed = fixed_explanations(ctx);
+    let pending = pending_explanations(ctx);
+    let fixed_section = if fixed.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "\n\n✅ 已解决明细：\n{}",
             fixed
                 .iter()
                 .map(|explanation| format!("- {}", explanation))
                 .collect::<Vec<_>>()
                 .join("\n")
-        ));
-    }
-    if !pending.is_empty() {
-        sections.push(format!(
-            "🧭 未自动修复问题：\n{}",
+        )
+    };
+    let pending_section = if pending.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "\n\n🧭 未解决明细：\n{}",
             pending
                 .iter()
                 .map(|explanation| format!("- {}", explanation))
                 .collect::<Vec<_>>()
                 .join("\n")
-        ));
-    }
+        )
+    };
 
-    format!("\n\n{}", sections.join("\n\n"))
+    format!(
+        "\n\n📋 Medium/Medium+ 对应状态\n\n| # | Gemini 问题 | 状态 | 说明 |\n|---|---|---|---|\n{}{}{}",
+        rows, fixed_section, pending_section
+    )
+}
+
+fn status_label(status: &str) -> &'static str {
+    match status {
+        "resolved" => "✅ 已解决",
+        "blocked" => "⚠️ 推送阻塞",
+        _ => "🧭 未解决",
+    }
+}
+
+fn markdown_table_cell(value: &str) -> String {
+    value
+        .replace('|', "\\|")
+        .replace('\n', " ")
+        .trim()
+        .to_string()
 }
 
 fn build_security_findings(ctx: &SkillContext) -> String {
@@ -1270,7 +1362,7 @@ mod tests {
     }
 
     #[test]
-    fn review_status_block_lists_fixed_and_unfixed_medium_items() {
+    fn review_status_block_lists_one_to_one_medium_status_table() {
         let mut ctx = SkillContext::new(SkillContextInit {
             pr_number: 1,
             repo: "owner/repo".to_string(),
@@ -1325,10 +1417,10 @@ mod tests {
 
         let block = review_status_block(&ctx);
 
-        assert!(block.contains("✅ 已自动修复问题"));
-        assert!(block.contains("[Medium] `src/a.rs`:10 已自动修复：first"));
-        assert!(block.contains("🧭 未自动修复问题"));
-        assert!(block.contains("[Medium+] `src/b.rs`:20 未自动修复：empty patch"));
+        assert!(block.contains("📋 Medium/Medium+ 对应状态"));
+        assert!(block.contains("| # | Gemini 问题 | 状态 | 说明 |"));
+        assert!(block.contains("| 1 | [Medium] `src/a.rs`:10 first | ✅ 已解决 | 已自动修复 |"));
+        assert!(block.contains("| 2 | [Medium+] `src/b.rs`:20 second | 🧭 未解决 | empty patch |"));
     }
 
     #[test]

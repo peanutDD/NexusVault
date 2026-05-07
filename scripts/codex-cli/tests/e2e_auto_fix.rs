@@ -126,6 +126,14 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
     assert_eq!(json["pending_count"], 0);
     assert_eq!(json["review_clean"], false);
     assert_eq!(json["pending_explanations"].as_array().unwrap().len(), 0);
+    assert_eq!(json["fixed_explanations"].as_array().unwrap().len(), 0);
+    assert_eq!(json["issue_statuses"][0]["status"], "blocked");
+    assert!(
+        json["issue_statuses"][0]["explanation"]
+            .as_str()
+            .unwrap()
+            .contains("阻止推送")
+    );
 
     let commit_count = workspace.git_stdout(&repo, &["rev-list", "--count", "HEAD"]);
     assert_eq!(commit_count.trim(), "1");
@@ -174,6 +182,24 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
     assert_eq!(fixed.len(), 1);
     assert!(fixed[0].as_str().unwrap().contains("`:1"));
     assert!(fixed[0].as_str().unwrap().contains("已自动修复"));
+    let statuses = json["issue_statuses"].as_array().unwrap();
+    assert_eq!(statuses.len(), 2);
+    assert_eq!(statuses[0]["status"], "resolved");
+    assert_eq!(statuses[0]["line"], 1);
+    assert!(
+        statuses[0]["explanation"]
+            .as_str()
+            .unwrap()
+            .contains("已自动修复")
+    );
+    assert_eq!(statuses[1]["status"], "pending");
+    assert_eq!(statuses[1]["line"], 5);
+    assert!(
+        statuses[1]["explanation"]
+            .as_str()
+            .unwrap()
+            .contains("模型未返回可应用")
+    );
 }
 
 #[test]

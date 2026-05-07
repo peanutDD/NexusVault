@@ -100,6 +100,7 @@ printf '%s\n' "$REVIEW_TEXT" > /tmp/review.md
 - `retry_count`：发生过 `patch_apply_retry` 的次数。
 - `fallback_used`：是否成功使用 full-file fallback。
 - `final_status`：`clean`、`pending` 或 `needs-human`。
+- `issue_statuses`：每个 `Medium/Medium+` 及以上 Gemini issue 的一一对应状态；PR 评论必须展示同源状态表。
 
 ### 仓库根目录与规则/Changelog 参数化
 
