@@ -139,6 +139,55 @@ fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
 }
 
 #[test]
+fn pr_auto_fix_posts_issue_status_checklist_comment_in_dry_run() {
+    let workspace = TestWorkspace::new("pr-comment-checklist");
+    let repo = workspace.create_repo();
+    write_repo_file(
+        &repo,
+        "src/lib.rs",
+        "pub fn value() -> i32 {\n    1\n}\n\npub fn other() -> i32 {\n    3\n}\n",
+    );
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的问题，并在 PR 评论区逐项标记状态。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nTwo Medium comments in one file.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("same_file_partial");
+    let fake_gh = workspace.fake_gh();
+    let gh_comment = workspace.path.join("gh-comment.md");
+
+    let output =
+        run_pr_auto_fix_with_fake_gh(&repo, &review, &fake_agent, &fake_gh, &gh_comment, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["has_pending"], true);
+    assert_eq!(json["issue_statuses"][0]["status"], "resolved");
+    assert_eq!(json["issue_statuses"][1]["status"], "pending");
+
+    let comment = fs::read_to_string(gh_comment).unwrap();
+    assert!(comment.contains("Codex 已在本地生成并应用补丁"));
+    assert!(comment.contains("📋 Medium/Medium+/High/Critical 对应状态"));
+    assert!(comment.contains("| # | Gemini 问题 | 状态 | 说明 |"));
+    assert!(comment.contains("✅ 已解决"));
+    assert!(comment.contains("🧭 未解决"));
+    assert!(comment.contains("✅ 已解决明细"));
+    assert!(comment.contains("🧭 未解决明细"));
+    assert!(comment.contains("fix value"));
+    assert!(comment.contains("fix other"));
+}
+
+#[test]
 fn auto_fix_local_blocks_push_when_security_audit_fails() {
     let workspace = TestWorkspace::new("blocked");
     let repo = workspace.create_repo();
@@ -506,6 +555,41 @@ fn run_auto_fix_json(
     command.output().unwrap()
 }
 
+fn run_pr_auto_fix_with_fake_gh(
+    repo: &Path,
+    review: &Path,
+    fake_agent: &Path,
+    fake_gh: &Path,
+    gh_comment: &Path,
+    yes: bool,
+) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    let path = std::env::var("PATH")
+        .map(|current| format!("{}:{}", fake_gh.parent().unwrap().display(), current))
+        .unwrap_or_else(|_| fake_gh.parent().unwrap().display().to_string());
+    command
+        .args([
+            "pr-auto-fix",
+            "--pr-number",
+            "24",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--gemini-review",
+            review.to_str().unwrap(),
+            "--disable-changelog",
+            "--max-rounds",
+            "2",
+        ])
+        .env("PATH", path)
+        .env("CODEX_AGENT_COMMAND", fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30")
+        .env("FAKE_GH_COMMENT_PATH", gh_comment);
+    if yes {
+        command.arg("--yes");
+    }
+    command.output().unwrap()
+}
+
 fn parse_stdout(output: &std::process::Output) -> Value {
     let stdout = String::from_utf8_lossy(&output.stdout);
     serde_json::from_str(stdout.trim()).unwrap_or_else(|e| {
@@ -557,6 +641,35 @@ impl TestWorkspace {
         let path = self.path.join(format!("fake-agent-{mode}.sh"));
         let script = fake_agent_script(mode);
         fs::write(&path, script).unwrap();
+        let mut permissions = fs::metadata(&path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).unwrap();
+        path
+    }
+
+    fn fake_gh(&self) -> PathBuf {
+        let path = self.path.join("gh");
+        fs::write(
+            &path,
+            r#"#!/bin/sh
+set -eu
+if [ "$1" = "pr" ] && [ "$2" = "comment" ]; then
+  shift 3
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --body)
+        printf '%s' "$2" > "$FAKE_GH_COMMENT_PATH"
+        exit 0
+        ;;
+    esac
+    shift
+  done
+fi
+printf '%s\n' "unexpected gh invocation: $*" >&2
+exit 1
+"#,
+        )
+        .unwrap();
         let mut permissions = fs::metadata(&path).unwrap().permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(&path, permissions).unwrap();

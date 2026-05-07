@@ -1,0 +1,20 @@
+{
+  "task": "auto-review-comment-checklist-e2e",
+  "date": "2026-05-08",
+  "assumptions": [
+    "Gemini quota is exhausted, so no new Gemini review should be requested.",
+    "A fake Codex agent plus fake gh executable can exercise pr-auto-fix's automated comment boundary.",
+    "Manual PR comments do not prove the automated review loop posts the checklist."
+  ],
+  "risks": [
+    "Testing only stdout JSON misses reviewer-facing comment failures.",
+    "Testing only the local ledger misses PR conversation behavior.",
+    "Replacing PATH with only fake gh breaks system commands used by fake agents."
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml --test e2e_auto_fix pr_auto_fix_posts_issue_status_checklist_comment_in_dry_run",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml",
+    "cargo clippy --manifest-path scripts/codex-cli/Cargo.toml --all-targets -- -D warnings",
+    "git diff --check"
+  ]
+}
