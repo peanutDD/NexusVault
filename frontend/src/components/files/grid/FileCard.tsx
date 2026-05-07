@@ -13,6 +13,7 @@ import LazyThumbnail from "../preview/LazyThumbnail";
 import { cn } from "../../../utils/cn";
 import { getMimeTypeLabel } from "../../../utils/mimeType";
 import { schedulePreload } from "../../../utils/preloadPreview";
+import { findFolderDropTargetFromPoint } from "../../../utils/dropTargets";
 import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 
 interface FileCardProps {
@@ -120,11 +121,7 @@ const FileCard = memo(
         suppressNextPreviewRef.current = true;
         setIsMobileDragging(false);
 
-        const target = document.elementFromPoint
-          ? document
-              .elementFromPoint(e.clientX, e.clientY)
-              ?.closest<HTMLElement>("[data-folder-id]")
-          : null;
+        const target = findFolderDropTargetFromPoint(e.clientX, e.clientY);
         const targetFolderId = target?.dataset.folderId;
         if (targetFolderId !== undefined) {
           onMobileFileDrop?.(targetFolderId, file.id);

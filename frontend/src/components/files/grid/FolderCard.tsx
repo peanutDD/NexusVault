@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { FolderOpen, PencilLine, Trash2, MoreVertical } from "lucide-react";
 import type { Folder } from "../../../types/folders";
 import { cn } from "../../../utils/cn";
+import { findFolderDropTargetFromPoint } from "../../../utils/dropTargets";
 import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 
 interface FolderCardProps {
@@ -130,13 +131,13 @@ const FolderCard = memo(function FolderCard({
       mobileDragActiveRef.current = false;
       setIsMobileDragging(false);
 
-      const target = document.elementFromPoint
-        ? document
-            .elementFromPoint(e.clientX, e.clientY)
-            ?.closest<HTMLElement>("[data-folder-id]")
-        : null;
+      const target = findFolderDropTargetFromPoint(
+        e.clientX,
+        e.clientY,
+        folder.id,
+      );
       const targetFolderId = target?.dataset.folderId;
-      if (targetFolderId !== undefined && targetFolderId !== folder.id) {
+      if (targetFolderId !== undefined) {
         onMobileFolderDrop?.(targetFolderId, folder.id);
       }
       onMobileFolderDragEnd?.();

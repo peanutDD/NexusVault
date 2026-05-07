@@ -139,7 +139,7 @@ apply_plan() {
     needs_human)
       add_label "$current"
       add_label "gemini-review-needs-human"
-      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 未能清理当前 Gemini Review 的 Medium/Medium+ 问题。** 已在上方评论列出未自动修复原因；本轮不会误判为可合并，请人工处理或重跑。"
+      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 未能清理当前 Gemini Review 的 Medium/Medium+ 问题。** 上方 Codex 分析评论应已分区列出已自动修复问题与未自动修复原因；本轮不会误判为可合并，请人工处理或重跑。"
       ;;
     advance|advance_with_pending)
       add_label "$next_round"

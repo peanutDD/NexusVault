@@ -4,7 +4,7 @@ use crate::repo;
 use crate::skills::{
     BatchFixSkill, DecisionSkill, DocumentationSkill, DryRunFeedbackSkill, FeedbackSkill,
     QualityScoreSkill, ReadReviewSkill, SecurityCheckSkill, SkillContext, SkillContextInit,
-    review_issue_key,
+    fixed_explanations, review_issue_key,
 };
 use crate::types::{PrAutoFixOutput, ReviewData, is_review_severity_medium_or_higher};
 use std::env;
@@ -182,6 +182,7 @@ async fn run_auto_fix_loop(
         fallback_used: fallback_used(&ctx.fix_attempts),
         final_status,
         summary,
+        fixed_explanations: fixed_explanations(&ctx),
         pending_explanations: ctx.pending_explanations,
     };
 

@@ -83,6 +83,7 @@ codex-auto-fix pr-auto-fix \
   "pending_count": 0,
   "review_clean": true,
   "summary": "Gemini 对本次 PR 的整体总结",
+  "fixed_explanations": [],
   "pending_explanations": []
 }
 ```
@@ -114,6 +115,7 @@ codex-auto-fix auto-fix-local \
 stdout 只输出一份 JSON，workflow 可直接用 `jq` 读取。关键字段包括：
 
 - `fixed`：本轮是否产生修复（Dry-Run 下表示本地已改动）。
+- `fixed_explanations`：已自动修复的 `Medium/Medium+` 问题清单。
 - `pending_count` / `pending_explanations`：未自动修复的问题数量与原因。
 - `apply_fail_reason`：`git apply` 失败分类，可能为 `malformed_diff`、
   `context_mismatch`、`drift`、`unknown` 或 `null`。

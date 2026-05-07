@@ -109,6 +109,7 @@ pub struct PrAutoFixOutput {
     pub fallback_used: bool,
     pub final_status: String,
     pub summary: Option<String>,
+    pub fixed_explanations: Vec<String>,
     pub pending_explanations: Vec<String>,
 }
 

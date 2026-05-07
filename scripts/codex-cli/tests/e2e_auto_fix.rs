@@ -170,6 +170,10 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
     assert_eq!(pending.len(), 1);
     assert!(pending[0].as_str().unwrap().contains("`:5"));
     assert!(pending[0].as_str().unwrap().contains("模型未返回可应用"));
+    let fixed = json["fixed_explanations"].as_array().unwrap();
+    assert_eq!(fixed.len(), 1);
+    assert!(fixed[0].as_str().unwrap().contains("`:1"));
+    assert!(fixed[0].as_str().unwrap().contains("已自动修复"));
 }
 
 #[test]

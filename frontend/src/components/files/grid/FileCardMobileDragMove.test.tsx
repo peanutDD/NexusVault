@@ -200,4 +200,41 @@ describe("FileCard mobile drag move", () => {
 
     expect(onMobileFileDrop).toHaveBeenCalledWith("", file.id);
   });
+
+  it("finds a covered folder target from the pointer hit stack", () => {
+    const onMobileFileDrop = vi.fn();
+    renderFile({ onMobileFileDrop });
+    const sourceCard = screen.getByTitle(file.original_filename).closest("[data-file-id]");
+    const targetFolder = document.createElement("div");
+    targetFolder.dataset.folderId = "folder-target";
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => sourceCard),
+    });
+    Object.defineProperty(document, "elementsFromPoint", {
+      configurable: true,
+      value: vi.fn(() => [sourceCard, targetFolder]),
+    });
+
+    fireEvent.pointerDown(sourceCard as Element, {
+      pointerId: 4,
+      pointerType: "touch",
+      clientX: 16,
+      clientY: 16,
+      isPrimary: true,
+    });
+    act(() => {
+      vi.advanceTimersByTime(450);
+    });
+    fireEvent.pointerUp(sourceCard as Element, {
+      pointerId: 4,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 120,
+      isPrimary: true,
+    });
+
+    expect(onMobileFileDrop).toHaveBeenCalledWith("folder-target", file.id);
+  });
 });

@@ -193,6 +193,10 @@ fn state_script_names_medium_and_medium_plus_as_pending_scope() {
         "pending comments should cover both Medium and Medium+ findings"
     );
     assert!(
+        script.contains("已自动修复问题与未自动修复原因"),
+        "needs-human comment should point humans to fixed/unfixed review status sections"
+    );
+    assert!(
         !script.contains("medium+ review items"),
         "state labels must not narrow the loop to Medium+ only"
     );

@@ -1,0 +1,23 @@
+{
+  "date": "2026-05-07",
+  "task": "auto-review-transparency-and-medium-cleanup",
+  "intent": "Clear the current PR #24 Medium finding and make codex-cli comments show fixed and unfixed Medium/Medium+ issue status.",
+  "assumptions": [
+    "The latest unresolved Medium is mobile drag target detection in FileCard.tsx.",
+    "FolderCard shares the same hit-stack risk and should use the same helper.",
+    "Existing full-file fallback line limits remain conservative."
+  ],
+  "risks": [
+    "Pointer hit stack behavior can differ by browser.",
+    "PrAutoFixOutput additions must preserve existing workflow fields."
+  ],
+  "verification": [
+    "npm test -- FileCardMobileDragMove.test.tsx FolderCardDragMove.test.tsx",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml review_status_block_lists_fixed_and_unfixed_medium_items",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml auto_fix_local_reports_unfixed_same_file_issue_independently",
+    "cargo fmt --manifest-path scripts/codex-cli/Cargo.toml --check && cargo test --manifest-path scripts/codex-cli/Cargo.toml",
+    "npm run test",
+    "npm run lint",
+    "npm run build"
+  ]
+}

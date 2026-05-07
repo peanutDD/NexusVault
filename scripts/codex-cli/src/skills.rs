@@ -1,6 +1,9 @@
 use crate::llm::CodexClient;
 use crate::repo;
-use crate::types::{ChangelogEntryInput, ReviewData, ReviewIssue, review_severity_matches_allowed};
+use crate::types::{
+    ChangelogEntryInput, ReviewData, ReviewIssue, is_review_severity_medium_or_higher,
+    review_severity_matches_allowed,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::env;
@@ -577,7 +580,7 @@ impl Skill for FeedbackSkill {
                 let gh_msg = format!(
                     "🤖 **Codex 自动修复已生成，但未推送**\n\n⚠️ 安全扫描未通过，已按 fail-closed 策略停止提交。\n\n{}\n{}",
                     build_security_findings(ctx),
-                    pending_explanations_block(ctx)
+                    review_status_block(ctx)
                 );
                 if ctx.enable_pr_comments {
                     repo::post_comment(ctx.pr_number, &gh_msg)?;
@@ -606,7 +609,7 @@ impl Skill for FeedbackSkill {
                     .map(|f| format!("- `{}`", f))
                     .collect::<Vec<_>>()
                     .join("\n"),
-                pending_explanations_block(ctx)
+                review_status_block(ctx)
             );
             if ctx.enable_pr_comments {
                 repo::post_comment(ctx.pr_number, &gh_msg)?;
@@ -623,7 +626,7 @@ impl Skill for FeedbackSkill {
                 format!(
                     "🤖 **Codex GPT-5.5 分析**: 存在未自动修复的问题，已保留原因。\n\n**总结**: {}\n{}",
                     data.summary,
-                    pending_explanations_block(ctx)
+                    review_status_block(ctx)
                 )
             };
             if ctx.enable_pr_comments {
@@ -659,23 +662,114 @@ fn build_dry_run_comment(ctx: &SkillContext) -> String {
             .map(|f| format!("- `{}`", f))
             .collect::<Vec<_>>()
             .join("\n"),
-        pending_explanations_block(ctx)
+        review_status_block(ctx)
     )
 }
 
-fn pending_explanations_block(ctx: &SkillContext) -> String {
-    if ctx.pending_explanations.is_empty() {
+pub(crate) fn fixed_explanations(ctx: &SkillContext) -> Vec<String> {
+    let fixed = fixed_issue_keys(ctx);
+    let Some(data) = &ctx.parsed_data else {
+        return Vec::new();
+    };
+
+    data.issues
+        .iter()
+        .filter(|issue| is_review_severity_medium_or_higher(&issue.severity))
+        .filter(|issue| fixed.contains(&review_issue_key(issue)))
+        .map(|issue| {
+            format!(
+                "[{}] `{}`:{} 已自动修复：{}",
+                issue.severity,
+                issue.file,
+                issue.line.unwrap_or(0),
+                issue.description
+            )
+        })
+        .collect()
+}
+
+fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
+    if !ctx.pending_explanations.is_empty() {
+        return ctx.pending_explanations.clone();
+    }
+
+    let fixed = fixed_issue_keys(ctx);
+    let selected: HashSet<String> = ctx.selected_issues.iter().map(review_issue_key).collect();
+    let Some(data) = &ctx.parsed_data else {
+        return Vec::new();
+    };
+
+    data.issues
+        .iter()
+        .filter(|issue| is_review_severity_medium_or_higher(&issue.severity))
+        .filter_map(|issue| {
+            let issue_key = review_issue_key(issue);
+            if fixed.contains(&issue_key) {
+                return None;
+            }
+            let latest_attempt = ctx
+                .fix_attempts
+                .iter()
+                .rev()
+                .find(|attempt| attempt.issue_key == issue_key && !attempt.success)
+                .and_then(|attempt| attempt.reason.as_deref());
+            let reason = latest_attempt.unwrap_or_else(|| {
+                if selected.contains(&issue_key) {
+                    "未产生可应用补丁"
+                } else {
+                    "策略过滤或受保护路径，未自动修复"
+                }
+            });
+            Some(format!(
+                "[{}] `{}`:{} 未自动修复：{}",
+                issue.severity,
+                issue.file,
+                issue.line.unwrap_or(0),
+                reason
+            ))
+        })
+        .collect()
+}
+
+fn fixed_issue_keys(ctx: &SkillContext) -> HashSet<String> {
+    ctx.fix_attempts
+        .iter()
+        .filter(|attempt| attempt.success)
+        .map(|attempt| attempt.issue_key.clone())
+        .chain(ctx.fixed_issue_keys.iter().cloned())
+        .collect()
+}
+
+fn review_status_block(ctx: &SkillContext) -> String {
+    let fixed = fixed_explanations(ctx);
+    let pending = pending_explanations(ctx);
+    if fixed.is_empty() && pending.is_empty() {
         return String::new();
     }
 
-    format!(
-        "\n\n🧭 未自动修复说明：\n{}",
-        ctx.pending_explanations
-            .iter()
-            .map(|e| format!("- {}", e))
-            .collect::<Vec<_>>()
-            .join("\n")
-    )
+    let mut sections = Vec::new();
+    if !fixed.is_empty() {
+        sections.push(format!(
+            "✅ 已自动修复问题：\n{}",
+            fixed
+                .iter()
+                .map(|explanation| format!("- {}", explanation))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ));
+    }
+    if !pending.is_empty() {
+        sections.push(format!(
+            "🧭 未自动修复问题：\n{}",
+            pending
+                .iter()
+                .map(|explanation| format!("- {}", explanation))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ));
+    }
+
+    format!("\n\n{}", sections.join("\n\n"))
 }
 
 fn build_security_findings(ctx: &SkillContext) -> String {
@@ -1173,6 +1267,68 @@ mod tests {
         assert!(summary.contains("成功 1"));
         assert!(summary.contains("失败 1"));
         assert!(summary.contains("empty patch"));
+    }
+
+    #[test]
+    fn review_status_block_lists_fixed_and_unfixed_medium_items() {
+        let mut ctx = SkillContext::new(SkillContextInit {
+            pr_number: 1,
+            repo: "owner/repo".to_string(),
+            repo_root: ".".to_string(),
+            rules_text: "rules".to_string(),
+            raw_input: "review".to_string(),
+            rounds: 2,
+            auto_push: false,
+            enable_pr_comments: false,
+            changelog_path: None,
+            disable_changelog: true,
+        });
+        ctx.parsed_data = Some(ReviewData {
+            summary: "summary".to_string(),
+            issues: vec![
+                ReviewIssue {
+                    file: "src/a.rs".to_string(),
+                    line: Some(10),
+                    severity: "Medium".to_string(),
+                    description: "first".to_string(),
+                    suggestion: "fix".to_string(),
+                    constraints: Vec::new(),
+                    reason: None,
+                },
+                ReviewIssue {
+                    file: "src/b.rs".to_string(),
+                    line: Some(20),
+                    severity: "Medium+".to_string(),
+                    description: "second".to_string(),
+                    suggestion: "fix".to_string(),
+                    constraints: Vec::new(),
+                    reason: None,
+                },
+            ],
+        });
+        ctx.fix_attempts.push(FixAttempt {
+            round: 1,
+            issue_key: "src/a.rs:10:Medium:first".to_string(),
+            file: "src/a.rs".to_string(),
+            stage: "patch_apply".to_string(),
+            success: true,
+            reason: None,
+        });
+        ctx.fix_attempts.push(FixAttempt {
+            round: 1,
+            issue_key: "src/b.rs:20:Medium+:second".to_string(),
+            file: "src/b.rs".to_string(),
+            stage: "patch_generation".to_string(),
+            success: false,
+            reason: Some("empty patch".to_string()),
+        });
+
+        let block = review_status_block(&ctx);
+
+        assert!(block.contains("✅ 已自动修复问题"));
+        assert!(block.contains("[Medium] `src/a.rs`:10 已自动修复：first"));
+        assert!(block.contains("🧭 未自动修复问题"));
+        assert!(block.contains("[Medium+] `src/b.rs`:20 未自动修复：empty patch"));
     }
 
     #[test]
