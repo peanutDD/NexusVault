@@ -4,14 +4,14 @@ Date: 2026-05-07
 
 ## Rule
 
-Codex auto-review feedback must list Medium/Medium+ issues by status, not only
-by changed file or total pending count.
+Codex auto-review feedback must list Medium/Medium+/High/Critical issues by
+status, not only by changed file or total pending count.
 
 ## Required Pattern
 
-- Always render a one-to-one `Medium/Medium+ 对应状态` table in PR feedback
-  when a Gemini Review has been parsed. Each Gemini issue must map to exactly
-  one status row.
+- Always render a one-to-one `Medium/Medium+/High/Critical 对应状态` table in
+  PR feedback when a Gemini Review has been parsed. Each actionable Gemini
+  issue must map to exactly one status row.
 - Show `已自动修复问题` with severity, file, line, and review description.
 - Show `未自动修复问题` with severity, file, line, and the concrete failure
   reason.

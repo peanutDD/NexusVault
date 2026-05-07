@@ -104,8 +104,8 @@ PR 模式默认会发布评论：
 
 - Dry-Run：说明已生成并应用补丁，但未推送
 - Push：说明已修复文件、质量评分、安全扫描结果，并按 issue 展示“已自动修复问题”
-- 未修复：`Medium/Medium+` 及以上问题必须说明原因；禁用评论时写入最终 JSON 的 `pending_explanations`
-- 对应状态：每次解析到 Gemini Review 后，评论必须包含 `Medium/Medium+ 对应状态` 表，将每个 Gemini issue 一一标记为已解决、未解决或推送阻塞
+- 未修复：`Medium/Medium+/High/Critical` 问题必须说明原因；禁用评论时写入最终 JSON 的 `pending_explanations`
+- 对应状态：每次解析到 Gemini Review 后，评论必须包含 `Medium/Medium+/High/Critical 对应状态` 表，将每个 Gemini issue 一一标记为已解决、未解决或推送阻塞
 - JSON：`issue_statuses`、`fixed_explanations` 与 `pending_explanations` 必须让人类和 workflow 能区分已修复、未修复和停止原因
 
 禁用方式：

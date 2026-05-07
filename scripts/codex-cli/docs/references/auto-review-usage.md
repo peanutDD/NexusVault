@@ -180,11 +180,11 @@ CODEX_EXCLUDE_DOCS=true
 - `fixed=true`：本轮有变更且已允许进入后续轮次。
 - `fixed=false`：没有变更，或变更被安全门禁拦截。
 - `push_blocked=true`：生成了变更，但安全审计 fail-closed，未 commit/push。
-- `has_pending=true` / `pending_count>0`：仍有 `Medium` 及以上问题没有自动修复，PR 不可视为 clean。
-- `review_clean=true`：当前 Codex 解析出的 `Medium/Medium+` 及以上问题全部修复或不存在，且未被安全门禁阻断。
-- `issue_statuses`：当前 Gemini Review 中每个 `Medium/Medium+` 及以上问题的一一对应状态；PR 评论会用同一份数据渲染 `Medium/Medium+ 对应状态` 表。
-- `fixed_explanations`：`Medium` 及以上问题已自动修复时的 issue 级说明。
-- `pending_explanations`：`Medium` 及以上问题未修复时的原因。
+- `has_pending=true` / `pending_count>0`：仍有 `Medium/Medium+/High/Critical` 问题没有自动修复，PR 不可视为 clean。
+- `review_clean=true`：当前 Codex 解析出的 `Medium/Medium+/High/Critical` 问题全部修复或不存在，且未被安全门禁阻断。
+- `issue_statuses`：当前 Gemini Review 中每个 `Medium/Medium+/High/Critical` 问题的一一对应状态；PR 评论会用同一份数据渲染 `Medium/Medium+/High/Critical 对应状态` 表。
+- `fixed_explanations`：`Medium/Medium+/High/Critical` 问题已自动修复时的 issue 级说明。
+- `pending_explanations`：`Medium/Medium+/High/Critical` 问题未修复时的原因。
 - `quality_score_available=false`：质量评分不可用，不等于真实 0 分。
 
 ## 安全门禁
@@ -203,7 +203,7 @@ CODEX_EXCLUDE_DOCS=true
 建议满足以下条件再合并：
 
 - PR 带有 `gemini-review-round-max` 和 `gemini-review-clean`，或 `gemini-review-needs-human` 中的问题已人工接受/处理。
-- Gemini 第二轮没有新的 `Medium` 及以上问题，或第二轮发现的问题已被 Codex/人工处理。
+- Gemini 第二轮没有新的 `Medium/Medium+/High/Critical` 问题，或第二轮发现的问题已被 Codex/人工处理。
 - PR 没有 `push_blocked=true` 的 Codex 评论。
 - `pending_explanations` 中的问题都被接受，或已经人工处理。
 - CI 通过。

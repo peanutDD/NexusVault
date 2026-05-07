@@ -45,12 +45,22 @@ pub struct StructuredReviewIssue {
     pub acceptance: Vec<String>,
 }
 
-fn review_severity_token(severity: &str) -> String {
-    severity
+pub fn review_severity_token(severity: &str) -> String {
+    let compact = severity
         .chars()
-        .filter(|c| !c.is_whitespace())
-        .collect::<String>()
-        .to_ascii_lowercase()
+        .filter_map(|c| {
+            if c.is_ascii_alphanumeric() || c == '+' {
+                Some(c.to_ascii_lowercase())
+            } else {
+                None
+            }
+        })
+        .collect::<String>();
+
+    compact
+        .strip_suffix("priority")
+        .unwrap_or(compact.as_str())
+        .to_string()
 }
 
 pub fn is_review_severity_medium_or_higher(severity: &str) -> bool {
@@ -76,6 +86,27 @@ mod tests {
         assert!(review_severity_matches_allowed("Medium", &allowed));
         assert!(review_severity_matches_allowed("Medium+", &allowed));
         assert!(!review_severity_matches_allowed("Low", &allowed));
+    }
+
+    #[test]
+    fn priority_suffix_severities_are_actionable() {
+        assert!(is_review_severity_medium_or_higher("medium priority"));
+        assert!(is_review_severity_medium_or_higher("medium+ priority"));
+        assert!(is_review_severity_medium_or_higher("high priority"));
+        assert!(is_review_severity_medium_or_higher("critical priority"));
+        assert!(!is_review_severity_medium_or_higher("low priority"));
+
+        let allowed = HashSet::from(["medium".to_string(), "high".to_string()]);
+        assert!(review_severity_matches_allowed("Medium Priority", &allowed));
+        assert!(review_severity_matches_allowed(
+            "Medium+ Priority",
+            &allowed
+        ));
+        assert!(review_severity_matches_allowed("High Priority", &allowed));
+        assert!(!review_severity_matches_allowed(
+            "Critical Priority",
+            &allowed
+        ));
     }
 }
 
@@ -114,7 +145,7 @@ pub struct PrAutoFixOutput {
     pub issue_statuses: Vec<ReviewIssueStatus>,
 }
 
-/// One-to-one status for a Medium/Medium+ review issue in the PR feedback.
+/// One-to-one status for a Medium/Medium+/High/Critical review issue.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct ReviewIssueStatus {
     pub severity: String,

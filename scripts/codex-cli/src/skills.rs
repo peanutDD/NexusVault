@@ -2,7 +2,7 @@ use crate::llm::CodexClient;
 use crate::repo;
 use crate::types::{
     ChangelogEntryInput, ReviewData, ReviewIssue, ReviewIssueStatus,
-    is_review_severity_medium_or_higher, review_severity_matches_allowed,
+    is_review_severity_medium_or_higher, review_severity_matches_allowed, review_severity_token,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -794,7 +794,7 @@ fn review_status_block(ctx: &SkillContext) -> String {
 
     let statuses = review_issue_statuses(ctx);
     if statuses.is_empty() {
-        return "\n\n📋 Medium/Medium+ 对应状态：\n- 本轮 Gemini Review 未解析到 Medium/Medium+ 及以上问题。".to_string();
+        return "\n\n📋 Medium/Medium+/High/Critical 对应状态：\n- 本轮 Gemini Review 未解析到 Medium/Medium+/High/Critical 问题。".to_string();
     }
 
     let rows = statuses
@@ -843,7 +843,7 @@ fn review_status_block(ctx: &SkillContext) -> String {
     };
 
     format!(
-        "\n\n📋 Medium/Medium+ 对应状态\n\n| # | Gemini 问题 | 状态 | 说明 |\n|---|---|---|---|\n{}{}{}",
+        "\n\n📋 Medium/Medium+/High/Critical 对应状态\n\n| # | Gemini 问题 | 状态 | 说明 |\n|---|---|---|---|\n{}{}{}",
         rows, fixed_section, pending_section
     )
 }
@@ -1004,7 +1004,7 @@ async fn read_gemini_review(
 
 /// “硬过滤”规则：决定哪些问题允许进入自动修复。
 ///
-/// - 仅处理 High/Medium（避免低优先级噪声）
+/// - 仅处理 Critical/High/Medium+/Medium（避免低优先级噪声）
 /// - 排除锁文件/配置文件等高风险路径
 /// - 排除 docs/*.md（避免自动改文档造成 review 噪声与误改）
 fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
@@ -1014,12 +1014,7 @@ fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
         .unwrap_or_else(|_| "Critical,High,Medium+,Medium".to_string());
     let allowed: HashSet<String> = allowed
         .split(',')
-        .map(|s| {
-            s.chars()
-                .filter(|c| !c.is_whitespace())
-                .collect::<String>()
-                .to_ascii_lowercase()
-        })
+        .map(review_severity_token)
         .filter(|s| !s.is_empty())
         .collect();
 
@@ -1417,7 +1412,7 @@ mod tests {
 
         let block = review_status_block(&ctx);
 
-        assert!(block.contains("📋 Medium/Medium+ 对应状态"));
+        assert!(block.contains("📋 Medium/Medium+/High/Critical 对应状态"));
         assert!(block.contains("| # | Gemini 问题 | 状态 | 说明 |"));
         assert!(block.contains("| 1 | [Medium] `src/a.rs`:10 first | ✅ 已解决 | 已自动修复 |"));
         assert!(block.contains("| 2 | [Medium+] `src/b.rs`:20 second | 🧭 未解决 | empty patch |"));
@@ -1443,12 +1438,12 @@ mod tests {
     }
 
     #[test]
-    fn decide_fix_or_skip_selects_medium_and_literal_medium_plus() {
+    fn decide_fix_or_skip_selects_all_actionable_priority_severities() {
         let issues = vec![
             ReviewIssue {
                 file: "src/a.rs".to_string(),
                 line: Some(10),
-                severity: "Medium".to_string(),
+                severity: "Medium Priority".to_string(),
                 description: "medium".to_string(),
                 suggestion: String::new(),
                 constraints: Vec::new(),
@@ -1457,7 +1452,7 @@ mod tests {
             ReviewIssue {
                 file: "src/b.rs".to_string(),
                 line: Some(20),
-                severity: "Medium+".to_string(),
+                severity: "Medium+ Priority".to_string(),
                 description: "medium plus".to_string(),
                 suggestion: String::new(),
                 constraints: Vec::new(),
@@ -1466,6 +1461,24 @@ mod tests {
             ReviewIssue {
                 file: "src/c.rs".to_string(),
                 line: Some(30),
+                severity: "High Priority".to_string(),
+                description: "high".to_string(),
+                suggestion: String::new(),
+                constraints: Vec::new(),
+                reason: None,
+            },
+            ReviewIssue {
+                file: "src/d.rs".to_string(),
+                line: Some(40),
+                severity: "Critical Priority".to_string(),
+                description: "critical".to_string(),
+                suggestion: String::new(),
+                constraints: Vec::new(),
+                reason: None,
+            },
+            ReviewIssue {
+                file: "src/e.rs".to_string(),
+                line: Some(50),
                 severity: "Low".to_string(),
                 description: "low".to_string(),
                 suggestion: String::new(),
@@ -1476,8 +1489,10 @@ mod tests {
 
         let selected = decide_fix_or_skip(&issues);
 
-        assert_eq!(selected.len(), 2);
-        assert_eq!(selected[0].severity, "Medium");
-        assert_eq!(selected[1].severity, "Medium+");
+        assert_eq!(selected.len(), 4);
+        assert_eq!(selected[0].severity, "Medium Priority");
+        assert_eq!(selected[1].severity, "Medium+ Priority");
+        assert_eq!(selected[2].severity, "High Priority");
+        assert_eq!(selected[3].severity, "Critical Priority");
     }
 }

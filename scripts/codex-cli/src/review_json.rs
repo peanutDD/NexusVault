@@ -1,4 +1,6 @@
-use crate::types::{ReviewData, ReviewIssue, StructuredReview, StructuredReviewIssue};
+use crate::types::{
+    ReviewData, ReviewIssue, StructuredReview, StructuredReviewIssue, review_severity_token,
+};
 use std::fs;
 use std::path::Path;
 
@@ -228,7 +230,7 @@ fn parse_severity_badge(line: &str) -> Option<String> {
     let lower = line.to_ascii_lowercase();
     let start = lower.find("![")? + 2;
     let end = lower[start..].find(']')? + start;
-    match lower[start..end].trim() {
+    match review_severity_token(lower[start..end].trim()).as_str() {
         "critical" => Some("Critical".to_string()),
         "high" => Some("High".to_string()),
         "medium+" => Some("Medium+".to_string()),

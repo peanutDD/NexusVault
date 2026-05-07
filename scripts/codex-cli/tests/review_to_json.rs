@@ -89,7 +89,7 @@ const handleDropOnFolderAdapter = useCallback(() => {}, []);
 ```
 
 ### frontend/src/components/files/grid/FileCard.tsx:142
-![high](https://www.gstatic.com/codereviewagent/high-priority.svg)
+![high priority](https://www.gstatic.com/codereviewagent/high-priority.svg)
 
 Reset the preview suppression flag on every pointer interaction.
 "#;

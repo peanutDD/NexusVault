@@ -210,7 +210,7 @@ Skill 顺序职责：
 
 1. 构造 `SkillContext`。
 2. 运行修复 pipeline：ReadReview、Decision、BatchFix、SecurityCheck、QualityScore、Documentation。
-3. 调用 `enforce_review_policy`，确保 `Medium/Medium+` 及以上未修复问题有说明。
+3. 调用 `enforce_review_policy`，确保 `Medium/Medium+/High/Critical` 未修复问题有说明。
 4. 运行反馈 pipeline：DryRunFeedback、Feedback。
 5. 生成 `PrAutoFixOutput` JSON。
 

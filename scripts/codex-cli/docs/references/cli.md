@@ -125,8 +125,8 @@ codex-auto-fix auto-fix-local \
 stdout 只输出一份 JSON，workflow 可直接用 `jq` 读取。关键字段包括：
 
 - `fixed`：本轮是否产生修复（Dry-Run 下表示本地已改动）。
-- `issue_statuses`：每个 `Medium/Medium+` 及以上 Gemini issue 的一一对应状态，`status` 为 `resolved`、`pending` 或 `blocked`。
-- `fixed_explanations`：已自动修复的 `Medium/Medium+` 问题清单。
+- `issue_statuses`：每个 `Medium/Medium+/High/Critical` Gemini issue 的一一对应状态，`status` 为 `resolved`、`pending` 或 `blocked`。
+- `fixed_explanations`：已自动修复的 `Medium/Medium+/High/Critical` 问题清单。
 - `pending_count` / `pending_explanations`：未自动修复的问题数量与原因。
 - `apply_fail_reason`：`git apply` 失败分类，可能为 `malformed_diff`、
   `context_mismatch`、`drift`、`unknown` 或 `null`。
