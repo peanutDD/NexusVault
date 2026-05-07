@@ -245,8 +245,10 @@ export function useFileActions({
         );
         movedAnything = true;
       }
-      setSelectedFiles(new Set());
-      setSelectedFolders(new Set());
+      if (shouldMoveSelection) {
+        setSelectedFiles(new Set());
+        setSelectedFolders(new Set());
+      }
     } catch (err) {
       setError(getErrorMessage(err, '移动失败'));
     } finally {

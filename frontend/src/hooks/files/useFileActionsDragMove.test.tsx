@@ -213,6 +213,20 @@ describe("useFileActions drag move", () => {
     );
   });
 
+  it("preserves the current selection when moving an unselected dragged item", async () => {
+    vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
+    const { result, setSelectedFiles, setSelectedFolders } = renderActions();
+
+    await result.current.handleDropOnFolder("folder-target", ["file-3"], []);
+
+    expect(folderService.moveFilesToFolder).toHaveBeenCalledWith(
+      ["file-3"],
+      "folder-target",
+    );
+    expect(setSelectedFiles).not.toHaveBeenCalled();
+    expect(setSelectedFolders).not.toHaveBeenCalled();
+  });
+
   it("normalizes the root folder sentinel to null before moving", async () => {
     vi.mocked(folderService.moveFilesToFolder).mockResolvedValue(1);
     const { result } = renderActions();

@@ -19,6 +19,8 @@ and folders once, then move the group directly.
 - Expand the payload in the shared action layer so list, grid, mobile, and
   breadcrumb drops follow the same selection semantics.
 - Keep unselected drags as single-item moves.
+- Moving an unselected item must not clear the user's existing selection; clear
+  selection only when the drag operation moved the current selection.
 - When the target folder is part of the selected folder payload, exclude only
   that folder from `moveFolders`; do not block selected files or other folders
   from moving into the target.
