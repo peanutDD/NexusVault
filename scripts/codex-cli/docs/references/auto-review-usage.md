@@ -170,7 +170,7 @@ CODEX_EXCLUDE_DOCS=true
 - `fixed=false`：没有变更，或变更被安全门禁拦截。
 - `push_blocked=true`：生成了变更，但安全审计 fail-closed，未 commit/push。
 - `has_pending=true` / `pending_count>0`：仍有 `Medium` 及以上问题没有自动修复，PR 不可视为 clean。
-- `review_clean=true`：当前 Codex 解析出的 Medium+ 问题全部修复或不存在，且未被安全门禁阻断。
+- `review_clean=true`：当前 Codex 解析出的 `Medium/Medium+` 及以上问题全部修复或不存在，且未被安全门禁阻断。
 - `pending_explanations`：`Medium` 及以上问题未修复时的原因。
 - `quality_score_available=false`：质量评分不可用，不等于真实 0 分。
 
