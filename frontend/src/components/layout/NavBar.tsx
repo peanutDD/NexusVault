@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { APP_NAME } from "../../config/env";
 import { cn } from "../../utils/cn";
-import { ArrowLeft, LogOut, Settings } from "lucide-react";
+import { ArrowLeft, LogOut, Settings, Trash2 } from "lucide-react";
 import ThemeToggle from "../common/ThemeToggle";
 
 interface NavBarProps {
@@ -182,6 +182,28 @@ export default function NavBar({
                   </span>
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={() => navigate("/trash")}
+                aria-label="回收站"
+                title="回收站"
+                className={cn(
+                  "nav-btn inline-flex items-center justify-center whitespace-nowrap",
+                  "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
+                  "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
+                  "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
+                  "active:translate-y-px transition-all duration-200",
+                )}
+                data-oid="trash-nav"
+              >
+                <Trash2
+                  className="nav-icon shrink-0 text-[var(--nav-btn-icon)]"
+                  aria-hidden="true"
+                />
+
+                <span className="hidden sm:inline whitespace-nowrap">回收站</span>
+              </button>
 
               <ThemeToggle showLabel data-oid="zsuxs6n" />
 

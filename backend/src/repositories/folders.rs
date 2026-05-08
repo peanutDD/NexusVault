@@ -282,7 +282,7 @@ impl<'a> FoldersRepo<'a> {
         user_id: Uuid,
     ) -> Result<i64, AppError> {
         let result: (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM files WHERE folder_id = ANY($1) AND user_id = $2")
+            sqlx::query_as("SELECT COUNT(*) FROM files WHERE folder_id = ANY($1) AND user_id = $2 AND deleted_at IS NULL")
                 .bind(folder_ids)
                 .bind(user_id)
                 .fetch_one(self.pool)
@@ -299,7 +299,7 @@ impl<'a> FoldersRepo<'a> {
         user_id: Uuid,
     ) -> Result<Vec<String>, AppError> {
         let paths: Vec<(String,)> = sqlx::query_as(
-            "SELECT file_path FROM files WHERE folder_id = ANY($1) AND user_id = $2",
+            "SELECT file_path FROM files WHERE folder_id = ANY($1) AND user_id = $2 AND deleted_at IS NULL",
         )
         .bind(folder_ids)
         .bind(user_id)
@@ -335,7 +335,7 @@ impl<'a> FoldersRepo<'a> {
             WITH moving AS (
                 SELECT id, original_filename
                 FROM files
-                WHERE id = ANY($1) AND user_id = $2
+                WHERE id = ANY($1) AND user_id = $2 AND deleted_at IS NULL
             ),
             dupes AS (
                 SELECT original_filename
@@ -350,6 +350,7 @@ impl<'a> FoldersRepo<'a> {
                 WHERE f.user_id = $2
                   AND f.folder_id IS NOT DISTINCT FROM $3
                   AND f.id <> ALL($1)
+                  AND f.deleted_at IS NULL
             )
             SELECT original_filename FROM dupes
             UNION
@@ -373,7 +374,7 @@ impl<'a> FoldersRepo<'a> {
         folder_id: Option<Uuid>,
     ) -> Result<u64, AppError> {
         let result = sqlx::query(
-            "UPDATE files SET folder_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($2) AND user_id = $3",
+            "UPDATE files SET folder_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($2) AND user_id = $3 AND deleted_at IS NULL",
         )
         .bind(folder_id)
         .bind(file_ids)
@@ -414,7 +415,7 @@ impl<'a> FoldersRepo<'a> {
 
         // 获取所有文件 ID
         let file_ids: Vec<(Uuid,)> =
-            sqlx::query_as("SELECT id FROM files WHERE folder_id = ANY($1) AND user_id = $2")
+            sqlx::query_as("SELECT id FROM files WHERE folder_id = ANY($1) AND user_id = $2 AND deleted_at IS NULL")
                 .bind(&folder_id_list)
                 .bind(user_id)
                 .fetch_all(self.pool)

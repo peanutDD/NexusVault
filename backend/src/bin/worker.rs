@@ -4,13 +4,16 @@ use std::time::Duration;
 use axum::routing::get;
 use axum::Router;
 use metrics::gauge;
+use serde_json::json;
 use tokio::sync::Semaphore;
 
 use file_storage_backend::config::Config;
 use file_storage_backend::database::pool::create_pool;
 use file_storage_backend::middleware::metrics::init_metrics;
 use file_storage_backend::services::file::create_storage;
-use file_storage_backend::services::task_queue::{run_gif_preview_worker, run_hls_worker};
+use file_storage_backend::services::task_queue::{
+    run_gif_preview_worker, run_hls_worker, run_trash_cleanup_worker,
+};
 use file_storage_backend::AppState;
 
 use file_storage_backend::tracing::init_tracing;
@@ -96,12 +99,47 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
+    // ---------- Trash cleanup scheduler + worker ----------
+    {
+        let state_for_scheduler = state.clone();
+        tokio::spawn(async move {
+            loop {
+                let today = chrono::Utc::now().date_naive();
+                let dedupe_key = format!("trash_cleanup:{}", today);
+                let payload = json!({
+                    "retention_days": 30,
+                    "batch_limit": 500,
+                });
+                if let Err(e) = state_for_scheduler
+                    .task_queue
+                    .enqueue_task("trash_cleanup", payload, Some(&dedupe_key))
+                    .await
+                {
+                    tracing::warn!(error = %e, "failed to enqueue trash cleanup");
+                }
+                tokio::time::sleep(Duration::from_secs(60 * 60)).await;
+            }
+        });
+    }
+
+    {
+        let state_for_trash = state.clone();
+        tokio::spawn(async move {
+            loop {
+                if let Err(e) = run_trash_cleanup_worker(&state_for_trash).await {
+                    tracing::error!("trash_cleanup worker iteration failed: {}", e);
+                }
+                tokio::time::sleep(Duration::from_secs(30)).await;
+            }
+        });
+    }
+
     // ---------- Maintenance：requeue stuck tasks ----------
     {
         let state_for_maintenance = state.clone();
         tokio::spawn(async move {
             loop {
-                for task_type in ["gif_preview", "hls_preview"] {
+                for task_type in ["gif_preview", "hls_preview", "trash_cleanup"] {
                     if let Ok(n) = state_for_maintenance
                         .task_queue
                         .requeue_stuck_tasks(task_type, 200)
@@ -122,7 +160,7 @@ async fn main() -> anyhow::Result<()> {
         let state_for_metrics = state.clone();
         tokio::spawn(async move {
             loop {
-                for task_type in ["gif_preview", "hls_preview"] {
+                for task_type in ["gif_preview", "hls_preview", "trash_cleanup"] {
                     if let Ok(depth) = state_for_metrics
                         .task_queue
                         .get_queue_depth(task_type)

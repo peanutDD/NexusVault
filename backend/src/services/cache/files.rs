@@ -477,6 +477,7 @@ mod tests {
             content_sha256: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            deleted_at: None,
         };
 
         let result = FileListResult {

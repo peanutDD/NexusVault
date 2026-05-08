@@ -14,6 +14,7 @@ pub struct FileResponse {
     pub category: Option<String>,
     pub folder_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]

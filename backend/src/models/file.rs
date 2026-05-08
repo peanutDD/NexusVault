@@ -24,6 +24,7 @@ impl From<crate::entities::file::File> for FileResponse {
             category: file.category,
             folder_id: file.folder_id,
             created_at: file.created_at,
+            deleted_at: file.deleted_at,
         }
     }
 }

@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-08 | trash soft delete | 95 | 文件删除改为 30 天回收站软删除：新增 `deleted_at`、active-only 同名唯一索引、回收站 API/页面、还原/彻底删除/清空和 `trash_cleanup` 后台任务；补齐后端服务与前端页面红绿测试。 |
 | 2026-05-08 | auto review comment checklist e2e | 95 | 补齐全自动 review 评论区验证缺口：新增 `pr-auto-fix` e2e，通过 fake `gh pr comment` 捕获自动生成的 PR 评论正文，断言包含 `Medium/Medium+/High/Critical 对应状态` 表、已解决/未解决标记和对应 issue 文案；新增 C-051 与 exec-plan 双件。 |
 | 2026-05-08 | auto review local ledger | 95 | 修复 Gemini Review 问题解决后缺少本地可追溯记录的设计缺口：`codex-auto-fix` 在提交/反馈前写入 `docs/auto-review-ledger.md`，逐条记录 Gemini 问题、状态、解决答案/未解决原因和修改文件；stdout JSON 新增 `review_record_path`。新增 C-050、exec-plan 双件和 e2e 红绿测试。 |
 | 2026-05-08 | auto review status list comments | 95 | 修复全自动 review 输出层缺口：状态机所有 clean/pending/blocked/round-max 评论都会指向上方 `Medium/Medium+/High/Critical 对应状态` 表；Gemini watchdog quota/timeout 评论明确说明没有新的 Gemini Review 输入，因此无法生成新的问题清单。新增红绿测试覆盖 workflow state 与 watchdog 文案，避免再靠人工补发清单。 |

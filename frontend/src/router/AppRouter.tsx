@@ -9,6 +9,7 @@ const GithubCallback = lazy(() => import("../components/auth/GithubCallback"));
 const Files = lazy(() => import("../pages/Files"));
 const Settings = lazy(() => import("../pages/Settings"));
 const Share = lazy(() => import("../pages/Share"));
+const Trash = lazy(() => import("../pages/Trash"));
 
 function RouteFallback() {
   return (
@@ -75,6 +76,16 @@ export default function AppRouter() {
             <RequireAuth>
               <LazyRoute>
                 <Settings />
+              </LazyRoute>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/trash"
+          element={
+            <RequireAuth>
+              <LazyRoute>
+                <Trash />
               </LazyRoute>
             </RequireAuth>
           }

@@ -926,3 +926,66 @@ pub async fn run_hls_worker(
 
     Ok(())
 }
+
+// =============================================================================
+// Worker：回收站过期清理
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrashCleanupPayload {
+    pub retention_days: i64,
+    pub batch_limit: i64,
+}
+
+#[tracing::instrument(skip(state), fields(task_id))]
+pub async fn run_trash_cleanup_worker(state: &crate::AppState) -> Result<(), AppError> {
+    let task = match state
+        .task_queue
+        .dequeue_pending_task("trash_cleanup")
+        .await?
+    {
+        Some(t) => t,
+        None => return Ok(()),
+    };
+
+    tracing::Span::current().record("task_id", tracing::field::display(task.id));
+
+    let payload: TrashCleanupPayload = serde_json::from_value(task.payload.clone())
+        .map_err(|e| AppError::File(format!("解析 trash_cleanup payload 失败: {}", e)))?;
+    let started_at = Instant::now();
+
+    match state
+        .file_service
+        .purge_expired_trash(payload.retention_days, payload.batch_limit)
+        .await
+    {
+        Ok(deleted) => {
+            let elapsed = started_at.elapsed();
+            counter!("trash_cleanup_deleted_total").increment(deleted);
+            histogram!("trash_cleanup_duration_seconds").record(elapsed.as_secs_f64());
+            tracing::info!(
+                task_id = %task.id,
+                deleted,
+                retention_days = payload.retention_days,
+                batch_limit = payload.batch_limit,
+                duration_ms = elapsed.as_millis() as u64,
+                "trash cleanup succeeded"
+            );
+            state.task_queue.mark_succeeded(task.id).await?;
+        }
+        Err(e) => {
+            let msg = format!("trash_cleanup failed: {}", e);
+            tracing::error!(task_id = %task.id, error = %e, "trash cleanup failed");
+            if task.attempts < MAX_ATTEMPTS {
+                state
+                    .task_queue
+                    .mark_pending_with_error(task.id, task.attempts, &msg)
+                    .await?;
+            } else {
+                state.task_queue.mark_failed(task.id, &msg).await?;
+            }
+        }
+    }
+
+    Ok(())
+}
