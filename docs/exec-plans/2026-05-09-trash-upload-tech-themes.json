@@ -1,0 +1,28 @@
+{
+  "date": "2026-05-09",
+  "task": "trash-upload-tech-themes",
+  "goal": "Unify Trash light, purple, and dark themes around the UploadDialog tech glass visual language.",
+  "assumptions": [
+    "Trash keeps 10 desktop/tablet columns, 5 mobile columns, 82% thumbnail area, and one-line truncated filenames.",
+    "Restore, permanent delete, empty trash, back navigation, query invalidation, and confirmation behavior remain unchanged.",
+    "Theme switching remains CSS-variable driven through data-theme and theme classes."
+  ],
+  "risks": [
+    "Overlay density could reduce mobile readability.",
+    "Light mode could become too dark if upload-tech language is copied too literally.",
+    "Purple mode could become too neon if cyan and magenta accents are too strong."
+  ],
+  "dependencies": [
+    "frontend/src/styles/tokens.css",
+    "frontend/src/pages/Trash.tsx",
+    "frontend/src/styles/trashThemeTokens.test.ts",
+    "frontend/src/pages/Trash.test.tsx"
+  ],
+  "verification": [
+    "npm run test -- src/styles/trashThemeTokens.test.ts src/pages/Trash.test.tsx",
+    "npm run lint -- --quiet",
+    "npx tsc -b --noEmit",
+    "npm run build",
+    "Playwright screenshots for dark/light/purple desktop and mobile in docs/evidence/"
+  ]
+}

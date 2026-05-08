@@ -17,6 +17,21 @@ impl FileService {
             .ok_or(AppError::NotFound)
     }
 
+    pub async fn get_file_for_thumbnail(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<File, AppError> {
+        if let Some(file) = self.files_repo.find_by_id(file_id, user_id).await? {
+            return Ok(file);
+        }
+
+        self.files_repo
+            .find_deleted_by_id(file_id, user_id)
+            .await?
+            .ok_or(AppError::NotFound)
+    }
+
     /// 检查文件在存储中是否存在且非空
     /// 用于验证缓存有效性，防止数据库记录存在但文件缺失的情况
     pub async fn verify_file_exists(&self, file: &File) -> Result<(), AppError> {

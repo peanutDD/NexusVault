@@ -14,6 +14,7 @@ import { cn } from "../../../utils/cn";
 import { getMimeTypeLabel } from "../../../utils/mimeType";
 import { schedulePreload } from "../../../utils/preloadPreview";
 import { findFolderDropTargetFromPoint } from "../../../utils/dropTargets";
+import { stopDragAutoScroll, updateDragAutoScroll } from "../../../utils/dragAutoScroll";
 import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 
 interface FileCardProps {
@@ -120,6 +121,7 @@ const FileCard = memo(
         mobileDragActiveRef.current = false;
         suppressNextPreviewRef.current = true;
         setIsMobileDragging(false);
+        stopDragAutoScroll();
 
         const target = findFolderDropTargetFromPoint(e.clientX, e.clientY);
         const targetFolderId = target?.dataset.folderId;
@@ -173,6 +175,7 @@ const FileCard = memo(
 
         if (mobileDragActiveRef.current) {
           e.preventDefault();
+          updateDragAutoScroll(e.clientY);
         }
       },
       [clearLongPressTimer],
@@ -184,6 +187,7 @@ const FileCard = memo(
       if (mobileDragActiveRef.current) {
         mobileDragActiveRef.current = false;
         setIsMobileDragging(false);
+        stopDragAutoScroll();
         onMobileFileDragEnd?.();
       }
     }, [clearLongPressTimer, onMobileFileDragEnd]);

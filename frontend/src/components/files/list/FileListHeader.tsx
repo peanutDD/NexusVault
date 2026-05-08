@@ -16,7 +16,6 @@
  * @param props.onOpenUpload 打开上传对话框的回调函数
  */
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import FolderBreadcrumb from "../FolderBreadcrumb";
 import FileListFilters from "./FileListFilters";
 
@@ -49,8 +48,6 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
   onOpenUpload,
   setShowCreateFolder,
 }) => {
-  const navigate = useNavigate();
-
   return (
     <>
       {/* 面包屑：进入文件夹后置顶、左对齐 */}
@@ -112,21 +109,6 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
                 />
 
                 <span data-oid="ebr--_h">New Folder</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/trash")}
-                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
-                aria-label="打开回收站"
-                title="打开回收站"
-                data-oid="open-trash"
-              >
-                <i
-                  className="bi bi-trash3 shrink-0 text-[0.75rem]"
-                  aria-hidden
-                />
-
-                <span>回收站</span>
               </button>
               {onOpenUpload && (
                 <button

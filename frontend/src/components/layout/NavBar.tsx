@@ -1,8 +1,14 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { APP_NAME } from "../../config/env";
 import { cn } from "../../utils/cn";
 import { ArrowLeft, LogOut, Settings, Trash2 } from "lucide-react";
 import ThemeToggle from "../common/ThemeToggle";
+import {
+  currentFilesLocation,
+  readTrashReturnTarget,
+  rememberTrashReturnTarget,
+} from "../../utils/trashReturnTarget";
 
 interface NavBarProps {
   title?: string;
@@ -22,6 +28,13 @@ export default function NavBar({
   showSettings = true,
 }: NavBarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const filesLocation = currentFilesLocation(location.pathname, location.search);
+
+  useEffect(() => {
+    rememberTrashReturnTarget(filesLocation);
+  }, [filesLocation]);
+
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -185,9 +198,15 @@ export default function NavBar({
 
               <button
                 type="button"
-                onClick={() => navigate("/trash")}
-                aria-label="回收站"
-                title="回收站"
+                onClick={() => {
+                  const returnTo = filesLocation ?? readTrashReturnTarget() ?? "/files";
+                  rememberTrashReturnTarget(returnTo);
+                  navigate("/trash", {
+                    state: { from: returnTo },
+                  });
+                }}
+                aria-label="Trash"
+                title="Trash"
                 className={cn(
                   "nav-btn inline-flex items-center justify-center whitespace-nowrap",
                   "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
@@ -202,7 +221,7 @@ export default function NavBar({
                   aria-hidden="true"
                 />
 
-                <span className="hidden sm:inline whitespace-nowrap">回收站</span>
+                <span className="hidden sm:inline whitespace-nowrap">Trash</span>
               </button>
 
               <ThemeToggle showLabel data-oid="zsuxs6n" />

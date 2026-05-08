@@ -1,7 +1,8 @@
-import { lazy, Suspense, useCallback } from "react";
+import { lazy, Suspense, useCallback, useEffect } from "react";
 import "./FileListGlass.css";
 import { useFileList } from "../useFileList";
 import { useThrottledCallback } from "../../../hooks/useThrottledCallback";
+import { stopDragAutoScroll, updateDragAutoScroll } from "../../../utils/dragAutoScroll";
 import { FileCardSkeleton } from "../../common/feedback/Skeleton";
 
 interface FileListProps {
@@ -91,6 +92,28 @@ export default function FileList({ onOpenUpload }: FileListProps) {
   const throttledLoadMore = useThrottledCallback(() => {
     void loadMore();
   }, 400);
+
+  useEffect(() => {
+    const handleDragOver = (event: DragEvent) => {
+      const types = Array.from(event.dataTransfer?.types ?? []);
+      if (
+        types.includes("application/file-id") ||
+        types.includes("application/folder-id")
+      ) {
+        updateDragAutoScroll(event.clientY);
+      }
+    };
+
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("drop", stopDragAutoScroll);
+    window.addEventListener("dragend", stopDragAutoScroll);
+    return () => {
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("drop", stopDragAutoScroll);
+      window.removeEventListener("dragend", stopDragAutoScroll);
+      stopDragAutoScroll();
+    };
+  }, []);
 
   // 适配器函数，处理类型不匹配问题
   const handleSortChangeAdapter = useCallback(

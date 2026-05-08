@@ -797,6 +797,28 @@ async fn test_file_service_delete_file_soft_deletes_into_trash() {
 }
 
 #[tokio::test]
+async fn test_file_service_thumbnail_lookup_allows_deleted_owner_file() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "deleted_thumb").await;
+    let file_id = create_test_file(&pool, user_id, "deleted_image.png").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(file_id, user_id).await.unwrap();
+
+    assert!(service.get_file(file_id, user_id).await.is_err());
+
+    let file = service
+        .get_file_for_thumbnail(file_id, user_id)
+        .await
+        .unwrap();
+    assert_eq!(file.id, file_id);
+    assert!(file.deleted_at.is_some());
+}
+
+#[tokio::test]
 async fn test_file_service_delete_nonexistent_file() {
     init_test_env();
     let pool = create_test_pool().await;

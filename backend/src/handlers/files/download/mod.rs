@@ -288,7 +288,10 @@ pub async fn thumbnail_file_handler(
     // - 缩略图生成属于 CPU 密集（解码/缩放/编码）
     // - 多实例情况下同一文件的缩略图请求可能并发打到不同副本
     // - 更偏好“一个实例生成，其它实例短暂等待磁盘缓存出现”
-    let file = state.file_service.get_file(file_id, user_id).await?;
+    let file = state
+        .file_service
+        .get_file_for_thumbnail(file_id, user_id)
+        .await?;
 
     let is_supported = file.mime_type.starts_with("image/");
     if !is_supported {

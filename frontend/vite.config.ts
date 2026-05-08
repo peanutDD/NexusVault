@@ -116,6 +116,9 @@ export default defineConfig(({ mode }) => {
     host: "0.0.0.0",
     allowedHosts: true,
   },
+  resolve: {
+    dedupe: ["react", "react-dom", "@tanstack/react-query"],
+  },
   build: {
     target: "es2015",
     rollupOptions: {
@@ -217,7 +220,15 @@ export default defineConfig(({ mode }) => {
     },
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react-router-dom", "zustand", "axios"],
+    include: [
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "zustand",
+      "axios",
+      "@tanstack/react-query",
+      "@tanstack/react-query-devtools",
+    ],
   },
   test: {
     environment: "jsdom",

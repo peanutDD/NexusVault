@@ -10,6 +10,7 @@ interface PageLayoutProps {
   navExtra?: React.ReactNode;
   showSettings?: boolean;
   useSolidBackground?: boolean;
+  backgroundClassName?: string;
 }
 
 export default function PageLayout({
@@ -21,14 +22,17 @@ export default function PageLayout({
   navExtra,
   showSettings,
   useSolidBackground = false,
+  backgroundClassName,
 }: PageLayoutProps) {
+  const backgroundClass =
+    backgroundClassName ??
+    (useSolidBackground
+      ? "bg-[color:var(--filelist-page-bg)]"
+      : "bg-[image:var(--surface-page-gradient)]");
+
   return (
     <div
-      className={`flex min-h-screen flex-col transition-colors duration-300 ${
-        useSolidBackground
-          ? "bg-[color:var(--filelist-page-bg)]"
-          : "bg-[image:var(--surface-page-gradient)]"
-      }`}
+      className={`flex min-h-screen flex-col transition-colors duration-300 ${backgroundClass}`}
       data-oid="umkt5hh"
     >
       <a

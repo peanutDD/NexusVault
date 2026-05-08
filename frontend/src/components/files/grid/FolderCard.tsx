@@ -3,6 +3,7 @@ import { FolderOpen, PencilLine, Trash2, MoreVertical } from "lucide-react";
 import type { Folder } from "../../../types/folders";
 import { cn } from "../../../utils/cn";
 import { findFolderDropTargetFromPoint } from "../../../utils/dropTargets";
+import { stopDragAutoScroll, updateDragAutoScroll } from "../../../utils/dragAutoScroll";
 import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 
 interface FolderCardProps {
@@ -130,6 +131,7 @@ const FolderCard = memo(function FolderCard({
       e.stopPropagation();
       mobileDragActiveRef.current = false;
       setIsMobileDragging(false);
+      stopDragAutoScroll();
 
       const target = findFolderDropTargetFromPoint(
         e.clientX,
@@ -184,9 +186,10 @@ const FolderCard = memo(function FolderCard({
         return;
       }
 
-      if (mobileDragActiveRef.current) {
-        e.preventDefault();
-      }
+    if (mobileDragActiveRef.current) {
+      e.preventDefault();
+      updateDragAutoScroll(e.clientY);
+    }
     },
     [clearLongPressTimer],
   );
@@ -197,6 +200,7 @@ const FolderCard = memo(function FolderCard({
     if (mobileDragActiveRef.current) {
       mobileDragActiveRef.current = false;
       setIsMobileDragging(false);
+      stopDragAutoScroll();
       onMobileFolderDragEnd?.();
     }
   }, [clearLongPressTimer, onMobileFolderDragEnd]);
