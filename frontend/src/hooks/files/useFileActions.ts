@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { fileService } from '../../services/files';
 import { folderService } from '../../services/folders';
@@ -26,6 +26,16 @@ interface UseFileActionsProps {
   refetchFolders: () => Promise<unknown>;
 }
 
+const ROOT_FOLDER_SENTINEL = "";
+
+function normalizeDropTargetFolderId(targetFolderId: string | null) {
+  return targetFolderId === ROOT_FOLDER_SENTINEL ? null : targetFolderId;
+}
+
+function uniquePayloadIds(ids: string[]) {
+  return [...new Set(ids)].filter((id) => id !== ROOT_FOLDER_SENTINEL);
+}
+
 export function useFileActions({
   files,
   selectedFiles,
@@ -45,6 +55,18 @@ export function useFileActions({
   const queryClient = useQueryClient();
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [batchDownloading, setBatchDownloading] = useState(false);
+  const selectionRef = useRef({
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
+  });
+  selectionRef.current = {
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
+  };
 
   const {
     deleteFile: deleteFileMutation,
@@ -169,23 +191,88 @@ export function useFileActions({
     }
   }, [selectedFiles.size, selectedFolders.size, selectedFileIds, selectedFolderIds, setError]);
 
+  const refreshListsAfterMove = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['files'] }),
+      queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
+    ]);
+    await Promise.all([refetchFiles(), refetchFolders()]);
+  }, [queryClient, refetchFiles, refetchFolders]);
+
+  const handleDropOnFolder = useCallback(async (
+    targetFolderId: string | null,
+    fileIds: string[],
+    folderIds: string[],
+  ) => {
+    const normalizedTargetFolderId = normalizeDropTargetFolderId(targetFolderId);
+    const {
+      selectedFiles: latestSelectedFiles,
+      selectedFolders: latestSelectedFolders,
+      selectedFileIds: latestSelectedFileIds,
+      selectedFolderIds: latestSelectedFolderIds,
+    } = selectionRef.current;
+    const draggedSelectedFile = fileIds.some((id) =>
+      latestSelectedFiles.has(id),
+    );
+    const draggedSelectedFolder = folderIds.some((id) =>
+      latestSelectedFolders.has(id),
+    );
+    const shouldMoveSelection = draggedSelectedFile || draggedSelectedFolder;
+    const resolvedFileIds = shouldMoveSelection ? latestSelectedFileIds : fileIds;
+    const resolvedFolderIds = shouldMoveSelection
+      ? latestSelectedFolderIds
+      : folderIds;
+
+    const uniqueFileIds = uniquePayloadIds(resolvedFileIds);
+    const uniqueFolderIds = uniquePayloadIds(resolvedFolderIds).filter(
+      (folderId) => folderId !== normalizedTargetFolderId,
+    );
+    if (uniqueFileIds.length === 0 && uniqueFolderIds.length === 0) return;
+
+    let movedAnything = false;
+    try {
+      if (uniqueFileIds.length > 0) {
+        await folderService.moveFilesToFolder(
+          uniqueFileIds,
+          normalizedTargetFolderId,
+        );
+        movedAnything = true;
+      }
+      if (uniqueFolderIds.length > 0) {
+        await folderService.moveFolders(
+          uniqueFolderIds,
+          normalizedTargetFolderId,
+        );
+        movedAnything = true;
+      }
+      if (shouldMoveSelection) {
+        setSelectedFiles(new Set());
+        setSelectedFolders(new Set());
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, '移动失败'));
+    } finally {
+      if (movedAnything) {
+        await refreshListsAfterMove();
+      }
+    }
+  }, [
+    refreshListsAfterMove,
+    setError,
+    setSelectedFiles,
+    setSelectedFolders,
+  ]);
+
   const handleDropOnBreadcrumb = useCallback(async (targetFolderId: string | null, e: React.DragEvent) => {
     e.preventDefault();
     const fileId = e.dataTransfer.getData('application/file-id');
-    if (!fileId) return;
-
-    try {
-      await folderService.moveFilesToFolder([fileId], targetFolderId);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['files'] }),
-        queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
-      ]);
-      refetchFiles();
-      refetchFolders();
-    } catch (err) {
-      setError(getErrorMessage(err, '移动失败'));
-    }
-  }, [queryClient, refetchFiles, refetchFolders, setError]);
+    const folderId = e.dataTransfer.getData('application/folder-id');
+    await handleDropOnFolder(
+      targetFolderId,
+      fileId ? [fileId] : [],
+      folderId ? [folderId] : [],
+    );
+  }, [handleDropOnFolder]);
 
   return {
     deleteLoading,
@@ -197,6 +284,7 @@ export function useFileActions({
     handleRenameFileSubmit,
     handleDownload,
     handleBatchDownload,
+    handleDropOnFolder,
     handleDropOnBreadcrumb,
   };
 }

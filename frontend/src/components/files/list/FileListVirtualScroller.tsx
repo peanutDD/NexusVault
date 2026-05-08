@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import type { DragEvent } from "react";
 import FileGrid from "../grid/FileGrid";
 import VirtualizedFileGrid from "../grid/VirtualizedFileGrid";
@@ -65,6 +66,20 @@ export default function FileListVirtualScroller({
   onToggleFolderMenu,
   onCloseMenu,
 }: FileListVirtualScrollerProps) {
+  const handleDeleteFolder = useCallback(
+    (folderId: string) => {
+      const folder = displayFolders.find((item) => item.id === folderId);
+      if (folder) onDelete(folder, "folder");
+    },
+    [displayFolders, onDelete],
+  );
+  const handleMobileFileDrop = useCallback(
+    (targetFolderId: string, sourceFileId: string) => {
+      onDropOnFolder(targetFolderId, [sourceFileId], []);
+    },
+    [onDropOnFolder],
+  );
+
   if (isPlainSort) {
     if (shouldUseVirtualList) {
       return (
@@ -126,10 +141,7 @@ export default function FileListVirtualScroller({
         onSelect={onSelectFolder}
         onOpen={onOpenFolder}
         onRename={onRenameFolder}
-        onDelete={(folderId) => {
-          const folder = displayFolders.find((item) => item.id === folderId);
-          if (folder) onDelete(folder, "folder");
-        }}
+        onDelete={handleDeleteFolder}
         onDrop={onDropOnFolder}
         openFolderMenuId={openFolderMenuId}
         onToggleMenu={onToggleFolderMenu}
@@ -147,6 +159,7 @@ export default function FileListVirtualScroller({
           onRename={onRenameFile}
           onDelete={onDelete}
           onDragStart={onFileDragStart}
+          onMobileFileDrop={handleMobileFileDrop}
           openFileMenuId={openFileMenuId}
           onToggleMenu={onToggleFileMenu}
           onCloseMenu={onCloseMenu}
@@ -163,6 +176,7 @@ export default function FileListVirtualScroller({
           onRename={onRenameFile}
           onDelete={onDelete}
           onDragStart={onFileDragStart}
+          onMobileFileDrop={handleMobileFileDrop}
           openFileMenuId={openFileMenuId}
           onToggleMenu={onToggleFileMenu}
           onCloseMenu={onCloseMenu}

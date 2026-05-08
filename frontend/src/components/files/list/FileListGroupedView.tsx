@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import type { DragEvent, ReactNode } from "react";
 import FileGrid from "../grid/FileGrid";
 import FolderGrid from "../grid/FolderGrid";
@@ -71,6 +72,20 @@ export default function FileListGroupedView({
   onToggleFolderMenu,
   onCloseMenu,
 }: FileListGroupedViewProps) {
+  const handleDeleteFolder = useCallback(
+    (folderId: string) => {
+      const folder = displayFolders.find((item) => item.id === folderId);
+      if (folder) onDelete(folder, "folder");
+    },
+    [displayFolders, onDelete],
+  );
+  const handleMobileFileDrop = useCallback(
+    (targetFolderId: string, sourceFileId: string) => {
+      onDropOnFolder(targetFolderId, [sourceFileId], []);
+    },
+    [onDropOnFolder],
+  );
+
   if (mode === "type") {
     return (
       <div className="space-y-6">
@@ -98,10 +113,7 @@ export default function FileListGroupedView({
               onSelect={onSelectFolder}
               onOpen={onOpenFolder}
               onRename={onRenameFolder}
-              onDelete={(folderId) => {
-                const folder = displayFolders.find((f) => f.id === folderId);
-                if (folder) onDelete(folder, "folder");
-              }}
+              onDelete={handleDeleteFolder}
               onDrop={onDropOnFolder}
               openFolderMenuId={openFolderMenuId}
               onToggleMenu={onToggleFolderMenu}
@@ -127,12 +139,13 @@ export default function FileListGroupedView({
               files={group.files}
               selectedFiles={selectedFiles}
               onSelect={onSelectFile}
-              onPreview={(file) => onPreviewFile(file)}
-              onShare={(file) => onShareFile(file)}
+              onPreview={onPreviewFile}
+              onShare={onShareFile}
               onDownload={onDownload}
               onRename={onRenameFile}
               onDelete={onDelete}
               onDragStart={onFileDragStart}
+              onMobileFileDrop={handleMobileFileDrop}
               openFileMenuId={openFileMenuId}
               onToggleMenu={onToggleFileMenu}
               onCloseMenu={onCloseMenu}
@@ -176,8 +189,8 @@ export default function FileListGroupedView({
             onSelectFile={onSelectFile}
             onSelectFolder={onSelectFolder}
             onOpenFolder={onOpenFolder}
-            onPreviewFile={(file) => onPreviewFile(file)}
-            onShareFile={(file) => onShareFile(file)}
+            onPreviewFile={onPreviewFile}
+            onShareFile={onShareFile}
             onDownloadFile={onDownload}
             onRenameFolder={onRenameFolder}
             onRenameFile={onRenameFile}

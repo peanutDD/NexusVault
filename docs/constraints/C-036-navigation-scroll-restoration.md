@@ -4,6 +4,8 @@ Route navigation must persist scroll by history entry. File-list navigation must
 Rules:
 
 - Settings Back must use browser history instead of hardcoding `/files`.
+- Settings Back must fall back to `/files` with `replace` when the Settings
+  route has no previous in-app history entry.
 - Settings must not render Quick nav or same-page hash navigation.
 - A newly pushed route with no saved position starts at top.
 - Browser Back/Forward and refresh restore saved route position.
@@ -41,6 +43,8 @@ Rules:
 
 - Do not hardcode Settings Back or similar page-return actions to `/files` when
   browser history can preserve the previous route and query params.
+- Do fall back to `/files` when Settings is the first in-app route, so Back does
+  not navigate the user out of the app.
 - Do not force file-list scroll to top after every folder navigation.
 - Scroll to top only when the destination scope has no saved browsing position.
 - Persist the active file-list position during normal scrolling and before

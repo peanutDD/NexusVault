@@ -1,0 +1,22 @@
+{
+  "date": "2026-05-08",
+  "task": "codex-cli priority severity closure",
+  "goal": "Treat medium priority, medium+ priority, high priority, and critical priority as actionable severities in every codex-cli auto-review run.",
+  "assumptions": [
+    "Gemini may emit either bare severity labels or labels with a priority suffix",
+    "Low and low priority remain excluded by default",
+    "issue_statuses is the shared source for PR comments and stdout JSON"
+  ],
+  "risks": [
+    "Priority suffix labels can bypass severity filters if normalization is too literal",
+    "Inline badge alt text can include priority suffixes independently of image URLs"
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml priority_suffix_severities_are_actionable --lib",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml decide_fix_or_skip_selects_all_actionable_priority_severities --lib",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml parses_gemini_inline_badge_comments_from_review_body --test review_to_json",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml",
+    "cargo clippy --manifest-path scripts/codex-cli/Cargo.toml --all-targets -- -D warnings",
+    "git diff --check"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "task": "auto-review-local-ledger",
+  "date": "2026-05-08",
+  "assumptions": [
+    "Existing PR comments and stdout JSON expose one-to-one issue status but do not persist local per-issue history.",
+    "docs/CHANGELOG.md is aggregate history and should not be overloaded as the detailed issue ledger.",
+    "--disable-changelog should also disable the auto review ledger in test/tooling contexts."
+  ],
+  "risks": [
+    "Writing the ledger after feedback would miss the auto-pushed commit.",
+    "Writing resolved before push-block checks would mislabel blocked fixes.",
+    "Committing ledger-only changes when no issue was fixed could create noisy PR commits."
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml --test e2e_auto_fix auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml",
+    "cargo clippy --manifest-path scripts/codex-cli/Cargo.toml --all-targets -- -D warnings",
+    "git diff --check"
+  ]
+}

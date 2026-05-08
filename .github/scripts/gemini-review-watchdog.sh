@@ -90,7 +90,7 @@ watch() {
 
   ensure_label
   gh pr edit "${PR_NUMBER:?}" --add-label "gemini-review-needs-human"
-  gh pr comment "${PR_NUMBER:?}" --body "🤖 **Gemini Review 请求超时。** 已发送 \`/gemini review\`，但在 ${timeout_seconds}s 内没有检测到 Gemini 对最新 commit \`${PR_SHA}\` 的 review。自动闭环按 fail-closed 停止，请人工确认 Gemini 配额/权限后重跑。"
+  gh pr comment "${PR_NUMBER:?}" --body "🤖 **Gemini Review 请求超时。** 已发送 \`/gemini review\`，但在 ${timeout_seconds}s 内没有检测到 Gemini 对最新 commit \`${PR_SHA}\` 的 review。由于没有新的 Gemini Review 输入，无法生成新的 Medium/Medium+/High/Critical 问题清单；请以上一次 Codex 分析评论中的对应状态表为准。自动闭环按 fail-closed 停止，请人工确认 Gemini 配额/权限后重跑。"
   exit 1
 }
 

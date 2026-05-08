@@ -197,6 +197,27 @@ export default function VirtualizedMixedGrid({
     if (el) el.style.setProperty("height", `${bottomSpacerHeight}px`);
   }, [bottomSpacerHeight]);
 
+  const handleDeleteFile = useCallback(
+    (file: FileMetadata) => onDelete(file, "file"),
+    [onDelete],
+  );
+  const handleDeleteFolder = useCallback(
+    (folder: Folder) => onDelete(folder, "folder"),
+    [onDelete],
+  );
+  const handleMobileFolderDrop = useCallback(
+    (targetFolderId: string, sourceFolderId: string) => {
+      onDropOnFolder(targetFolderId, [], [sourceFolderId]);
+    },
+    [onDropOnFolder],
+  );
+  const handleMobileFileDrop = useCallback(
+    (targetFolderId: string, sourceFileId: string) => {
+      onDropOnFolder(targetFolderId, [sourceFileId], []);
+    },
+    [onDropOnFolder],
+  );
+
   if (items.length === 0) return null;
 
   return (
@@ -237,25 +258,12 @@ export default function VirtualizedMixedGrid({
                           key={`folder-${folder.id}`}
                           folder={folder}
                           isSelected={selectedFolders.has(folder.id)}
-                          onSelect={(id) =>
-                            onSelectFolder(id, !selectedFolders.has(id))
-                          }
-                          onOpen={(f) => onOpenFolder(f.id)}
+                          onSelect={onSelectFolder}
+                          onOpen={onOpenFolder}
                           onRename={onRenameFolder}
-                          onDelete={() => onDelete(folder, "folder")}
-                          onDrop={(e, target) => {
-                            const fileId = e.dataTransfer.getData(
-                              "application/file-id",
-                            );
-                            const folderId = e.dataTransfer.getData(
-                              "application/folder-id",
-                            );
-                            onDropOnFolder(
-                              target.id,
-                              fileId ? [fileId] : [],
-                              folderId ? [folderId] : [],
-                            );
-                          }}
+                          onDelete={handleDeleteFolder}
+                          onDrop={onDropOnFolder}
+                          onMobileFolderDrop={handleMobileFolderDrop}
                           isMenuOpen={openFolderMenuId === folder.id}
                           onToggleMenu={onToggleFolderMenu}
                           onCloseMenu={onCloseMenu}
@@ -270,15 +278,14 @@ export default function VirtualizedMixedGrid({
                         key={`file-${file.id}`}
                         file={file}
                         isSelected={selectedFiles.has(file.id)}
-                        onSelect={(id) =>
-                          onSelectFile(id, !selectedFiles.has(id))
-                        }
+                        onSelect={onSelectFile}
                         onPreview={onPreviewFile}
                         onShare={onShareFile}
                         onDownload={onDownloadFile}
-                        onRename={() => onRenameFile(file)}
-                        onDelete={() => onDelete(file, "file")}
-                        onDragStart={(e) => onFileDragStart(file.id, e)}
+                        onRename={onRenameFile}
+                        onDelete={handleDeleteFile}
+                        onDragStart={onFileDragStart}
+                        onMobileFileDrop={handleMobileFileDrop}
                         isMenuOpen={openFileMenuId === file.id}
                         onToggleMenu={onToggleFileMenu}
                         onCloseMenu={onCloseMenu}

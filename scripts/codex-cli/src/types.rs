@@ -45,12 +45,22 @@ pub struct StructuredReviewIssue {
     pub acceptance: Vec<String>,
 }
 
-fn review_severity_token(severity: &str) -> String {
-    severity
+pub fn review_severity_token(severity: &str) -> String {
+    let compact = severity
         .chars()
-        .filter(|c| !c.is_whitespace())
-        .collect::<String>()
-        .to_ascii_lowercase()
+        .filter_map(|c| {
+            if c.is_ascii_alphanumeric() || c == '+' {
+                Some(c.to_ascii_lowercase())
+            } else {
+                None
+            }
+        })
+        .collect::<String>();
+
+    compact
+        .strip_suffix("priority")
+        .unwrap_or(compact.as_str())
+        .to_string()
 }
 
 pub fn is_review_severity_medium_or_higher(severity: &str) -> bool {
@@ -77,6 +87,27 @@ mod tests {
         assert!(review_severity_matches_allowed("Medium+", &allowed));
         assert!(!review_severity_matches_allowed("Low", &allowed));
     }
+
+    #[test]
+    fn priority_suffix_severities_are_actionable() {
+        assert!(is_review_severity_medium_or_higher("medium priority"));
+        assert!(is_review_severity_medium_or_higher("medium+ priority"));
+        assert!(is_review_severity_medium_or_higher("high priority"));
+        assert!(is_review_severity_medium_or_higher("critical priority"));
+        assert!(!is_review_severity_medium_or_higher("low priority"));
+
+        let allowed = HashSet::from(["medium".to_string(), "high".to_string()]);
+        assert!(review_severity_matches_allowed("Medium Priority", &allowed));
+        assert!(review_severity_matches_allowed(
+            "Medium+ Priority",
+            &allowed
+        ));
+        assert!(review_severity_matches_allowed("High Priority", &allowed));
+        assert!(!review_severity_matches_allowed(
+            "Critical Priority",
+            &allowed
+        ));
+    }
 }
 
 /// 写入 `docs/CHANGELOG.md` 的条目输入（由 Pipeline 在运行期聚合）。
@@ -88,6 +119,17 @@ pub struct ChangelogEntryInput {
     pub files: Vec<String>,
     pub security_passed: bool,
     pub quality_score: u8,
+}
+
+/// 写入 `docs/auto-review-ledger.md` 的 Gemini Review 问题处理记录。
+#[derive(Debug, Clone)]
+pub struct ReviewLedgerEntryInput {
+    pub pr_number: u32,
+    pub round: u8,
+    pub unix_ts: u64,
+    pub summary: Option<String>,
+    pub files: Vec<String>,
+    pub statuses: Vec<ReviewIssueStatus>,
 }
 
 /// `codex-auto-fix pr-auto-fix` 的机器可读输出（供 GitHub Actions 解析）。
@@ -109,7 +151,21 @@ pub struct PrAutoFixOutput {
     pub fallback_used: bool,
     pub final_status: String,
     pub summary: Option<String>,
+    pub review_record_path: Option<String>,
+    pub fixed_explanations: Vec<String>,
     pub pending_explanations: Vec<String>,
+    pub issue_statuses: Vec<ReviewIssueStatus>,
+}
+
+/// One-to-one status for a Medium/Medium+/High/Critical review issue.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ReviewIssueStatus {
+    pub severity: String,
+    pub file: String,
+    pub line: u32,
+    pub description: String,
+    pub status: String,
+    pub explanation: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]

@@ -2,8 +2,8 @@
 
 The Gemini/Codex auto-review loop must not infer merge readiness from
 `fixed=false` alone. `codex-auto-fix` output must expose whether
-`Medium/Medium+` or higher issues remain pending, and the workflow must route
-through a tested state machine:
+`Medium/Medium+/High/Critical` issues remain pending, and the workflow must
+route through a tested state machine:
 
 - `pending_explanations` non-empty means the PR is not clean.
 - `push_blocked=true` must stop the loop and require human action.

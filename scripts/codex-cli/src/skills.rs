@@ -1,6 +1,9 @@
 use crate::llm::CodexClient;
 use crate::repo;
-use crate::types::{ChangelogEntryInput, ReviewData, ReviewIssue, review_severity_matches_allowed};
+use crate::types::{
+    ChangelogEntryInput, ReviewData, ReviewIssue, ReviewIssueStatus,
+    is_review_severity_medium_or_higher, review_severity_matches_allowed, review_severity_token,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::env;
@@ -577,7 +580,7 @@ impl Skill for FeedbackSkill {
                 let gh_msg = format!(
                     "🤖 **Codex 自动修复已生成，但未推送**\n\n⚠️ 安全扫描未通过，已按 fail-closed 策略停止提交。\n\n{}\n{}",
                     build_security_findings(ctx),
-                    pending_explanations_block(ctx)
+                    review_status_block(ctx)
                 );
                 if ctx.enable_pr_comments {
                     repo::post_comment(ctx.pr_number, &gh_msg)?;
@@ -606,7 +609,7 @@ impl Skill for FeedbackSkill {
                     .map(|f| format!("- `{}`", f))
                     .collect::<Vec<_>>()
                     .join("\n"),
-                pending_explanations_block(ctx)
+                review_status_block(ctx)
             );
             if ctx.enable_pr_comments {
                 repo::post_comment(ctx.pr_number, &gh_msg)?;
@@ -623,7 +626,7 @@ impl Skill for FeedbackSkill {
                 format!(
                     "🤖 **Codex GPT-5.5 分析**: 存在未自动修复的问题，已保留原因。\n\n**总结**: {}\n{}",
                     data.summary,
-                    pending_explanations_block(ctx)
+                    review_status_block(ctx)
                 )
             };
             if ctx.enable_pr_comments {
@@ -659,23 +662,206 @@ fn build_dry_run_comment(ctx: &SkillContext) -> String {
             .map(|f| format!("- `{}`", f))
             .collect::<Vec<_>>()
             .join("\n"),
-        pending_explanations_block(ctx)
+        review_status_block(ctx)
     )
 }
 
-fn pending_explanations_block(ctx: &SkillContext) -> String {
-    if ctx.pending_explanations.is_empty() {
-        return String::new();
+pub(crate) fn fixed_explanations(ctx: &SkillContext) -> Vec<String> {
+    if ctx.push_blocked {
+        return Vec::new();
     }
 
+    let fixed = fixed_issue_keys(ctx);
+    let Some(data) = &ctx.parsed_data else {
+        return Vec::new();
+    };
+
+    data.issues
+        .iter()
+        .filter(|issue| is_review_severity_medium_or_higher(&issue.severity))
+        .filter(|issue| fixed.contains(&review_issue_key(issue)))
+        .map(|issue| {
+            format!(
+                "[{}] `{}`:{} 已自动修复：{}",
+                issue.severity,
+                issue.file,
+                issue.line.unwrap_or(0),
+                issue.description
+            )
+        })
+        .collect()
+}
+
+fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
+    if !ctx.pending_explanations.is_empty() {
+        return ctx.pending_explanations.clone();
+    }
+
+    let fixed = fixed_issue_keys(ctx);
+    let selected: HashSet<String> = ctx.selected_issues.iter().map(review_issue_key).collect();
+    let Some(data) = &ctx.parsed_data else {
+        return Vec::new();
+    };
+
+    data.issues
+        .iter()
+        .filter(|issue| is_review_severity_medium_or_higher(&issue.severity))
+        .filter_map(|issue| {
+            let issue_key = review_issue_key(issue);
+            if fixed.contains(&issue_key) {
+                return None;
+            }
+            let reason = pending_reason_for_issue(ctx, &issue_key, selected.contains(&issue_key));
+            Some(format!(
+                "[{}] `{}`:{} 未自动修复：{}",
+                issue.severity,
+                issue.file,
+                issue.line.unwrap_or(0),
+                reason
+            ))
+        })
+        .collect()
+}
+
+pub(crate) fn review_issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus> {
+    let Some(data) = &ctx.parsed_data else {
+        return Vec::new();
+    };
+
+    let fixed = fixed_issue_keys(ctx);
+    let selected: HashSet<String> = ctx.selected_issues.iter().map(review_issue_key).collect();
+
+    data.issues
+        .iter()
+        .filter(|issue| is_review_severity_medium_or_higher(&issue.severity))
+        .map(|issue| {
+            let issue_key = review_issue_key(issue);
+            let line = issue.line.unwrap_or(0);
+            let (status, explanation) = if fixed.contains(&issue_key) && ctx.push_blocked {
+                (
+                    "blocked".to_string(),
+                    "已生成修复，但安全扫描 fail-closed 阻止推送".to_string(),
+                )
+            } else if fixed.contains(&issue_key) {
+                ("resolved".to_string(), "已自动修复".to_string())
+            } else {
+                (
+                    "pending".to_string(),
+                    pending_reason_for_issue(ctx, &issue_key, selected.contains(&issue_key)),
+                )
+            };
+
+            ReviewIssueStatus {
+                severity: issue.severity.clone(),
+                file: issue.file.clone(),
+                line,
+                description: issue.description.clone(),
+                status,
+                explanation,
+            }
+        })
+        .collect()
+}
+
+fn pending_reason_for_issue(ctx: &SkillContext, issue_key: &str, selected: bool) -> String {
+    ctx.fix_attempts
+        .iter()
+        .rev()
+        .find(|attempt| attempt.issue_key == issue_key && !attempt.success)
+        .and_then(|attempt| attempt.reason.clone())
+        .unwrap_or_else(|| {
+            if selected {
+                "未产生可应用补丁".to_string()
+            } else {
+                "策略过滤或受保护路径，未自动修复".to_string()
+            }
+        })
+}
+
+fn fixed_issue_keys(ctx: &SkillContext) -> HashSet<String> {
+    ctx.fix_attempts
+        .iter()
+        .filter(|attempt| attempt.success)
+        .map(|attempt| attempt.issue_key.clone())
+        .chain(ctx.fixed_issue_keys.iter().cloned())
+        .collect()
+}
+
+fn review_status_block(ctx: &SkillContext) -> String {
+    let Some(_) = &ctx.parsed_data else {
+        return String::new();
+    };
+
+    let statuses = review_issue_statuses(ctx);
+    if statuses.is_empty() {
+        return "\n\n📋 Medium/Medium+/High/Critical 对应状态：\n- 本轮 Gemini Review 未解析到 Medium/Medium+/High/Critical 问题。".to_string();
+    }
+
+    let rows = statuses
+        .iter()
+        .enumerate()
+        .map(|(index, status)| {
+            format!(
+                "| {} | [{}] `{}`:{} {} | {} | {} |",
+                index + 1,
+                markdown_table_cell(&status.severity),
+                markdown_table_cell(&status.file),
+                status.line,
+                markdown_table_cell(&status.description),
+                markdown_table_cell(status_label(&status.status)),
+                markdown_table_cell(&status.explanation)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let fixed = fixed_explanations(ctx);
+    let pending = pending_explanations(ctx);
+    let fixed_section = if fixed.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "\n\n✅ 已解决明细：\n{}",
+            fixed
+                .iter()
+                .map(|explanation| format!("- {}", explanation))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    };
+    let pending_section = if pending.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "\n\n🧭 未解决明细：\n{}",
+            pending
+                .iter()
+                .map(|explanation| format!("- {}", explanation))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    };
+
     format!(
-        "\n\n🧭 未自动修复说明：\n{}",
-        ctx.pending_explanations
-            .iter()
-            .map(|e| format!("- {}", e))
-            .collect::<Vec<_>>()
-            .join("\n")
+        "\n\n📋 Medium/Medium+/High/Critical 对应状态\n\n| # | Gemini 问题 | 状态 | 说明 |\n|---|---|---|---|\n{}{}{}",
+        rows, fixed_section, pending_section
     )
+}
+
+fn status_label(status: &str) -> &'static str {
+    match status {
+        "resolved" => "✅ 已解决",
+        "blocked" => "⚠️ 推送阻塞",
+        _ => "🧭 未解决",
+    }
+}
+
+fn markdown_table_cell(value: &str) -> String {
+    value
+        .replace('|', "\\|")
+        .replace('\n', " ")
+        .trim()
+        .to_string()
 }
 
 fn build_security_findings(ctx: &SkillContext) -> String {
@@ -818,7 +1004,7 @@ async fn read_gemini_review(
 
 /// “硬过滤”规则：决定哪些问题允许进入自动修复。
 ///
-/// - 仅处理 High/Medium（避免低优先级噪声）
+/// - 仅处理 Critical/High/Medium+/Medium（避免低优先级噪声）
 /// - 排除锁文件/配置文件等高风险路径
 /// - 排除 docs/*.md（避免自动改文档造成 review 噪声与误改）
 fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
@@ -828,12 +1014,7 @@ fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
         .unwrap_or_else(|_| "Critical,High,Medium+,Medium".to_string());
     let allowed: HashSet<String> = allowed
         .split(',')
-        .map(|s| {
-            s.chars()
-                .filter(|c| !c.is_whitespace())
-                .collect::<String>()
-                .to_ascii_lowercase()
-        })
+        .map(review_severity_token)
         .filter(|s| !s.is_empty())
         .collect();
 
@@ -1176,6 +1357,68 @@ mod tests {
     }
 
     #[test]
+    fn review_status_block_lists_one_to_one_medium_status_table() {
+        let mut ctx = SkillContext::new(SkillContextInit {
+            pr_number: 1,
+            repo: "owner/repo".to_string(),
+            repo_root: ".".to_string(),
+            rules_text: "rules".to_string(),
+            raw_input: "review".to_string(),
+            rounds: 2,
+            auto_push: false,
+            enable_pr_comments: false,
+            changelog_path: None,
+            disable_changelog: true,
+        });
+        ctx.parsed_data = Some(ReviewData {
+            summary: "summary".to_string(),
+            issues: vec![
+                ReviewIssue {
+                    file: "src/a.rs".to_string(),
+                    line: Some(10),
+                    severity: "Medium".to_string(),
+                    description: "first".to_string(),
+                    suggestion: "fix".to_string(),
+                    constraints: Vec::new(),
+                    reason: None,
+                },
+                ReviewIssue {
+                    file: "src/b.rs".to_string(),
+                    line: Some(20),
+                    severity: "Medium+".to_string(),
+                    description: "second".to_string(),
+                    suggestion: "fix".to_string(),
+                    constraints: Vec::new(),
+                    reason: None,
+                },
+            ],
+        });
+        ctx.fix_attempts.push(FixAttempt {
+            round: 1,
+            issue_key: "src/a.rs:10:Medium:first".to_string(),
+            file: "src/a.rs".to_string(),
+            stage: "patch_apply".to_string(),
+            success: true,
+            reason: None,
+        });
+        ctx.fix_attempts.push(FixAttempt {
+            round: 1,
+            issue_key: "src/b.rs:20:Medium+:second".to_string(),
+            file: "src/b.rs".to_string(),
+            stage: "patch_generation".to_string(),
+            success: false,
+            reason: Some("empty patch".to_string()),
+        });
+
+        let block = review_status_block(&ctx);
+
+        assert!(block.contains("📋 Medium/Medium+/High/Critical 对应状态"));
+        assert!(block.contains("| # | Gemini 问题 | 状态 | 说明 |"));
+        assert!(block.contains("| 1 | [Medium] `src/a.rs`:10 first | ✅ 已解决 | 已自动修复 |"));
+        assert!(block.contains("| 2 | [Medium+] `src/b.rs`:20 second | 🧭 未解决 | empty patch |"));
+    }
+
+    #[test]
     fn review_issue_key_distinguishes_same_file_issues() {
         let first = ReviewIssue {
             file: "src/a.rs".to_string(),
@@ -1195,12 +1438,12 @@ mod tests {
     }
 
     #[test]
-    fn decide_fix_or_skip_selects_medium_and_literal_medium_plus() {
+    fn decide_fix_or_skip_selects_all_actionable_priority_severities() {
         let issues = vec![
             ReviewIssue {
                 file: "src/a.rs".to_string(),
                 line: Some(10),
-                severity: "Medium".to_string(),
+                severity: "Medium Priority".to_string(),
                 description: "medium".to_string(),
                 suggestion: String::new(),
                 constraints: Vec::new(),
@@ -1209,7 +1452,7 @@ mod tests {
             ReviewIssue {
                 file: "src/b.rs".to_string(),
                 line: Some(20),
-                severity: "Medium+".to_string(),
+                severity: "Medium+ Priority".to_string(),
                 description: "medium plus".to_string(),
                 suggestion: String::new(),
                 constraints: Vec::new(),
@@ -1218,6 +1461,24 @@ mod tests {
             ReviewIssue {
                 file: "src/c.rs".to_string(),
                 line: Some(30),
+                severity: "High Priority".to_string(),
+                description: "high".to_string(),
+                suggestion: String::new(),
+                constraints: Vec::new(),
+                reason: None,
+            },
+            ReviewIssue {
+                file: "src/d.rs".to_string(),
+                line: Some(40),
+                severity: "Critical Priority".to_string(),
+                description: "critical".to_string(),
+                suggestion: String::new(),
+                constraints: Vec::new(),
+                reason: None,
+            },
+            ReviewIssue {
+                file: "src/e.rs".to_string(),
+                line: Some(50),
                 severity: "Low".to_string(),
                 description: "low".to_string(),
                 suggestion: String::new(),
@@ -1228,8 +1489,10 @@ mod tests {
 
         let selected = decide_fix_or_skip(&issues);
 
-        assert_eq!(selected.len(), 2);
-        assert_eq!(selected[0].severity, "Medium");
-        assert_eq!(selected[1].severity, "Medium+");
+        assert_eq!(selected.len(), 4);
+        assert_eq!(selected[0].severity, "Medium Priority");
+        assert_eq!(selected[1].severity, "Medium+ Priority");
+        assert_eq!(selected[2].severity, "High Priority");
+        assert_eq!(selected[3].severity, "Critical Priority");
     }
 }

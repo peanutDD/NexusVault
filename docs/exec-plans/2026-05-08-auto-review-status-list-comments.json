@@ -1,0 +1,21 @@
+{
+  "date": "2026-05-08",
+  "task": "auto review status list comments",
+  "goal": "Ensure automatic review state comments point to generated issue status lists and quota timeouts explain why no new list exists.",
+  "assumptions": [
+    "codex-auto-fix feedback comments render the issue status table when review input exists",
+    "workflow state comments are separate from codex-cli feedback comments",
+    "Gemini quota or timeout means no new review input was received"
+  ],
+  "risks": [
+    "Final clean or pending summaries can hide the issue table if they do not reference it",
+    "Timeout comments can look like skipped issue processing unless they explain that Gemini produced no new review"
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml state_script_names_medium_and_medium_plus_as_pending_scope --test workflow_state",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml watchdog_timeout_comment_explains_no_new_issue_list --test gemini_watchdog",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml",
+    "cargo clippy --manifest-path scripts/codex-cli/Cargo.toml --all-targets -- -D warnings",
+    "git diff --check"
+  ]
+}

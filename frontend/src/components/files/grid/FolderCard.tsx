@@ -1,23 +1,39 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { FolderOpen, PencilLine, Trash2, MoreVertical } from "lucide-react";
 import type { Folder } from "../../../types/folders";
 import { cn } from "../../../utils/cn";
+import { findFolderDropTargetFromPoint } from "../../../utils/dropTargets";
 import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 
 interface FolderCardProps {
   folder: Folder;
   isSelected: boolean;
-  onSelect: (id: string) => void;
-  onOpen: (folder: Folder) => void;
+  onSelect: (id: string, selected: boolean) => void;
+  onOpen: (folderId: string) => void;
   onRename: (folder: Folder) => void;
-  onDelete: (id: string) => void;
+  onDelete: (folder: Folder) => void;
   onDragStart?: (e: React.DragEvent, folder: Folder) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDragLeave?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent, targetFolder: Folder) => void;
+  onDrop?: (targetFolderId: string, fileIds: string[], folderIds: string[]) => void;
+  onMobileFolderDragStart?: (folderId: string) => void;
+  onMobileFolderDragEnd?: () => void;
+  onMobileFolderDrop?: (targetFolderId: string, sourceFolderId: string) => void;
   isMenuOpen: boolean;
   onToggleMenu: (id: string) => void;
   onCloseMenu: () => void;
+}
+
+const MOBILE_FOLDER_DRAG_LONG_PRESS_MS = 450;
+const MOBILE_FOLDER_DRAG_CANCEL_DISTANCE_PX = 10;
+
+function isInteractivePointerTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      'button, input, select, textarea, a, [role="checkbox"], [data-folder-menu]',
+    ),
+  );
 }
 
 /**
@@ -34,11 +50,27 @@ const FolderCard = memo(function FolderCard({
   onDragOver,
   onDragLeave,
   onDrop,
+  onMobileFolderDragStart,
+  onMobileFolderDragEnd,
+  onMobileFolderDrop,
   isMenuOpen,
   onToggleMenu,
   onCloseMenu,
 }: FolderCardProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isMobileDragging, setIsMobileDragging] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mobileDragActiveRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearLongPressTimer, [clearLongPressTimer]);
 
   const handleToggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -46,7 +78,7 @@ const FolderCard = memo(function FolderCard({
   };
 
   const handleDoubleClick = () => {
-    onOpen(folder);
+    onOpen(folder.id);
   };
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -77,12 +109,101 @@ const FolderCard = memo(function FolderCard({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    onDrop?.(e, folder);
+    const fileId = e.dataTransfer.getData("application/file-id");
+    const folderId = e.dataTransfer.getData("application/folder-id");
+    onDrop?.(
+      folder.id,
+      fileId ? [fileId] : [],
+      folderId ? [folderId] : [],
+    );
   };
 
+  const finishMobileFolderDrag = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const wasDragging = mobileDragActiveRef.current;
+      clearLongPressTimer();
+      pointerStartRef.current = null;
+
+      if (!wasDragging) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      mobileDragActiveRef.current = false;
+      setIsMobileDragging(false);
+
+      const target = findFolderDropTargetFromPoint(
+        e.clientX,
+        e.clientY,
+        folder.id,
+      );
+      const targetFolderId = target?.dataset.folderId;
+      if (targetFolderId !== undefined) {
+        onMobileFolderDrop?.(targetFolderId, folder.id);
+      }
+      onMobileFolderDragEnd?.();
+    },
+    [
+      clearLongPressTimer,
+      folder.id,
+      onMobileFolderDragEnd,
+      onMobileFolderDrop,
+    ],
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse" || !e.isPrimary) return;
+      if (isInteractivePointerTarget(e.target)) return;
+
+      clearLongPressTimer();
+      pointerStartRef.current = { x: e.clientX, y: e.clientY };
+      longPressTimerRef.current = setTimeout(() => {
+        mobileDragActiveRef.current = true;
+        setIsMobileDragging(true);
+        onMobileFolderDragStart?.(folder.id);
+      }, MOBILE_FOLDER_DRAG_LONG_PRESS_MS);
+
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    },
+    [clearLongPressTimer, folder.id, onMobileFolderDragStart],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse") return;
+      const start = pointerStartRef.current;
+      if (!start) return;
+
+      const distance = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+      if (
+        !mobileDragActiveRef.current &&
+        distance > MOBILE_FOLDER_DRAG_CANCEL_DISTANCE_PX
+      ) {
+        clearLongPressTimer();
+        pointerStartRef.current = null;
+        return;
+      }
+
+      if (mobileDragActiveRef.current) {
+        e.preventDefault();
+      }
+    },
+    [clearLongPressTimer],
+  );
+
+  const handlePointerCancel = useCallback(() => {
+    clearLongPressTimer();
+    pointerStartRef.current = null;
+    if (mobileDragActiveRef.current) {
+      mobileDragActiveRef.current = false;
+      setIsMobileDragging(false);
+      onMobileFolderDragEnd?.();
+    }
+  }, [clearLongPressTimer, onMobileFolderDragEnd]);
+
   const handleSelect = useCallback(() => {
-    onSelect(folder.id);
-  }, [folder.id, onSelect]);
+    onSelect(folder.id, !isSelected);
+  }, [folder.id, isSelected, onSelect]);
 
   return (
     <div
@@ -90,12 +211,20 @@ const FolderCard = memo(function FolderCard({
         "glass-card group relative cursor-pointer rounded-md transition-colors",
         isSelected && "border-[var(--cta-primary-border)]",
         isDragOver && "border-[var(--color-border-strong)]",
+        isMobileDragging &&
+          "border-[var(--color-border-strong)] opacity-80 pointer-events-none",
       )}
+      data-folder-id={folder.id}
+      data-mobile-folder-dragging={isMobileDragging ? "true" : undefined}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishMobileFolderDrag}
+      onPointerCancel={handlePointerCancel}
       onDoubleClick={handleDoubleClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === "Enter") onOpen(folder);
+        if (e.key === "Enter") onOpen(folder.id);
       }}
       data-oid="y3sabdy"
     >
@@ -155,11 +284,13 @@ const FolderCard = memo(function FolderCard({
               <div
                 className="fixed inset-0 z-40"
                 onClick={onCloseMenu}
+                data-folder-menu="true"
                 data-oid="0cciqz9"
               />
 
               <div
                 className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
+                data-folder-menu="true"
                 data-oid="9xqi6te"
               >
                   <button
@@ -168,7 +299,7 @@ const FolderCard = memo(function FolderCard({
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
-                      onOpen(folder);
+                      onOpen(folder.id);
                     }}
                     data-oid="ishdm9z"
                   >
@@ -211,7 +342,7 @@ const FolderCard = memo(function FolderCard({
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
-                      onDelete(folder.id);
+                      onDelete(folder);
                     }}
                     data-oid="j2_pyh."
                   >

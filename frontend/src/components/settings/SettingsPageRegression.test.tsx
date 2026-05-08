@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { User } from "../../types/auth";
 import type { ApiToken } from "../../services/apiTokens";
+import Settings from "../../pages/Settings";
 import ThemeSection from "./ThemeSection";
 import UserInfoSection from "./UserInfoSection";
 import ApiTokenSection from "./ApiTokenSection";
@@ -15,6 +17,7 @@ import {
   useCreateApiToken,
   useDeleteApiToken,
 } from "../../hooks/useApiTokens";
+import { useStorageUsage } from "../../hooks/useStorageUsage";
 
 vi.mock("../../store/themeStore", () => ({
   useThemeStore: vi.fn(),
@@ -37,6 +40,10 @@ vi.mock("../../hooks/useApiTokens", () => ({
   useApiTokens: vi.fn(),
   useCreateApiToken: vi.fn(),
   useDeleteApiToken: vi.fn(),
+}));
+
+vi.mock("../../hooks/useStorageUsage", () => ({
+  useStorageUsage: vi.fn(),
 }));
 
 vi.mock("../../hooks/useClipboard", () => ({
@@ -86,6 +93,16 @@ function mockAuthStore() {
   );
 }
 
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <div data-testid="location">
+      {location.pathname}
+      {location.search}
+    </div>
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useThemeStore).mockReturnValue({
@@ -108,6 +125,9 @@ beforeEach(() => {
   vi.mocked(useApiTokens).mockReturnValue(asApiTokensQuery([]));
   vi.mocked(useCreateApiToken).mockReturnValue(asCreateTokenMutation());
   vi.mocked(useDeleteApiToken).mockReturnValue(asDeleteTokenMutation());
+  vi.mocked(useStorageUsage).mockReturnValue({
+    data: { total_size: 2048, file_count: 3 },
+  } as unknown as ReturnType<typeof useStorageUsage>);
 });
 
 describe("Settings page regressions", () => {
@@ -170,5 +190,72 @@ describe("Settings page regressions", () => {
   it("uses semantic settings tokens for error input states", () => {
     expect(settingsInputClass(true)).toContain("settings-form-error");
     expect(settingsInputClass(false)).toContain("settings-form-input-border");
+  });
+
+  it("returns to the previous route instead of hardcoding files home", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={["/files?folder=folder-1", "/settings"]}
+        initialIndex={1}
+      >
+        <Routes>
+          <Route path="/files" element={<LocationProbe />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Back/i }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/files?folder=folder-1",
+    );
+  });
+
+  it("falls back to files home when there is no previous app route", async () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/files" element={<LocationProbe />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Back/i }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent("/files");
+  });
+
+  it("does not render Settings quick nav links", () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("Quick nav")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Jump to Account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Jump to Storage/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Jump to Appearance/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Jump to Security/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Jump to Tokens/i })).not.toBeInTheDocument();
+  });
+
+  it("returns home only from the title icon", async () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/files" element={<LocationProbe />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Go to files home/i }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent("/files");
   });
 });

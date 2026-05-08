@@ -73,6 +73,103 @@ fn assigns_incrementing_ids_skips_incomplete_blocks_and_normalizes_bad_line() {
 }
 
 #[test]
+fn parses_gemini_inline_badge_comments_from_review_body() {
+    let review = r#"## Code Review
+
+This pull request has inline comments.
+
+## Inline Review Comments
+### frontend/src/components/files/list/FileList.tsx:145
+![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+The `handleDropOnFolderAdapter` function is recreated on every render.
+
+```suggestion
+const handleDropOnFolderAdapter = useCallback(() => {}, []);
+```
+
+### frontend/src/components/files/grid/FileCard.tsx:142
+![high priority](https://www.gstatic.com/codereviewagent/high-priority.svg)
+
+Reset the preview suppression flag on every pointer interaction.
+"#;
+
+    let parsed = parse_structured_review(review);
+
+    assert_eq!(parsed.summary, "2 actionable issues");
+    assert_eq!(parsed.issues.len(), 2);
+    assert_eq!(parsed.issues[0].severity, "Medium");
+    assert_eq!(
+        parsed.issues[0].file,
+        "frontend/src/components/files/list/FileList.tsx"
+    );
+    assert_eq!(parsed.issues[0].line, 145);
+    assert!(
+        parsed.issues[0]
+            .problem
+            .contains("recreated on every render")
+    );
+    assert!(parsed.issues[0].expected.contains("useCallback"));
+    assert_eq!(parsed.issues[1].severity, "High");
+    assert_eq!(
+        parsed.issues[1].file,
+        "frontend/src/components/files/grid/FileCard.tsx"
+    );
+    assert_eq!(parsed.issues[1].line, 142);
+}
+
+#[test]
+fn parses_gemini_inline_badge_comments_without_body_text() {
+    let review = r#"## Code Review
+
+### frontend/src/components/files/grid/FileCard.tsx:130
+![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+```suggestion
+if (targetFolderId !== undefined) {
+  onMobileFileDrop?.(targetFolderId, file.id);
+}
+```
+"#;
+
+    let parsed = parse_structured_review(review);
+
+    assert_eq!(parsed.summary, "1 actionable issues");
+    assert_eq!(parsed.issues.len(), 1);
+    assert_eq!(parsed.issues[0].severity, "Medium");
+    assert_eq!(
+        parsed.issues[0].file,
+        "frontend/src/components/files/grid/FileCard.tsx"
+    );
+    assert_eq!(parsed.issues[0].line, 130);
+    assert!(parsed.issues[0].problem.contains("review comment"));
+    assert!(parsed.issues[0].expected.contains("targetFolderId"));
+}
+
+#[test]
+fn parses_inline_headings_with_colon_suffix_after_line_number() {
+    let review = r#"## Code Review
+
+### frontend/src/components/files/list/FileListGroupedView.tsx:136: Prefer a stable callback: useCallback
+![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+The mobile drop adapter is recreated on unrelated parent renders.
+"#;
+
+    let parsed = parse_structured_review(review);
+
+    assert_eq!(parsed.summary, "1 actionable issues");
+    assert_eq!(parsed.issues.len(), 1);
+    assert_eq!(parsed.issues[0].severity, "Medium");
+    assert_eq!(
+        parsed.issues[0].file,
+        "frontend/src/components/files/list/FileListGroupedView.tsx"
+    );
+    assert_eq!(parsed.issues[0].line, 136);
+    assert!(parsed.issues[0].problem.contains("mobile drop adapter"));
+}
+
+#[test]
 fn review_to_json_cli_writes_output_file_and_stdout_json() {
     let workspace = TestWorkspace::new("review-to-json");
     let input = workspace.path.join("review.md");

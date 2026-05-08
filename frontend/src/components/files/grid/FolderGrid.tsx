@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import type { Folder } from "../../../types/folders";
 import FolderCard from "./FolderCard";
 
@@ -34,6 +35,17 @@ export default function FolderGrid({
   onToggleMenu,
   onCloseMenu,
 }: FolderGridProps) {
+  const handleDeleteFolder = useCallback(
+    (folder: Folder) => onDelete(folder.id),
+    [onDelete],
+  );
+  const handleMobileFolderDrop = useCallback(
+    (targetFolderId: string, sourceFolderId: string) => {
+      onDrop(targetFolderId, [], [sourceFolderId]);
+    },
+    [onDrop],
+  );
+
   if (folders.length === 0) return null;
 
   return (
@@ -46,19 +58,12 @@ export default function FolderGrid({
           key={folder.id}
           folder={folder}
           isSelected={selectedFolders.has(folder.id)}
-          onSelect={(id) => onSelect(id, !selectedFolders.has(id))}
-          onOpen={(f) => onOpen(f.id)}
+          onSelect={onSelect}
+          onOpen={onOpen}
           onRename={onRename}
-          onDelete={onDelete}
-          onDrop={(e, target) => {
-            const fileId = e.dataTransfer.getData("application/file-id");
-            const folderId = e.dataTransfer.getData("application/folder-id");
-            onDrop(
-              target.id,
-              fileId ? [fileId] : [],
-              folderId ? [folderId] : [],
-            );
-          }}
+          onDelete={handleDeleteFolder}
+          onDrop={onDrop}
+          onMobileFolderDrop={handleMobileFolderDrop}
           isMenuOpen={openFolderMenuId === folder.id}
           onToggleMenu={onToggleMenu}
           onCloseMenu={onCloseMenu}

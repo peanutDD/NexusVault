@@ -95,6 +95,99 @@ fn auto_fix_local_uses_review_json_as_primary_input() {
 }
 
 #[test]
+fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
+    let workspace = TestWorkspace::new("review-ledger");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题，并记录每条问题的解决状态。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("success");
+
+    let output = run_auto_fix_with_docs(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["review_record_path"], "docs/auto-review-ledger.md");
+    assert!(
+        json["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|file| { file.as_str() == Some("docs/auto-review-ledger.md") })
+    );
+
+    let ledger = fs::read_to_string(repo.join("docs/auto-review-ledger.md")).unwrap();
+    assert!(ledger.contains("Medium"));
+    assert!(ledger.contains("fix value"));
+    assert!(ledger.contains("resolved"));
+    assert!(ledger.contains("已自动修复"));
+    assert!(ledger.contains("src/lib.rs"));
+    assert!(ledger.contains("修改文件"));
+}
+
+#[test]
+fn pr_auto_fix_posts_issue_status_checklist_comment_in_dry_run() {
+    let workspace = TestWorkspace::new("pr-comment-checklist");
+    let repo = workspace.create_repo();
+    write_repo_file(
+        &repo,
+        "src/lib.rs",
+        "pub fn value() -> i32 {\n    1\n}\n\npub fn other() -> i32 {\n    3\n}\n",
+    );
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的问题，并在 PR 评论区逐项标记状态。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nTwo Medium comments in one file.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("same_file_partial");
+    let fake_gh = workspace.fake_gh();
+    let gh_comment = workspace.path.join("gh-comment.md");
+
+    let output =
+        run_pr_auto_fix_with_fake_gh(&repo, &review, &fake_agent, &fake_gh, &gh_comment, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["has_pending"], true);
+    assert_eq!(json["issue_statuses"][0]["status"], "resolved");
+    assert_eq!(json["issue_statuses"][1]["status"], "pending");
+
+    let comment = fs::read_to_string(gh_comment).unwrap();
+    assert!(comment.contains("Codex 已在本地生成并应用补丁"));
+    assert!(comment.contains("📋 Medium/Medium+/High/Critical 对应状态"));
+    assert!(comment.contains("| # | Gemini 问题 | 状态 | 说明 |"));
+    assert!(comment.contains("✅ 已解决"));
+    assert!(comment.contains("🧭 未解决"));
+    assert!(comment.contains("✅ 已解决明细"));
+    assert!(comment.contains("🧭 未解决明细"));
+    assert!(comment.contains("fix value"));
+    assert!(comment.contains("fix other"));
+}
+
+#[test]
 fn auto_fix_local_blocks_push_when_security_audit_fails() {
     let workspace = TestWorkspace::new("blocked");
     let repo = workspace.create_repo();
@@ -126,6 +219,14 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
     assert_eq!(json["pending_count"], 0);
     assert_eq!(json["review_clean"], false);
     assert_eq!(json["pending_explanations"].as_array().unwrap().len(), 0);
+    assert_eq!(json["fixed_explanations"].as_array().unwrap().len(), 0);
+    assert_eq!(json["issue_statuses"][0]["status"], "blocked");
+    assert!(
+        json["issue_statuses"][0]["explanation"]
+            .as_str()
+            .unwrap()
+            .contains("阻止推送")
+    );
 
     let commit_count = workspace.git_stdout(&repo, &["rev-list", "--count", "HEAD"]);
     assert_eq!(commit_count.trim(), "1");
@@ -170,6 +271,28 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
     assert_eq!(pending.len(), 1);
     assert!(pending[0].as_str().unwrap().contains("`:5"));
     assert!(pending[0].as_str().unwrap().contains("模型未返回可应用"));
+    let fixed = json["fixed_explanations"].as_array().unwrap();
+    assert_eq!(fixed.len(), 1);
+    assert!(fixed[0].as_str().unwrap().contains("`:1"));
+    assert!(fixed[0].as_str().unwrap().contains("已自动修复"));
+    let statuses = json["issue_statuses"].as_array().unwrap();
+    assert_eq!(statuses.len(), 2);
+    assert_eq!(statuses[0]["status"], "resolved");
+    assert_eq!(statuses[0]["line"], 1);
+    assert!(
+        statuses[0]["explanation"]
+            .as_str()
+            .unwrap()
+            .contains("已自动修复")
+    );
+    assert_eq!(statuses[1]["status"], "pending");
+    assert_eq!(statuses[1]["line"], 5);
+    assert!(
+        statuses[1]["explanation"]
+            .as_str()
+            .unwrap()
+            .contains("模型未返回可应用")
+    );
 }
 
 #[test]
@@ -381,6 +504,31 @@ fn run_auto_fix(repo: &Path, review: &Path, fake_agent: &Path, yes: bool) -> std
     command.output().unwrap()
 }
 
+fn run_auto_fix_with_docs(
+    repo: &Path,
+    review: &Path,
+    fake_agent: &Path,
+    yes: bool,
+) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    command
+        .args([
+            "auto-fix-local",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--review-file",
+            review.to_str().unwrap(),
+            "--max-rounds",
+            "2",
+        ])
+        .env("CODEX_AGENT_COMMAND", fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30");
+    if yes {
+        command.arg("--yes");
+    }
+    command.output().unwrap()
+}
+
 fn run_auto_fix_json(
     repo: &Path,
     review_json: &Path,
@@ -401,6 +549,41 @@ fn run_auto_fix_json(
         ])
         .env("CODEX_AGENT_COMMAND", fake_agent)
         .env("CODEX_AGENT_TIMEOUT_SECONDS", "30");
+    if yes {
+        command.arg("--yes");
+    }
+    command.output().unwrap()
+}
+
+fn run_pr_auto_fix_with_fake_gh(
+    repo: &Path,
+    review: &Path,
+    fake_agent: &Path,
+    fake_gh: &Path,
+    gh_comment: &Path,
+    yes: bool,
+) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    let path = std::env::var("PATH")
+        .map(|current| format!("{}:{}", fake_gh.parent().unwrap().display(), current))
+        .unwrap_or_else(|_| fake_gh.parent().unwrap().display().to_string());
+    command
+        .args([
+            "pr-auto-fix",
+            "--pr-number",
+            "24",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--gemini-review",
+            review.to_str().unwrap(),
+            "--disable-changelog",
+            "--max-rounds",
+            "2",
+        ])
+        .env("PATH", path)
+        .env("CODEX_AGENT_COMMAND", fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30")
+        .env("FAKE_GH_COMMENT_PATH", gh_comment);
     if yes {
         command.arg("--yes");
     }
@@ -458,6 +641,35 @@ impl TestWorkspace {
         let path = self.path.join(format!("fake-agent-{mode}.sh"));
         let script = fake_agent_script(mode);
         fs::write(&path, script).unwrap();
+        let mut permissions = fs::metadata(&path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).unwrap();
+        path
+    }
+
+    fn fake_gh(&self) -> PathBuf {
+        let path = self.path.join("gh");
+        fs::write(
+            &path,
+            r#"#!/bin/sh
+set -eu
+if [ "$1" = "pr" ] && [ "$2" = "comment" ]; then
+  shift 3
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --body)
+        printf '%s' "$2" > "$FAKE_GH_COMMENT_PATH"
+        exit 0
+        ;;
+    esac
+    shift
+  done
+fi
+printf '%s\n' "unexpected gh invocation: $*" >&2
+exit 1
+"#,
+        )
+        .unwrap();
         let mut permissions = fs::metadata(&path).unwrap().permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(&path, permissions).unwrap();

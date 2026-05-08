@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { formatBytes } from "../utils/format";
 import PageLayout from "../components/layout/PageLayout";
@@ -12,16 +12,19 @@ import { Settings2, ArrowLeft } from "lucide-react";
 import { useStorageUsage } from "../hooks/useStorageUsage";
 import { useApiTokens } from "../hooks/useApiTokens";
 
-const SETTINGS_SECTIONS = [
-  { href: "#profile", label: "Account" },
-  { href: "#storage", label: "Storage" },
-  { href: "#appearance", label: "Appearance" },
-  { href: "#security", label: "Security" },
-  { href: "#api-tokens", label: "Tokens" },
-];
+function hasPreviousAppHistoryEntry(locationKey: string) {
+  if (typeof window !== "undefined") {
+    const historyIndex = window.history.state?.idx;
+    if (typeof historyIndex === "number") {
+      return historyIndex > 0;
+    }
+  }
+  return locationKey !== "default";
+}
 
 export default function Settings() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   
@@ -32,6 +35,14 @@ export default function Settings() {
     clearAuth();
     navigate("/login");
   }, [clearAuth, navigate]);
+
+  const handleBack = useCallback(() => {
+    if (hasPreviousAppHistoryEntry(location.key)) {
+      navigate(-1);
+    } else {
+      navigate("/files", { replace: true });
+    }
+  }, [location.key, navigate]);
 
   return (
     <PageLayout
@@ -68,7 +79,7 @@ export default function Settings() {
             <div className="min-w-0" data-oid="tc3yanx">
               <button
                 type="button"
-                onClick={() => navigate("/files")}
+                onClick={handleBack}
                 className="font-brand mb-4 inline-flex items-center rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:bg-[var(--settings-chip-bg-hover)] hover:border-[var(--settings-chip-border-hover)]"
                 data-oid="li-ft82"
               >
@@ -77,11 +88,14 @@ export default function Settings() {
                   aria-hidden="true"
                   data-oid="mf5bp9k"
                 />
-                Back to Home
+                Back
               </button>
               <div className="flex items-center gap-3" data-oid="lvlcydi">
-                <div
-                  className="rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-2 text-[var(--settings-chip-icon)]"
+                <button
+                  type="button"
+                  aria-label="Go to files home"
+                  onClick={() => navigate("/files")}
+                  className="rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-2 text-[var(--settings-chip-icon)] transition-colors hover:border-[var(--settings-chip-border-hover)] hover:bg-[var(--settings-chip-bg-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]"
                   data-oid="06je80s"
                 >
                   <Settings2
@@ -89,7 +103,7 @@ export default function Settings() {
                     aria-hidden="true"
                     data-oid="6q_g5bq"
                   />
-                </div>
+                </button>
                 <h1
                   className="font-brand truncate text-[length:var(--settings-text-xl)] font-normal tracking-widest text-[var(--settings-title)]"
                   data-oid=":ph..cd"
@@ -164,49 +178,12 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Two-column layout: quick nav on the left, content on the right */}
-        <div
-          className="grid grid-cols-1 gap-6 lg:grid-cols-12"
-          data-oid="xe7ci2f"
-        >
-          <aside className="lg:col-span-4" data-oid="j2k.gno">
-            <div className="lg:sticky lg:top-28 space-y-4" data-oid="6q1rkzk">
-              <div
-                className="rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-quicknav-bg)] p-4 text-[length:var(--settings-text-sm)] text-[var(--settings-quicknav-text)] shadow-[var(--settings-quicknav-shadow)] backdrop-blur-md"
-                data-oid=":40--9t"
-              >
-                <p
-                  className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-quicknav-muted)]"
-                  data-oid="9tppe.2"
-                >
-                  Quick nav
-                </p>
-                <div
-                  className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"
-                  data-oid="ofccbv_"
-                >
-                  {SETTINGS_SECTIONS.map((section) => (
-                    <a
-                      key={section.href}
-                      href={section.href}
-                      aria-label={`Jump to ${section.label}`}
-                      className="font-brand inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-center text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:border-[var(--settings-chip-border-hover)] hover:bg-[var(--settings-chip-bg-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]"
-                    >
-                      {section.label}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          <div className="lg:col-span-8 space-y-6" data-oid="g884a9r">
-            <UserInfoSection data-oid="1jpbmmd" />
-            <StorageUsageSection data-oid="jcf9:wl" />
-            <ThemeSection data-oid="-93dk47" />
-            <PasswordChangeSection data-oid="0py-1mt" />
-            <ApiTokenSection data-oid="y70j20v" />
-          </div>
+        <div className="space-y-6" data-oid="g884a9r">
+          <UserInfoSection data-oid="1jpbmmd" />
+          <StorageUsageSection data-oid="jcf9:wl" />
+          <ThemeSection data-oid="-93dk47" />
+          <PasswordChangeSection data-oid="0py-1mt" />
+          <ApiTokenSection data-oid="y70j20v" />
         </div>
       </div>
     </PageLayout>

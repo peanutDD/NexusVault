@@ -106,13 +106,15 @@ add_label() {
   gh pr edit "${PR_NUMBER:?}" --add-label "$1"
 }
 
+issue_status_note="问题清单见上方 Codex 分析评论中的 \`Medium/Medium+/High/Critical 对应状态\` 表；每个 Gemini 问题都会标记已解决、未解决或推送阻塞。"
+
 apply_plan() {
   ensure_label "gemini-review-round-1" "6f42c1" "Gemini/Codex review loop round 1"
   ensure_label "gemini-review-round-2" "6f42c1" "Gemini/Codex review loop round 2"
   ensure_label "gemini-review-round-max" "5319e7" "Gemini/Codex automated review loop completed"
-  ensure_label "gemini-review-pending" "d29922" "Codex has pending Medium/Medium+ review items while another round is queued"
+  ensure_label "gemini-review-pending" "d29922" "Codex has pending Medium/Medium+/High/Critical review items while another round is queued"
   ensure_label "gemini-review-needs-human" "b60205" "Automated review loop requires human decision"
-  ensure_label "gemini-review-clean" "0e8a16" "Automated review loop has no pending Medium/Medium+ findings"
+  ensure_label "gemini-review-clean" "0e8a16" "Automated review loop has no pending Medium/Medium+/High/Critical findings"
 
   labels_to_clear=(
     "gemini-review-round-1"
@@ -129,17 +131,17 @@ apply_plan() {
   case "$action" in
     max_stop)
       add_label "gemini-review-round-max"
-      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 自动修复已达到 ${max_rounds} 轮上限。** 请人工 Review 后决定合并或重跑。"
+      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 自动修复已达到 ${max_rounds} 轮上限。** ${issue_status_note} 请人工 Review 后决定合并或重跑。"
       ;;
     push_blocked)
       add_label "$current"
       add_label "gemini-review-needs-human"
-      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 自动修复已阻塞。** 安全审计 fail-closed，未推送自动修复。请人工处理后决定是否重跑 Gemini Review。"
+      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 自动修复已阻塞。** 安全审计 fail-closed，未推送自动修复。${issue_status_note} 请人工处理后决定是否重跑 Gemini Review。"
       ;;
     needs_human)
       add_label "$current"
       add_label "gemini-review-needs-human"
-      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 未能清理当前 Gemini Review 的 Medium/Medium+ 问题。** 已在上方评论列出未自动修复原因；本轮不会误判为可合并，请人工处理或重跑。"
+      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 未能清理当前 Gemini Review 的 Medium/Medium+/High/Critical 问题。** ${issue_status_note} 本轮不会误判为可合并，请人工处理或重跑。"
       ;;
     advance|advance_with_pending)
       add_label "$next_round"
@@ -152,20 +154,20 @@ apply_plan() {
         REVIEW_REQUESTED_AT="$review_requested_at" bash .github/scripts/gemini-review-watchdog.sh watch
       fi
       if [[ "$action" == "advance_with_pending" ]]; then
-        gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 已推送部分修复，并请求下一轮 Gemini Review。** 当前仍有 Medium/Medium+ 未自动修复说明，下一轮后仍存在则需要人工决策。"
+        gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 已推送部分修复，并请求下一轮 Gemini Review。** ${issue_status_note} 当前仍有 Medium/Medium+/High/Critical 未自动修复说明，下一轮后仍存在则需要人工决策。"
       else
-        gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 本轮已完成，已请求下一轮 Gemini Review。**"
+        gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex 本轮已完成，已请求下一轮 Gemini Review。** ${issue_status_note}"
       fi
       ;;
     complete)
       add_label "gemini-review-round-max"
       add_label "gemini-review-clean"
-      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex/Gemini 自动 Review 闭环已完成 ${max_rounds} 轮，当前没有 Medium/Medium+ 未处理项。** 请人工做最终 diff Review 后决定是否合并。"
+      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex/Gemini 自动 Review 闭环已完成 ${max_rounds} 轮，当前没有 Medium/Medium+/High/Critical 未处理项。** ${issue_status_note} 请人工做最终 diff Review 后决定是否合并。"
       ;;
     complete_with_pending)
       add_label "gemini-review-round-max"
       add_label "gemini-review-needs-human"
-      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex/Gemini 自动 Review 已达到 ${max_rounds} 轮，但仍有 Medium/Medium+ 未自动修复说明。** 请人工处理或明确接受这些 pending 后再合并。"
+      gh pr comment "${PR_NUMBER:?}" --body "🤖 **Codex/Gemini 自动 Review 已达到 ${max_rounds} 轮，但仍有 Medium/Medium+/High/Critical 未自动修复说明。** ${issue_status_note} 请人工处理或明确接受这些 pending 后再合并。"
       ;;
   esac
 }

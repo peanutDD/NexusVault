@@ -1,4 +1,6 @@
-use crate::types::{ReviewData, ReviewIssue, StructuredReview, StructuredReviewIssue};
+use crate::types::{
+    ReviewData, ReviewIssue, StructuredReview, StructuredReviewIssue, review_severity_token,
+};
 use std::fs;
 use std::path::Path;
 
@@ -11,6 +13,16 @@ struct PendingIssue {
     problem: String,
     expected: String,
     constraints: Vec<String>,
+}
+
+#[derive(Debug, Default)]
+struct PendingInlineIssue {
+    severity: String,
+    file: String,
+    line: u32,
+    body_lines: Vec<String>,
+    suggestion_lines: Vec<String>,
+    in_suggestion: bool,
 }
 
 impl PendingIssue {
@@ -123,6 +135,7 @@ pub fn parse_structured_review(markdown: &str) -> StructuredReview {
     }
 
     flush_issue(&mut current, &mut issues);
+    issues.extend(parse_inline_review_comments(markdown));
 
     for (index, issue) in issues.iter_mut().enumerate() {
         issue.id = format!("ISSUE-{:03}", index + 1);
@@ -133,6 +146,135 @@ pub fn parse_structured_review(markdown: &str) -> StructuredReview {
         summary: format!("{} actionable issues", issues.len()),
         issues,
     }
+}
+
+fn parse_inline_review_comments(markdown: &str) -> Vec<StructuredReviewIssue> {
+    let mut issues = Vec::new();
+    let mut current: Option<PendingInlineIssue> = None;
+
+    for raw in markdown.lines() {
+        let line = raw.trim_end();
+
+        if let Some((file, line_number)) = parse_inline_heading(line) {
+            flush_inline_issue(&mut current, &mut issues);
+            current = Some(PendingInlineIssue {
+                file,
+                line: line_number,
+                ..PendingInlineIssue::default()
+            });
+            continue;
+        }
+
+        let Some(issue) = current.as_mut() else {
+            continue;
+        };
+
+        if let Some(severity) = parse_severity_badge(line) {
+            issue.severity = severity;
+            continue;
+        }
+
+        let trimmed = line.trim();
+        if trimmed.starts_with("```suggestion") {
+            issue.in_suggestion = true;
+            continue;
+        }
+        if issue.in_suggestion && trimmed.starts_with("```") {
+            issue.in_suggestion = false;
+            continue;
+        }
+
+        if issue.in_suggestion {
+            issue.suggestion_lines.push(line.to_string());
+        } else if !trimmed.is_empty() && !trimmed.starts_with("```") {
+            issue.body_lines.push(trimmed.to_string());
+        }
+    }
+
+    flush_inline_issue(&mut current, &mut issues);
+    issues
+}
+
+fn parse_inline_heading(line: &str) -> Option<(String, u32)> {
+    let heading = line.trim().strip_prefix("### ")?;
+
+    for (index, _) in heading.match_indices(':').rev() {
+        let suffix = heading[index + 1..].trim_start();
+        let digit_len = suffix
+            .chars()
+            .take_while(|char| char.is_ascii_digit())
+            .map(char::len_utf8)
+            .sum::<usize>();
+        if digit_len == 0 {
+            continue;
+        }
+
+        let rest = suffix[digit_len..].trim_start();
+        if !rest.is_empty() && !rest.starts_with(':') {
+            continue;
+        }
+
+        let file = heading[..index].trim();
+        if file.is_empty() {
+            continue;
+        }
+
+        let line_number = suffix[..digit_len].parse::<u32>().ok()?;
+        return Some((file.to_string(), line_number));
+    }
+
+    None
+}
+
+fn parse_severity_badge(line: &str) -> Option<String> {
+    let lower = line.to_ascii_lowercase();
+    let start = lower.find("![")? + 2;
+    let end = lower[start..].find(']')? + start;
+    match review_severity_token(lower[start..end].trim()).as_str() {
+        "critical" => Some("Critical".to_string()),
+        "high" => Some("High".to_string()),
+        "medium+" => Some("Medium+".to_string()),
+        "medium" => Some("Medium".to_string()),
+        "low" => Some("Low".to_string()),
+        _ => None,
+    }
+}
+
+fn flush_inline_issue(
+    current: &mut Option<PendingInlineIssue>,
+    issues: &mut Vec<StructuredReviewIssue>,
+) {
+    let Some(issue) = current.take() else {
+        return;
+    };
+
+    if issue.severity.is_empty() || issue.file.is_empty() {
+        return;
+    }
+
+    let problem = if issue.body_lines.is_empty() {
+        "Actionable review comment has no body text; inspect the referenced line and apply the finding."
+            .to_string()
+    } else {
+        issue.body_lines.join("\n")
+    };
+    let expected = if issue.suggestion_lines.is_empty() {
+        "Address the review comment.".to_string()
+    } else {
+        issue.suggestion_lines.join("\n")
+    };
+
+    issues.push(StructuredReviewIssue {
+        id: String::new(),
+        severity: issue.severity,
+        file: issue.file,
+        line: issue.line,
+        rule: "gemini-inline-comment".to_string(),
+        problem,
+        expected,
+        constraints: Vec::new(),
+        acceptance: Vec::new(),
+    });
 }
 
 pub fn convert_review_file(
