@@ -1,0 +1,26 @@
+{
+  "date": "2026-05-09",
+  "task": "gemini-kickoff-skip-precision",
+  "goal": "Fix the Gemini kickoff skip predicate so post-960c60d verification requests a real Gemini review.",
+  "assumptions": [
+    "Manual commits may mention codex auto-fix and still need Gemini review.",
+    "True bot auto-fix commits use the exact subject prefix '🤖 codex auto-fix:'."
+  ],
+  "risks": [
+    "Broad skip predicates hide review-loop failures.",
+    "Overly narrow skip predicates may request duplicate Gemini reviews after real bot commits."
+  ],
+  "steps": [
+    "Add a workflow contract test for the skip predicate.",
+    "Narrow gemini-review-kickoff.yml to the exact bot subject prefix.",
+    "Record the permanent constraint.",
+    "Run codex-cli tests and clippy.",
+    "Push a new commit to trigger a real Gemini kickoff run."
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml gemini_kickoff_only_skips_actual_auto_fix_commit_subjects -- --nocapture",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml",
+    "cargo clippy --manifest-path scripts/codex-cli/Cargo.toml --all-targets -- -D warnings",
+    "GitHub Actions Gemini Review Kickoff runs after the pushed commit and does not log the old skip message."
+  ]
+}

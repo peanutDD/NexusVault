@@ -33,7 +33,7 @@ jobs:
 
           LAST_COMMIT_MESSAGE="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.message')"
 
-          if [[ "$LAST_COMMIT_MESSAGE" == *"codex auto-fix"* ]]; then
+          if [[ "$LAST_COMMIT_MESSAGE" == "🤖 codex auto-fix:"* ]]; then
             echo "Skip: codex-auto-fix workflow owns the next Gemini request for this commit."
             exit 0
           fi
