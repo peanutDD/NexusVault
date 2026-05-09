@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-09 | codex auto-fix checkout resilience | 95 | 修复 PR #26 反复红的真实根因：`codex-fix` 在 self-hosted runner 上默认拉 PR merge ref，GitHub 443 瞬断导致 checkout 阶段失败，尚未进入 auto-fix。Workflow 改为先 checkout PR head SHA、`fetch-depth: 0`，再用带 3 次重试的 `gh pr checkout --repo` 对齐分支；新增 C-052 永久约束和 workflow_state 契约测试。 |
 | 2026-05-09 | PR26 Gemini review follow-up | 95 | 手动接管 auto-fix malformed patch：修复永久删除先查引用后删记录的竞态，改为删除记录后统一 `cleanup_unreferenced_deleted_files`；新增批量还原/批量彻底删除后端接口，前端 Trash 改用单次批量 API 并报告 partial failure；物理文件和衍生资源清理改为并发 join。补充 service 与前端契约测试；frontend focused tests/lint/typecheck/build、backend fmt/clippy/service_file_tests 单线程通过。 |
 | 2026-05-09 | trash summary fit and color selection | 95 | Vault Console summary row 改为 `w-fit`/`max-content`/`max-w-full`，玻璃质感边框长度跟随自身内容收缩；Trash 卡片选中态移除额外 border/ring，仅用 emerald/cyan 背景光晕与 meta 信息条颜色强调。更新 Trash 契约测试；聚焦测试、lint、typecheck、build 通过；Playwright 重新生成 desktop/mobile 证据图并验证 summary row 宽度小于 Console、selected 无额外 border/ring class、有颜色强调。 |
 | 2026-05-09 | trash balanced ratio and mobile console rows | 95 | Trash 卡片缩略图从 9:16 改为更协调的 4:5，缩略图边框圆角与最外层 `trashCardFrame` 圆角统一为 `0.24rem`；移动端 Vault Console 改成三行等距结构，summary row 增加玻璃质感边框和背景，批量操作行/基础操作行保持左/右对齐。更新 Trash 契约测试；聚焦测试、lint、typecheck、build 通过；Playwright 验证移动端三行间距均为 3.9px、缩略图比例 1.25、内外圆角一致、summary row 有 1px 玻璃边框。 |

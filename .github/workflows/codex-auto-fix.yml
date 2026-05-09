@@ -43,10 +43,22 @@ jobs:
     steps:
       - name: Checkout 仓库
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
 
       - name: Checkout PR 分支
         run: |
-          gh pr checkout "${PR_NUMBER}"
+          for attempt in 1 2 3; do
+            if gh pr checkout "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}"; then
+              break
+            fi
+            if [[ "$attempt" == "3" ]]; then
+              echo "::error::Failed to checkout PR branch after ${attempt} attempts"
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
         env:

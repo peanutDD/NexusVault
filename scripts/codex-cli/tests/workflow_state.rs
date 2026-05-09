@@ -172,6 +172,29 @@ fn codex_auto_fix_supports_markdown_rollback_switch() {
 }
 
 #[test]
+fn codex_auto_fix_checks_out_pr_head_before_pr_branch_checkout() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        workflow.contains("ref: ${{ github.event.pull_request.head.sha || github.sha }}"),
+        "pull_request_review runs should checkout the PR head SHA instead of the volatile merge ref"
+    );
+    assert!(
+        workflow.contains("fetch-depth: 0"),
+        "codex-fix needs enough history for gh pr checkout and later pushes"
+    );
+    assert!(
+        workflow.contains("for attempt in 1 2 3"),
+        "PR branch checkout should retry transient GitHub/self-hosted runner network failures"
+    );
+    assert!(
+        workflow.contains("gh pr checkout \"${PR_NUMBER}\" --repo \"${GITHUB_REPOSITORY}\""),
+        "PR branch checkout should be explicit about the source repository"
+    );
+}
+
+#[test]
 fn state_script_names_medium_and_medium_plus_as_pending_scope() {
     let script =
         fs::read_to_string(workflow_script()).expect("workflow state script should be readable");
