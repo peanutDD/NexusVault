@@ -409,7 +409,7 @@ impl Skill for BatchFixSkill {
 
 /// 对已修改文件做安全检查（prompt-based）。
 ///
-/// 这是“软审计”：结果来自模型判断，因此用于提示/拦截高风险，而不是替代真实安全扫描。
+/// 这是“软审计”：结果来自模型判断，因此用于提示风险，而不是替代真实安全扫描或阻止推送。
 pub struct SecurityCheckSkill;
 #[async_trait::async_trait]
 impl Skill for SecurityCheckSkill {
@@ -575,32 +575,17 @@ impl Skill for FeedbackSkill {
                 return Ok(());
             }
 
-            if !ctx.security_passed {
-                ctx.push_blocked = true;
-                let gh_msg = format!(
-                    "🤖 **Codex 自动修复已生成，但未推送**\n\n⚠️ 安全扫描未通过，已按 fail-closed 策略停止提交。\n\n{}\n{}",
-                    build_security_findings(ctx),
-                    review_status_block(ctx)
-                );
-                if ctx.enable_pr_comments {
-                    repo::post_comment(ctx.pr_number, &gh_msg)?;
-                } else {
-                    eprintln!("{}", gh_msg);
-                }
-                return Ok(());
-            }
-
             let security_info = if ctx.security_passed {
                 "✅ 安全扫描通过"
             } else {
-                "⚠️ 安全扫描发现潜在风险"
+                "⚠️ 安全扫描发现潜在风险（warn-only，未阻止推送）"
             };
             let score_info = quality_score_label(ctx);
 
             repo::commit_and_push_in(&ctx.repo_root, &ctx.fixed_files, true)?;
 
             let gh_msg = format!(
-                "🤖 **Codex 自动修复完成**\n\n{}\n{}\n{}\n\n✅ 已修复文件：\n{}{}",
+                "🤖 **Codex 自动修复完成**\n\n{}\n{}\n{}\n\n✅ 已修复文件：\n{}{}{}",
                 security_info,
                 score_info,
                 build_fix_attempt_summary(&ctx.fix_attempts),
@@ -609,6 +594,7 @@ impl Skill for FeedbackSkill {
                     .map(|f| format!("- `{}`", f))
                     .collect::<Vec<_>>()
                     .join("\n"),
+                build_security_findings(ctx),
                 review_status_block(ctx)
             );
             if ctx.enable_pr_comments {
@@ -644,7 +630,7 @@ fn build_dry_run_comment(ctx: &SkillContext) -> String {
     let security_info = if ctx.security_passed {
         "✅ 安全扫描通过"
     } else {
-        "⚠️ 安全扫描发现潜在风险"
+        "⚠️ 安全扫描发现潜在风险（warn-only）"
     };
     let score_info = quality_score_label(ctx);
 
@@ -740,7 +726,7 @@ pub(crate) fn review_issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus
             let (status, explanation) = if fixed.contains(&issue_key) && ctx.push_blocked {
                 (
                     "blocked".to_string(),
-                    "已生成修复，但安全扫描 fail-closed 阻止推送".to_string(),
+                    "已生成修复，但推送被自动化保护策略阻止".to_string(),
                 )
             } else if fixed.contains(&issue_key) {
                 ("resolved".to_string(), "已自动修复".to_string())
@@ -865,12 +851,12 @@ fn markdown_table_cell(value: &str) -> String {
 }
 
 fn build_security_findings(ctx: &SkillContext) -> String {
-    if ctx.security_findings.is_empty() {
-        return "安全扫描未通过，但没有可展示的结构化 finding。".to_string();
+    if ctx.security_passed || ctx.security_findings.is_empty() {
+        return String::new();
     }
 
     format!(
-        "安全扫描发现：\n{}",
+        "\n\n安全扫描发现：\n{}",
         ctx.security_findings
             .iter()
             .map(|f| format!("- {}", f))
@@ -1143,7 +1129,7 @@ async fn apply_full_file_fallback(
     failed_patch: &str,
     issue_key: &str,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    if let Some(reason) = full_file_fallback_block_reason(issue, ctx)? {
+    if let Some(reason) = full_file_fallback_block_reason(issue)? {
         ctx.fix_attempts.push(FixAttempt {
             round: ctx.current_round,
             issue_key: issue_key.to_string(),
@@ -1184,7 +1170,6 @@ async fn apply_full_file_fallback(
 
 fn full_file_fallback_block_reason(
     issue: &ReviewIssue,
-    ctx: &SkillContext,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let protected = protected_files();
     if protected.iter().any(|p| issue.file.contains(p)) {
@@ -1199,16 +1184,6 @@ fn full_file_fallback_block_reason(
         return Ok(Some(format!(
             "完整文件兜底被阻止：路径 `{}` 不在允许目录内",
             issue.file
-        )));
-    }
-
-    let content = repo::read_repo_file(&ctx.repo_root, &issue.file)?;
-    let max_lines = fallback_max_lines();
-    let line_count = content.lines().count();
-    if line_count > max_lines {
-        return Ok(Some(format!(
-            "完整文件兜底被阻止：文件 `{}` 有 {} 行，超过上限 {} 行",
-            issue.file, line_count, max_lines
         )));
     }
 
@@ -1245,14 +1220,6 @@ fn fallback_allowed_prefixes() -> Vec<String> {
         .filter(|s| !s.is_empty())
         .map(ToString::to_string)
         .collect()
-}
-
-fn fallback_max_lines() -> usize {
-    env::var("CODEX_FULL_FILE_FALLBACK_MAX_LINES")
-        .ok()
-        .and_then(|value| value.parse::<usize>().ok())
-        .filter(|value| *value > 0)
-        .unwrap_or(300)
 }
 
 async fn generate_replacement_file(

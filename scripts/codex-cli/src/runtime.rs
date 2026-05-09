@@ -150,7 +150,6 @@ async fn run_auto_fix_loop(
     round_pipeline.run(&mut ctx, client).await?;
 
     enforce_review_policy(&mut ctx);
-    apply_push_block_guard(&mut ctx);
     record_security_findings_as_pending(&mut ctx);
 
     let summary = ctx.parsed_data.as_ref().map(|d| d.summary.clone());
@@ -195,12 +194,6 @@ async fn run_auto_fix_loop(
     };
 
     Ok(serde_json::to_string(&output)?)
-}
-
-fn apply_push_block_guard(ctx: &mut SkillContext) {
-    if ctx.auto_push && !ctx.fixed_files.is_empty() && !ctx.security_passed {
-        ctx.push_blocked = true;
-    }
 }
 
 fn record_security_findings_as_pending(ctx: &mut SkillContext) {

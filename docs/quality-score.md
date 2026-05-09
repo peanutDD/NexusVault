@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-09 | codex auto-fix warn-only security | 95 | 按最新 review 闭环要求降级 prompt-based SecurityCheck：安全 finding 仍写入 pending explanations/评论，但不再设置 `push_blocked` 或阻止 `--yes` 提交推送；full-file fallback 取消全局 300 行上限，保留 protected files 与 allowed prefixes 两道硬边界，避免 `FileCard.tsx` 这类 451 行真实前端文件的 High priority 修复被挡住。新增 C-054、exec-plan 和红绿 e2e 覆盖。 |
 | 2026-05-09 | codex auto-fix diff preflight | 95 | 修复 `codex-auto-fix` 反复输出 `corrupt patch` / `patch fragment without header` 的根因：LLM 生成的 patch 在进入 `git apply` 前新增单文件 unified diff preflight，缺少 `diff --git`、文件头或合法 hunk header 时直接分类为 `malformed_diff` 并进入既有 retry/fallback；补强生成/重试 prompt，并把 SecurityCheck 失败写入 pending explanations。新增 C-053、exec-plan 和红绿回归测试；`scripts/codex-cli` 全量测试通过。 |
 | 2026-05-09 | codex auto-fix checkout resilience | 95 | 修复 PR #26 反复红的真实根因：`codex-fix` 在 self-hosted runner 上默认拉 PR merge ref，GitHub 443 瞬断导致 checkout 阶段失败，尚未进入 auto-fix。Workflow 改为先 checkout PR head SHA、`fetch-depth: 0`，再用带 3 次重试的 `gh pr checkout --repo` 对齐分支；新增 C-052 永久约束和 workflow_state 契约测试。 |
 | 2026-05-09 | PR26 Gemini review follow-up | 95 | 手动接管 auto-fix malformed patch：修复永久删除先查引用后删记录的竞态，改为删除记录后统一 `cleanup_unreferenced_deleted_files`；新增批量还原/批量彻底删除后端接口，前端 Trash 改用单次批量 API 并报告 partial failure；物理文件和衍生资源清理改为并发 join。补充 service 与前端契约测试；frontend focused tests/lint/typecheck/build、backend fmt/clippy/service_file_tests 单线程通过。 |

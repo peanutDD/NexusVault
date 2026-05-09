@@ -188,8 +188,8 @@ fn pr_auto_fix_posts_issue_status_checklist_comment_in_dry_run() {
 }
 
 #[test]
-fn auto_fix_local_blocks_push_when_security_audit_fails() {
-    let workspace = TestWorkspace::new("blocked");
+fn auto_fix_local_warns_but_pushes_when_security_audit_fails() {
+    let workspace = TestWorkspace::new("security-warn");
     let repo = workspace.create_repo();
     write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
     write_repo_file(
@@ -199,6 +199,12 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
     );
     workspace.git(&repo, &["add", "."]);
     workspace.git(&repo, &["commit", "-m", "initial"]);
+    let remote = workspace.create_bare_remote();
+    workspace.git(
+        &repo,
+        &["remote", "add", "origin", remote.to_str().unwrap()],
+    );
+    workspace.git(&repo, &["push", "-u", "origin", "HEAD"]);
 
     let review = workspace.path.join("review.md");
     fs::write(
@@ -212,12 +218,13 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
     assert!(output.status.success(), "stderr={}", stderr(&output));
 
     let json = parse_stdout(&output);
-    assert_eq!(json["fixed"], false);
+    assert_eq!(json["fixed"], true);
     assert_eq!(json["security_passed"], false);
-    assert_eq!(json["push_blocked"], true);
+    assert_eq!(json["push_blocked"], false);
     assert_eq!(json["has_pending"], true);
     assert_eq!(json["pending_count"], 1);
     assert_eq!(json["review_clean"], false);
+    assert_eq!(json["final_status"], "pending");
     let pending = json["pending_explanations"].as_array().unwrap();
     assert_eq!(pending.len(), 1);
     assert!(
@@ -226,17 +233,17 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
             .unwrap()
             .contains("synthetic security finding")
     );
-    assert_eq!(json["fixed_explanations"].as_array().unwrap().len(), 0);
-    assert_eq!(json["issue_statuses"][0]["status"], "blocked");
+    assert_eq!(json["fixed_explanations"].as_array().unwrap().len(), 1);
+    assert_eq!(json["issue_statuses"][0]["status"], "resolved");
     assert!(
         json["issue_statuses"][0]["explanation"]
             .as_str()
             .unwrap()
-            .contains("阻止推送")
+            .contains("已自动修复")
     );
 
     let commit_count = workspace.git_stdout(&repo, &["rev-list", "--count", "HEAD"]);
-    assert_eq!(commit_count.trim(), "1");
+    assert_eq!(commit_count.trim(), "2");
     let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
     assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
 }
@@ -376,8 +383,8 @@ fn retry_prompt_includes_apply_stderr_latest_source_and_budget() {
 }
 
 #[test]
-fn full_file_fallback_is_blocked_for_large_files() {
-    let workspace = TestWorkspace::new("large-fallback-blocked");
+fn full_file_fallback_allows_large_files() {
+    let workspace = TestWorkspace::new("large-fallback-allowed");
     let repo = workspace.create_repo();
     let mut large_file = String::new();
     large_file.push_str("pub fn value() -> i32 {\n    1\n}\n");
@@ -405,18 +412,13 @@ fn full_file_fallback_is_blocked_for_large_files() {
     assert!(output.status.success(), "stderr={}", stderr(&output));
 
     let json = parse_stdout(&output);
-    assert_eq!(json["fixed"], false);
-    assert_eq!(json["fallback_used"], false);
-    assert_eq!(json["final_status"], "pending");
-    assert!(
-        json["pending_explanations"][0]
-            .as_str()
-            .unwrap()
-            .contains("完整文件兜底被阻止")
-    );
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["fallback_used"], true);
+    assert_eq!(json["final_status"], "clean");
+    assert_eq!(json["pending_count"], 0);
 
     let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
-    assert_eq!(updated, large_file);
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
 }
 
 #[test]
@@ -642,6 +644,23 @@ impl TestWorkspace {
             &["config", "user.email", "codex-test@example.invalid"],
         );
         repo
+    }
+
+    fn create_bare_remote(&self) -> PathBuf {
+        let remote = self.path.join("remote.git");
+        let output = Command::new("git")
+            .arg("init")
+            .arg("--bare")
+            .arg(&remote)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git init --bare failed\nstdout={}\nstderr={}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        remote
     }
 
     fn fake_agent(&self, mode: &str) -> PathBuf {

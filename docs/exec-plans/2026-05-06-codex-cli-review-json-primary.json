@@ -21,7 +21,7 @@
     "Let ReadReviewSkill reuse pre-parsed review data instead of asking the model to parse Markdown.",
     "Pass --review-json \"$REVIEW_JSON_PATH\" from the GitHub workflow by default, while preserving --gemini-review \"$REVIEW_BODY\" when USE_REVIEW_JSON=false.",
     "Capture git apply stderr/classification for retry prompts and output metrics.",
-    "Block full-file fallback outside safe prefixes, protected paths, or the max-line budget.",
+    "Block full-file fallback outside safe prefixes or protected paths.",
     "Update CLI, integration docs, constraints, and quality score.",
     "Verify with codex-cli tests, workflow shell syntax, and full cargo test."
   ]
