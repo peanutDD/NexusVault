@@ -8,9 +8,9 @@
 pub use crate::entities::file::{File, FileVersion};
 
 pub use crate::types::file::{
-    BatchDeleteRequest, BatchGetRequest, BatchMoveRequest, FileListQuery, FileListResult,
-    FileResponse, FileVersionResponse, InstantUploadRequest, RenameFileRequest,
-    RestoreVersionRequest, UpdateVersionLabelRequest,
+    BatchDeleteRequest, BatchGetRequest, BatchMoveRequest, BatchTrashFailure, BatchTrashResult,
+    FileListQuery, FileListResult, FileResponse, FileVersionResponse, InstantUploadRequest,
+    RenameFileRequest, RestoreVersionRequest, UpdateVersionLabelRequest,
 };
 
 impl From<crate::entities::file::File> for FileResponse {

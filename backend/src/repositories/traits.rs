@@ -200,6 +200,13 @@ pub trait FilesRepository: Send + Sync {
     /// 彻底删除单个回收站文件记录
     async fn hard_delete_deleted(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError>;
 
+    /// 批量彻底删除回收站文件记录，返回被删文件
+    async fn hard_delete_deleted_batch(
+        &self,
+        ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<Vec<File>, AppError>;
+
     /// 彻底删除用户回收站所有文件记录，返回被删文件
     async fn hard_delete_all_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError>;
 

@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-09 | PR26 Gemini review follow-up | 95 | 手动接管 auto-fix malformed patch：修复永久删除先查引用后删记录的竞态，改为删除记录后统一 `cleanup_unreferenced_deleted_files`；新增批量还原/批量彻底删除后端接口，前端 Trash 改用单次批量 API 并报告 partial failure；物理文件和衍生资源清理改为并发 join。补充 service 与前端契约测试；frontend focused tests/lint/typecheck/build、backend fmt/clippy/service_file_tests 单线程通过。 |
 | 2026-05-09 | trash summary fit and color selection | 95 | Vault Console summary row 改为 `w-fit`/`max-content`/`max-w-full`，玻璃质感边框长度跟随自身内容收缩；Trash 卡片选中态移除额外 border/ring，仅用 emerald/cyan 背景光晕与 meta 信息条颜色强调。更新 Trash 契约测试；聚焦测试、lint、typecheck、build 通过；Playwright 重新生成 desktop/mobile 证据图并验证 summary row 宽度小于 Console、selected 无额外 border/ring class、有颜色强调。 |
 | 2026-05-09 | trash balanced ratio and mobile console rows | 95 | Trash 卡片缩略图从 9:16 改为更协调的 4:5，缩略图边框圆角与最外层 `trashCardFrame` 圆角统一为 `0.24rem`；移动端 Vault Console 改成三行等距结构，summary row 增加玻璃质感边框和背景，批量操作行/基础操作行保持左/右对齐。更新 Trash 契约测试；聚焦测试、lint、typecheck、build 通过；Playwright 验证移动端三行间距均为 3.9px、缩略图比例 1.25、内外圆角一致、summary row 有 1px 玻璃边框。 |
 | 2026-05-09 | trash final card and mobile action rows | 95 | Trash Console 移动端动作区重构为两行：选中时批量还原/批量彻底删除同一行左对齐，返回上一级/清空回收站同一行右对齐；未选中时仅基础操作行右对齐，按钮 `w-auto/max-w-max` 自适应文字宽度。Trash 卡片改为完整 `trashCardFrame` / `trashCardThumb` / `trashCardMeta` 三段式 mini vault tile：9:16 主视觉、轻玻璃框、右上圆形 checkbox、紧凑信息带和选中态细光。更新 Trash 契约测试；聚焦测试、lint、typecheck、build 通过；Playwright 验证未选中/选中移动端布局、按钮宽度、9:16 缩略图和 checkbox 位置。 |

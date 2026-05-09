@@ -2,7 +2,9 @@
 
 use std::collections::HashSet;
 
-use crate::models::file::FileResponse;
+use futures::future::join_all;
+
+use crate::models::file::{BatchTrashFailure, BatchTrashResult, FileResponse};
 use uuid::Uuid;
 
 use crate::utils::AppError;
@@ -53,6 +55,27 @@ impl FileService {
         Ok(FileResponse::from(restored))
     }
 
+    pub async fn batch_restore_files(
+        &self,
+        ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<BatchTrashResult, AppError> {
+        let mut succeeded = 0;
+        let mut failed = Vec::new();
+
+        for id in ids {
+            match self.restore_file(*id, user_id).await {
+                Ok(_) => succeeded += 1,
+                Err(error) => failed.push(BatchTrashFailure {
+                    id: *id,
+                    message: error.to_string(),
+                }),
+            }
+        }
+
+        Ok(BatchTrashResult { succeeded, failed })
+    }
+
     pub async fn permanently_delete_file(
         &self,
         file_id: Uuid,
@@ -63,7 +86,6 @@ impl FileService {
             .find_deleted_by_id(file_id, user_id)
             .await?
             .ok_or(AppError::NotFound)?;
-        let ref_count = self.files_repo.count_by_file_path(&file.file_path).await?;
         let affected = self
             .files_repo
             .hard_delete_deleted(file_id, user_id)
@@ -71,11 +93,33 @@ impl FileService {
         if affected == 0 {
             return Err(AppError::NotFound);
         }
-        self.delete_derived_assets(file_id, user_id).await;
-        if ref_count <= 1 {
-            let _ = self.storage.delete_file(&file.file_path).await;
-        }
+        self.cleanup_unreferenced_deleted_files(vec![file]).await?;
         Ok(())
+    }
+
+    pub async fn batch_permanently_delete_files(
+        &self,
+        ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<BatchTrashResult, AppError> {
+        let files = self
+            .files_repo
+            .hard_delete_deleted_batch(ids, user_id)
+            .await?;
+        let deleted_ids: HashSet<Uuid> = files.iter().map(|file| file.id).collect();
+        let failed = ids
+            .iter()
+            .filter(|id| !deleted_ids.contains(id))
+            .map(|id| BatchTrashFailure {
+                id: *id,
+                message: AppError::NotFound.to_string(),
+            })
+            .collect();
+        let succeeded = files.len() as u64;
+
+        self.cleanup_unreferenced_deleted_files(files).await?;
+
+        Ok(BatchTrashResult { succeeded, failed })
     }
 
     pub async fn empty_trash(&self, user_id: Uuid) -> Result<u64, AppError> {
@@ -111,15 +155,18 @@ impl FileService {
             .collect();
         let ref_counts = self.files_repo.count_by_file_paths(&paths).await?;
 
-        for file in files {
-            self.delete_derived_assets(file.id, file.user_id).await;
-        }
+        join_all(
+            files
+                .iter()
+                .map(|file| self.delete_derived_assets(file.id, file.user_id)),
+        )
+        .await;
 
-        for path in paths {
-            if ref_counts.get(&path).copied().unwrap_or(0) == 0 {
-                let _ = self.storage.delete_file(&path).await;
-            }
-        }
+        join_all(paths.into_iter().filter_map(|path| {
+            (ref_counts.get(&path).copied().unwrap_or(0) == 0)
+                .then_some(async move { self.storage.delete_file(&path).await })
+        }))
+        .await;
         Ok(())
     }
 

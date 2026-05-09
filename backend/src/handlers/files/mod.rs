@@ -71,7 +71,8 @@ pub use list::list_files_handler;
 pub use semantic_search::semantic_search_handler;
 pub use storage::storage_usage_handler;
 pub use trash::{
-    empty_trash_handler, list_trash_handler, permanently_delete_file_handler, restore_file_handler,
+    batch_permanently_delete_files_handler, batch_restore_files_handler, empty_trash_handler,
+    list_trash_handler, permanently_delete_file_handler, restore_file_handler,
 };
 pub use upload::upload_file_handler;
 pub use versions::{

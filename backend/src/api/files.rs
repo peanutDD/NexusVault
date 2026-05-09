@@ -19,7 +19,8 @@ use crate::constants::{
 };
 use crate::handlers::files::{
     batch_delete_handler, batch_download_zip_handler, batch_download_zip_post_handler,
-    batch_get_handler, batch_move_handler, categories_handler, chunked_upload_abort_handler,
+    batch_get_handler, batch_move_handler, batch_permanently_delete_files_handler,
+    batch_restore_files_handler, categories_handler, chunked_upload_abort_handler,
     chunked_upload_chunk_handler, chunked_upload_complete_handler, chunked_upload_init_handler,
     chunked_upload_status_handler, delete_file_handler, delete_version_handler,
     download_file_handler, empty_trash_handler, get_file_version_handler,
@@ -179,6 +180,11 @@ pub fn create_router() -> Router<AppState> {
         .route(
             "/trash",
             get(list_trash_handler).delete(empty_trash_handler),
+        )
+        .route("/trash/batch-restore", post(batch_restore_files_handler))
+        .route(
+            "/trash/batch-permanent",
+            post(batch_permanently_delete_files_handler),
         )
         .route("/batch", post(batch_get_handler))
         .route("/batch-delete", post(batch_delete_handler))

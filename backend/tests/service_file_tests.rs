@@ -926,6 +926,32 @@ async fn test_file_service_restore_deleted_file_rejects_name_conflict() {
 }
 
 #[tokio::test]
+async fn test_file_service_batch_restore_reports_partial_failures() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "batch_restore_partial").await;
+    let restorable_id = create_test_file(&pool, user_id, "batch-ok.txt").await;
+    let conflict_id = create_test_file(&pool, user_id, "batch-conflict.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(restorable_id, user_id).await.unwrap();
+    service.delete_file(conflict_id, user_id).await.unwrap();
+    create_test_file(&pool, user_id, "batch-conflict.txt").await;
+
+    let result = service
+        .batch_restore_files(&[restorable_id, conflict_id], user_id)
+        .await
+        .unwrap();
+
+    assert_eq!(result.succeeded, 1);
+    assert_eq!(result.failed.len(), 1);
+    assert_eq!(result.failed[0].id, conflict_id);
+    assert!(service.get_file(restorable_id, user_id).await.is_ok());
+}
+
+#[tokio::test]
 async fn test_file_service_permanently_delete_file_removes_deleted_record() {
     init_test_env();
     let pool = create_test_pool().await;
@@ -943,6 +969,39 @@ async fn test_file_service_permanently_delete_file_removes_deleted_record() {
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*)::BIGINT FROM files WHERE id = $1")
         .bind(file_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
+}
+
+#[tokio::test]
+async fn test_file_service_batch_permanently_delete_files_removes_deleted_records() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "batch_permanent").await;
+    let deleted_one = create_test_file(&pool, user_id, "delete-one.txt").await;
+    let deleted_two = create_test_file(&pool, user_id, "delete-two.txt").await;
+    let active_file = create_test_file(&pool, user_id, "keep-active.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(deleted_one, user_id).await.unwrap();
+    service.delete_file(deleted_two, user_id).await.unwrap();
+
+    let result = service
+        .batch_permanently_delete_files(&[deleted_one, deleted_two, active_file], user_id)
+        .await
+        .unwrap();
+
+    assert_eq!(result.succeeded, 2);
+    assert_eq!(result.failed.len(), 1);
+    assert_eq!(result.failed[0].id, active_file);
+    assert!(service.get_file(active_file, user_id).await.is_ok());
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*)::BIGINT FROM files WHERE id = ANY($1)")
+        .bind([deleted_one, deleted_two])
         .fetch_one(&pool)
         .await
         .unwrap();

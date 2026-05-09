@@ -12,7 +12,9 @@ vi.mock("../services/files", () => ({
   fileService: {
     listTrash: vi.fn(),
     restoreFile: vi.fn(),
+    batchRestoreFiles: vi.fn(),
     permanentlyDeleteFile: vi.fn(),
+    batchPermanentlyDeleteFiles: vi.fn(),
     emptyTrash: vi.fn(),
   },
 }));
@@ -235,9 +237,9 @@ describe("Trash page", () => {
         makeTrashFile("file-2", "file-2.txt"),
       ],
     });
-    vi.mocked(fileService.restoreFile).mockResolvedValue({
-      ...makeTrashFile("file-1", "file-1.txt"),
-      deleted_at: null,
+    vi.mocked(fileService.batchRestoreFiles).mockResolvedValue({
+      restored: 2,
+      failed: [],
     });
 
     renderTrash();
@@ -284,8 +286,8 @@ describe("Trash page", () => {
     await userEvent.click(screen.getByRole("button", { name: "批量还原" }));
 
     await waitFor(() => {
-      expect(fileService.restoreFile).toHaveBeenCalledWith("file-1");
-      expect(fileService.restoreFile).toHaveBeenCalledWith("file-2");
+      expect(fileService.batchRestoreFiles).toHaveBeenCalledWith(["file-1", "file-2"]);
+      expect(fileService.restoreFile).not.toHaveBeenCalled();
     });
   });
 
@@ -296,7 +298,10 @@ describe("Trash page", () => {
         makeTrashFile("file-2", "file-2.txt"),
       ],
     });
-    vi.mocked(fileService.permanentlyDeleteFile).mockResolvedValue(undefined);
+    vi.mocked(fileService.batchPermanentlyDeleteFiles).mockResolvedValue({
+      deleted: 2,
+      failed: [],
+    });
 
     renderTrash();
 
@@ -310,8 +315,11 @@ describe("Trash page", () => {
     await userEvent.click(screen.getByRole("button", { name: "彻底删除" }));
 
     await waitFor(() => {
-      expect(fileService.permanentlyDeleteFile).toHaveBeenCalledWith("file-1");
-      expect(fileService.permanentlyDeleteFile).toHaveBeenCalledWith("file-2");
+      expect(fileService.batchPermanentlyDeleteFiles).toHaveBeenCalledWith([
+        "file-1",
+        "file-2",
+      ]);
+      expect(fileService.permanentlyDeleteFile).not.toHaveBeenCalled();
     });
   });
 

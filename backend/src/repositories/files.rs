@@ -349,6 +349,25 @@ impl FilesRepository for SqlxFilesRepo {
         Ok(result.rows_affected())
     }
 
+    async fn hard_delete_deleted_batch(
+        &self,
+        ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<Vec<File>, AppError> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        sqlx::query_as::<_, File>(
+            "DELETE FROM files WHERE user_id = $1 AND id = ANY($2) AND deleted_at IS NOT NULL RETURNING *",
+        )
+        .bind(user_id)
+        .bind(ids)
+        .fetch_all(self.w())
+        .await
+        .map_err(AppError::from)
+    }
+
     async fn hard_delete_all_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError> {
         sqlx::query_as::<_, File>(
             "DELETE FROM files WHERE user_id = $1 AND deleted_at IS NOT NULL RETURNING *",

@@ -185,6 +185,16 @@ impl FilesRepository for CachedFilesRepo {
         Ok(result)
     }
 
+    async fn hard_delete_deleted_batch(
+        &self,
+        ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<Vec<File>, AppError> {
+        let result = self.inner.hard_delete_deleted_batch(ids, user_id).await?;
+        self.invalidate_cache(user_id).await;
+        Ok(result)
+    }
+
     async fn hard_delete_all_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError> {
         let result = self.inner.hard_delete_all_deleted(user_id).await?;
         self.invalidate_cache(user_id).await;
@@ -451,6 +461,14 @@ mod tests {
             _user_id: Uuid,
         ) -> Result<u64, AppError> {
             Ok(1)
+        }
+
+        async fn hard_delete_deleted_batch(
+            &self,
+            _ids: &[Uuid],
+            _user_id: Uuid,
+        ) -> Result<Vec<File>, AppError> {
+            Ok(Vec::new())
         }
 
         async fn hard_delete_all_deleted(&self, _user_id: Uuid) -> Result<Vec<File>, AppError> {

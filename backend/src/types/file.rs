@@ -68,6 +68,18 @@ pub struct BatchGetRequest {
     pub ids: Vec<Uuid>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct BatchTrashFailure {
+    pub id: Uuid,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BatchTrashResult {
+    pub succeeded: u64,
+    pub failed: Vec<BatchTrashFailure>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct RenameFileRequest {
     pub name: String,

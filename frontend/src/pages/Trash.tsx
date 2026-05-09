@@ -152,11 +152,14 @@ export default function Trash() {
   });
 
   const batchRestoreMutation = useMutation({
-    mutationFn: async (fileIds: string[]) => {
-      await Promise.all(fileIds.map((fileId) => fileService.restoreFile(fileId)));
+    mutationFn: (fileIds: string[]) => {
+      return fileService.batchRestoreFiles(fileIds);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setSelectedIds([]);
+      if (result.failed.length > 0) {
+        setError(`${result.failed.length} 个文件还原失败，列表已刷新`);
+      }
       void invalidateFileViews();
     },
     onError: (err) => setError(getErrorMessage(err, "批量还原失败")),
@@ -172,14 +175,15 @@ export default function Trash() {
   });
 
   const batchPermanentMutation = useMutation({
-    mutationFn: async (fileIds: string[]) => {
-      await Promise.all(
-        fileIds.map((fileId) => fileService.permanentlyDeleteFile(fileId)),
-      );
+    mutationFn: (fileIds: string[]) => {
+      return fileService.batchPermanentlyDeleteFiles(fileIds);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setConfirm(null);
       setSelectedIds([]);
+      if (result.failed.length > 0) {
+        setError(`${result.failed.length} 个文件彻底删除失败，列表已刷新`);
+      }
       void invalidateFileViews();
     },
     onError: (err) => setError(getErrorMessage(err, "批量彻底删除失败")),
