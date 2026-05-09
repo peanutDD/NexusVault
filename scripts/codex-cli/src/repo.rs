@@ -436,7 +436,9 @@ pub fn validate_unified_diff_for_file(file_path: &str, patch: &str) -> Result<()
     let mut has_old_header = false;
     let mut has_new_header = false;
     let mut has_hunk = false;
-    for line in lines {
+    let mut index = 0;
+    while index < lines.len() {
+        let line = lines[index];
         if line.starts_with("--- ") {
             has_old_header = true;
             validate_file_header_path(line, "--- ", &normalized_file)?;
@@ -445,13 +447,24 @@ pub fn validate_unified_diff_for_file(file_path: &str, patch: &str) -> Result<()
             validate_file_header_path(line, "+++ ", &normalized_file)?;
         } else if line.starts_with("@@") {
             has_hunk = true;
-            if !is_valid_hunk_header(line) {
+            let Some((expected_old, expected_new)) = parse_hunk_counts(line) else {
                 return Err(format!(
                     "preflight: malformed unified diff for `{}`: malformed hunk header `{}`",
                     normalized_file, line
                 ));
+            };
+            let (actual_old, actual_new, next_index) =
+                count_hunk_body(&lines, index + 1, &normalized_file)?;
+            if actual_old != expected_old || actual_new != expected_new {
+                return Err(format!(
+                    "preflight: malformed unified diff for `{}`: hunk body count mismatch `{}` expected -{},+{} got -{},+{}",
+                    normalized_file, line, expected_old, expected_new, actual_old, actual_new
+                ));
             }
+            index = next_index;
+            continue;
         }
+        index += 1;
     }
 
     if !has_old_header || !has_new_header {
@@ -528,35 +541,88 @@ fn strip_git_patch_path(path: &str) -> Option<&str> {
     path.strip_prefix("a/").or_else(|| path.strip_prefix("b/"))
 }
 
-fn is_valid_hunk_header(line: &str) -> bool {
+fn parse_hunk_counts(line: &str) -> Option<(usize, usize)> {
     if !line.starts_with("@@ -") {
-        return false;
+        return None;
     }
-    let Some(close_at) = line[3..].find(" @@") else {
-        return false;
-    };
+    let close_at = line[3..].find(" @@")?;
     let range = &line[3..3 + close_at];
     let parts = range.split_whitespace().collect::<Vec<_>>();
-    parts.len() == 2 && is_valid_hunk_range(parts[0], '-') && is_valid_hunk_range(parts[1], '+')
+    if parts.len() != 2
+        || !is_valid_hunk_range(parts[0], '-')
+        || !is_valid_hunk_range(parts[1], '+')
+    {
+        return None;
+    }
+    Some((
+        hunk_range_count(parts[0], '-')?,
+        hunk_range_count(parts[1], '+')?,
+    ))
 }
 
 fn is_valid_hunk_range(range: &str, prefix: char) -> bool {
-    let Some(rest) = range.strip_prefix(prefix) else {
-        return false;
-    };
+    hunk_range_count(range, prefix).is_some()
+}
+
+fn hunk_range_count(range: &str, prefix: char) -> Option<usize> {
+    let rest = range.strip_prefix(prefix)?;
     let mut pieces = rest.split(',');
-    let Some(start) = pieces.next() else {
-        return false;
-    };
+    let start = pieces.next()?;
     if start.is_empty() || !start.chars().all(|c| c.is_ascii_digit()) {
-        return false;
+        return None;
     }
-    if let Some(len) = pieces.next()
-        && (len.is_empty() || !len.chars().all(|c| c.is_ascii_digit()))
-    {
-        return false;
+    let count = match pieces.next() {
+        Some(len) if !len.is_empty() && len.chars().all(|c| c.is_ascii_digit()) => {
+            len.parse::<usize>().ok()?
+        }
+        Some(_) => return None,
+        None => 1,
+    };
+    if pieces.next().is_some() {
+        return None;
     }
-    pieces.next().is_none()
+    Some(count)
+}
+
+fn count_hunk_body(
+    lines: &[&str],
+    start: usize,
+    file_path: &str,
+) -> Result<(usize, usize, usize), String> {
+    let mut old_count = 0;
+    let mut new_count = 0;
+    let mut index = start;
+    while index < lines.len() {
+        let line = lines[index];
+        if line.starts_with("@@") || line.starts_with("diff --git ") {
+            break;
+        }
+        if line.starts_with("--- ") || line.starts_with("+++ ") {
+            return Err(format!(
+                "preflight: malformed unified diff for `{}`: file header inside hunk `{}`",
+                file_path, line
+            ));
+        }
+
+        if line.starts_with(' ') {
+            old_count += 1;
+            new_count += 1;
+        } else if line.starts_with('-') {
+            old_count += 1;
+        } else if line.starts_with('+') {
+            new_count += 1;
+        } else if line.starts_with('\\') {
+            // "\ No newline at end of file" marker: no line count impact.
+        } else {
+            return Err(format!(
+                "preflight: malformed unified diff for `{}`: invalid hunk line `{}`",
+                file_path, line
+            ));
+        }
+        index += 1;
+    }
+
+    Ok((old_count, new_count, index))
 }
 
 pub fn classify_apply_failure(stderr: &str) -> String {
@@ -608,14 +674,66 @@ pub fn commit_and_push_in(
             .args(["commit", "-m", &msg]),
     )?;
     if push {
-        checked_output(
-            StdCommand::new("git")
-                .args(["-C", repo_root])
-                .args(["push", "origin", "HEAD"]),
-        )?;
+        push_with_retry(repo_root)?;
     }
 
     Ok(())
+}
+
+fn push_with_retry(repo_root: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let max_attempts = 3;
+    let mut last_error: Option<String> = None;
+
+    for attempt in 1..=max_attempts {
+        let output = StdCommand::new("git")
+            .args(["-C", repo_root])
+            .args(["push", "origin", "HEAD"])
+            .output()?;
+        if output.status.success() {
+            return Ok(());
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let message = format!(
+            "git push failed attempt {}/{} status={} stdout={} stderr={}",
+            attempt, max_attempts, output.status, stdout, stderr
+        );
+        last_error = Some(message.clone());
+
+        if attempt == max_attempts || !is_transient_git_push_error(&stderr) {
+            return Err(message.into());
+        }
+
+        eprintln!(
+            "⚠️ git push transient failure, retrying ({}/{}): {}",
+            attempt,
+            max_attempts,
+            stderr.trim()
+        );
+        std::thread::sleep(std::time::Duration::from_secs((attempt * 10) as u64));
+    }
+
+    Err(last_error
+        .unwrap_or_else(|| "git push failed without output".to_string())
+        .into())
+}
+
+fn is_transient_git_push_error(stderr: &str) -> bool {
+    let lower = stderr.to_ascii_lowercase();
+    [
+        "empty reply from server",
+        "failed to connect",
+        "connection reset",
+        "connection timed out",
+        "operation timed out",
+        "unexpected disconnect",
+        "the remote end hung up unexpectedly",
+        "http/2 stream",
+        "tls",
+    ]
+    .iter()
+    .any(|needle| lower.contains(needle))
 }
 
 /// 在指定 PR 下发布评论（用于 Dry-Run 提示与修复结果回传）。
@@ -998,5 +1116,36 @@ BODY
         assert_eq!(result.fail_reason.as_deref(), Some("malformed_diff"));
         assert!(result.stderr.contains("preflight"));
         assert!(result.stderr.contains("malformed hunk header"));
+    }
+
+    #[test]
+    fn apply_patch_preflight_rejects_hunk_body_count_mismatch() {
+        let repo = create_patch_test_repo("bad-hunk-count");
+        let patch = "diff --git a/src/lib.rs b/src/lib.rs\n--- a/src/lib.rs\n+++ b/src/lib.rs\n@@ -1,4 +1,4 @@\n pub fn value() -> i32 {\n-    1\n+    2\n }\n";
+
+        let result =
+            apply_patch_with_details_in(repo.to_str().unwrap(), "src/lib.rs", patch).unwrap();
+        let _ = fs::remove_dir_all(&repo);
+
+        assert!(!result.applied);
+        assert_eq!(result.fail_reason.as_deref(), Some("malformed_diff"));
+        assert!(result.stderr.contains("preflight"));
+        assert!(result.stderr.contains("hunk body count mismatch"));
+    }
+
+    #[test]
+    fn transient_git_push_errors_are_retryable() {
+        assert!(is_transient_git_push_error(
+            "fatal: unable to access 'https://github.com/owner/repo/': Empty reply from server"
+        ));
+        assert!(is_transient_git_push_error(
+            "fatal: unable to access 'https://github.com/owner/repo/': Failed to connect to github.com port 443"
+        ));
+        assert!(is_transient_git_push_error(
+            "send-pack: unexpected disconnect while reading sideband packet"
+        ));
+        assert!(!is_transient_git_push_error(
+            "error: failed to push some refs to 'github.com:owner/repo.git'"
+        ));
     }
 }

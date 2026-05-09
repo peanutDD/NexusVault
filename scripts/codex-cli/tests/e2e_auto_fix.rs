@@ -422,6 +422,44 @@ fn full_file_fallback_allows_large_files() {
 }
 
 #[test]
+fn malformed_diff_goes_directly_to_full_file_fallback_without_retry_patch() {
+    let workspace = TestWorkspace::new("malformed-direct-fallback");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("malformed_direct_fallback");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["fallback_used"], true);
+    assert_eq!(json["retry_count"], 0);
+    assert!(
+        stderr(&output).contains("补丁格式无效，直接尝试完整文件兜底"),
+        "stderr={}",
+        stderr(&output)
+    );
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
 fn output_json_exposes_retry_fallback_and_final_status_metrics() {
     let workspace = TestWorkspace::new("metrics");
     let repo = workspace.create_repo();
@@ -447,7 +485,7 @@ fn output_json_exposes_retry_fallback_and_final_status_metrics() {
 
     let json = parse_stdout(&output);
     assert_eq!(json["fixed"], true);
-    assert_eq!(json["retry_count"], 1);
+    assert_eq!(json["retry_count"], 0);
     assert_eq!(json["fallback_used"], true);
     assert_eq!(json["final_status"], "clean");
     assert_eq!(json["apply_fail_reason"], "malformed_diff");
@@ -836,6 +874,31 @@ PATCH
       exit 0
     fi
     if [ "$mode" = "full_file_fallback_large" ]; then
+      if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
+        cat <<'FILE'
+pub fn value() -> i32 {{
+    2
+}}
+FILE
+      else
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3
+ pub fn value() -> i32 {{
+-    1
++    2
+ }}
+PATCH
+      fi
+      exit 0
+    fi
+    if [ "$mode" = "malformed_direct_fallback" ]; then
+      if printf '%s' "$prompt" | grep -q "上一版补丁应用失败"; then
+        printf '%s\n' 'retry patch generation should be skipped for malformed diffs' >&2
+        exit 77
+      fi
       if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
         cat <<'FILE'
 pub fn value() -> i32 {{

@@ -253,6 +253,30 @@ impl Skill for BatchFixSkill {
                     });
 
                     let issue_key = review_issue_key(&issue);
+                    if apply_reason == "malformed_diff" {
+                        eprintln!(
+                            "❌ [BatchFix] 补丁格式无效，直接尝试完整文件兜底 - 文件: {}",
+                            issue.file
+                        );
+                        match apply_full_file_fallback(&issue, ctx, client, &patch, &issue_key)
+                            .await
+                        {
+                            Ok(true) => {}
+                            Ok(false) => {}
+                            Err(e) => {
+                                ctx.fix_attempts.push(FixAttempt {
+                                    round: ctx.current_round,
+                                    issue_key,
+                                    file: issue.file,
+                                    stage: "file_replacement_fallback".to_string(),
+                                    success: false,
+                                    reason: Some(e.to_string()),
+                                });
+                            }
+                        }
+                        continue;
+                    }
+
                     let retry_patch = match generate_retry_fix_patch(
                         &issue,
                         ctx,
