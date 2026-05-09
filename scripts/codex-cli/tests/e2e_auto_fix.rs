@@ -215,10 +215,17 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
     assert_eq!(json["fixed"], false);
     assert_eq!(json["security_passed"], false);
     assert_eq!(json["push_blocked"], true);
-    assert_eq!(json["has_pending"], false);
-    assert_eq!(json["pending_count"], 0);
+    assert_eq!(json["has_pending"], true);
+    assert_eq!(json["pending_count"], 1);
     assert_eq!(json["review_clean"], false);
-    assert_eq!(json["pending_explanations"].as_array().unwrap().len(), 0);
+    let pending = json["pending_explanations"].as_array().unwrap();
+    assert_eq!(pending.len(), 1);
+    assert!(
+        pending[0]
+            .as_str()
+            .unwrap()
+            .contains("synthetic security finding")
+    );
     assert_eq!(json["fixed_explanations"].as_array().unwrap().len(), 0);
     assert_eq!(json["issue_statuses"][0]["status"], "blocked");
     assert!(

@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-09 | codex auto-fix diff preflight | 95 | 修复 `codex-auto-fix` 反复输出 `corrupt patch` / `patch fragment without header` 的根因：LLM 生成的 patch 在进入 `git apply` 前新增单文件 unified diff preflight，缺少 `diff --git`、文件头或合法 hunk header 时直接分类为 `malformed_diff` 并进入既有 retry/fallback；补强生成/重试 prompt，并把 SecurityCheck 失败写入 pending explanations。新增 C-053、exec-plan 和红绿回归测试；`scripts/codex-cli` 全量测试通过。 |
 | 2026-05-09 | codex auto-fix checkout resilience | 95 | 修复 PR #26 反复红的真实根因：`codex-fix` 在 self-hosted runner 上默认拉 PR merge ref，GitHub 443 瞬断导致 checkout 阶段失败，尚未进入 auto-fix。Workflow 改为先 checkout PR head SHA、`fetch-depth: 0`，再用带 3 次重试的 `gh pr checkout --repo` 对齐分支；新增 C-052 永久约束和 workflow_state 契约测试。 |
 | 2026-05-09 | PR26 Gemini review follow-up | 95 | 手动接管 auto-fix malformed patch：修复永久删除先查引用后删记录的竞态，改为删除记录后统一 `cleanup_unreferenced_deleted_files`；新增批量还原/批量彻底删除后端接口，前端 Trash 改用单次批量 API 并报告 partial failure；物理文件和衍生资源清理改为并发 join。补充 service 与前端契约测试；frontend focused tests/lint/typecheck/build、backend fmt/clippy/service_file_tests 单线程通过。 |
 | 2026-05-09 | trash summary fit and color selection | 95 | Vault Console summary row 改为 `w-fit`/`max-content`/`max-w-full`，玻璃质感边框长度跟随自身内容收缩；Trash 卡片选中态移除额外 border/ring，仅用 emerald/cyan 背景光晕与 meta 信息条颜色强调。更新 Trash 契约测试；聚焦测试、lint、typecheck、build 通过；Playwright 重新生成 desktop/mobile 证据图并验证 summary row 宽度小于 Console、selected 无额外 border/ring class、有颜色强调。 |

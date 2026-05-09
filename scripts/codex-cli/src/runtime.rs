@@ -151,6 +151,7 @@ async fn run_auto_fix_loop(
 
     enforce_review_policy(&mut ctx);
     apply_push_block_guard(&mut ctx);
+    record_security_findings_as_pending(&mut ctx);
 
     let summary = ctx.parsed_data.as_ref().map(|d| d.summary.clone());
     let review_record_path = append_review_ledger(&mut ctx, summary.clone())?;
@@ -199,6 +200,19 @@ async fn run_auto_fix_loop(
 fn apply_push_block_guard(ctx: &mut SkillContext) {
     if ctx.auto_push && !ctx.fixed_files.is_empty() && !ctx.security_passed {
         ctx.push_blocked = true;
+    }
+}
+
+fn record_security_findings_as_pending(ctx: &mut SkillContext) {
+    if ctx.security_passed || ctx.security_findings.is_empty() {
+        return;
+    }
+
+    for finding in &ctx.security_findings {
+        let explanation = format!("[Security] 未自动推送：{}", finding);
+        if !ctx.pending_explanations.contains(&explanation) {
+            ctx.pending_explanations.push(explanation);
+        }
     }
 }
 

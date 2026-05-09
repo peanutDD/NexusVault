@@ -1,0 +1,28 @@
+{
+  "date": "2026-05-09",
+  "task": "codex-auto-fix-diff-preflight",
+  "goal": "Reject malformed LLM unified diffs before git apply and expose security audit blockers in pending explanations.",
+  "assumptions": [
+    "Repeated corrupt patch logs are caused by malformed model diff output.",
+    "Retry and full-file fallback behavior should remain available.",
+    "Auto-fix patch application targets one review issue file at a time."
+  ],
+  "risks": [
+    "Overly strict validation could reject valid single-file edits.",
+    "Overly loose validation could allow cross-file patches.",
+    "Security blockers could remain difficult to diagnose if not included in pending explanations."
+  ],
+  "steps": [
+    "Write failing regression tests for malformed patch fragments.",
+    "Add unified diff preflight in the repo apply path.",
+    "Harden patch-generation prompts.",
+    "Add security findings to pending explanations.",
+    "Run formatting and codex-cli tests."
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml apply_patch_preflight -- --nocapture",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml auto_fix_local_blocks_push_when_security_audit_fails -- --nocapture",
+    "cargo fmt --manifest-path scripts/codex-cli/Cargo.toml",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml"
+  ]
+}

@@ -1058,8 +1058,9 @@ async fn generate_fix_patch(
     };
 
     let system_prompt = format!(
-        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{}\n\n请根据提供的审查意见，为目标文件生成 unified diff 格式的修复补丁。\n仅返回补丁内容，不要任何其他解释文字。如果没有需要修复的，返回空。",
-        ctx.rules_text
+        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n请根据提供的审查意见，为目标文件生成 unified diff 格式的修复补丁。\n硬性约束：Allowed file: {file}；必须从 `diff --git a/{file} b/{file}` 开始；必须包含 `--- a/{file}`、`+++ b/{file}`；每个 hunk header 必须形如 `@@ -start,count +start,count @@`；禁止输出 patch fragment；仅返回补丁内容，不要任何其他解释文字。如果没有需要修复的，返回空。",
+        rules = ctx.rules_text,
+        file = issue.file
     );
 
     let user_prompt = format!(
@@ -1093,8 +1094,9 @@ async fn generate_retry_fix_patch(
     let content = repo::read_repo_file(&ctx.repo_root, &issue.file)?;
 
     let system_prompt = format!(
-        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{}\n\n上一版补丁应用失败。请基于最新源码重新生成更小、更精确的 unified diff。\n硬性约束：Allowed file: {}；max hunks: 3；max changed lines: 80；只输出 unified diff；禁止解释文本；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。",
-        ctx.rules_text, issue.file
+        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n上一版补丁应用失败。请基于最新源码重新生成更小、更精确的 unified diff。\n硬性约束：Allowed file: {file}；必须从 `diff --git a/{file} b/{file}` 开始；必须包含 `--- a/{file}`、`+++ b/{file}`；每个 hunk header 必须形如 `@@ -start,count +start,count @@`；禁止输出 patch fragment；max hunks: 3；max changed lines: 80；只输出 unified diff；禁止解释文本；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。",
+        rules = ctx.rules_text,
+        file = issue.file
     );
 
     let constraints = if issue.constraints.is_empty() {

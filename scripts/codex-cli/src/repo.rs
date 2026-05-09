@@ -373,6 +373,15 @@ pub fn apply_patch_with_details_in(
     file_path: &str,
     patch: &str,
 ) -> Result<PatchApplyResult, Box<dyn std::error::Error>> {
+    if let Err(reason) = validate_unified_diff_for_file(file_path, patch) {
+        eprintln!("patch preflight failed for {}: {}", file_path, reason);
+        return Ok(PatchApplyResult {
+            applied: false,
+            stderr: reason,
+            fail_reason: Some("malformed_diff".to_string()),
+        });
+    }
+
     let tmp = std::env::temp_dir().join(format!("codex-cli-{}.patch", file_path.replace('/', "_")));
     fs::write(&tmp, patch)?;
 
@@ -392,6 +401,162 @@ pub fn apply_patch_with_details_in(
         fail_reason: (!output.status.success()).then(|| classify_apply_failure(&stderr)),
         stderr,
     })
+}
+
+pub fn validate_unified_diff_for_file(file_path: &str, patch: &str) -> Result<(), String> {
+    let normalized_file = file_path.replace('\\', "/");
+    let trimmed = patch.trim_start();
+    if trimmed.is_empty() {
+        return Err(format!(
+            "preflight: malformed unified diff for `{}`: patch is empty",
+            normalized_file
+        ));
+    }
+    if !trimmed.starts_with("diff --git ") {
+        return Err(format!(
+            "preflight: malformed unified diff for `{}`: missing diff --git header",
+            normalized_file
+        ));
+    }
+
+    let lines = trimmed.lines().collect::<Vec<_>>();
+    let diff_headers = lines
+        .iter()
+        .filter(|line| line.starts_with("diff --git "))
+        .collect::<Vec<_>>();
+    if diff_headers.len() != 1 {
+        return Err(format!(
+            "preflight: malformed unified diff for `{}`: expected exactly one diff --git header",
+            normalized_file
+        ));
+    }
+
+    validate_diff_git_header(diff_headers[0], &normalized_file)?;
+
+    let mut has_old_header = false;
+    let mut has_new_header = false;
+    let mut has_hunk = false;
+    for line in lines {
+        if line.starts_with("--- ") {
+            has_old_header = true;
+            validate_file_header_path(line, "--- ", &normalized_file)?;
+        } else if line.starts_with("+++ ") {
+            has_new_header = true;
+            validate_file_header_path(line, "+++ ", &normalized_file)?;
+        } else if line.starts_with("@@") {
+            has_hunk = true;
+            if !is_valid_hunk_header(line) {
+                return Err(format!(
+                    "preflight: malformed unified diff for `{}`: malformed hunk header `{}`",
+                    normalized_file, line
+                ));
+            }
+        }
+    }
+
+    if !has_old_header || !has_new_header {
+        return Err(format!(
+            "preflight: malformed unified diff for `{}`: missing ---/+++ file headers",
+            normalized_file
+        ));
+    }
+    if !has_hunk {
+        return Err(format!(
+            "preflight: malformed unified diff for `{}`: missing @@ hunk header",
+            normalized_file
+        ));
+    }
+
+    Ok(())
+}
+
+fn validate_diff_git_header(header: &str, file_path: &str) -> Result<(), String> {
+    let parts = header.split_whitespace().collect::<Vec<_>>();
+    if parts.len() != 4 || parts[0] != "diff" || parts[1] != "--git" {
+        return Err(format!(
+            "preflight: malformed unified diff for `{}`: invalid diff --git header",
+            file_path
+        ));
+    }
+
+    for path in [&parts[2], &parts[3]] {
+        let Some(stripped) = strip_git_patch_path(path) else {
+            return Err(format!(
+                "preflight: malformed unified diff for `{}`: invalid patch path `{}`",
+                file_path, path
+            ));
+        };
+        if stripped != file_path {
+            return Err(format!(
+                "preflight: malformed unified diff for `{}`: patch targets `{}`",
+                file_path, stripped
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_file_header_path(line: &str, prefix: &str, file_path: &str) -> Result<(), String> {
+    let path = line
+        .strip_prefix(prefix)
+        .unwrap_or_default()
+        .split_whitespace()
+        .next()
+        .unwrap_or_default();
+    if path == "/dev/null" {
+        return Ok(());
+    }
+
+    let Some(stripped) = strip_git_patch_path(path) else {
+        return Err(format!(
+            "preflight: malformed unified diff for `{}`: invalid file header `{}`",
+            file_path, line
+        ));
+    };
+    if stripped != file_path {
+        return Err(format!(
+            "preflight: malformed unified diff for `{}`: file header targets `{}`",
+            file_path, stripped
+        ));
+    }
+
+    Ok(())
+}
+
+fn strip_git_patch_path(path: &str) -> Option<&str> {
+    path.strip_prefix("a/").or_else(|| path.strip_prefix("b/"))
+}
+
+fn is_valid_hunk_header(line: &str) -> bool {
+    if !line.starts_with("@@ -") {
+        return false;
+    }
+    let Some(close_at) = line[3..].find(" @@") else {
+        return false;
+    };
+    let range = &line[3..3 + close_at];
+    let parts = range.split_whitespace().collect::<Vec<_>>();
+    parts.len() == 2 && is_valid_hunk_range(parts[0], '-') && is_valid_hunk_range(parts[1], '+')
+}
+
+fn is_valid_hunk_range(range: &str, prefix: char) -> bool {
+    let Some(rest) = range.strip_prefix(prefix) else {
+        return false;
+    };
+    let mut pieces = rest.split(',');
+    let Some(start) = pieces.next() else {
+        return false;
+    };
+    if start.is_empty() || !start.chars().all(|c| c.is_ascii_digit()) {
+        return false;
+    }
+    if let Some(len) = pieces.next()
+        && (len.is_empty() || !len.chars().all(|c| c.is_ascii_digit()))
+    {
+        return false;
+    }
+    pieces.next().is_none()
 }
 
 pub fn classify_apply_failure(stderr: &str) -> String {
@@ -783,5 +948,55 @@ BODY
         let _ = fs::remove_dir_all(&dir);
 
         assert!(resolved.ends_with("/CHANGELOG.md"));
+    }
+
+    fn create_patch_test_repo(name: &str) -> std::path::PathBuf {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-{}-{}", name, now));
+        fs::create_dir_all(dir.join("src")).unwrap();
+        StdCommand::new("git")
+            .arg("init")
+            .arg(&dir)
+            .output()
+            .unwrap();
+        fs::write(
+            dir.join("src/lib.rs"),
+            "pub fn value() -> i32 {\n    1\n}\n",
+        )
+        .unwrap();
+        dir
+    }
+
+    #[test]
+    fn apply_patch_preflight_rejects_patch_fragment_without_git_apply() {
+        let repo = create_patch_test_repo("patch-fragment");
+        let patch = "@@ -1,3 +1,3 @@\n pub fn value() -> i32 {\n-    1\n+    2\n }\n";
+
+        let result =
+            apply_patch_with_details_in(repo.to_str().unwrap(), "src/lib.rs", patch).unwrap();
+        let _ = fs::remove_dir_all(&repo);
+
+        assert!(!result.applied);
+        assert_eq!(result.fail_reason.as_deref(), Some("malformed_diff"));
+        assert!(result.stderr.contains("preflight"));
+        assert!(result.stderr.contains("diff --git"));
+    }
+
+    #[test]
+    fn apply_patch_preflight_rejects_malformed_hunk_header() {
+        let repo = create_patch_test_repo("bad-hunk");
+        let patch = "diff --git a/src/lib.rs b/src/lib.rs\n--- a/src/lib.rs\n+++ b/src/lib.rs\n@@ -1,3 +1,3\n pub fn value() -> i32 {\n-    1\n+    2\n }\n";
+
+        let result =
+            apply_patch_with_details_in(repo.to_str().unwrap(), "src/lib.rs", patch).unwrap();
+        let _ = fs::remove_dir_all(&repo);
+
+        assert!(!result.applied);
+        assert_eq!(result.fail_reason.as_deref(), Some("malformed_diff"));
+        assert!(result.stderr.contains("preflight"));
+        assert!(result.stderr.contains("malformed hunk header"));
     }
 }
