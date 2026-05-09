@@ -1,4 +1,5 @@
 use crate::llm::CodexClient;
+use crate::patch::{PatchFormat, apply_search_replace_in, detect_format};
 use crate::repo;
 use crate::types::{
     ChangelogEntryInput, ReviewData, ReviewIssue, ReviewIssueStatus,
@@ -187,7 +188,7 @@ impl Skill for BatchFixSkill {
                 Ok(Some(patch)) => patch,
                 Ok(None) => {
                     eprintln!(
-                        "❌ [BatchFix] 补丁为空 - 文件: {}, 问题: {}, 原因: 模型未返回可应用的 unified diff",
+                        "❌ [BatchFix] 补丁为空 - 文件: {}, 问题: {}, 原因: 模型未返回可应用的 SEARCH/REPLACE 或 unified diff",
                         issue.file, issue.description
                     );
                     ctx.fix_attempts.push(FixAttempt {
@@ -196,7 +197,9 @@ impl Skill for BatchFixSkill {
                         file: issue.file,
                         stage: "patch_generation".to_string(),
                         success: false,
-                        reason: Some("模型未返回可应用的 unified diff".to_string()),
+                        reason: Some(
+                            "模型未返回可应用的 SEARCH/REPLACE 或 unified diff".to_string(),
+                        ),
                     });
                     continue;
                 }
@@ -217,9 +220,8 @@ impl Skill for BatchFixSkill {
                 }
             };
 
-            let apply_result =
-                repo::apply_patch_with_details_in(&ctx.repo_root, &issue.file, &patch)
-                    .map_err(|e| e.to_string());
+            let apply_result = apply_generated_patch(&ctx.repo_root, &issue.file, &patch)
+                .map_err(|e| e.to_string());
 
             match apply_result {
                 Ok(result) if result.applied => {
@@ -295,7 +297,10 @@ impl Skill for BatchFixSkill {
                                 file: issue.file,
                                 stage: "patch_generation_retry".to_string(),
                                 success: false,
-                                reason: Some("重试后模型未返回可应用的 unified diff".to_string()),
+                                reason: Some(
+                                    "重试后模型未返回可应用的 SEARCH/REPLACE 或 unified diff"
+                                        .to_string(),
+                                ),
                             });
                             continue;
                         }
@@ -312,12 +317,9 @@ impl Skill for BatchFixSkill {
                         }
                     };
 
-                    let retry_apply_result = repo::apply_patch_with_details_in(
-                        &ctx.repo_root,
-                        &issue.file,
-                        &retry_patch,
-                    )
-                    .map_err(|e| e.to_string());
+                    let retry_apply_result =
+                        apply_generated_patch(&ctx.repo_root, &issue.file, &retry_patch)
+                            .map_err(|e| e.to_string());
                     match retry_apply_result {
                         Ok(result) if result.applied => {
                             ctx.fixed_files.push(issue.file.clone());
@@ -428,6 +430,47 @@ impl Skill for BatchFixSkill {
             }
         }
         Ok(())
+    }
+}
+
+fn apply_generated_patch(
+    repo_root: &str,
+    file_path: &str,
+    patch: &str,
+) -> Result<repo::PatchApplyResult, Box<dyn std::error::Error>> {
+    match detect_format(patch) {
+        PatchFormat::SearchReplace | PatchFormat::Mixed => {
+            match apply_search_replace_in(repo_root, file_path, patch) {
+                Ok(outcome) => Ok(repo::PatchApplyResult {
+                    applied: true,
+                    stderr: format!("{:?}", outcome),
+                    fail_reason: None,
+                }),
+                Err(e) => {
+                    let stderr = e.to_string();
+                    let fail_reason = if stderr.contains("missing")
+                        || stderr.contains("malformed")
+                        || stderr.contains("does not match allowed file")
+                        || stderr.contains("no SEARCH/REPLACE")
+                    {
+                        "malformed_diff"
+                    } else {
+                        "context_mismatch"
+                    };
+                    Ok(repo::PatchApplyResult {
+                        applied: false,
+                        stderr,
+                        fail_reason: Some(fail_reason.to_string()),
+                    })
+                }
+            }
+        }
+        PatchFormat::UnifiedDiff => repo::apply_patch_with_details_in(repo_root, file_path, patch),
+        PatchFormat::Empty | PatchFormat::Unknown => Ok(repo::PatchApplyResult {
+            applied: false,
+            stderr: "model output did not contain SEARCH/REPLACE or unified diff".to_string(),
+            fail_reason: Some("malformed_diff".to_string()),
+        }),
     }
 }
 
@@ -1047,9 +1090,9 @@ fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
         .collect()
 }
 
-/// 针对单条 issue 生成 unified diff 补丁。
+/// 针对单条 issue 生成可应用补丁。
 ///
-/// 返回 `None` 表示无需修复或模型未生成有效补丁（例如缺少 @@ hunk）。
+/// 返回 `None` 表示无需修复或模型未生成有效 SEARCH/REPLACE / unified diff。
 async fn generate_fix_patch(
     issue: &ReviewIssue,
     ctx: &SkillContext,
@@ -1068,7 +1111,7 @@ async fn generate_fix_patch(
     };
 
     let system_prompt = format!(
-        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n请根据提供的审查意见，为目标文件生成 unified diff 格式的修复补丁。\n硬性约束：Allowed file: {file}；必须从 `diff --git a/{file} b/{file}` 开始；必须包含 `--- a/{file}`、`+++ b/{file}`；每个 hunk header 必须形如 `@@ -start,count +start,count @@`；禁止输出 patch fragment；仅返回补丁内容，不要任何其他解释文字。如果没有需要修复的，返回空。",
+        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n请根据提供的审查意见，为目标文件生成 SEARCH/REPLACE block 修复补丁。\n硬性约束：Allowed file: {file}；必须先输出 `### File: {file}`；每个变更必须使用 `<<<<<<< SEARCH`、`=======`、`>>>>>>> REPLACE`；SEARCH 块必须精确摘自当前源码并尽量包含前后上下文；最多 5 个 block；禁止 unified diff；禁止解释文字；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。\n兼容说明：旧 unified diff 仍可被工具识别，但不要作为主输出格式。",
         rules = ctx.rules_text,
         file = issue.file
     );
@@ -1086,7 +1129,12 @@ async fn generate_fix_patch(
         patch = extracted;
     }
 
-    if patch.trim().is_empty() || !patch.contains("@@") {
+    if patch.trim().is_empty()
+        || matches!(
+            detect_format(&patch),
+            PatchFormat::Empty | PatchFormat::Unknown
+        )
+    {
         Ok(None)
     } else {
         Ok(Some(patch))
@@ -1104,7 +1152,7 @@ async fn generate_retry_fix_patch(
     let content = repo::read_repo_file(&ctx.repo_root, &issue.file)?;
 
     let system_prompt = format!(
-        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n上一版补丁应用失败。请基于最新源码重新生成更小、更精确的 unified diff。\n硬性约束：Allowed file: {file}；必须从 `diff --git a/{file} b/{file}` 开始；必须包含 `--- a/{file}`、`+++ b/{file}`；每个 hunk header 必须形如 `@@ -start,count +start,count @@`；禁止输出 patch fragment；max hunks: 3；max changed lines: 80；只输出 unified diff；禁止解释文本；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。",
+        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n上一版补丁应用失败。请基于最新源码重新生成更小、更精确的 SEARCH/REPLACE block。\n硬性约束：Allowed file: {file}；必须先输出 `### File: {file}`；每个变更必须使用 `<<<<<<< SEARCH`、`=======`、`>>>>>>> REPLACE`；SEARCH 块必须来自最新源码并扩展到足够唯一（建议前后各至少 3 行）；max blocks: 5；禁止解释文本；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。\n兼容预算（旧 diff fallback 使用）：max hunks: 3；max changed lines: 80。",
         rules = ctx.rules_text,
         file = issue.file
     );
@@ -1139,7 +1187,12 @@ async fn generate_retry_fix_patch(
         patch = extracted;
     }
 
-    if patch.trim().is_empty() || !patch.contains("@@") {
+    if patch.trim().is_empty()
+        || matches!(
+            detect_format(&patch),
+            PatchFormat::Empty | PatchFormat::Unknown
+        )
+    {
         Ok(None)
     } else {
         Ok(Some(patch))
@@ -1163,6 +1216,39 @@ async fn apply_full_file_fallback(
             reason: Some(reason),
         });
         return Ok(false);
+    }
+
+    if let Some(sr_patch) =
+        generate_replacement_via_search_replace(issue, ctx, client, failed_patch).await?
+    {
+        match apply_generated_patch(&ctx.repo_root, &issue.file, &sr_patch) {
+            Ok(result) if result.applied => {
+                ctx.fixed_files.push(issue.file.clone());
+                ctx.fixed_issue_keys.push(issue_key.to_string());
+                ctx.fix_attempts.push(FixAttempt {
+                    round: ctx.current_round,
+                    issue_key: issue_key.to_string(),
+                    file: issue.file.clone(),
+                    stage: "file_replacement_fallback".to_string(),
+                    success: true,
+                    reason: None,
+                });
+                return Ok(true);
+            }
+            Ok(result) => {
+                eprintln!(
+                    "❌ [BatchFix] SEARCH/REPLACE 兜底未能应用 - 文件: {}, 原因: {}",
+                    issue.file,
+                    result.fail_reason.as_deref().unwrap_or("unknown")
+                );
+            }
+            Err(e) => {
+                eprintln!(
+                    "❌ [BatchFix] SEARCH/REPLACE 兜底执行错误 - 文件: {}, 原因: {}",
+                    issue.file, e
+                );
+            }
+        }
     }
 
     let Some(replacement) = generate_replacement_file(issue, ctx, client, failed_patch).await?
@@ -1244,6 +1330,41 @@ fn fallback_allowed_prefixes() -> Vec<String> {
         .filter(|s| !s.is_empty())
         .map(ToString::to_string)
         .collect()
+}
+
+async fn generate_replacement_via_search_replace(
+    issue: &ReviewIssue,
+    ctx: &SkillContext,
+    client: &CodexClient,
+    failed_patch: &str,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let content = repo::read_repo_file(&ctx.repo_root, &issue.file)?;
+    let system_prompt = format!(
+        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{}\n\n前序补丁无法应用。请改为返回 SEARCH/REPLACE block，仍只修改目标文件。\n硬性约束：必须先输出 `### File: {}`；必须使用 `<<<<<<< SEARCH`、`=======`、`>>>>>>> REPLACE`；SEARCH 块必须足够唯一；禁止解释文字；如果无法安全生成，返回空。",
+        ctx.rules_text, issue.file
+    );
+    let user_prompt = format!(
+        "Allowed file: {}\n问题: {}\n建议: {}\n\n失败补丁如下：\n```\n{}\n```\n\n当前完整源码:\n```\n{}\n```",
+        issue.file, issue.description, issue.suggestion, failed_patch, content
+    );
+
+    let mut patch = client.call(&system_prompt, &user_prompt).await?;
+    if patch.contains("```")
+        && let Some(extracted) = repo::extract_code_block(&patch)
+    {
+        patch = extracted;
+    }
+
+    if patch.trim().is_empty()
+        || !matches!(
+            detect_format(&patch),
+            PatchFormat::SearchReplace | PatchFormat::Mixed
+        )
+    {
+        Ok(None)
+    } else {
+        Ok(Some(patch))
+    }
 }
 
 async fn generate_replacement_file(

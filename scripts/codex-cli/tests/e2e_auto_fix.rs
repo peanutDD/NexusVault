@@ -44,6 +44,39 @@ fn auto_fix_local_applies_patch_with_local_codex_command() {
 }
 
 #[test]
+fn auto_fix_local_prefers_search_replace_blocks() {
+    let workspace = TestWorkspace::new("sr-success");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("sr_success");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["retry_count"], 0);
+    assert_eq!(json["fallback_used"], false);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
 fn auto_fix_local_uses_review_json_as_primary_input() {
     let workspace = TestWorkspace::new("json-primary");
     let repo = workspace.create_repo();
@@ -794,6 +827,23 @@ case "$prompt" in
     fi
     ;;
   *"高级工程师"*)
+    if [ "$mode" = "sr_success" ]; then
+      printf '%s' "$prompt" | grep -q "SEARCH/REPLACE block" || exit 70
+      printf '%s' "$prompt" | grep -q '### File: src/lib.rs' || exit 71
+      cat <<'PATCH'
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    1
+}}
+=======
+pub fn value() -> i32 {{
+    2
+}}
+>>>>>>> REPLACE
+PATCH
+      exit 0
+    fi
     if [ "$mode" = "full_file_fallback" ]; then
       if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
         cat <<'FILE'

@@ -8,6 +8,8 @@ import {
 } from "../../../utils/uploadValidation";
 import type { UploadFile } from "./UploadFileItem";
 
+const REMOTE_URL_HEAD_TIMEOUT_MS = 30_000;
+
 interface UrlUploadFormProps {
   /** 添加文件到上传列表 */
   onFileAdd: (file: UploadFile) => void;
@@ -143,7 +145,10 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
       // 使用 AbortController 设置超时
       const controller = new AbortController();
       activeControllerRef.current = controller;
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        REMOTE_URL_HEAD_TIMEOUT_MS,
+      );
 
       let response: Response;
       try {
@@ -217,15 +222,15 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
   );
 
   return (
-    <div className="uploadUrlPanel mb-4" data-oid="_b1-ohy">
+    <div className="uploadUrlPanel mb-[clamp(0.78rem,1.8vw,1rem)]" data-oid="_b1-ohy">
       <p
-        className="font-brand mb-2 flex items-center gap-2 text-sm font-normal tracking-widest text-[var(--upload-text-muted)]"
+        className="font-brand mb-[clamp(0.39rem,0.9vw,0.5rem)] flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--upload-text-muted)]"
         data-oid="mcl5tfe"
       >
-        <SatelliteDish className="h-4 w-4 text-[var(--upload-accent)]" aria-hidden="true" />
+        <SatelliteDish className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)] text-[var(--upload-accent)]" aria-hidden="true" />
         Or upload from URL
       </p>
-      <div className="flex gap-2" data-oid="h__ldbv">
+      <div className="flex gap-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="h__ldbv">
         <label htmlFor="upload-url-input" className="sr-only">
           File URL
         </label>
@@ -239,7 +244,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder="Add file URL"
           className={cn(
-            "uploadDialogCyberInput font-brand flex-1 rounded-lg border bg-transparent px-4 py-2.5 text-sm font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
+            "uploadDialogCyberInput font-brand flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] border bg-transparent px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
             urlInput.trim()
               ? "uploadDialogCyberInputActive border-[var(--upload-accent)]"
               : "border-[var(--upload-input-border)] focus:border-[var(--upload-accent)]",
@@ -252,10 +257,10 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
           type="button"
           onClick={handleUpload}
           disabled={!urlInput.trim() || loading}
-          className="uploadDialogCyberPrimaryBtn font-brand inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="uploadDialogCyberPrimaryBtn font-brand inline-flex items-center justify-center gap-[clamp(0.39rem,0.9vw,0.5rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--btn-primary-bg)] px-[clamp(1rem,2.25vw,1.25rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           data-oid="dp9.vve"
         >
-          <Link2 className="h-4 w-4" aria-hidden="true" />
+          <Link2 className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]" aria-hidden="true" />
           {loading ? "…" : "Upload"}
         </button>
       </div>

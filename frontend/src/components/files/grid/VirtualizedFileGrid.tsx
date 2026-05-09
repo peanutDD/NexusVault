@@ -168,7 +168,7 @@ export default function VirtualizedFileGrid({
     updateViewport();
   }, [files.length, columns, updateViewport]);
 
-// ── Pretext-based per-row heights ──────────────────────────────────────────
+// ── Pretext-[clamp(0.875rem,2vw,1rem)]d per-row heights ──────────────────────────────────────────
   const itemDescriptors = useMemo<GridItemDescriptor[]>(
     () => files.map((f) => ({ kind: "file" as const, filename: f.original_filename })),
     [files],
@@ -240,11 +240,11 @@ export default function VirtualizedFileGrid({
             return (
               <div
                 key={rowIndex}
-                className="virtualized-row mb-2 pt-1 last:mb-0"
+                className="virtualized-row mb-[clamp(0.4rem,1vw,0.5rem)] pt-[clamp(0.2rem,0.7vw,0.25rem)] last:mb-0"
                 data-oid="qbzn4v8"
               >
                 <div
-                  className="grid gap-2 bg-transparent [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
+                  className="grid gap-[clamp(0.4rem,1vw,0.5rem)] bg-transparent [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
                   data-oid="pq_c030"
                 >
                   {rowFiles.map((file) => (

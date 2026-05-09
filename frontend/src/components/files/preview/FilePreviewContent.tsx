@@ -177,9 +177,9 @@ export function FilePreviewContent(props: FilePreviewContentProps) {
 
 function PreviewInlineLoading({ label }: { label: string }) {
   return (
-    <div className="flex flex-col items-center gap-4">
-      <SpinnerIcon className="h-12 w-12 text-[var(--preview-spinner)]" />
-      <span className="text-sm text-[var(--preview-text-muted)]">{label}</span>
+    <div className="flex flex-col items-center gap-[clamp(0.78rem,1.8vw,1rem)]">
+      <SpinnerIcon className="h-[clamp(2.75rem,5.4vw,3rem)] w-[clamp(2.75rem,5.4vw,3rem)] text-[var(--preview-spinner)]" />
+      <span className="text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-text-muted)]">{label}</span>
     </div>
   );
 }

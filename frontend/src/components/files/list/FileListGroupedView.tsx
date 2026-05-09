@@ -88,7 +88,7 @@ export default function FileListGroupedView({
 
   if (mode === "type") {
     return (
-      <div className="space-y-6">
+      <div className="space-y-[clamp(1.25rem,3vw,1.5rem)]">
         {displayFolders.length > 0 ? (
           <div>
             <FileListGroupHeader
@@ -102,7 +102,7 @@ export default function FileListGroupedView({
                 />
               }
               icon={
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--glass-bg-b)] text-base text-[var(--glass-text)]">
+                <span className="inline-flex h-[clamp(1.5rem,3.5vw,1.75rem)] w-[clamp(1.5rem,3.5vw,1.75rem)] shrink-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--glass-bg-b)] text-[clamp(0.875rem,2vw,1rem)] text-[var(--glass-text)]">
                   <i className="bi bi-folder2" aria-hidden />
                 </span>
               }
@@ -157,7 +157,7 @@ export default function FileListGroupedView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[clamp(1.25rem,3vw,1.5rem)]">
       {(timeGroupedItems ?? []).map((group) => (
         <div key={`time-group-${group.key}`}>
           <FileListGroupHeader
@@ -176,7 +176,7 @@ export default function FileListGroupedView({
               />
             }
             icon={
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--glass-bg-b)] text-base text-[var(--glass-text)]">
+              <span className="inline-flex h-[clamp(1.5rem,3.5vw,1.75rem)] w-[clamp(1.5rem,3.5vw,1.75rem)] shrink-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--glass-bg-b)] text-[clamp(0.875rem,2vw,1rem)] text-[var(--glass-text)]">
                 <i className="bi bi-calendar3" aria-hidden />
               </span>
             }

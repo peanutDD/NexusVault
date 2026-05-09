@@ -3,6 +3,7 @@ import type { FileMetadata } from '../../types/files';
 
 /** 超过该数量时在 Worker 中分组，避免主线程卡顿 */
 const GROUP_FILES_WORKER_THRESHOLD = 50;
+const DEFER_WORKER_GROUP_RESET_MS = 0;
 
 /**
  * 文件类型标签配置（简化版，用于 Worker）
@@ -103,7 +104,10 @@ export function useFileGrouping(
   useEffect(() => {
     if (files.length <= GROUP_FILES_WORKER_THRESHOLD || !isGroupByType) {
       // 使用 setTimeout 避免同步 setState
-      const timer = setTimeout(() => setWorkerGrouped(null), 0);
+      const timer = setTimeout(
+        () => setWorkerGrouped(null),
+        DEFER_WORKER_GROUP_RESET_MS,
+      );
       return () => clearTimeout(timer);
     }
   }, [files.length, isGroupByType]);

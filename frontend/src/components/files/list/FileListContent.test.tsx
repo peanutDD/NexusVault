@@ -86,7 +86,7 @@ describe("FileListContent", () => {
     renderContent(sortBy);
 
     expect(screen.getByTestId("virtual-scroller").parentElement).toHaveClass(
-      "pt-1",
+      "pt-[clamp(0.2rem,0.7vw,0.25rem)]",
     );
   });
 });

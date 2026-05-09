@@ -42,28 +42,28 @@ export default function BottomBar() {
       />
 
       <div
-        className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10"
+        className="relative mx-auto max-w-[80rem] px-[clamp(1rem,2.5vw,2rem)] py-[clamp(2rem,5vw,2.5rem)]"
         data-oid=".0dbe-l"
       >
         <div
-          className="flex flex-col items-center gap-4 text-center font-footer"
+          className="flex flex-col items-center gap-[clamp(0.75rem,2vw,1rem)] text-center font-footer"
           data-oid="pdlh.i:"
         >
           <p
-            className="text-sm sm:text-base font-semibold tracking-[0.35em] uppercase text-[var(--footer-title-text)] letter-spacing-wider"
+            className="text-[clamp(0.875rem,2vw,1rem)] font-semibold tracking-[0.35em] uppercase text-[var(--footer-title-text)] letter-spacing-wider"
             data-oid="14m1uu8"
           >
             {APP_NAME}
           </p>
           <p
-            className="text-xs sm:text-sm text-[var(--footer-copy-text)] max-w-xl leading-relaxed tracking-wide"
+            className="max-w-[36rem] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--footer-copy-text)] leading-relaxed tracking-wide"
             data-oid="mqi:ck8"
           >
             © {year} WEIZHANG. All rights reserved. Unauthorized copying,
             reproduction or commercial use is prohibited.
           </p>
           <div
-            className="flex items-center gap-3 w-full max-w-md justify-center"
+            className="flex w-full max-w-[28rem] items-center justify-center gap-[clamp(0.5rem,1.5vw,0.75rem)]"
             data-oid="7omu0xz"
           >
             <span
@@ -72,7 +72,7 @@ export default function BottomBar() {
             />
 
             <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--footer-dot-bg)] shadow-[var(--footer-dot-shadow)]"
+              className="inline-block h-[clamp(0.3rem,0.9vw,0.375rem)] w-[clamp(0.3rem,0.9vw,0.375rem)] rounded-full bg-[var(--footer-dot-bg)] shadow-[var(--footer-dot-shadow)]"
               data-oid="kfl7.dq"
             />
 

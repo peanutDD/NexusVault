@@ -177,7 +177,7 @@ export default function BatchMoveDialog({
   };
 
   const message = (
-    <div className="space-y-3" data-oid="cv5xfoz">
+    <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="cv5xfoz">
       {error && (
         <ErrorMessage
           message={error}
@@ -191,7 +191,7 @@ export default function BatchMoveDialog({
       )}
       {errorDetails.length > 0 && (
         <div
-          className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+          className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]"
           data-oid="r14y2ft"
         >
           <p
@@ -200,7 +200,7 @@ export default function BatchMoveDialog({
           >
             冲突文件
           </p>
-          <ul className="mt-1.5 space-y-1" data-oid="x6xjivh">
+          <ul className="mt-[clamp(0.2925rem,0.675vw,0.375rem)] space-y-[clamp(0.195rem,0.45vw,0.25rem)]" data-oid="x6xjivh">
             {errorDetails.map((item, index) => (
               <li
                 key={`${item}-${index}`}
@@ -225,7 +225,7 @@ export default function BatchMoveDialog({
 
       {/* 已选摘要 */}
       <div
-        className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+        className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]"
         data-oid="0wuphy5"
       >
         <p
@@ -235,7 +235,7 @@ export default function BatchMoveDialog({
           已选择
         </p>
         <p
-          className="mt-0.5 font-brand text-sm font-normal tracking-wide text-[var(--dialog-panel-text)]"
+          className="mt-[clamp(0.0975rem,0.3vw,0.125rem)] font-brand text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-wide text-[var(--dialog-panel-text)]"
           data-oid="i6ui2fa"
         >
           <span className="font-semibold text-[var(--dialog-panel-accent)]" data-oid="nvwq_d3">
@@ -247,29 +247,29 @@ export default function BatchMoveDialog({
       {/* 目标位置：标题 + 列表 */}
       <div data-oid="x:-p7se">
         <p
-          className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="07cslc8"
         >
           目标位置
         </p>
         {loadingFolders ? (
           <div
-            className="flex items-center justify-center rounded-lg border border-[var(--dialog-list-loading-border)] bg-[var(--dialog-list-loading-bg)] py-6 text-[var(--dialog-list-loading-text)]"
+            className="flex items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-list-loading-border)] bg-[var(--dialog-list-loading-bg)] py-[clamp(1.25rem,2.7vw,1.5rem)] text-[var(--dialog-list-loading-text)]"
             data-oid="zc--m82"
           >
             <Loader2
-              className="h-4 w-4 animate-spin"
+              className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)] animate-spin"
               aria-hidden="true"
               data-oid="9zciazk"
             />
 
-            <span className="ml-2 text-xs" data-oid="wv0_6ud">
+            <span className="ml-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)]" data-oid="wv0_6ud">
               加载中…
             </span>
           </div>
         ) : (
           <div
-            className="max-h-44 overflow-y-auto rounded-lg border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] py-1"
+            className="max-h-[clamp(10.75rem,19.8vw,11rem)] overflow-y-auto rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] py-[clamp(0.195rem,0.45vw,0.25rem)]"
             data-oid="jie0rhg"
           >
             <button
@@ -277,7 +277,7 @@ export default function BatchMoveDialog({
               onClick={() => setTargetFolderId("")}
               disabled={loading}
               className={cn(
-                "flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-xs text-[var(--dialog-list-item-text)] transition-colors",
+                "flex w-full items-center gap-[clamp(0.4875rem,1.125vw,0.625rem)] px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-left text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-list-item-text)] transition-colors",
                 targetFolderId === ""
                   ? "bg-[var(--dialog-list-item-selected-bg)] text-[var(--dialog-list-item-selected-text)]"
                   : "hover:bg-[var(--dialog-list-item-hover-bg)]",
@@ -285,7 +285,7 @@ export default function BatchMoveDialog({
               data-oid="ixs:-:s"
             >
               <Home
-                className="h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-icon)]"
+                className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-icon)]"
                 aria-hidden="true"
                 data-oid="-vetu5j"
               />
@@ -295,7 +295,7 @@ export default function BatchMoveDialog({
               </span>
               {targetFolderId === "" && (
                 <Check
-                  className="h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-selected-icon)]"
+                  className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-selected-icon)]"
                   aria-hidden="true"
                   data-oid="k-jaak5"
                 />
@@ -308,7 +308,7 @@ export default function BatchMoveDialog({
                 onClick={() => setTargetFolderId(folder.id)}
                 disabled={loading}
                 className={cn(
-                  "flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-xs text-[var(--dialog-list-item-text)] transition-colors",
+                  "flex w-full items-center gap-[clamp(0.4875rem,1.125vw,0.625rem)] px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-left text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-list-item-text)] transition-colors",
                   targetFolderId === folder.id
                     ? "bg-[var(--dialog-list-item-selected-bg)] text-[var(--dialog-list-item-selected-text)]"
                     : "hover:bg-[var(--dialog-list-item-hover-bg)]",
@@ -317,13 +317,13 @@ export default function BatchMoveDialog({
               >
                 {targetFolderId === folder.id ? (
                   <i
-                    className="bi bi-folder2-open h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-selected-icon)]"
+                    className="bi bi-folder2-open h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-selected-icon)]"
                     aria-hidden
                     data-oid="yyfkb5t"
                   />
                 ) : (
                   <i
-                    className="bi bi-folder2 h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-icon)]"
+                    className="bi bi-folder2 h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-icon)]"
                     aria-hidden
                     data-oid="a6a42ln"
                   />
@@ -333,7 +333,7 @@ export default function BatchMoveDialog({
                 </span>
                 {targetFolderId === folder.id && (
                   <Check
-                    className="h-3.5 w-3.5 shrink-0 text-[var(--dialog-list-item-selected-icon)]"
+                    className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-selected-icon)]"
                     aria-hidden="true"
                     data-oid="wxw2mkm"
                   />
@@ -342,7 +342,7 @@ export default function BatchMoveDialog({
             ))}
             {availableFolders.length === 0 && (
               <p
-                className="px-2.5 py-4 text-center text-xs text-[var(--dialog-list-item-muted)]"
+                className="px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.78rem,1.8vw,1rem)] text-center text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-list-item-muted)]"
                 data-oid="usgeo3h"
               >
                 暂无可用文件夹
@@ -359,7 +359,7 @@ export default function BatchMoveDialog({
       open
       appearance="glass"
       variant="info"
-      icon={<FolderSymlink className="h-5 w-5" data-oid="g7_mx0g" />}
+      icon={<FolderSymlink className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" data-oid="g7_mx0g" />}
       iconBgClass="bg-[var(--dialog-accent-blue-bg)]"
       iconColorClass="text-[var(--dialog-accent-blue-text)]"
       title="批量移动"

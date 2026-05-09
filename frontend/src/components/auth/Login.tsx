@@ -70,35 +70,35 @@ export default function Login() {
 
   return (
     <div className={AUTH_PAGE_CLASSES} data-oid="c81a8nz">
-      <div className="w-full max-w-md mx-4 animate-fade-in" data-oid="73-1cga">
+      <div className="w-full max-w-[clamp(22rem,92vw,28rem)] mx-[clamp(0.78rem,1.8vw,1rem)] animate-fade-in" data-oid="73-1cga">
         <div className={AUTH_CARD_CLASSES} data-oid="12or9nf">
           {/* 顶部渐变光效，与主页卡片呼应 */}
           <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-emerald-400/10"
+            className="pointer-events-none absolute inset-0 bg-[image:var(--auth-card-glow-bg)]"
             data-oid="wd63wdd"
           />
 
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/40 to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[image:var(--auth-card-edge-bg)]"
             data-oid="51vqbla"
           />
 
           <div className="relative z-10" data-oid="zf-:ywt">
             <div
-              className="flex items-center justify-center mb-8"
+              className="flex items-center justify-center mb-[clamp(1.75rem,3.6vw,2rem)]"
               data-oid="ij_sc42"
             >
               <div className="relative" data-oid="ibkt9b-">
                 <div
-                  className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-tr from-emerald-400/60 via-fuchsia-500/60 to-cyan-400/60 opacity-60 blur-md"
+                  className="pointer-events-none absolute -inset-[clamp(0.195rem,0.45vw,0.25rem)] rounded-[clamp(0.8rem,2vw,1rem)] bg-[image:var(--auth-logo-aura-bg)] opacity-60 blur-[clamp(0.6rem,1.4vw,0.75rem)]"
                   data-oid="_2u:we8"
                 />
 
                 <div
-                  className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-300/40 bg-slate-950/90 shadow-[0_18px_70px_rgba(0,0,0,0.65)]"
+                  className="relative flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-[clamp(0.8rem,2vw,1rem)] border border-[var(--auth-logo-shell-border)] bg-[var(--auth-logo-shell-bg)] shadow-[var(--auth-logo-shell-shadow)]"
                   data-oid="_29y:4u"
                 >
-                  <CyberPrismLogo className="h-10 w-10" data-oid="5vbrkrr" />
+                  <CyberPrismLogo className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)]" data-oid="5vbrkrr" />
                 </div>
               </div>
             </div>
@@ -118,7 +118,7 @@ export default function Login() {
 
             <form
               onSubmit={handleSubmit(onSubmit)}
-              className="space-y-4"
+              className="space-y-[clamp(0.78rem,1.8vw,1rem)]"
               data-oid=".wvtkow"
             >
               <div data-oid="y8m-gm9">
@@ -183,12 +183,12 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="mt-6" data-oid="jsgbksl">
+            <div className="mt-[clamp(1.25rem,2.7vw,1.5rem)]" data-oid="jsgbksl">
               <button
                 type="button"
                 onClick={handleGithubLogin}
                 disabled={githubLoading}
-                className="w-full inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800/80 transition-colors"
+                className="w-full inline-flex items-center justify-center rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--auth-oauth-button-border)] bg-[var(--auth-oauth-button-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--auth-oauth-button-text)] hover:bg-[var(--auth-oauth-button-bg-hover)] transition-colors"
                 data-oid="dd3dfhp"
               >
                 {githubLoading
@@ -197,11 +197,11 @@ export default function Login() {
               </button>
             </div>
 
-            <div className="mt-3" data-oid="l.f21zd">
+            <div className="mt-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="l.f21zd">
               <button
                 type="button"
                 disabled
-                className="w-full inline-flex items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/40 px-4 py-2 text-sm font-medium text-slate-500 cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--auth-oauth-disabled-border)] bg-[var(--auth-oauth-disabled-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--auth-oauth-disabled-text)] cursor-not-allowed"
                 data-oid="heomkn5"
               >
                 Sign in with Google (coming soon)
@@ -209,13 +209,13 @@ export default function Login() {
             </div>
 
             <p
-              className="font-brand mt-6 text-center text-slate-400 text-sm"
+              className="font-brand mt-[clamp(1.25rem,2.7vw,1.5rem)] text-center text-[var(--auth-footer-text)] text-[clamp(0.75rem,1.8vw,0.875rem)]"
               data-oid="35zdoqk"
             >
               Don&apos;t have an account?{" "}
               <Link
                 to="/register"
-                className="font-brand text-emerald-300 hover:text-emerald-200 font-medium"
+                className="font-brand text-[var(--auth-footer-link-text)] hover:text-[var(--auth-footer-link-text-hover)] font-medium"
                 data-oid="h5vh81."
               >
                 Sign up

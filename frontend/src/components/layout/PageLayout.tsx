@@ -37,7 +37,7 @@ export default function PageLayout({
     >
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded focus:bg-[var(--btn-primary-bg)] focus:px-3 focus:py-2 focus:text-[var(--btn-primary-text)]"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-[clamp(0.75rem,2vw,1rem)] focus:top-[clamp(0.75rem,2vw,1rem)] focus:z-[100] focus:rounded focus:bg-[var(--btn-primary-bg)] focus:px-[clamp(0.625rem,1.5vw,0.75rem)] focus:py-[clamp(0.4rem,1vw,0.5rem)] focus:text-[var(--btn-primary-text)]"
       >
         跳转到主内容
       </a>
@@ -53,7 +53,7 @@ export default function PageLayout({
 
       <main
         id="main-content"
-        className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-[clamp(1rem,2.4vw,2rem)] pt-[calc(clamp(5.5rem,10vw,8rem)+env(safe-area-inset-top))] animate-fade-in text-[var(--color-text-primary)]"
+        className="mx-auto w-full max-w-[80rem] flex-1 px-[clamp(1rem,2.5vw,2rem)] py-[clamp(1rem,2.4vw,2rem)] pt-[calc(clamp(5.5rem,10vw,8rem)+env(safe-area-inset-top))] animate-fade-in text-[var(--color-text-primary)]"
         data-oid="g430w:_"
       >
         {children}

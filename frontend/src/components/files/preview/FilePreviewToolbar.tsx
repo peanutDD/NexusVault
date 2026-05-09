@@ -65,7 +65,7 @@ export function FilePreviewToolbar({
     >
       <div
         className={cn(
-          "flex flex-col items-center rounded-2xl bg-[var(--preview-floating-bg)] backdrop-blur-xl border-solid pointer-events-auto",
+          "flex flex-col items-center rounded-[clamp(0.8rem,2vw,1rem)] bg-[var(--preview-floating-bg)] backdrop-blur-xl border-solid pointer-events-auto",
           "w-[clamp(2.5rem,6vw,3rem)] gap-[clamp(0.25rem,0.8vw,0.5rem)] p-[clamp(0.35rem,1vw,0.75rem)]",
           "border-[clamp(1px,0.15vw,2px)] border-[var(--preview-floating-border)]",
           "shadow-[var(--preview-floating-shadow)]",

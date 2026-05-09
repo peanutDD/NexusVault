@@ -195,7 +195,7 @@ export default function FilePreview({
       {/* ---- 背景层（点击关闭） ---- */}
       <div
         className="absolute inset-0 z-0 backdrop-blur-xl"
-        style={{ backgroundColor: "rgba(var(--preview-ink), 0.92)" }}
+        style={{ backgroundColor: "var(--preview-modal-bg)" }}
         onClick={onClose}
         aria-hidden
         data-oid="fj47v.w"
@@ -239,11 +239,11 @@ export default function FilePreview({
           className={cn(
             "absolute z-20 top-1/2 -translate-y-1/2 left-[clamp(0.5rem,2vw,1rem)]",
             "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
-            "border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]",
-            "shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]",
-            "bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-[var(--preview-icon)] transition-all duration-200",
+            "border-[clamp(1px,0.2vw,2px)] border-solid border-[var(--preview-nav-border)]",
+            "shadow-[var(--preview-nav-shadow)]",
+            "bg-[image:var(--preview-nav-bg)] backdrop-blur-xl text-[var(--preview-icon)] transition-all duration-200",
             canGoPrev
-              ? "hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer"
+              ? "hover:text-[var(--preview-nav-hover-text)] hover:scale-105 hover:border-[var(--preview-nav-border-hover)] cursor-pointer"
               : "opacity-30 cursor-not-allowed",
           )}
           aria-label="上一个文件"
@@ -269,24 +269,24 @@ export default function FilePreview({
 
       {/* ---- 顶部工具栏（文件计数器） ---- */}
       <div
-        className="relative z-20 flex shrink-0 items-center justify-between bg-gradient-to-b from-black/70 via-black/40 to-transparent px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]"
+        className="relative z-20 flex shrink-0 items-center justify-between bg-[image:var(--preview-toolbar-mobile-bg)] px-[clamp(0.78rem,1.8vw,1rem)] pb-[clamp(0.585rem,1.35vw,0.75rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)]"
         onClick={(e) => e.stopPropagation()}
         data-oid="0_8_xes"
       >
-        <div className="flex items-center gap-3" data-oid="omtvpu3" />
-        <div className="flex items-center gap-2" data-oid="sj8woog" />
+        <div className="flex items-center gap-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="omtvpu3" />
+        <div className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="sj8woog" />
         {files.length > 1 && (
           <div
-            className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2"
+            className="pointer-events-none absolute left-1/2 top-[clamp(0.585rem,1.35vw,0.75rem)] -translate-x-1/2"
             data-oid="ptnb6vs"
           >
             <div
               className={cn(
-                "inline-flex items-center rounded-full bg-white/10 backdrop-blur-xl border-solid",
+                "inline-flex items-center rounded-full bg-[var(--preview-counter-bg)] backdrop-blur-xl border-solid",
                 "gap-[clamp(0.25rem,0.8vw,0.5rem)] pl-[clamp(0.5rem,1.2vw,0.75rem)] pr-[clamp(0.5rem,1.2vw,0.75rem)]",
                 "pt-[clamp(0.2rem,0.5vw,0.25rem)] pb-[clamp(0.2rem,0.5vw,0.25rem)]",
-                "border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.2)] text-[clamp(0.6rem,1.2vw,0.7rem)]",
-                "shadow-[0_clamp(0.25rem,0.8vw,0.6rem)_clamp(0.5rem,1.5vw,1rem)_rgba(15,23,42,0.85)]",
+                "border-[clamp(1px,0.15vw,2px)] border-[var(--preview-counter-border)] text-[clamp(0.6rem,1.2vw,0.7rem)]",
+                "shadow-[var(--preview-counter-shadow)]",
               )}
               data-oid="2ug-018"
             >
@@ -363,11 +363,11 @@ export default function FilePreview({
           className={cn(
             "absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-1/2 -translate-y-1/2",
             "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
-            "border-[clamp(1px,0.2vw,2px)] border-solid border-[rgba(255,255,255,0.25)]",
-            "shadow-[0_clamp(0.25rem,1vw,0.75rem)_clamp(0.5rem,2.5vw,1.5rem)_rgba(15,23,42,0.75)]",
-            "bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl text-[var(--preview-icon)] transition-all duration-200",
+            "border-[clamp(1px,0.2vw,2px)] border-solid border-[var(--preview-nav-border)]",
+            "shadow-[var(--preview-nav-shadow)]",
+            "bg-[image:var(--preview-nav-bg)] backdrop-blur-xl text-[var(--preview-icon)] transition-all duration-200",
             canGoNext
-              ? "hover:from-white/20 hover:via-white/10 hover:text-white hover:scale-105 hover:border-white/40 cursor-pointer"
+              ? "hover:text-[var(--preview-nav-hover-text)] hover:scale-105 hover:border-[var(--preview-nav-border-hover)] cursor-pointer"
               : "opacity-30 cursor-not-allowed",
           )}
           aria-label="下一个文件"
@@ -409,17 +409,17 @@ export default function FilePreview({
 
       {/* ---- 底部文件信息 ---- */}
       <div
-        className="relative z-20 shrink-0 bg-gradient-to-t from-black/70 to-transparent px-[clamp(0.8rem,2vw,1rem)] py-[clamp(0.9rem,2.25vw,1.25rem)]"
+        className="relative z-20 shrink-0 bg-[image:var(--preview-toolbar-mobile-bottom-bg)] px-[clamp(0.8rem,2vw,1rem)] py-[clamp(0.9rem,2.25vw,1.25rem)]"
         onClick={(e) => e.stopPropagation()}
         data-oid="8u:a17z"
       >
-        <div className="mx-auto max-w-3xl" data-oid="j24dcaf">
+        <div className="mx-auto max-w-[clamp(38rem,96vw,48rem)]" data-oid="j24dcaf">
           <div
             className={cn(
-              "mx-auto max-w-2xl rounded-xl bg-white/5 text-center backdrop-blur-sm border-solid",
+              "mx-auto max-w-[clamp(34rem,96vw,42rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] bg-[var(--preview-caption-bg)] text-center backdrop-blur-sm border-solid",
               "p-[clamp(0.5rem,1.2vw,0.75rem)]",
-              "border-[clamp(1px,0.15vw,2px)] border-[rgba(255,255,255,0.1)]",
-              "shadow-[0_clamp(0.2rem,0.6vw,0.4rem)_clamp(0.4rem,1.2vw,0.8rem)_rgba(0,0,0,0.2)]",
+              "border-[clamp(1px,0.15vw,2px)] border-[var(--preview-caption-border)]",
+              "shadow-[var(--preview-caption-shadow)]",
             )}
             data-oid="86:.xt."
           >

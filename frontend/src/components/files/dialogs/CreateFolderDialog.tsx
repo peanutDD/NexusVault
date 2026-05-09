@@ -68,10 +68,10 @@ export default function CreateFolderDialog({
   );
 
   const inputClass =
-    "w-full rounded-lg border border-[var(--dialog-field-border)] bg-transparent px-2.5 py-1.5 text-xs text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:border-[var(--dialog-field-focus-border)] focus:outline-none";
+    "w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-transparent px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:border-[var(--dialog-field-focus-border)] focus:outline-none";
 
   const message = (
-    <div className="space-y-3" data-oid="1blbv_w">
+    <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="1blbv_w">
       {error && (
         <ErrorMessage
           message={error}
@@ -81,7 +81,7 @@ export default function CreateFolderDialog({
         />
       )}
       <div
-        className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+        className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]"
         data-oid="4i1br7m"
       >
         <p
@@ -90,7 +90,7 @@ export default function CreateFolderDialog({
         >
           文件夹名称
         </p>
-        <form onSubmit={handleSubmit} className="mt-2" data-oid="37fvisp">
+        <form onSubmit={handleSubmit} className="mt-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="37fvisp">
           <input
             ref={inputRef}
             type="text"
@@ -112,7 +112,7 @@ export default function CreateFolderDialog({
       open={open}
       appearance="glass"
       variant="info"
-      icon={<FolderPlus className="h-5 w-5" data-oid="z8fcsjk" />}
+      icon={<FolderPlus className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" data-oid="z8fcsjk" />}
       iconBgClass="bg-[var(--dialog-accent-rose-bg)]"
       iconColorClass="text-[var(--dialog-accent-rose-text)]"
       title="新建文件夹"

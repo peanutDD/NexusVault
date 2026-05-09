@@ -44,7 +44,17 @@
   - `CODEX_EXCLUDE_DOCS=false`
   - `CODEX_PROTECTED_FILES=...`
 
-### 5) git apply 失败
+### 5) SEARCH/REPLACE 无法应用
+
+原因：模型输出的 SEARCH 块在目标文件里没有唯一匹配，常见于代码已经漂移、上下文太短或同一片段出现多次。
+
+处理：
+
+- 确认 review 指向的是当前工作区里的最新代码。
+- 让模型扩大 SEARCH 块上下文，至少包含前后各 3 行稳定代码。
+- 如果路径命中保护规则，完整文件兜底会被阻止，需要人类处理。
+
+### 6) git apply 失败
 
 原因：patch 的上下文与当前工作区不匹配，或者模型输出的 patch 不合法。
 
@@ -53,8 +63,13 @@
 - 确认 `repo_root` 指向的工作区就是你要修复的仓库
 - 确认 review 里的文件路径与仓库路径一致
 - 如果 issue 已过期（代码已变化），需要重新生成 review
+- unified diff 只是兼容路径；新问题优先让模型输出 SEARCH/REPLACE block
 
-### 6) PR 评论失败
+### 7) 没有任何修复但出现 pending
+
+当 `selected_issues > 0` 且 `fixed_files = 0` 时，运行时会跳过 SecurityCheck / QualityScore / Documentation，并在最终 JSON/PR 评论中保留未修复原因。这样避免对原始未修复代码误打质量分。
+
+### 8) PR 评论失败
 
 原因：`gh` 未安装/未登录/权限不足。
 
@@ -62,8 +77,9 @@
 
 - GitHub Actions：确保 runner 有 `gh`，并正确配置 token 权限
 - 或直接禁用：`--no-pr-comments`
+- 如果 stderr 包含 `Empty reply from server`、timeout 或 disconnect，工具会自动重试；三次后仍失败才需要人工检查网络或 GitHub 状态
 
-### 7) changelog 写入失败或不希望写入
+### 9) changelog 写入失败或不希望写入
 
 处理：
 

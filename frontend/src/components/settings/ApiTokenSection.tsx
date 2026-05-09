@@ -117,7 +117,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
       id="api-tokens"
       title="API Tokens"
       description="For programmatic access. New tokens are shown only once — save them immediately."
-      icon={<Key className="h-5 w-5" aria-hidden="true" data-oid="o0-sgaf" />}
+      icon={<Key className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" aria-hidden="true" data-oid="o0-sgaf" />}
       data-oid=".havazj"
     >
       {error && (
@@ -126,7 +126,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
           onClose={handleCloseError}
           type="error"
           autoDismissMs={5000}
-          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
+          className="mb-[clamp(0.78rem,1.8vw,1rem)] [&_p]:text-[length:var(--settings-text-sm)]"
           data-oid="qjw3d7d"
         />
       )}
@@ -136,7 +136,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
           onClose={handleCloseSuccess}
           type="info"
           autoDismissMs={3000}
-          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
+          className="mb-[clamp(0.78rem,1.8vw,1rem)] [&_p]:text-[length:var(--settings-text-sm)]"
           data-oid="yvujd5y"
         />
       )}
@@ -145,7 +145,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
         open={Boolean(pendingDeleteToken)}
         appearance="glass"
         variant="danger"
-        icon={<Trash2 className="h-5 w-5" data-oid="a:j1bu3" />}
+        icon={<Trash2 className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" data-oid="a:j1bu3" />}
         iconBgClass="bg-[var(--settings-danger-icon-bg)]"
         iconColorClass="text-[var(--settings-danger-icon-text)]"
         title="Delete API Token"
@@ -166,9 +166,9 @@ const ApiTokenSection = memo(function ApiTokenSection() {
         data-oid="w:9o6xk"
       />
 
-      <div className="mb-6" data-oid="5zclh.n">
+      <div className="mb-[clamp(1.25rem,2.7vw,1.5rem)]" data-oid="5zclh.n">
         <div
-          className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+          className="mb-[clamp(0.585rem,1.35vw,0.75rem)] flex flex-col gap-[clamp(0.195rem,0.45vw,0.25rem)] sm:flex-row sm:items-center sm:justify-between sm:gap-[clamp(0.585rem,1.35vw,0.75rem)]"
           data-oid="_4sfcnc"
         >
           <h3
@@ -187,7 +187,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
         <form
           onSubmit={handleSubmit(handleCreateToken)}
           noValidate
-          className="grid gap-4 sm:grid-cols-2"
+          className="grid gap-[clamp(0.78rem,1.8vw,1rem)] sm:grid-cols-2"
           data-oid="l01z3qa"
         >
           <div data-oid="gier:.r">
@@ -245,11 +245,11 @@ const ApiTokenSection = memo(function ApiTokenSection() {
         {/* 显示新创建的 Token */}
         {showCreatedTokenValue && createdTokenValue && (
           <div
-            className="mt-4 rounded-xl border border-[var(--settings-warning-panel-border)] bg-[var(--settings-warning-panel-bg)] p-4"
+            className="mt-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-warning-panel-border)] bg-[var(--settings-warning-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
             data-oid="denb39z"
           >
             <div
-              className="flex items-start justify-between gap-3"
+              className="flex items-start justify-between gap-[clamp(0.585rem,1.35vw,0.75rem)]"
               data-oid="lv6krqe"
             >
               <div data-oid="-11mmv5">
@@ -261,7 +261,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
                   once
                 </p>
                 <p
-                  className="font-brand mt-1 text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-warning-panel-muted)]"
+                  className="font-brand mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-warning-panel-muted)]"
                   data-oid=".:7lh-q"
                 >
                   Save to a password manager or CI secret
@@ -270,19 +270,19 @@ const ApiTokenSection = memo(function ApiTokenSection() {
               <button
                 type="button"
                 onClick={handleCloseTokenValue}
-                className="inline-flex items-center justify-center rounded-lg border border-[var(--settings-warning-close-border)] bg-[var(--settings-warning-close-bg)] p-2 text-[var(--settings-warning-close-text)] hover:bg-[var(--settings-warning-close-bg-hover)]"
+                className="inline-flex items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--settings-warning-close-border)] bg-[var(--settings-warning-close-bg)] p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-warning-close-text)] hover:bg-[var(--settings-warning-close-bg-hover)]"
                 aria-label="Close token display"
                 data-oid="ao3wc_v"
               >
-                <X className="h-4 w-4" aria-hidden="true" data-oid="-0byacd" />
+                <X className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]" aria-hidden="true" data-oid="-0byacd" />
               </button>
             </div>
             <div
-              className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center"
+              className="mt-[clamp(0.585rem,1.35vw,0.75rem)] flex flex-col gap-[clamp(0.39rem,0.9vw,0.5rem)] sm:flex-row sm:items-center"
               data-oid="7u87js0"
             >
               <code
-                className="flex-1 rounded-xl border border-[var(--settings-warning-code-border)] bg-[var(--settings-warning-code-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] text-[var(--settings-warning-code-text)] break-all"
+                className="flex-1 rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-warning-code-border)] bg-[var(--settings-warning-code-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-warning-code-text)] break-all"
                 data-oid="o78yn83"
               >
                 {createdTokenValue}
@@ -291,13 +291,13 @@ const ApiTokenSection = memo(function ApiTokenSection() {
                 type="button"
                 onClick={handleCopyClick}
                 className={cn(
-                  "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[length:var(--settings-text-sm)] font-semibold",
+                  "inline-flex items-center justify-center gap-[clamp(0.39rem,0.9vw,0.5rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-sm)] font-semibold",
                   "bg-[var(--settings-warning-action-bg)] text-[var(--settings-warning-action-text)] hover:bg-[var(--settings-warning-action-bg-hover)]",
                 )}
                 data-oid="p9.y1yc"
               >
                 <Copy
-                  className="h-4 w-4"
+                  className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]"
                   aria-hidden="true"
                   data-oid="n:oyem_"
                 />
@@ -311,7 +311,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
       {/* Token 列表 */}
       <div data-oid="2dmiy18">
         <h3
-          className="font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-[var(--settings-section-title)] mb-3"
+          className="font-brand text-[length:var(--settings-text-sm)] font-semibold tracking-wide text-[var(--settings-section-title)] mb-[clamp(0.585rem,1.35vw,0.75rem)]"
           data-oid=":l5kjxh"
         >
           Existing tokens
@@ -332,7 +332,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3" data-oid="aqr55vy">
+          <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="aqr55vy">
             {apiTokens.map((token) => (
               <div
                 key={token.id}
@@ -343,11 +343,11 @@ const ApiTokenSection = memo(function ApiTokenSection() {
                 data-oid="r:tjzmm"
               >
                 <div
-                  className="flex items-start justify-between gap-3"
+                  className="flex items-start justify-between gap-[clamp(0.585rem,1.35vw,0.75rem)]"
                   data-oid="uit:r1:"
                 >
                   <div className="min-w-0 flex-1" data-oid="ec9rooh">
-                    <div className="flex items-center gap-2" data-oid="oou06jt">
+                    <div className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="oou06jt">
                       <h4
                         className="truncate text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
                         data-oid="ga42q36"
@@ -357,7 +357,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
                       {token.expires_at &&
                         new Date(token.expires_at) < new Date() && (
                           <span
-                            className="font-brand rounded-full border border-[var(--settings-expired-border)] bg-[var(--settings-expired-bg)] px-2 py-0.5 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-expired-text)]"
+                            className="font-brand rounded-full border border-[var(--settings-expired-border)] bg-[var(--settings-expired-bg)] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-expired-text)]"
                             data-oid="f6orwcm"
                           >
                             Expired
@@ -365,7 +365,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
                         )}
                     </div>
                     <div
-                      className="mt-2 grid gap-1 text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)] sm:grid-cols-2"
+                      className="mt-[clamp(0.39rem,0.9vw,0.5rem)] grid gap-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)] sm:grid-cols-2"
                       data-oid="zanp7p:"
                     >
                       <p
@@ -408,7 +408,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
                     onClick={() => setPendingDeleteToken(token)}
                     disabled={loading}
                     className={cn(
-                      "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[length:var(--settings-text-sm)] font-semibold",
+                      "inline-flex items-center justify-center gap-[clamp(0.39rem,0.9vw,0.5rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-sm)] font-semibold",
                       "border border-[var(--settings-danger-button-border)] bg-[var(--settings-danger-button-bg)] text-[var(--settings-danger-button-text)]",
                       "hover:bg-[var(--settings-danger-button-bg-hover)] hover:border-[var(--settings-danger-button-border-hover)]",
                       "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -416,7 +416,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
                     data-oid="novnj:6"
                   >
                     <Trash2
-                      className="h-4 w-4"
+                      className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]"
                       aria-hidden="true"
                       data-oid="8uqj4qt"
                     />

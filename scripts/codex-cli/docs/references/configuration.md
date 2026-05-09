@@ -68,6 +68,34 @@ CODEX_AGENT_COMMAND=codex exec --skip-git-repo-check --prompt-file {prompt_file}
 
 - [skills.rs:decide_fix_or_skip](file:///Users/tyone/github/upload-download-util/scripts/codex-cli/src/skills.rs#L390-L441)
 
+### 补丁格式策略
+
+`BatchFixSkill` 默认要求模型输出 SEARCH/REPLACE block，并保留 unified diff 兼容路径。
+
+SEARCH/REPLACE 格式：
+
+```text
+### File: src/lib.rs
+<<<<<<< SEARCH
+old code
+=======
+new code
+>>>>>>> REPLACE
+```
+
+相关环境变量：
+
+- `CODEX_SR_MAX_BLOCKS`：单个 issue 允许的最大 block 数，默认 `5`
+- `CODEX_FULL_FILE_FALLBACK_ALLOWED_PREFIXES`：完整文件兜底允许前缀，默认 `src/,backend/src/,frontend/src/,scripts/,.github/scripts/`
+- `CODEX_PROTECTED_FILES`：完整文件兜底保护文件，默认包含锁文件、包管理配置和 `.env`
+
+行为：
+
+- SEARCH/REPLACE 是主路径，避免 LLM 直接生成易损坏的 hunk header。
+- unified diff 输出仍会自动识别并走 `git apply` 兼容路径。
+- 如果本轮没有任何文件被修复，SecurityCheck / QualityScore / Documentation 会跳过；最终 JSON 的 `quality_score_available=false` 并带 skip 原因。
+- `git push` 与 `gh pr comment` 遇到 `Empty reply from server`、连接超时、断连等 transient 网络错误会自动重试 3 次。
+
 ### 规则文件（AGENTS.md 注入）
 
 Patch 生成时会把规则注入 system prompt（用于限制越权修改/架构违规/不安全操作）。

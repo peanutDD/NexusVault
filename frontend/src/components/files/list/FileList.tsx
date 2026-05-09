@@ -193,7 +193,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       <Suspense
         fallback={
           <div
-            className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
+            className="grid grid-cols-3 gap-[clamp(0.6rem,1.4vw,0.75rem)] sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
             data-oid="_2vkq1p"
           >
             <FileCardSkeleton count={12} data-oid=".8oa0_j" />

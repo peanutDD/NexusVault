@@ -24,7 +24,7 @@ export function GroupSelectCheckbox({
       type="button"
       onClick={handleClick}
       className={`
-        flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-150
+        flex h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)] shrink-0 items-center justify-center rounded border transition-colors duration-150
         ${
           allSelected
             ? "border-[var(--filelist-check-border-checked)] bg-[var(--filelist-check-bg-checked)] text-[var(--filelist-check-text-checked)]"
@@ -84,7 +84,7 @@ export function GroupSelectCheckboxMixed({
       type="button"
       onClick={handleClick}
       className={`
-        flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-150
+        flex h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)] shrink-0 items-center justify-center rounded border transition-colors duration-150
         ${
           allSelected
             ? "border-[var(--filelist-check-border-checked)] bg-[var(--filelist-check-bg-checked)] text-[var(--filelist-check-text-checked)]"

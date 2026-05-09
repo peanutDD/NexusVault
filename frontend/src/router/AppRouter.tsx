@@ -13,7 +13,7 @@ const Trash = lazy(() => import("../pages/Trash"));
 
 function RouteFallback() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[var(--app-shell-loading-bg)] text-[var(--app-shell-loading-text)]">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-[clamp(0.5rem,1.5vw,0.75rem)] bg-[var(--app-shell-loading-bg)] text-[var(--app-shell-loading-text)]">
       <Spinner size="lg" />
       <span>Loading...</span>
     </div>

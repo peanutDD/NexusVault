@@ -195,7 +195,7 @@ const FileCard = memo(
     return (
       <article
         className={cn(
-          "glass-card group relative rounded-md transition-colors",
+          "glass-card group relative rounded-[clamp(0.3rem,0.8vw,0.375rem)] transition-colors",
           isSelected && "border-[var(--cta-primary-border)]",
           isMobileDragging &&
             "border-[var(--color-border-strong)] opacity-80 pointer-events-none",
@@ -215,10 +215,10 @@ const FileCard = memo(
         onMouseEnter={handleMouseEnter}
         data-oid="vkt8wq9"
       >
-        <div className="p-3" data-oid="-e0ub1-">
+        <div className="p-[clamp(0.6rem,1.4vw,0.75rem)]" data-oid="-e0ub1-">
           {/* 缩略图区域 */}
           <div
-            className="relative mb-3 aspect-square cursor-pointer overflow-hidden rounded-sm bg-[var(--file-card-thumb-bg)]"
+            className="relative mb-[clamp(0.6rem,1.4vw,0.75rem)] aspect-square cursor-pointer overflow-hidden rounded-[clamp(0.2rem,0.6vw,0.25rem)] bg-[var(--file-card-thumb-bg)]"
             onClick={(e) => {
               if (suppressNextPreviewRef.current) {
                 suppressNextPreviewRef.current = false;
@@ -259,11 +259,11 @@ const FileCard = memo(
                   onPreview(file);
                 }}
                 aria-label="预览"
-                className="rounded-full bg-[var(--file-card-preview-btn-bg)] p-3 backdrop-blur-sm hover:bg-[var(--file-card-preview-btn-bg-hover)] scale-75"
+                className="rounded-full bg-[var(--file-card-preview-btn-bg)] p-[clamp(0.6rem,1.4vw,0.75rem)] backdrop-blur-sm hover:bg-[var(--file-card-preview-btn-bg-hover)] scale-75"
                 data-oid="qrd7kd_"
               >
                 <Eye
-                  className="h-6 w-6 text-[var(--file-card-preview-btn-text)] scale-75"
+                  className="h-[clamp(1.25rem,3vw,1.5rem)] w-[clamp(1.25rem,3vw,1.5rem)] text-[var(--file-card-preview-btn-text)] scale-75"
                   data-oid="f75efee"
                 />
               </button>
@@ -273,7 +273,7 @@ const FileCard = memo(
           {/* 文件信息 + 设置按钮 */}
           <div className="relative flex w-full items-start" data-oid="y5j_0ma">
             <div
-              className="min-w-0 w-full space-y-0.5"
+              className="min-w-0 w-full space-y-[clamp(0.0975rem,0.3vw,0.125rem)]"
               data-oid="4w9i3kj"
             >
               <p
@@ -284,14 +284,14 @@ const FileCard = memo(
                 {file.original_filename}
               </p>
               <p
-                className="flex min-w-0 items-center gap-1 whitespace-nowrap overflow-hidden text-[clamp(0.38rem,1.25vw,0.55rem)] text-[var(--file-card-text-muted)]"
+                className="flex min-w-0 items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] whitespace-nowrap overflow-hidden text-[clamp(0.38rem,1.25vw,0.55rem)] text-[var(--file-card-text-muted)]"
                 data-oid="azlsnn4"
               >
                 <span className="shrink-0" data-oid="to09d67">
                   {formatFileSizeCompact(file.file_size)}
                 </span>
                 <span
-                  className="h-0.5 w-0.5 rounded-full bg-[var(--color-border-medium)]"
+                  className="h-[clamp(0.1rem,0.3vw,0.125rem)] w-[clamp(0.1rem,0.3vw,0.125rem)] rounded-full bg-[var(--color-border-medium)]"
                   aria-hidden="true"
                   data-oid="ozf:i9g"
                 ></span>
@@ -311,7 +311,7 @@ const FileCard = memo(
             <button
               type="button"
               onClick={handleToggleMenu}
-              className="absolute right-0 top-0 z-10 inline-flex translate-x-[0.4375rem] items-center justify-center rounded-md leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--file-card-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
+              className="absolute right-0 top-0 z-10 inline-flex translate-x-[0.4375rem] items-center justify-center rounded-[clamp(0.3rem,0.8vw,0.375rem)] leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--file-card-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
               aria-label="更多操作"
               data-oid="npjy::1"
             >
@@ -332,7 +332,7 @@ const FileCard = memo(
                 />
 
                 <div
-                  className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--file-card-menu-border)] bg-[var(--file-card-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
+                  className="absolute bottom-full right-0 z-50 mb-[clamp(0.2rem,0.7vw,0.25rem)] w-max origin-bottom-right scale-[0.7] rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--file-card-menu-border)] bg-[var(--file-card-menu-bg)] py-[clamp(0.2rem,0.7vw,0.25rem)] pl-[clamp(0.4rem,1vw,0.5rem)] pr-[clamp(0.75rem,2vw,1rem)] shadow-xl sm:scale-90 md:scale-100"
                   data-file-menu="true"
                   data-oid="qo212qm"
                 >
@@ -394,7 +394,7 @@ const FileCard = memo(
                       </span>
                     </button>
                     <div
-                      className="my-0.5 border-t border-[var(--file-card-menu-divider)]"
+                      className="my-[clamp(0.0975rem,0.3vw,0.125rem)] border-t border-[var(--file-card-menu-divider)]"
                       data-oid="qe35:8s"
                     />
 

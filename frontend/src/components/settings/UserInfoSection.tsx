@@ -203,7 +203,7 @@ const UserInfoSection = memo(function UserInfoSection() {
       description="Update your username and email. Email changes require verification."
       icon={
         <UserCircle2
-          className="h-5 w-5"
+          className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]"
           aria-hidden="true"
           data-oid=":xh-78x"
         />
@@ -216,7 +216,7 @@ const UserInfoSection = memo(function UserInfoSection() {
           onClose={handleCloseError}
           type="error"
           autoDismissMs={5000}
-          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
+          className="mb-[clamp(0.78rem,1.8vw,1rem)] [&_p]:text-[length:var(--settings-text-sm)]"
           data-oid="rslw:5_"
         />
       )}
@@ -226,14 +226,14 @@ const UserInfoSection = memo(function UserInfoSection() {
           onClose={handleCloseSuccess}
           type="info"
           autoDismissMs={3000}
-          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
+          className="mb-[clamp(0.78rem,1.8vw,1rem)] [&_p]:text-[length:var(--settings-text-sm)]"
           data-oid="73_qjhq"
         />
       )}
       <form
         onSubmit={handleSubmit(onSubmit)}
         noValidate
-        className="space-y-4"
+        className="space-y-[clamp(0.78rem,1.8vw,1rem)]"
         data-oid=".gy:f9i"
       >
         <div data-oid="pqfg1l8">
@@ -266,7 +266,7 @@ const UserInfoSection = memo(function UserInfoSection() {
           >
             Email
           </label>
-          <div className="flex flex-col gap-2 sm:flex-row" data-oid="wvivq7f">
+          <div className="flex flex-col gap-[clamp(0.39rem,0.9vw,0.5rem)] sm:flex-row" data-oid="wvivq7f">
             <input
               id="profile-email"
               type="email"
@@ -296,7 +296,7 @@ const UserInfoSection = memo(function UserInfoSection() {
           )}
           
           {user?.email && emailValue?.trim() !== user.email && (
-            <div className="mt-2" data-oid="y9w43uk">
+            <div className="mt-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="y9w43uk">
               <label
                 htmlFor="profile-email-code"
                 className={settingsLabelClass()}
@@ -336,7 +336,7 @@ const UserInfoSection = memo(function UserInfoSection() {
             Registered
           </p>
           <p
-            className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
+            className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
             data-oid="ma009es"
           >
             {user?.created_at

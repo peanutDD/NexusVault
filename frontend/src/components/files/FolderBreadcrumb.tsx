@@ -29,7 +29,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
 
   return (
     <nav
-      className="font-brand flex items-center justify-start gap-1 overflow-x-auto whitespace-nowrap font-normal tracking-widest text-[0.625rem] leading-none text-gray-300"
+      className="font-brand flex items-center justify-start gap-[clamp(0.195rem,0.45vw,0.25rem)] overflow-x-auto whitespace-nowrap font-normal tracking-widest text-[0.625rem] leading-none text-[var(--filelist-breadcrumb-text)]"
       aria-label="面包屑导航"
       data-oid="im_2rc0"
     >
@@ -40,12 +40,14 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, null)}
         className={cn(
-          "glass-chip flex items-center gap-1 px-2 py-1 transition-colors whitespace-nowrap",
-          path.length === 0 ? "text-white" : "text-gray-400 hover:text-white",
+          "glass-chip flex items-center gap-[clamp(0.195rem,0.45vw,0.25rem)] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] transition-colors whitespace-nowrap",
+          path.length === 0
+            ? "text-[var(--filelist-breadcrumb-text-active)]"
+            : "text-[var(--filelist-breadcrumb-text-muted)] hover:text-[var(--filelist-breadcrumb-text-active)]",
         )}
         data-oid="ha.a-tv"
       >
-        <HomeIcon className="h-3.5 w-3.5 shrink-0" data-oid="dj:zxma" />
+        <HomeIcon className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0" data-oid="dj:zxma" />
         <span data-oid="1t0:uam">Home</span>
       </button>
 
@@ -57,7 +59,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
           data-oid="m0m6tsp"
         >
           <ChevronIcon
-            className="h-3.5 w-3.5 shrink-0 text-gray-500"
+            className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--filelist-breadcrumb-separator)]"
             data-oid="12ne7sn"
           />
 
@@ -67,10 +69,10 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, folder.id)}
             className={cn(
-              "glass-chip px-2 py-1 transition-colors whitespace-nowrap",
+              "glass-chip px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] transition-colors whitespace-nowrap",
               index === path.length - 1
-                ? "text-white"
-                : "text-gray-400 hover:text-white",
+                ? "text-[var(--filelist-breadcrumb-text-active)]"
+                : "text-[var(--filelist-breadcrumb-text-muted)] hover:text-[var(--filelist-breadcrumb-text-active)]",
             )}
             data-oid=".qzvcbd"
           >

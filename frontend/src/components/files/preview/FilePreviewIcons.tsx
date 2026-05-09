@@ -38,7 +38,7 @@ export function CloseIcon() {
 export function DownloadIcon() {
   return (
     <svg
-      className="h-3.5 w-3.5 shrink-0"
+      className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -63,7 +63,7 @@ export function DownloadIcon() {
 export function ErrorIcon() {
   return (
     <svg
-      className="h-8 w-8 text-[var(--preview-icon-error)]"
+      className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] text-[var(--preview-icon-error)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -88,7 +88,7 @@ export function ErrorIcon() {
 export function FileIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--preview-icon-file)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--preview-icon-file)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -113,7 +113,7 @@ export function FileIcon() {
 export function AudioIcon() {
   return (
     <svg
-      className="h-12 w-12 text-[var(--preview-icon-audio)]"
+      className="h-[clamp(2.75rem,5.4vw,3rem)] w-[clamp(2.75rem,5.4vw,3rem)] text-[var(--preview-icon-audio)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -138,7 +138,7 @@ export function AudioIcon() {
 export function LoopIcon() {
   return (
     <svg
-      className="h-3.5 w-3.5 shrink-0"
+      className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -179,7 +179,7 @@ export function LoopIcon() {
 export function PauseIcon() {
   return (
     <svg
-      className="h-3.5 w-3.5 shrink-0"
+      className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="lpk4dpm"
@@ -193,7 +193,7 @@ export function PauseIcon() {
 export function PlayIcon() {
   return (
     <svg
-      className="h-3.5 w-3.5 shrink-0"
+      className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="n9kffqg"

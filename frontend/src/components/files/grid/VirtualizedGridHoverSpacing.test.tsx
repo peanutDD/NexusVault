@@ -78,8 +78,8 @@ describe("virtualized grid hover spacing", () => {
     );
 
     expect(container.querySelector(".virtualized-row")).toHaveClass(
-      "pt-1",
-      "mb-2",
+      "pt-[clamp(0.2rem,0.7vw,0.25rem)]",
+      "mb-[clamp(0.4rem,1vw,0.5rem)]",
     );
   });
 
@@ -112,8 +112,8 @@ describe("virtualized grid hover spacing", () => {
     );
 
     expect(container.querySelector(".virtualized-row")).toHaveClass(
-      "pt-1",
-      "mb-2",
+      "pt-[clamp(0.2rem,0.7vw,0.25rem)]",
+      "mb-[clamp(0.4rem,1vw,0.5rem)]",
     );
   });
 });

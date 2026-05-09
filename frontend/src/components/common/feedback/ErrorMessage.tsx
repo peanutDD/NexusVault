@@ -118,7 +118,7 @@ export default function ErrorMessage({
   return (
     <div
       className={cn(
-        "relative w-full min-w-0 overflow-hidden rounded-2xl border-2 p-4 text-xs",
+        "relative w-full min-w-0 overflow-hidden rounded-[clamp(1rem,2.5vw,1.5rem)] border-2 p-[clamp(0.75rem,2vw,1rem)] text-[clamp(0.65rem,1.5vw,0.75rem)]",
         "bg-[var(--notice-surface-bg)] backdrop-blur-xl",
         "shadow-[0_0_0_1px_rgba(var(--rgb-white),0.08),0_0.75rem_2.5rem_rgba(var(--rgb-black),0.5)]",
         config.borderClass,
@@ -145,16 +145,16 @@ export default function ErrorMessage({
         data-oid="lvqttey"
       />
 
-      <div className="relative z-10 flex items-center gap-3" data-oid="be8-oiu">
+      <div className="relative z-10 flex items-center gap-[clamp(0.5rem,1.5vw,0.75rem)]" data-oid="be8-oiu">
         <div
           className={cn(
-            "shrink-0 rounded-xl border border-current/10 bg-current/5 p-2",
+            "shrink-0 rounded-[clamp(0.75rem,1.8vw,1rem)] border border-current/10 bg-current/5 p-[clamp(0.4rem,1vw,0.5rem)]",
             config.iconClass,
           )}
           data-oid="-.r0ji4"
         >
           <Icon
-            className="h-5 w-5 text-current"
+            className="h-[clamp(1rem,2.5vw,1.25rem)] w-[clamp(1rem,2.5vw,1.25rem)] text-current"
             aria-hidden="true"
             data-oid="ga-8l7x"
           />
@@ -173,11 +173,11 @@ export default function ErrorMessage({
         {onClose && (
           <button
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[rgba(var(--rgb-white),0.06)] hover:text-[var(--color-text-primary)]"
+            className="shrink-0 rounded-[clamp(0.4rem,1vw,0.5rem)] p-[clamp(0.3rem,0.8vw,0.375rem)] text-[var(--color-text-muted)] transition-colors hover:bg-[rgba(var(--rgb-white),0.06)] hover:text-[var(--color-text-primary)]"
             aria-label="关闭"
             data-oid="q78a2sh"
           >
-            <X className="h-4 w-4" aria-hidden="true" data-oid="j8px__1" />
+            <X className="h-[clamp(0.875rem,2vw,1rem)] w-[clamp(0.875rem,2vw,1rem)]" aria-hidden="true" data-oid="j8px__1" />
           </button>
         )}
       </div>

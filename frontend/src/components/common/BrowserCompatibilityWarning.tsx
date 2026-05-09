@@ -43,16 +43,16 @@ export default function BrowserCompatibilityWarning({
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 bg-[rgba(var(--rgb-pistachio-400),0.86)] text-[rgba(var(--rgb-slate-950),0.92)] p-4 shadow-lg ${className}`}
+      className={`fixed top-0 left-0 right-0 z-50 bg-[rgba(var(--rgb-pistachio-400),0.86)] text-[rgba(var(--rgb-slate-950),0.92)] p-[clamp(0.75rem,2vw,1rem)] shadow-lg ${className}`}
       data-oid="a4b.e6y"
     >
       <div
         className="container mx-auto flex items-center justify-between"
         data-oid="ob_p7ma"
       >
-        <div className="flex items-center gap-3" data-oid="eqrtarr">
+        <div className="flex items-center gap-[clamp(0.5rem,1.5vw,0.75rem)]" data-oid="eqrtarr">
           <svg
-            className="w-6 h-6"
+            className="h-[clamp(1.25rem,3vw,1.5rem)] w-[clamp(1.25rem,3vw,1.5rem)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -71,13 +71,13 @@ export default function BrowserCompatibilityWarning({
             <h3 className="font-medium" data-oid="dd9a.u5">
               浏览器版本过低
             </h3>
-            <p className="text-sm opacity-90" data-oid="syttaj2">
+            <p className="text-[clamp(0.75rem,1.8vw,0.875rem)] opacity-90" data-oid="syttaj2">
               {browserName} 版本过低，可能导致网站功能异常
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4" data-oid="i8hzt96">
-          <span className="text-sm" data-oid="408ly74">
+        <div className="flex items-center gap-[clamp(0.75rem,2vw,1rem)]" data-oid="i8hzt96">
+          <span className="text-[clamp(0.75rem,1.8vw,0.875rem)]" data-oid="408ly74">
             建议使用 {supportedVersion}
           </span>
           <button
@@ -89,7 +89,7 @@ export default function BrowserCompatibilityWarning({
             data-oid="6ij2eek"
           >
             <svg
-              className="w-5 h-5"
+              className="h-[clamp(1rem,2.5vw,1.25rem)] w-[clamp(1rem,2.5vw,1.25rem)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

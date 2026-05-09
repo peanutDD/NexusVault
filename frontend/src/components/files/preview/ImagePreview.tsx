@@ -41,7 +41,7 @@ export function ImagePreview({
       <div
         className={cn(
           // 缩放与旋转由 CSS 变量驱动，避免重新布局
-          "flex h-full w-full min-h-0 min-w-0 touch-none select-none items-center justify-center overflow-hidden rounded-lg origin-center transition-transform ease-out",
+          "flex h-full w-full min-h-0 min-w-0 touch-none select-none items-center justify-center overflow-hidden rounded-[clamp(0.4rem,1vw,0.5rem)] origin-center transition-transform ease-out",
           "transform-[translate3d(var(--preview-pan-x),var(--preview-pan-y),0)_scale(var(--preview-zoom))_rotate(var(--preview-rotation))]",
           zoom > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default",
           isDragging ? "duration-0" : "duration-500",
@@ -79,7 +79,7 @@ export function ImagePreview({
           data-oid="uk1f569"
         >
           <div
-            className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--preview-loading-border)] border-t-[var(--preview-loading-border-top)]"
+            className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)] animate-spin rounded-full border-2 border-[var(--preview-loading-border)] border-t-[var(--preview-loading-border-top)]"
             data-oid="rk.oeiq"
           />
         </div>

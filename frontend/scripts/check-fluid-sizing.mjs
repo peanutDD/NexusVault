@@ -41,10 +41,41 @@ const scopes = {
     "src/components/files/InfiniteScrollSentinel.tsx",
   ],
   all: ["src"],
+  "tailwind-visual": ["src"],
+  "tailwind-shell-common": [
+    "src/components/common/BrowserCompatibilityWarning.tsx",
+    "src/components/common/Button.tsx",
+    "src/components/common/EmptyState.tsx",
+    "src/components/common/MacFolderIcon.tsx",
+    "src/components/common/feedback/ErrorMessage.tsx",
+    "src/components/common/form/FormField.tsx",
+    "src/components/layout",
+    "src/components/ErrorBoundary.tsx",
+    "src/providers/AuthProvider.tsx",
+    "src/router/AppRouter.tsx",
+  ],
+  "tailwind-filelist-trash": [
+    "src/components/files/grid",
+    "src/components/files/list",
+    "src/pages/Trash.tsx",
+  ],
 };
 
 const targetEntries = scopes[scope] ?? scopes.pr1;
+const isTailwindVisualScope = scope.startsWith("tailwind-");
 const fixedPxRe = /(?<![\w.-])-?(?:0|[1-9]\d*)(?:\.\d+)?px\b/g;
+const tailwindVariantPrefix = "(?:[a-z0-9-]+:)*";
+const tailwindSpacingPrefix =
+  "-?(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y|w|h|min-w|min-h|max-w|max-h|size|inset|inset-x|inset-y|top|right|bottom|left|translate-x|translate-y|scroll-mt|scroll-mb|scroll-pt|scroll-pb|scroll-pl|scroll-pr)";
+const tailwindVisualScaleRe = new RegExp(
+  [
+    `(?<![\\w/-])${tailwindVariantPrefix}${tailwindSpacingPrefix}-(?!(?:0|px|full|screen|svh|lvh|dvh|auto|min|max|fit)\\b)(?:[2-9]xl|\\d+(?:\\.\\d+)?|xs|sm|md|lg|xl)(?![\\w/-])`,
+    `(?<![\\w/-])${tailwindVariantPrefix}text-(?:xs|sm|base|lg|xl|[2-9]xl)(?![\\w/-])`,
+    `(?<![\\w/-])${tailwindVariantPrefix}rounded-(?:sm|md|lg|xl|[2-9]xl)(?![\\w/-])`,
+    `(?<![\\w/-])${tailwindVariantPrefix}blur-(?:sm|md|lg|xl|[2-9]xl|\\d+(?:\\.\\d+)?)(?![\\w/-])`,
+  ].join("|"),
+  "g",
+);
 
 async function exists(filePath) {
   try {
@@ -128,13 +159,57 @@ function findFixedPx(content) {
   return hits;
 }
 
+function findFixedTailwindVisualScale(content, filePath) {
+  const hits = [];
+  const lines = content.split("\n");
+
+  lines.forEach((line, lineIndex) => {
+    if (isCommentLine(line)) return;
+    if (line.includes("fluid-sizing-allow:")) return;
+    if (!shouldScanTailwindVisualLine(filePath, line)) return;
+    for (const match of line.matchAll(tailwindVisualScaleRe)) {
+      const value = match[0];
+      const index = match.index ?? 0;
+      hits.push({
+        value,
+        line: lineIndex + 1,
+        col: index + 1,
+        snippet: line.trim(),
+      });
+    }
+  });
+
+  return hits;
+}
+
+function shouldScanTailwindVisualLine(filePath, line) {
+  if (path.extname(filePath) === ".css") return false;
+  if (
+    line.includes("className") ||
+    line.includes("classNames") ||
+    line.includes("cn(") ||
+    line.includes("clsx(") ||
+    line.includes("cva(") ||
+    line.includes("twMerge(")
+  ) {
+    return true;
+  }
+
+  const baseName = path.basename(filePath);
+  if (baseName === "styles.ts" || baseName === "style.ts") return true;
+  return /^\s*["'`][^"'`]*(?:\bp-|px-|py-|h-|w-|max-w-|text-|rounded-|gap-)/.test(line);
+}
+
 const results = [];
 for (const entry of targetEntries) {
   const entryPath = path.join(projectRoot, entry);
   if (!(await exists(entryPath))) continue;
   for await (const filePath of walk(entryPath)) {
     const content = await fs.readFile(filePath, "utf8");
-    const hits = findFixedPx(content);
+    const hits =
+      isTailwindVisualScope
+        ? findFixedTailwindVisualScale(content, filePath)
+        : findFixedPx(content);
     if (hits.length > 0) {
       results.push({ filePath, hits });
     }
@@ -142,18 +217,33 @@ for (const entry of targetEntries) {
 }
 
 if (results.length === 0) {
-  process.stdout.write(`OK: no fixed px dimensions in ${scope} fluid sizing scope.\n`);
+  const label =
+    isTailwindVisualScope
+      ? "fixed Tailwind visual scale utilities"
+      : "fixed px dimensions";
+  process.stdout.write(`OK: no ${label} in ${scope} fluid sizing scope.\n`);
   process.exit(0);
 }
 
-process.stdout.write(
-  [
-    "Found fixed px dimensions in enforced frontend scopes.",
-    "Policy: user-visible dimensions should use clamp(), rem, viewport units, or semantic CSS tokens.",
-    "Allowed exceptions must be built-in hairlines/pills or marked with fluid-sizing-allow: <reason>.",
-    "",
-  ].join("\n"),
-);
+if (isTailwindVisualScope) {
+  process.stdout.write(
+    [
+      "Found fixed Tailwind visual scale utilities in enforced frontend scopes.",
+      "Policy: user-visible Tailwind scale dimensions should use semantic CSS tokens or explicit clamp()/min()/max() utilities.",
+      "Allowed exceptions must be marked with fluid-sizing-allow: <reason>.",
+      "",
+    ].join("\n"),
+  );
+} else {
+  process.stdout.write(
+    [
+      "Found fixed px dimensions in enforced frontend scopes.",
+      "Policy: user-visible dimensions should use clamp(), rem, viewport units, or semantic CSS tokens.",
+      "Allowed exceptions must be built-in hairlines/pills or marked with fluid-sizing-allow: <reason>.",
+      "",
+    ].join("\n"),
+  );
+}
 
 for (const result of results) {
   process.stdout.write(`${toRel(result.filePath)}\n`);

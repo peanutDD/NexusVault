@@ -130,7 +130,7 @@ const UploadFileItem = memo(function UploadFileItem({
       case "pending":
         return (
           <span
-            className="text-xs text-[var(--upload-item-muted)]"
+            className="text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--upload-item-muted)]"
             data-oid="14hlx0z"
           >
             {formatFileSize(file.size)}
@@ -140,12 +140,12 @@ const UploadFileItem = memo(function UploadFileItem({
       case "uploading":
         return (
           <span
-            className="text-xs text-[var(--upload-item-muted)]"
+            className="text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--upload-item-muted)]"
             data-oid="rjgwpm5"
           >
             {formatFileSize(file.size)}
             <span
-              className="mx-1.5 text-[var(--upload-item-muted)]"
+              className="mx-[clamp(0.2925rem,0.675vw,0.375rem)] text-[var(--upload-item-muted)]"
               data-oid="i-yzak1"
             >
               |
@@ -155,7 +155,7 @@ const UploadFileItem = memo(function UploadFileItem({
             </span>
             {file.statusMessage && (
               <span
-                className="ml-1.5 text-[var(--upload-item-muted)]"
+                className="ml-[clamp(0.2925rem,0.675vw,0.375rem)] text-[var(--upload-item-muted)]"
                 data-oid="1_:bu.."
               >
                 {file.statusMessage}
@@ -164,7 +164,7 @@ const UploadFileItem = memo(function UploadFileItem({
             {remainingTime && (
               <>
                 <span
-                  className="mx-1.5 text-[var(--upload-item-muted)]"
+                  className="mx-[clamp(0.2925rem,0.675vw,0.375rem)] text-[var(--upload-item-muted)]"
                   data-oid="domn9:e"
                 >
                   ·
@@ -178,12 +178,12 @@ const UploadFileItem = memo(function UploadFileItem({
       case "success":
         return (
           <span
-            className="text-xs text-[var(--upload-item-muted)]"
+            className="text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--upload-item-muted)]"
             data-oid="d5t.td6"
           >
             Upload Successful
             <span
-              className="mx-1.5 text-[var(--upload-item-muted)]"
+              className="mx-[clamp(0.2925rem,0.675vw,0.375rem)] text-[var(--upload-item-muted)]"
               data-oid="8n3x61b"
             >
               |
@@ -203,15 +203,15 @@ const UploadFileItem = memo(function UploadFileItem({
 
   return (
     <div
-      className="uploadFileItemCyber relative overflow-hidden rounded-xl bg-[var(--upload-item-bg)]"
+      className="uploadFileItemCyber relative overflow-hidden rounded-[clamp(0.6rem,1.4vw,0.75rem)] bg-[var(--upload-item-bg)]"
       data-oid="k8dog6k"
     >
       {/* 主内容 */}
-      <div className="flex items-center gap-3 p-3" data-oid="ph:.1e8">
+      <div className="flex items-center gap-[clamp(0.585rem,1.35vw,0.75rem)] p-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="ph:.1e8">
         {/* 文件图标 */}
         <div
           className={cn(
-            "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--upload-item-icon-border)] bg-[var(--upload-item-icon-bg)] shadow-[var(--upload-item-icon-shadow)] backdrop-blur-sm",
+            "relative flex h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)] shrink-0 items-center justify-center overflow-hidden rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--upload-item-icon-border)] bg-[var(--upload-item-icon-bg)] shadow-[var(--upload-item-icon-shadow)] backdrop-blur-sm",
             mimeTypeInfo.bgClass,
           )}
           data-oid="ah7zqi4"
@@ -227,7 +227,7 @@ const UploadFileItem = memo(function UploadFileItem({
         {/* 文件信息 */}
         <div className="min-w-0 flex-1" data-oid="cpn:rfo">
           <p
-            className="uploadFileItemName truncate text-sm font-medium text-[var(--upload-item-text)]"
+            className="uploadFileItemName truncate text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--upload-item-text)]"
             title={file.name}
             data-oid="5epl46k"
           >
@@ -237,12 +237,12 @@ const UploadFileItem = memo(function UploadFileItem({
         </div>
 
         {/* 操作按钮 */}
-        <div className="flex shrink-0 items-center gap-1" data-oid="u098jgz">
+        <div className="flex shrink-0 items-center gap-[clamp(0.195rem,0.45vw,0.25rem)]" data-oid="u098jgz">
           {file.status === "error" && (
             <button
               type="button"
               onClick={() => onRetry(file.id)}
-              className="uploadFileItemActionBtn flex h-8 w-8 items-center justify-center rounded-lg text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
+              className="uploadFileItemActionBtn flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
               title="重试"
               aria-label="重试上传"
               data-oid="3do2_5d"
@@ -253,7 +253,7 @@ const UploadFileItem = memo(function UploadFileItem({
           <button
             type="button"
             onClick={() => onRemove(file.id)}
-            className="uploadFileItemActionBtn flex h-8 w-8 items-center justify-center rounded-lg text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
+            className="uploadFileItemActionBtn flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] text-[var(--upload-item-action-text)] transition-colors hover:bg-[var(--upload-item-action-hover-bg)] hover:text-[var(--upload-item-action-hover-text)]"
             title="删除"
             aria-label="删除文件"
             data-oid="pg.ns.k"
@@ -266,7 +266,7 @@ const UploadFileItem = memo(function UploadFileItem({
       {/* 进度条 - 贯穿底部 */}
       {(file.status === "uploading" || file.status === "success") && (
         <div
-          className="absolute bottom-1 left-3 right-3 h-1.5"
+          className="absolute bottom-[clamp(0.195rem,0.45vw,0.25rem)] left-[clamp(0.585rem,1.35vw,0.75rem)] right-[clamp(0.585rem,1.35vw,0.75rem)] h-[clamp(0.2925rem,0.675vw,0.375rem)]"
           data-oid="vhuyy2p"
         >
           <div
@@ -388,7 +388,7 @@ function FileIcon({ color }: { color: string }) {
 function RetryIcon() {
   return (
     <svg
-      className="h-4 w-4"
+      className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -409,7 +409,7 @@ function RetryIcon() {
 function TrashIcon() {
   return (
     <svg
-      className="h-4 w-4"
+      className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -430,7 +430,7 @@ function TrashIcon() {
 function InfoIcon() {
   return (
     <svg
-      className="h-3.5 w-3.5"
+      className="h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -507,44 +507,44 @@ function ErrorTooltip({
     <div
       ref={tooltipRef}
       className={cn(
-        "fixed z-[9999] w-64 -translate-y-full animate-in fade-in slide-in-from-bottom-2 duration-200",
+        "fixed z-[9999] w-[clamp(15.75rem,28.8vw,16rem)] -translate-y-full animate-in fade-in slide-in-from-bottom-2 duration-200",
         posClass,
       )}
       data-oid="xb6t3n4"
     >
       {/* 主容器 - 渐变背景 */}
       <div
-        className="overflow-hidden rounded-sm bg-[var(--upload-tooltip-bg)] shadow-lg ring-1 ring-[var(--upload-tooltip-ring)]"
+        className="overflow-hidden rounded-[clamp(0.2rem,0.6vw,0.25rem)] bg-[var(--upload-tooltip-bg)] shadow-lg ring-1 ring-[var(--upload-tooltip-ring)]"
         data-oid="t6diyo-"
       >
         {/* 顶部装饰条 */}
         <div
-          className="h-0.5 bg-[var(--upload-tooltip-accent)]"
+          className="h-[clamp(0.0975rem,0.3vw,0.125rem)] bg-[var(--upload-tooltip-accent)]"
           data-oid="5g7g-d6"
         />
 
         {/* 内容区 */}
-        <div className="p-3" data-oid="2-w.4.-">
+        <div className="p-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="2-w.4.-">
           {/* 标题 */}
           <div
-            className="mb-2 flex items-center justify-between"
+            className="mb-[clamp(0.39rem,0.9vw,0.5rem)] flex items-center justify-between"
             data-oid="1c9i-64"
           >
             <span
-              className="text-xs font-semibold uppercase tracking-wide text-[var(--upload-tooltip-title)]"
+              className="text-[clamp(0.68rem,1.6vw,0.75rem)] font-semibold uppercase tracking-wide text-[var(--upload-tooltip-title)]"
               data-oid="ru4su2-"
             >
               错误详情
             </span>
             <button
               onClick={onClose}
-              className="flex h-5 w-5 items-center justify-center rounded text-[var(--upload-tooltip-close)] transition-colors hover:bg-[var(--upload-tooltip-close-bg)] hover:text-[var(--upload-tooltip-close-hover)]"
+              className="flex h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] items-center justify-center rounded text-[var(--upload-tooltip-close)] transition-colors hover:bg-[var(--upload-tooltip-close-bg)] hover:text-[var(--upload-tooltip-close-hover)]"
               title="关闭"
               aria-label="关闭"
               data-oid="mqjxnlk"
             >
               <svg
-                className="h-3 w-3"
+                className="h-[clamp(0.585rem,1.35vw,0.75rem)] w-[clamp(0.585rem,1.35vw,0.75rem)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -562,7 +562,7 @@ function ErrorTooltip({
           </div>
 
           {/* 错误内容 */}
-          <div className="max-h-32 overflow-y-auto" data-oid="jx7jgkh">
+          <div className="max-h-[clamp(7.75rem,14.4vw,8rem)] overflow-y-auto" data-oid="jx7jgkh">
             <p
               className="whitespace-pre-line text-[clamp(0.625rem,1.6vw,0.6875rem)] leading-relaxed text-[var(--upload-tooltip-text)]"
               data-oid="hj.49bw"
@@ -575,11 +575,11 @@ function ErrorTooltip({
 
       {/* 小三角箭头 */}
       <div
-        className="absolute -bottom-1.5 left-1/2 -translate-x-1/2"
+        className="absolute -bottom-[clamp(0.2925rem,0.675vw,0.375rem)] left-1/2 -translate-x-1/2"
         data-oid="wys7u4a"
       >
         <div
-          className="h-3 w-3 rotate-45 bg-[var(--upload-tooltip-arrow-bg)] ring-1 ring-[var(--upload-tooltip-ring)]"
+          className="h-[clamp(0.585rem,1.35vw,0.75rem)] w-[clamp(0.585rem,1.35vw,0.75rem)] rotate-45 bg-[var(--upload-tooltip-arrow-bg)] ring-1 ring-[var(--upload-tooltip-ring)]"
           data-oid="o2:lpz9"
         />
       </div>
@@ -618,9 +618,9 @@ function ErrorStatus({ error }: { error?: string }) {
   const hasMoreDetails = error && (error.includes("\n") || error.length > 35);
 
   return (
-    <div className="flex items-center gap-1.5" data-oid="2oux4-r">
+    <div className="flex items-center gap-[clamp(0.2925rem,0.675vw,0.375rem)]" data-oid="2oux4-r">
       <span
-        className="truncate text-xs text-[var(--upload-error-text)]"
+        className="truncate text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--upload-error-text)]"
         data-oid="s89j:k9"
       >
         {shortError}
@@ -632,7 +632,7 @@ function ErrorStatus({ error }: { error?: string }) {
             type="button"
             onClick={handleToggle}
             className={cn(
-              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors",
+              "flex h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] shrink-0 items-center justify-center rounded-full transition-colors",
               showTooltip
                 ? "bg-[var(--upload-error-pill-bg-active)] text-[var(--upload-error-pill-text-active)]"
                 : "bg-[var(--upload-error-pill-bg)] text-[var(--upload-error-pill-text)] hover:bg-[var(--upload-error-pill-bg-hover)]",

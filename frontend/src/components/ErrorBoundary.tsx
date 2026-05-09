@@ -30,17 +30,17 @@ export default class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
       return (
         <div
-          className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-gray-300 p-8"
+          className="min-h-screen flex flex-col items-center justify-center bg-[var(--error-boundary-bg)] text-[var(--error-boundary-text)] p-[clamp(1.25rem,4vw,2rem)]"
           data-oid="p_vs_.v"
         >
           <h1
-            className="text-xl font-semibold text-white mb-2"
+            className="mb-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(1.05rem,2.4vw,1.25rem)] font-semibold text-[var(--error-boundary-title)]"
             data-oid="y6lgxjp"
           >
             出错了
           </h1>
           <p
-            className="text-sm text-gray-400 mb-4 max-w-md text-center"
+            className="mb-[clamp(0.75rem,2vw,1rem)] max-w-[28rem] text-center text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--error-boundary-muted)]"
             data-oid="oez77o8"
           >
             {this.state.error?.message ?? "未知错误"}
@@ -48,7 +48,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           <button
             type="button"
             onClick={() => this.setState({ hasError: false })}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            className="rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--error-boundary-action-bg)] px-[clamp(0.75rem,2vw,1rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[var(--error-boundary-action-text)] hover:bg-[var(--error-boundary-action-bg-hover)]"
             data-oid="wu:q3m1"
           >
             重试

@@ -674,52 +674,76 @@ pub fn commit_and_push_in(
             .args(["commit", "-m", &msg]),
     )?;
     if push {
-        push_with_retry(repo_root)?;
+        checked_output_with_retry(
+            || {
+                let mut cmd = StdCommand::new("git");
+                cmd.args(["-C", repo_root]).args(["push", "origin", "HEAD"]);
+                cmd
+            },
+            "git push",
+        )?;
     }
 
     Ok(())
 }
 
-fn push_with_retry(repo_root: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn checked_output_with_retry<F>(
+    build_command: F,
+    label: &str,
+) -> Result<Output, Box<dyn std::error::Error>>
+where
+    F: FnMut() -> StdCommand,
+{
+    checked_output_with_retry_inner(build_command, label, true)
+}
+
+fn checked_output_with_retry_inner<F>(
+    mut build_command: F,
+    label: &str,
+    sleep_between_attempts: bool,
+) -> Result<Output, Box<dyn std::error::Error>>
+where
+    F: FnMut() -> StdCommand,
+{
     let max_attempts = 3;
     let mut last_error: Option<String> = None;
 
     for attempt in 1..=max_attempts {
-        let output = StdCommand::new("git")
-            .args(["-C", repo_root])
-            .args(["push", "origin", "HEAD"])
-            .output()?;
+        let output = build_command().output()?;
         if output.status.success() {
-            return Ok(());
+            return Ok(output);
         }
 
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let message = format!(
-            "git push failed attempt {}/{} status={} stdout={} stderr={}",
-            attempt, max_attempts, output.status, stdout, stderr
+            "{} failed attempt {}/{} status={} stdout={} stderr={}",
+            label, attempt, max_attempts, output.status, stdout, stderr
         );
         last_error = Some(message.clone());
 
-        if attempt == max_attempts || !is_transient_git_push_error(&stderr) {
+        if attempt == max_attempts || !is_transient_remote_error(&stderr) {
             return Err(message.into());
         }
 
         eprintln!(
-            "⚠️ git push transient failure, retrying ({}/{}): {}",
+            "⚠️ {} 网络抖动，已重试 {}/{}: {}",
+            label,
             attempt,
             max_attempts,
             stderr.trim()
         );
-        std::thread::sleep(std::time::Duration::from_secs((attempt * 10) as u64));
+        if sleep_between_attempts {
+            std::thread::sleep(std::time::Duration::from_secs((attempt * 10) as u64));
+        }
     }
 
     Err(last_error
-        .unwrap_or_else(|| "git push failed without output".to_string())
+        .unwrap_or_else(|| format!("{} failed without output", label))
         .into())
 }
 
-fn is_transient_git_push_error(stderr: &str) -> bool {
+fn is_transient_remote_error(stderr: &str) -> bool {
     let lower = stderr.to_ascii_lowercase();
     [
         "empty reply from server",
@@ -738,13 +762,15 @@ fn is_transient_git_push_error(stderr: &str) -> bool {
 
 /// 在指定 PR 下发布评论（用于 Dry-Run 提示与修复结果回传）。
 pub fn post_comment(pr_number: u32, body: &str) -> Result<(), Box<dyn std::error::Error>> {
-    checked_output(StdCommand::new("gh").args([
-        "pr",
-        "comment",
-        &format!("{}", pr_number),
-        "--body",
-        body,
-    ]))?;
+    let pr_number = pr_number.to_string();
+    checked_output_with_retry(
+        || {
+            let mut cmd = StdCommand::new("gh");
+            cmd.args(["pr", "comment", &pr_number, "--body", body]);
+            cmd
+        },
+        "gh pr comment",
+    )?;
     Ok(())
 }
 
@@ -1134,18 +1160,57 @@ BODY
     }
 
     #[test]
-    fn transient_git_push_errors_are_retryable() {
-        assert!(is_transient_git_push_error(
+    fn transient_remote_errors_are_retryable() {
+        assert!(is_transient_remote_error(
             "fatal: unable to access 'https://github.com/owner/repo/': Empty reply from server"
         ));
-        assert!(is_transient_git_push_error(
+        assert!(is_transient_remote_error(
             "fatal: unable to access 'https://github.com/owner/repo/': Failed to connect to github.com port 443"
         ));
-        assert!(is_transient_git_push_error(
+        assert!(is_transient_remote_error(
             "send-pack: unexpected disconnect while reading sideband packet"
         ));
-        assert!(!is_transient_git_push_error(
+        assert!(!is_transient_remote_error(
             "error: failed to push some refs to 'github.com:owner/repo.git'"
         ));
+    }
+
+    #[test]
+    fn checked_output_with_retry_retries_empty_reply_from_server() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-retry-{}", now));
+        fs::create_dir_all(&dir).unwrap();
+        let attempts = dir.join("attempts");
+        let script = dir.join("flaky.sh");
+        fs::write(
+            &script,
+            format!(
+                "#!/bin/sh\nset -eu\ncount=0\nif [ -f '{attempts}' ]; then count=$(cat '{attempts}'); fi\ncount=$((count + 1))\nprintf '%s' \"$count\" > '{attempts}'\nif [ \"$count\" -lt 3 ]; then\n  printf '%s\\n' 'fatal: unable to access https://github.com/owner/repo/: Empty reply from server' >&2\n  exit 1\nfi\nprintf '%s\\n' ok\n",
+                attempts = attempts.display()
+            ),
+        )
+        .unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut permissions = fs::metadata(&script).unwrap().permissions();
+            permissions.set_mode(0o755);
+            fs::set_permissions(&script, permissions).unwrap();
+        }
+
+        let output = checked_output_with_retry_inner(
+            || StdCommand::new(&script),
+            "test remote command",
+            false,
+        )
+        .unwrap();
+        let attempt_count = fs::read_to_string(&attempts).unwrap();
+        let _ = fs::remove_dir_all(&dir);
+
+        assert_eq!(attempt_count, "3");
+        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "ok");
     }
 }

@@ -7,6 +7,7 @@
 
 pub mod auto_fix_report;
 pub mod llm;
+pub mod patch;
 pub mod pipeline;
 pub mod repo;
 pub mod review_json;

@@ -136,4 +136,105 @@ describe("fluid sizing governance", () => {
     expect(result.stdout).toContain("src/providers/QueryProvider.tsx");
     expect(result.stdout).not.toContain("src/components/files/preview/FilePreviewStage.tsx");
   });
+
+  it("rejects user-visible fixed Tailwind visual scale utilities", () => {
+    const root = makeFixture({
+      "src/components/common/Surface.tsx": [
+        'export function Surface() {',
+        '  return <div className="p-4 h-10 max-w-md text-sm rounded-lg gap-3" />;',
+        '}',
+      ].join("\n"),
+    });
+
+    const result = runCheck(root, ["--scope=tailwind-visual"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stdout).toContain("Found fixed Tailwind visual scale utilities");
+    expect(result.stdout).toContain("src/components/common/Surface.tsx");
+    expect(result.stdout).toContain("p-4");
+    expect(result.stdout).toContain("h-10");
+    expect(result.stdout).toContain("max-w-md");
+    expect(result.stdout).toContain("text-sm");
+    expect(result.stdout).toContain("rounded-lg");
+    expect(result.stdout).toContain("gap-3");
+  });
+
+  it("allows non-visual Tailwind numeric utilities in tailwind visual scope", () => {
+    const root = makeFixture({
+      "src/components/common/Surface.tsx": [
+        'export function Surface() {',
+        '  return <div className="z-50 opacity-80 grid grid-cols-3 font-bold leading-none tracking-wide duration-200 scale-75 flex-1 shrink-0 left-1/2 -translate-x-1/2" />;',
+        '}',
+      ].join("\n"),
+    });
+
+    const result = runCheck(root, ["--scope=tailwind-visual"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("OK");
+  });
+
+  it("allows explicit Tailwind visual exceptions with inline reasons", () => {
+    const root = makeFixture({
+      "src/components/common/Surface.tsx":
+        'export const surface = "p-4 h-10"; // fluid-sizing-allow: legacy third-party embed',
+    });
+
+    const result = runCheck(root, ["--scope=tailwind-visual"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("OK");
+  });
+
+  it("does not treat CSS custom property names or SVG path data as Tailwind utilities", () => {
+    const root = makeFixture({
+      "src/styles/tokens.css": [
+        ":root {",
+        "  --settings-text-sm: clamp(0.75rem, 2vw, 0.875rem);",
+        "  --preview-glow-lg: clamp(1rem, 3vw, 1.5rem);",
+        "}",
+      ].join("\n"),
+      "src/components/common/Icon.tsx":
+        '<path d="M12 9v2m0 4h.01m-6.938 4h13.856" />',
+    });
+
+    const result = runCheck(root, ["--scope=tailwind-visual"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("OK");
+  });
+
+  it("can enforce only the shell and common Tailwind visual scope", () => {
+    const root = makeFixture({
+      "src/components/common/EmptyState.tsx": '<div className="p-4" />',
+      "src/components/layout/PageLayout.tsx": '<div className="gap-3" />',
+      "src/router/AppRouter.tsx": '<div className="text-sm" />',
+      "src/pages/Trash.tsx": '<div className="p-4" />',
+    });
+
+    const result = runCheck(root, ["--scope=tailwind-shell-common"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stdout).toContain("src/components/common/EmptyState.tsx");
+    expect(result.stdout).toContain("src/components/layout/PageLayout.tsx");
+    expect(result.stdout).toContain("src/router/AppRouter.tsx");
+    expect(result.stdout).not.toContain("src/pages/Trash.tsx");
+  });
+
+  it("can enforce only the file list and Trash Tailwind visual scope", () => {
+    const root = makeFixture({
+      "src/components/files/grid/FileCard.tsx": '<div className="p-3" />',
+      "src/components/files/list/FileListHeader.tsx": '<div className="gap-2" />',
+      "src/pages/Trash.tsx": '<div className="h-3 w-3" />',
+      "src/pages/Settings.tsx": '<div className="p-4" />',
+    });
+
+    const result = runCheck(root, ["--scope=tailwind-filelist-trash"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stdout).toContain("src/components/files/grid/FileCard.tsx");
+    expect(result.stdout).toContain("src/components/files/list/FileListHeader.tsx");
+    expect(result.stdout).toContain("src/pages/Trash.tsx");
+    expect(result.stdout).not.toContain("src/pages/Settings.tsx");
+  });
 });

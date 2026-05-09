@@ -71,7 +71,7 @@ const FileTypeIcon = memo(function FileTypeIcon({
 function PdfIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-pdf)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-pdf)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="e3rquqi"
@@ -93,7 +93,7 @@ function PdfIcon() {
 function ImageIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-image)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-image)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="m5jpsw0"
@@ -112,7 +112,7 @@ function ImageIcon() {
 function VideoIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-video)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-video)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="4gstg89"
@@ -131,7 +131,7 @@ function VideoIcon() {
 function AudioIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-audio)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-audio)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="3:ptz2d"
@@ -148,7 +148,7 @@ function AudioIcon() {
 function DocIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-doc)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-doc)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="9fpmk60"
@@ -170,7 +170,7 @@ function DocIcon() {
 function SpreadsheetIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-sheet)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-sheet)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="_1kazpw"
@@ -192,7 +192,7 @@ function SpreadsheetIcon() {
 function ArchiveIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-archive)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-archive)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="osyqyg-"
@@ -209,7 +209,7 @@ function ArchiveIcon() {
 function TextIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-text)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-text)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="72o60ns"
@@ -231,7 +231,7 @@ function TextIcon() {
 function DefaultFileIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--filetype-icon-default)]"
+      className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] text-[var(--filetype-icon-default)]"
       viewBox="0 0 24 24"
       fill="currentColor"
       data-oid="xv.0q-5"

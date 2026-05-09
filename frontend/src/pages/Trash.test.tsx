@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Trash from "./Trash";
@@ -44,6 +46,16 @@ function FilesPageProbe() {
   return <div data-testid="files-page-probe">Files page {location.search}</div>;
 }
 
+function readFileListGlassRule(selector: string) {
+  const css = readFileSync(
+    resolve(__dirname, "../components/files/list/FileListGlass.css"),
+    "utf8",
+  );
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = css.match(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\n\\}`));
+  return match?.[1].replace(/\s+/g, " ").trim() ?? "";
+}
+
 function renderTrash({
   initialEntries,
   initialIndex,
@@ -70,6 +82,41 @@ function renderTrash({
 }
 
 describe("Trash page", () => {
+  it("keeps the Trash console sticky despite the shared glass-panel position rule", () => {
+    const fileListGlassCss = readFileSync(
+      resolve(__dirname, "../components/files/list/FileListGlass.css"),
+      "utf8",
+    );
+
+    expect(
+      readFileListGlassRule(
+        ".fileListGlassScope .glass-panel.glass-panel-toolbar.trashConsoleToolbar",
+      ),
+    ).toContain("position: sticky");
+    expect(
+      readFileListGlassRule(
+        ".fileListGlassScope .glass-panel.glass-panel-toolbar.trashConsoleToolbar",
+      ),
+    ).toContain("z-index: var(--trash-console-z-index, 60)");
+    expect(
+      readFileListGlassRule(
+        ".fileListGlassScope .glass-panel.glass-panel-toolbar.trashConsoleToolbar",
+      ),
+    ).toContain("opacity: var(--trash-console-opacity, 0.98)");
+    expect(fileListGlassCss).toContain(
+      "--trash-console-summary-mobile-scale: 1.2",
+    );
+    expect(fileListGlassCss).toContain(
+      "transform: scale(var(--trash-console-summary-mobile-scale))",
+    );
+    expect(fileListGlassCss).toContain(
+      "--trash-console-mobile-row-gap: clamp(1rem, 2vw, 2rem)",
+    );
+    expect(fileListGlassCss).toContain(
+      "gap: var(--trash-console-mobile-row-gap)",
+    );
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     useAuthStore.setState({
@@ -118,25 +165,35 @@ describe("Trash page", () => {
       screen.getByRole("article", { name: "file-1.txt trash card" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("trash-card-grid")).toHaveClass(
-      "grid-cols-5",
-      "md:grid-cols-10",
+      "grid-cols-3",
+      "sm:grid-cols-4",
+      "md:grid-cols-6",
+      "lg:grid-cols-8",
+      "xl:grid-cols-10",
     );
     expect(screen.getByTestId("page-layout")).toHaveAttribute(
       "data-background-class-name",
-      "bg-[image:var(--trash-page-bg)]",
+      "bg-[color:var(--filelist-page-bg)]",
     );
     expect(screen.getByTestId("trash-console")).toHaveClass(
       "glass-panel",
       "glass-panel-toolbar",
       "fileListToolbarScale75",
       "trashConsoleToolbar",
-      "p-3",
+      "sticky",
+      "top-[calc(clamp(4.75rem,7.6vw,6.25rem)+env(safe-area-inset-top)+0.75rem)]",
+      "z-30",
+      "p-[clamp(0.6rem,1.4vw,0.75rem)]",
     );
-    expect(screen.getByTestId("trash-console-inner")).toHaveClass("gap-1.5");
+    expect(screen.getByTestId("trash-console-inner")).toHaveClass(
+      "gap-[clamp(0.65rem,1.6vw,0.9rem)]",
+    );
     expect(screen.getByTestId("trash-console-summary-row")).toHaveClass(
       "trashConsoleSummaryRow",
-      "w-fit",
+      "inline-flex",
+      "w-full",
       "max-w-full",
+      "self-stretch",
     );
     expect(screen.getByTestId("trash-shell")).toHaveClass("fileListGlassScope");
     expect(screen.queryByTestId("trash-console-grid")).not.toBeInTheDocument();
@@ -150,7 +207,18 @@ describe("Trash page", () => {
       "toolbarActionBtn",
       "uploadBtnHighlight",
     );
-    expect(screen.queryByTestId("trash-batch-actions-row")).not.toBeInTheDocument();
+    expect(screen.getByTestId("trash-batch-actions-row")).toHaveClass(
+      "trashBatchActionsRow",
+      "sm:w-auto",
+    );
+    expect(screen.getByTestId("trash-batch-actions-row")).not.toHaveClass(
+      "sm:hidden",
+    );
+    expect(screen.getByRole("button", { name: "全选" })).toHaveClass(
+      "trashSelectAllButton",
+    );
+    expect(screen.getByRole("button", { name: "批量还原" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "批量彻底删除" })).toBeDisabled();
     expect(screen.getByTestId("trash-base-actions-row")).toHaveClass(
       "trashBaseActionsRow",
       "justify-end",
@@ -158,36 +226,33 @@ describe("Trash page", () => {
     expect(screen.getByTestId("trash-card-file-1")).toHaveClass(
       "glass-card",
       "trashCardFrame",
-      "!rounded-[0.24rem]",
+      "group",
+      "rounded-[clamp(0.3rem,0.8vw,0.375rem)]",
     );
     expect(screen.getByTestId("trash-card-thumbnail-file-1")).toHaveClass(
-      "glass-thumb",
       "trashCardThumb",
-      "aspect-[4/5]",
-      "!rounded-[0.24rem]",
+      "aspect-square",
+      "rounded-[clamp(0.2rem,0.6vw,0.25rem)]",
     );
     expect(screen.getByTestId("trash-card-meta-file-1")).toHaveClass(
       "trashCardMeta",
-      "min-h-[2.05rem]",
+      "text-center",
     );
-    expect(screen.getByRole("checkbox", { name: "选择 file-1.txt" })).toHaveAttribute(
-      "aria-checked",
-      "false",
+    expect(screen.getByTestId("trash-card-title-file-1")).toHaveClass(
+      "text-center",
+      "text-[clamp(0.38rem,1.3vw,0.58rem)]",
     );
-    expect(screen.getByRole("checkbox", { name: "选择 file-1.txt" })).toHaveClass(
-      "right-1",
-      "top-1",
-      "rounded-full",
+    expect(screen.getByTestId("trash-card-detail-file-1")).toHaveClass(
+      "justify-center",
+      "text-center",
     );
-    expect(screen.getByTestId("trash-card-grid-file-1")).toHaveClass(
-      "bg-[image:var(--trash-tech-grid)]",
+    expect(screen.getByRole("button", { name: "选择" })).toHaveClass(
+      "invisible",
+      "group-hover:visible",
     );
-    expect(screen.getByTestId("trash-card-scanline-file-1")).toHaveClass(
-      "bg-[image:var(--trash-tech-scanline)]",
-    );
-    expect(screen.getByTestId("trash-card-corner-file-1")).toHaveClass(
-      "bg-[image:var(--trash-tech-corner)]",
-    );
+    expect(screen.queryByTestId("trash-card-grid-file-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("trash-card-scanline-file-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("trash-card-corner-file-1")).not.toBeInTheDocument();
     expect(screen.getByTestId("trash-card-title-file-1")).toHaveClass(
       "truncate",
     );
@@ -252,30 +317,32 @@ describe("Trash page", () => {
     expect(screen.getByTestId("trash-card-file-2")).toHaveAttribute("aria-selected", "true");
     expect(screen.getByTestId("trash-card-file-1")).toHaveClass(
       "trashCardSelected",
-    );
-    expect(screen.getByTestId("trash-card-file-1")).not.toHaveClass(
       "border-[var(--cta-primary-border)]",
-      "ring-1",
     );
-    expect(screen.getByRole("checkbox", { name: "选择 file-1.txt" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    expect(screen.getByTestId("trash-card-check-file-1")).toBeInTheDocument();
+    expect(screen.getByTestId("trash-card-file-1")).not.toHaveClass("ring-1");
+    expect(screen.getAllByRole("button", { name: "取消选择" })).toHaveLength(2);
     expect(screen.getByTestId("trash-batch-actions-row")).toHaveClass(
       "trashBatchActionsRow",
       "justify-start",
     );
+    expect(screen.getByTestId("trash-console-actions")).toHaveClass(
+      "w-full",
+      "items-stretch",
+      "sm:items-center",
+    );
     expect(screen.getByTestId("trash-base-actions-row")).toHaveClass(
       "trashBaseActionsRow",
+      "ml-auto",
       "justify-end",
     );
     expect(screen.getByRole("button", { name: "批量还原" })).toHaveClass(
       "trashBatchRestoreButton",
     );
+    expect(screen.getByRole("button", { name: "批量还原" })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: "批量彻底删除" })).toHaveClass(
       "trashBatchPermanentButton",
     );
+    expect(screen.getByRole("button", { name: "批量彻底删除" })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: "返回上一级" })).toHaveClass(
       "trashBackButton",
     );
@@ -289,6 +356,50 @@ describe("Trash page", () => {
       expect(fileService.batchRestoreFiles).toHaveBeenCalledWith(["file-1", "file-2"]);
       expect(fileService.restoreFile).not.toHaveBeenCalled();
     });
+  });
+
+  it("selects and clears every visible trash card from the toolbar", async () => {
+    vi.mocked(fileService.listTrash).mockResolvedValue({
+      files: [
+        makeTrashFile("file-1", "file-1.txt"),
+        makeTrashFile("file-2", "file-2.txt"),
+      ],
+    });
+
+    renderTrash();
+
+    await screen.findByText("file-1.txt");
+    await userEvent.click(screen.getByRole("button", { name: "全选" }));
+
+    expect(screen.getByTestId("trash-card-file-1")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByTestId("trash-card-file-2")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "取消全选" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "取消全选" }));
+
+    expect(screen.getByTestId("trash-card-file-1")).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    expect(screen.getByTestId("trash-card-file-2")).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "全选" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("confirms before permanently deleting selected files in batch", async () => {

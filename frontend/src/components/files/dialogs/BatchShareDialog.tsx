@@ -82,10 +82,10 @@ export default function BatchShareDialog({
   };
 
   const inputClass =
-    "w-full rounded-lg border border-[var(--dialog-field-border)] bg-transparent px-2.5 py-1.5 text-xs text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:border-[var(--dialog-field-focus-border)] focus:outline-none";
+    "w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-transparent px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:border-[var(--dialog-field-focus-border)] focus:outline-none";
 
   const message = (
-    <div className="space-y-3" data-oid="-m1a102">
+    <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="-m1a102">
       {error && (
         <ErrorMessage
           message={error}
@@ -105,10 +105,10 @@ export default function BatchShareDialog({
       )}
 
       {shareUrls.length > 0 ? (
-        <div className="space-y-3" data-oid="jb5guxs">
+        <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="jb5guxs">
           {/* 结果摘要 */}
           <div
-            className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+            className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]"
             data-oid="1i12zwm"
           >
             <p
@@ -118,7 +118,7 @@ export default function BatchShareDialog({
               分享链接
             </p>
             <p
-              className="mt-0.5 font-brand text-sm font-normal tracking-wide text-[var(--dialog-panel-text)]"
+              className="mt-[clamp(0.0975rem,0.3vw,0.125rem)] font-brand text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-wide text-[var(--dialog-panel-text)]"
               data-oid="49_6q8n"
             >
               <span className="font-semibold text-[var(--dialog-panel-accent)]" data-oid="bmd6x_x">
@@ -130,19 +130,19 @@ export default function BatchShareDialog({
           {/* 复制链接 */}
           <div data-oid="koybj05">
             <p
-              className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+              className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
               data-oid="ar8f.py"
             >
               复制链接
             </p>
             <div
-              className="max-h-44 overflow-y-auto rounded-lg border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] py-1"
+              className="max-h-[clamp(10.75rem,19.8vw,11rem)] overflow-y-auto rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] py-[clamp(0.195rem,0.45vw,0.25rem)]"
               data-oid="1w66y.."
             >
               {shareUrls.map((url, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2.5 px-2.5 py-1.5"
+                  className="flex items-center gap-[clamp(0.4875rem,1.125vw,0.625rem)] px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)]"
                   data-oid="pemegm-"
                 >
                   <input
@@ -151,7 +151,7 @@ export default function BatchShareDialog({
                     value={url}
                     readOnly
                     title={`分享链接 ${index + 1}`}
-                    className="min-w-0 flex-1 rounded border border-[var(--dialog-list-input-border)] bg-[var(--dialog-list-input-bg)] px-2 py-1 text-xs text-[var(--dialog-list-input-text)]"
+                    className="min-w-0 flex-1 rounded border border-[var(--dialog-list-input-border)] bg-[var(--dialog-list-input-bg)] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-list-input-text)]"
                     data-oid="gm:6j-u"
                   />
 
@@ -161,7 +161,7 @@ export default function BatchShareDialog({
                       navigator.clipboard.writeText(url);
                       alert("链接已复制");
                     }}
-                    className="shrink-0 rounded-lg border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-2 py-1 text-xs text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
+                    className="shrink-0 rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
                     data-oid="9sc719o"
                   >
                     复制
@@ -172,7 +172,7 @@ export default function BatchShareDialog({
             <button
               type="button"
               onClick={handleCopyAllUrls}
-              className="mt-2 w-full rounded-lg border border-[var(--dialog-batch-action-border)] bg-[var(--dialog-batch-action-bg)] py-2 text-xs font-medium text-[var(--dialog-action-text)] shadow-[var(--dialog-batch-action-shadow)] transition-colors hover:brightness-110"
+              className="mt-[clamp(0.39rem,0.9vw,0.5rem)] w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-batch-action-border)] bg-[var(--dialog-batch-action-bg)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-medium text-[var(--dialog-action-text)] shadow-[var(--dialog-batch-action-shadow)] transition-colors hover:brightness-110"
               data-oid="ws:fl3c"
             >
               复制所有链接
@@ -181,7 +181,7 @@ export default function BatchShareDialog({
 
           {failedCount > 0 && (
             <p
-              className="rounded-lg border border-[var(--dialog-warning-border)] bg-[var(--dialog-warning-bg)] px-3 py-1.5 text-xs text-[var(--dialog-warning-text)]"
+              className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-warning-border)] bg-[var(--dialog-warning-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-warning-text)]"
               data-oid="sv:4edp"
             >
               ⚠ {failedCount} 个文件分享失败
@@ -189,10 +189,10 @@ export default function BatchShareDialog({
           )}
         </div>
       ) : (
-        <div className="space-y-3" data-oid="oo9qngc">
+        <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="oo9qngc">
           {/* 将创建分享 */}
           <div
-            className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+            className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]"
             data-oid="edys2gx"
           >
             <p
@@ -202,14 +202,14 @@ export default function BatchShareDialog({
               将创建分享
             </p>
             <p
-              className="mt-0.5 font-brand text-sm font-normal tracking-wide text-[var(--dialog-panel-text)]"
+              className="mt-[clamp(0.0975rem,0.3vw,0.125rem)] font-brand text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-wide text-[var(--dialog-panel-text)]"
               data-oid="5a5nnq:"
             >
               <span className="font-semibold text-[var(--dialog-panel-accent)]" data-oid=".mib69r">
                 {fileCount} 个文件
               </span>
               {fileNames.length > 0 && (
-                <span className="ml-1 text-[var(--dialog-inline-text)]" data-oid="yyyc59m">
+                <span className="ml-[clamp(0.195rem,0.45vw,0.25rem)] text-[var(--dialog-inline-text)]" data-oid="yyyc59m">
                   （{fileNames.slice(0, 3).join("、")}
                   {fileNames.length > 3 ? ` 等${fileNames.length} 个` : ""}）
                 </span>
@@ -220,13 +220,13 @@ export default function BatchShareDialog({
           {/* 可选设置 */}
           <div data-oid="::x5bx1">
             <p
-              className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+              className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
               data-oid="h0t-lrs"
             >
               可选设置
             </p>
             <div
-              className="space-y-2 rounded-lg border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] p-2.5"
+              className="space-y-[clamp(0.39rem,0.9vw,0.5rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] p-[clamp(0.4875rem,1.125vw,0.625rem)]"
               data-oid="y635gjt"
             >
               <input
@@ -285,7 +285,7 @@ export default function BatchShareDialog({
       open
       appearance="glass"
       variant="info"
-      icon={<Share2 className="h-5 w-5" data-oid="hl9zp-4" />}
+      icon={<Share2 className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" data-oid="hl9zp-4" />}
       iconBgClass="bg-[var(--dialog-accent-rose-bg)]"
       iconColorClass="text-[var(--dialog-accent-rose-text)]"
       title="批量分享文件"

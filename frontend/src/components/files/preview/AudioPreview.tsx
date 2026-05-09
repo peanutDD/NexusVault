@@ -12,12 +12,12 @@ export function AudioPreview({ src, onError }: AudioPreviewProps) {
       data-oid="h.1_-ta"
     >
       <div
-        className="pointer-events-auto flex flex-col items-center gap-6 rounded-2xl bg-[var(--preview-surface-soft)] px-12 py-10"
+        className="pointer-events-auto flex flex-col items-center gap-[clamp(1.25rem,2.7vw,1.5rem)] rounded-[clamp(0.8rem,2vw,1rem)] bg-[var(--preview-surface-soft)] px-[clamp(2.75rem,5.4vw,3rem)] py-[clamp(2.25rem,4.5vw,2.5rem)]"
         onClick={(e) => e.stopPropagation()}
         data-oid="t97wgej"
       >
         <div
-          className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--preview-audio-icon-bg)]"
+          className="flex h-[clamp(5.75rem,10.8vw,6rem)] w-[clamp(5.75rem,10.8vw,6rem)] items-center justify-center rounded-full bg-[var(--preview-audio-icon-bg)]"
           data-oid="vp:v1h2"
         >
           <AudioIcon data-oid="n5a.zv-" />
@@ -27,7 +27,7 @@ export function AudioPreview({ src, onError }: AudioPreviewProps) {
           src={src}
           controls
           autoPlay
-          className="w-80"
+          className="w-[clamp(19.75rem,36vw,20rem)]"
           onError={onError}
           data-oid="ab7fcl9"
         >

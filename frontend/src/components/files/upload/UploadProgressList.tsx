@@ -44,9 +44,9 @@ export default function UploadProgressList({
     <>
       {/* 总文件数 / 大文件数：分开显示、分开提醒 */}
       {uploadFiles.length > 0 && (
-        <div className="font-brand mb-3 space-y-2" data-oid="yznpezc">
+        <div className="font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] space-y-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="yznpezc">
           <div
-            className="flex items-center justify-between rounded-lg bg-[var(--upload-stat-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-stat-text)]"
+            className="flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-stat-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
             data-oid="g0ntg:8"
           >
             <span data-oid=":i:btah">文件数量</span>
@@ -62,7 +62,7 @@ export default function UploadProgressList({
             </span>
           </div>
           <div
-            className="flex items-center justify-between rounded-lg bg-[var(--upload-stat-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-stat-text)]"
+            className="flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-stat-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
             data-oid="woge7mu"
           >
             <span data-oid="cg18l.s">大文件（≥100MB）</span>
@@ -82,7 +82,7 @@ export default function UploadProgressList({
       )}
       {totalLimitWarning && (
         <div
-          className="font-brand mb-3 rounded-lg bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]"
+          className="font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-warning-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
           data-oid="pap8bih"
         >
           {totalLimitWarning}
@@ -90,7 +90,7 @@ export default function UploadProgressList({
       )}
       {largeLimitWarning && (
         <div
-          className="font-brand mb-3 rounded-lg bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]"
+          className="font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-warning-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
           data-oid="n.4sq-9"
         >
           {largeLimitWarning}
@@ -98,7 +98,7 @@ export default function UploadProgressList({
       )}
       {duplicateWarning && (
         <div
-          className="font-brand mb-3 rounded-lg bg-[var(--upload-drop-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]"
+          className="font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-drop-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-text-muted)]"
           data-oid="9mpex2h"
         >
           {duplicateWarning}
@@ -106,7 +106,7 @@ export default function UploadProgressList({
       )}
       {uploadFiles.length > 0 && totalAtLimit && !totalLimitWarning && (
         <div
-          className="font-brand mb-3 rounded-lg border border-[var(--upload-warning-border)] bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]"
+          className="font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--upload-warning-border)] bg-[var(--upload-warning-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
           data-oid="mkphsir"
         >
           单次最多 {maxBatchCount}{" "}
@@ -115,7 +115,7 @@ export default function UploadProgressList({
       )}
       {uploadFiles.length > 0 && largeAtLimit && !largeLimitWarning && (
         <div
-          className="font-brand mb-3 rounded-lg border border-[var(--upload-warning-border)] bg-[var(--upload-warning-bg)] px-3 py-2 text-xs font-normal tracking-widest text-[var(--upload-warning-text)]"
+          className="font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--upload-warning-border)] bg-[var(--upload-warning-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
           data-oid="hzvtxeq"
         >
           大文件（≥100MB）最多 {LARGE_FILE_UPLOAD.MAX_CONCURRENT}{" "}
@@ -125,27 +125,27 @@ export default function UploadProgressList({
 
       {/* 已上传文件列表 */}
       {uploadFiles.length > 0 && (
-        <div className="mb-5" data-oid="6u.unr8">
+        <div className="mb-[clamp(1rem,2.25vw,1.25rem)]" data-oid="6u.unr8">
           <div
-            className="mb-3 flex items-center justify-between"
+            className="mb-[clamp(0.585rem,1.35vw,0.75rem)] flex items-center justify-between"
             data-oid="t5k3x3w"
           >
             <p
-              className="font-brand text-sm font-normal tracking-widest text-[var(--upload-text)]"
+              className="font-brand text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--upload-text)]"
               data-oid="vem_b1r"
             >
               Uploaded Files
             </p>
             <button
               onClick={onClearAll}
-              className="font-brand text-xs font-normal tracking-widest text-[var(--upload-accent)] transition-colors hover:text-[var(--upload-accent-hover)]"
+              className="font-brand text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-accent)] transition-colors hover:text-[var(--upload-accent-hover)]"
               data-oid="gqxm32m"
             >
               清空全部
             </button>
           </div>
           <div
-            className="uploadDialogCyberList max-h-60 space-y-2 overflow-y-auto pr-1"
+            className="uploadDialogCyberList max-h-[clamp(12rem,45vh,15rem)] space-y-[clamp(0.39rem,0.9vw,0.5rem)] overflow-y-auto pr-[clamp(0.195rem,0.45vw,0.25rem)]"
             data-oid="wo3szfd"
           >
             {uploadFiles.map((file) => (

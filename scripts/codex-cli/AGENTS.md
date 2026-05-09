@@ -9,6 +9,7 @@
 ## 交付约束
 - 自动化输出需要稳定可解析时：stdout 仅输出最终结果；过程日志写 stderr
 - 变更必须可验证：优先补测试，其次跑 lint/typecheck/test
+- BatchFix 的主补丁格式必须是 SEARCH/REPLACE block；unified diff 仅保留兼容路径，禁止重新把 LLM 直接产 unified diff 作为主路径
 
 版本：v2.1 | 最后更新：{{today}}
 人类掌舵，Agent 执行。任何违背本文件的行为视为无效。

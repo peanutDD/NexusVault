@@ -1,0 +1,51 @@
+{
+  "date": "2026-05-10",
+  "task": "frontend-fluid-sizing-all",
+  "status": "implemented",
+  "intent": "Convert the whole frontend to responsive/fluid visual sizing while preserving existing layouts.",
+  "baseline": {
+    "fixedPxCheck": "npm run check:fluid-sizing -- --scope=all passes",
+    "rootFontSize": "html font-size already uses clamp(0.875rem, 1.1vw + 0.5625rem, 1.25rem)",
+    "remainingRisk": "Tailwind fixed scale utilities and domain-specific layout aliases"
+  },
+  "assumptions": [
+    "Current page layout, grid breakpoints, ordering, and interaction flow must remain unchanged.",
+    "Hairlines, pill radii, observer root margins, runtime pan/zoom offsets, and offscreen clipboard staging can remain fixed when documented.",
+    "Semantic tokens and clamp() are preferred over one-off arbitrary utility values."
+  ],
+  "risks": [
+    "A blind global rewrite can change layout despite matching approximate dimensions.",
+    "Over-broad linting can flag non-visual numeric Tailwind utilities.",
+    "Preview and dialog domains require browser evidence because unit tests cannot prove layout preservation."
+  ],
+  "phases": [
+    "Expand fluid sizing governance for Tailwind visual scale utilities.",
+    "Migrate shared shell and common components.",
+    "Migrate file list and Trash domain.",
+    "Migrate dialogs, upload, settings, and share pages.",
+    "Migrate preview domain.",
+    "Enable whole-frontend enforcement and capture final browser evidence."
+  ],
+  "verification": [
+    "npm run check:fluid-sizing -- --scope=all",
+    "npm run check:fluid-sizing -- --scope=tailwind-visual",
+    "npx vitest run scripts/check-fluid-sizing.test.mjs",
+    "npm test",
+    "npm run lint",
+    "npm run build"
+  ],
+  "evidence": [
+    "Fixed px scan passed for all frontend source.",
+    "Tailwind visual fixed-scale scan passed for all frontend source.",
+    "Fluid sizing governance tests passed.",
+    "Full frontend Vitest suite passed: 33 test files, 158 tests.",
+    "Frontend ESLint passed.",
+    "Frontend production build passed with existing large chunk warnings only.",
+    "Browser smoke screenshots captured for login, Trash, and Settings mobile pages with no page errors."
+  ],
+  "screenshots": [
+    "docs/exec-plans/2026-05-10-fluid-login-mobile.png",
+    "docs/exec-plans/2026-05-10-fluid-trash-mobile.png",
+    "docs/exec-plans/2026-05-10-fluid-settings-mobile.png"
+  ]
+}

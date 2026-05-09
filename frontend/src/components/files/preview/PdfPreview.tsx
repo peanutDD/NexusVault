@@ -63,7 +63,7 @@ function DesktopPdfPreview({
       data-oid="v_jgls0"
     >
       <div
-        className="pointer-events-auto relative h-full max-h-full w-full max-w-full overflow-hidden rounded-lg shadow-2xl"
+        className="pointer-events-auto relative h-full max-h-full w-full max-w-full overflow-hidden rounded-[clamp(0.4rem,1vw,0.5rem)] shadow-2xl"
         data-oid="9qsx6qa"
       >
         {/* 加载指示 */}
@@ -73,15 +73,15 @@ function DesktopPdfPreview({
             data-oid="s.p0dpy"
           >
             <div
-              className="flex flex-col items-center gap-3"
+              className="flex flex-col items-center gap-[clamp(0.585rem,1.35vw,0.75rem)]"
               data-oid="u4jnraz"
             >
               <div
-                className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)] animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
                 data-oid="lkl.snn"
               />
 
-              <span className="text-sm text-[var(--loading-text)]" data-oid="ofg95wm">
+              <span className="text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--loading-text)]" data-oid="ofg95wm">
                 加载 PDF…
               </span>
             </div>
@@ -92,7 +92,7 @@ function DesktopPdfPreview({
           title={title}
           referrerPolicy="no-referrer"
           onLoad={() => setLoadedFor(blobUrl)}
-          className="h-full w-full border-0 bg-white"
+          className="h-full w-full border-0 bg-[var(--preview-pdf-frame-bg)]"
           data-oid=":_9e-mz"
         />
       </div>
@@ -120,15 +120,15 @@ function PdfPreview({ blobUrl, title }: PdfPreviewProps) {
                 data-oid="y4swyuy"
               >
                 <div
-                  className="flex flex-col items-center gap-3"
+                  className="flex flex-col items-center gap-[clamp(0.585rem,1.35vw,0.75rem)]"
                   data-oid="dpcktor"
                 >
                   <div
-                    className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                    className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)] animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
                     data-oid="nig-vli"
                   />
 
-                  <span className="text-sm text-[var(--loading-text)]" data-oid="5.k_xqi">
+                  <span className="text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--loading-text)]" data-oid="5.k_xqi">
                     加载 PDF…
                   </span>
                 </div>

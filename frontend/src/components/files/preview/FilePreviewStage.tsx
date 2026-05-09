@@ -41,11 +41,11 @@ export default function FilePreviewStage({
           data-oid="qwd4gor"
         >
           <div
-            className="absolute -inset-6 rounded-[2rem] bg-[var(--preview-orbit-glow)] blur-2xl"
+            className="absolute -inset-[clamp(1.25rem,2.7vw,1.5rem)] rounded-[2rem] bg-[var(--preview-orbit-glow)] blur-[clamp(2rem,5vw,2.5rem)]"
             data-oid="xkiq63w"
           />
           <div
-            className="absolute -inset-4 rounded-[1.875rem] shadow-[var(--preview-orbit-shadow)]"
+            className="absolute -inset-[clamp(0.78rem,1.8vw,1rem)] rounded-[1.875rem] shadow-[var(--preview-orbit-shadow)]"
             data-oid="ch3s5ae"
           />
           <PreviewPedestal />
