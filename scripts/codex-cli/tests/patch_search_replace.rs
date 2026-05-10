@@ -1,7 +1,8 @@
 use codex_cli::patch::{
-    ApplyOutcome, MatchLevel, PatchFormat, apply_search_replace_in, detect_format,
-    parse_search_replace_blocks,
+    ApplyOutcome, MatchEngine, MatchLevel, Patch, PatchFormat, RawPatch, SearchReplaceParser,
+    apply, apply_search_replace_in, detect_format, parse_search_replace_blocks,
 };
+use codex_cli::prompts::search_replace_system_prompt;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -27,6 +28,33 @@ fn patch_format_detection_test() {
     );
     assert_eq!(detect_format("   \n"), PatchFormat::Empty);
     assert_eq!(detect_format("hello world"), PatchFormat::Unknown);
+}
+
+#[test]
+fn raw_patch_implements_patch_trait() {
+    let patch =
+        RawPatch::new("### File: src/lib.rs\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n");
+
+    assert_eq!(patch.format(), PatchFormat::SearchReplace);
+    assert!(patch.body().contains("<<<<<<< SEARCH"));
+}
+
+#[test]
+fn search_replace_parser_contract_alias_matches_free_function() {
+    let text = "### File: src/lib.rs\n<<<<<<< SEARCH\none\n=======\ntwo\n>>>>>>> REPLACE\n";
+
+    let via_struct = SearchReplaceParser::parse(text, "src/lib.rs").unwrap();
+    let via_free_function = parse_search_replace_blocks(text, "src/lib.rs").unwrap();
+
+    assert_eq!(via_struct, via_free_function);
+}
+
+#[test]
+fn match_engine_returns_public_match_outcome() {
+    let outcome = MatchEngine::find("fn value() {\n    1\n}\n", "fn value() {\n  1\n}\n").unwrap();
+
+    assert_eq!(outcome.start, 0);
+    assert_eq!(outcome.level, MatchLevel::NormalizeIndent);
 }
 
 #[test]
@@ -88,6 +116,107 @@ fn sr_apply_replaces_deletes_and_appends() {
     assert!(updated.contains("println!(\"two\")"));
     assert!(!updated.contains("remove_me"));
     assert!(updated.ends_with("\nfn appended() {}\n"));
+}
+
+#[test]
+fn sr_apply_is_order_independent_and_rejects_overlapping_blocks() {
+    let repo = create_repo("sr-order-independent");
+    fs::write(repo.join("src/lib.rs"), "alpha\nmiddle\nomega\n").unwrap();
+
+    let reversed = "### File: src/lib.rs\n<<<<<<< SEARCH\nomega\n=======\nlast\n>>>>>>> REPLACE\n<<<<<<< SEARCH\nalpha\n=======\nfirst\n>>>>>>> REPLACE\n";
+    apply_search_replace_in(repo.to_str().unwrap(), "src/lib.rs", reversed).unwrap();
+    assert_eq!(
+        fs::read_to_string(repo.join("src/lib.rs")).unwrap(),
+        "first\nmiddle\nlast\n"
+    );
+
+    fs::write(repo.join("src/lib.rs"), "alpha\nmiddle\nomega\n").unwrap();
+    let overlapping = "### File: src/lib.rs\n<<<<<<< SEARCH\nalpha\nmiddle\n=======\none\n>>>>>>> REPLACE\n<<<<<<< SEARCH\nmiddle\nomega\n=======\ntwo\n>>>>>>> REPLACE\n";
+    let err =
+        apply_search_replace_in(repo.to_str().unwrap(), "src/lib.rs", overlapping).unwrap_err();
+    let _ = fs::remove_dir_all(&repo);
+
+    assert!(err.to_string().contains("overlap"));
+}
+
+#[test]
+fn patch_apply_accepts_search_replace_and_unified_diff() {
+    let repo = create_repo("patch-apply-entrypoint");
+    fs::write(
+        repo.join("src/lib.rs"),
+        "pub fn value() -> i32 {\n    1\n}\n",
+    )
+    .unwrap();
+
+    let sr = "### File: src/lib.rs\n<<<<<<< SEARCH\n    1\n=======\n    2\n>>>>>>> REPLACE\n";
+    let sr_result = apply(repo.to_str().unwrap(), "src/lib.rs", sr).unwrap();
+    assert!(sr_result.applied);
+
+    let diff = "diff --git a/src/lib.rs b/src/lib.rs\n--- a/src/lib.rs\n+++ b/src/lib.rs\n@@ -1,3 +1,3 @@\n pub fn value() -> i32 {\n-    2\n+    3\n }\n";
+    let diff_result = apply(repo.to_str().unwrap(), "src/lib.rs", diff).unwrap();
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    let _ = fs::remove_dir_all(&repo);
+
+    assert!(diff_result.applied);
+    assert!(updated.contains("3"));
+}
+
+#[test]
+fn search_replace_prompt_contains_required_constraints() {
+    let prompt = search_replace_system_prompt("follow rules", "src/lib.rs", 5);
+
+    assert!(prompt.contains("Allowed file: src/lib.rs"));
+    assert!(prompt.contains("### File: src/lib.rs"));
+    assert!(prompt.contains("<<<<<<< SEARCH"));
+    assert!(prompt.contains("max blocks: 5"));
+    assert!(prompt.contains("禁止 unified diff"));
+}
+
+#[test]
+fn golden_search_replace_fixtures_all_apply() {
+    let cases = [
+        (
+            "replace",
+            include_str!("fixtures/golden/replace.source"),
+            include_str!("fixtures/golden/replace.patch"),
+            include_str!("fixtures/golden/replace.expected"),
+        ),
+        (
+            "delete",
+            include_str!("fixtures/golden/delete.source"),
+            include_str!("fixtures/golden/delete.patch"),
+            include_str!("fixtures/golden/delete.expected"),
+        ),
+        (
+            "append",
+            include_str!("fixtures/golden/append.source"),
+            include_str!("fixtures/golden/append.patch"),
+            include_str!("fixtures/golden/append.expected"),
+        ),
+        (
+            "trim",
+            include_str!("fixtures/golden/trim.source"),
+            include_str!("fixtures/golden/trim.patch"),
+            include_str!("fixtures/golden/trim.expected"),
+        ),
+        (
+            "indent",
+            include_str!("fixtures/golden/indent.source"),
+            include_str!("fixtures/golden/indent.patch"),
+            include_str!("fixtures/golden/indent.expected"),
+        ),
+    ];
+
+    for (name, source, patch, expected) in cases {
+        let repo = create_repo(&format!("golden-{name}"));
+        fs::write(repo.join("src/lib.rs"), source).unwrap();
+
+        apply_search_replace_in(repo.to_str().unwrap(), "src/lib.rs", patch).unwrap();
+        let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+        let _ = fs::remove_dir_all(&repo);
+
+        assert_eq!(updated, expected, "golden case `{name}` did not match");
+    }
 }
 
 #[test]

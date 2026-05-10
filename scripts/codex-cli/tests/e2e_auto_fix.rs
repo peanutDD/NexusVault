@@ -896,18 +896,21 @@ PATCH
         printf '%s' "$prompt" | grep -q "git apply stderr:" || exit 43
         printf '%s' "$prompt" | grep -q "patch does not apply" || exit 44
         printf '%s' "$prompt" | grep -q "Allowed file: src/lib.rs" || exit 45
-        printf '%s' "$prompt" | grep -q "max hunks: 3" || exit 46
-        printf '%s' "$prompt" | grep -q "max changed lines: 80" || exit 47
+        printf '%s' "$prompt" | grep -q "<<<<<<< SEARCH" || exit 46
+        printf '%s' "$prompt" | grep -q "max blocks: 5" || exit 47
+        printf '%s' "$prompt" | grep -q "match_reason" || exit 49
         printf '%s' "$prompt" | grep -q "pub fn value() -> i32" || exit 48
         cat <<'PATCH'
-diff --git a/src/lib.rs b/src/lib.rs
---- a/src/lib.rs
-+++ b/src/lib.rs
-@@ -1,3 +1,3 @@
- pub fn value() -> i32 {{
--    1
-+    2
- }}
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    1
+}}
+=======
+pub fn value() -> i32 {{
+    2
+}}
+>>>>>>> REPLACE
 PATCH
       else
         cat <<'PATCH'

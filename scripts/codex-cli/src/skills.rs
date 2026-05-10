@@ -1,5 +1,6 @@
 use crate::llm::CodexClient;
-use crate::patch::{PatchFormat, apply_search_replace_in, detect_format};
+use crate::patch::{PatchFormat, apply as apply_patch_text, detect_format};
+use crate::prompts::{search_replace_retry_system_prompt, search_replace_system_prompt};
 use crate::repo;
 use crate::types::{
     ChangelogEntryInput, ReviewData, ReviewIssue, ReviewIssueStatus,
@@ -438,40 +439,7 @@ fn apply_generated_patch(
     file_path: &str,
     patch: &str,
 ) -> Result<repo::PatchApplyResult, Box<dyn std::error::Error>> {
-    match detect_format(patch) {
-        PatchFormat::SearchReplace | PatchFormat::Mixed => {
-            match apply_search_replace_in(repo_root, file_path, patch) {
-                Ok(outcome) => Ok(repo::PatchApplyResult {
-                    applied: true,
-                    stderr: format!("{:?}", outcome),
-                    fail_reason: None,
-                }),
-                Err(e) => {
-                    let stderr = e.to_string();
-                    let fail_reason = if stderr.contains("missing")
-                        || stderr.contains("malformed")
-                        || stderr.contains("does not match allowed file")
-                        || stderr.contains("no SEARCH/REPLACE")
-                    {
-                        "malformed_diff"
-                    } else {
-                        "context_mismatch"
-                    };
-                    Ok(repo::PatchApplyResult {
-                        applied: false,
-                        stderr,
-                        fail_reason: Some(fail_reason.to_string()),
-                    })
-                }
-            }
-        }
-        PatchFormat::UnifiedDiff => repo::apply_patch_with_details_in(repo_root, file_path, patch),
-        PatchFormat::Empty | PatchFormat::Unknown => Ok(repo::PatchApplyResult {
-            applied: false,
-            stderr: "model output did not contain SEARCH/REPLACE or unified diff".to_string(),
-            fail_reason: Some("malformed_diff".to_string()),
-        }),
-    }
+    apply_patch_text(repo_root, file_path, patch)
 }
 
 /// 对已修改文件做安全检查（prompt-based）。
@@ -1090,6 +1058,32 @@ fn decide_fix_or_skip(issues: &[ReviewIssue]) -> Vec<ReviewIssue> {
         .collect()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RequestedPatchFormat {
+    Auto,
+    SearchReplace,
+    UnifiedDiff,
+}
+
+fn requested_patch_format() -> RequestedPatchFormat {
+    match env::var("CODEX_PATCH_FORMAT")
+        .unwrap_or_else(|_| "auto".to_string())
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "search_replace" | "search-replace" | "sr" => RequestedPatchFormat::SearchReplace,
+        "unified_diff" | "unified-diff" | "diff" => RequestedPatchFormat::UnifiedDiff,
+        _ => RequestedPatchFormat::Auto,
+    }
+}
+
+fn sr_max_blocks() -> usize {
+    env::var("CODEX_SR_MAX_BLOCKS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(5)
+}
+
 /// 针对单条 issue 生成可应用补丁。
 ///
 /// 返回 `None` 表示无需修复或模型未生成有效 SEARCH/REPLACE / unified diff。
@@ -1110,11 +1104,16 @@ async fn generate_fix_patch(
             .join("\n")
     };
 
-    let system_prompt = format!(
-        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n请根据提供的审查意见，为目标文件生成 SEARCH/REPLACE block 修复补丁。\n硬性约束：Allowed file: {file}；必须先输出 `### File: {file}`；每个变更必须使用 `<<<<<<< SEARCH`、`=======`、`>>>>>>> REPLACE`；SEARCH 块必须精确摘自当前源码并尽量包含前后上下文；最多 5 个 block；禁止 unified diff；禁止解释文字；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。\n兼容说明：旧 unified diff 仍可被工具识别，但不要作为主输出格式。",
-        rules = ctx.rules_text,
-        file = issue.file
-    );
+    let system_prompt = match requested_patch_format() {
+        RequestedPatchFormat::UnifiedDiff => format!(
+            "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n请根据提供的审查意见，为目标文件生成 unified diff。\n硬性约束：Allowed file: {file}；必须从 `diff --git a/{file} b/{file}` 开始；必须包含 `--- a/{file}`、`+++ b/{file}`；每个 hunk header 必须形如 `@@ -start,count +start,count @@`；禁止输出 patch fragment；max hunks: 3；max changed lines: 80；只输出 unified diff；禁止解释文本；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。",
+            rules = ctx.rules_text,
+            file = issue.file
+        ),
+        RequestedPatchFormat::Auto | RequestedPatchFormat::SearchReplace => {
+            search_replace_system_prompt(&ctx.rules_text, &issue.file, sr_max_blocks())
+        }
+    };
 
     let user_prompt = format!(
         "文件: {}\n问题: {}\n建议: {}\n约束:\n{}\n\n源码:\n```\n{}\n```",
@@ -1151,11 +1150,16 @@ async fn generate_retry_fix_patch(
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let content = repo::read_repo_file(&ctx.repo_root, &issue.file)?;
 
-    let system_prompt = format!(
-        "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n上一版补丁应用失败。请基于最新源码重新生成更小、更精确的 SEARCH/REPLACE block。\n硬性约束：Allowed file: {file}；必须先输出 `### File: {file}`；每个变更必须使用 `<<<<<<< SEARCH`、`=======`、`>>>>>>> REPLACE`；SEARCH 块必须来自最新源码并扩展到足够唯一（建议前后各至少 3 行）；max blocks: 5；禁止解释文本；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。\n兼容预算（旧 diff fallback 使用）：max hunks: 3；max changed lines: 80。",
-        rules = ctx.rules_text,
-        file = issue.file
-    );
+    let system_prompt = match requested_patch_format() {
+        RequestedPatchFormat::UnifiedDiff => format!(
+            "你是一个高级工程师。请严格遵循以下规则完成修复：\n\n{rules}\n\n上一版补丁应用失败。请基于最新源码重新生成更小、更精确的 unified diff。\n硬性约束：Allowed file: {file}；必须从 `diff --git a/{file} b/{file}` 开始；必须包含 `--- a/{file}`、`+++ b/{file}`；每个 hunk header 必须形如 `@@ -start,count +start,count @@`；禁止输出 patch fragment；max hunks: 3；max changed lines: 80；只输出 unified diff；禁止解释文本；禁止修改 allowed file 以外的文件。如果没有需要修复的，返回空。",
+            rules = ctx.rules_text,
+            file = issue.file
+        ),
+        RequestedPatchFormat::Auto | RequestedPatchFormat::SearchReplace => {
+            search_replace_retry_system_prompt(&ctx.rules_text, &issue.file, sr_max_blocks())
+        }
+    };
 
     let constraints = if issue.constraints.is_empty() {
         "(none)".to_string()

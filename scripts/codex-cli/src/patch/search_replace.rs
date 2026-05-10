@@ -21,6 +21,29 @@ pub enum ApplyOutcome {
     AppliedWithFuzzyMatch { blocks: usize, level: MatchLevel },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MatchOutcome {
+    pub start: usize,
+    pub end: usize,
+    pub level: MatchLevel,
+}
+
+pub struct SearchReplaceParser;
+
+impl SearchReplaceParser {
+    pub fn parse(text: &str, allowed_file: &str) -> Result<Vec<SearchReplaceBlock>, PatchError> {
+        parse_search_replace_blocks(text, allowed_file)
+    }
+}
+
+pub struct MatchEngine;
+
+impl MatchEngine {
+    pub fn find(haystack: &str, needle: &str) -> Result<MatchOutcome, PatchError> {
+        find_unique_match(haystack, needle)
+    }
+}
+
 pub fn parse_search_replace_blocks(
     text: &str,
     allowed_file: &str,
@@ -97,19 +120,41 @@ pub fn apply_search_replace_in(
     let blocks = parse_search_replace_blocks(text, file_path)?;
     let abs = Path::new(repo_root).join(file_path);
     let original = fs::read_to_string(&abs).map_err(|e| PatchError::new(e.to_string()))?;
-    let mut current = original;
+    let mut edits = Vec::new();
     let mut highest_level = MatchLevel::Exact;
 
-    for block in &blocks {
+    for (order, block) in blocks.iter().enumerate() {
         if block.search.is_empty() {
-            current.push_str(&block.replace);
+            edits.push(PlannedEdit {
+                start: original.len(),
+                end: original.len(),
+                replace: block.replace.clone(),
+                order,
+            });
             continue;
         }
 
-        let found = find_unique_match(&current, &block.search)?;
+        let found = find_unique_match(&original, &block.search)?;
         highest_level = highest_level.max(found.level);
-        current.replace_range(found.start..found.end, &block.replace);
+        edits.push(PlannedEdit {
+            start: found.start,
+            end: found.end,
+            replace: block.replace.clone(),
+            order,
+        });
     }
+
+    edits.sort_by_key(|edit| (edit.start, edit.end, edit.order));
+    reject_overlapping_edits(&edits)?;
+
+    let mut current = String::with_capacity(original.len());
+    let mut cursor = 0;
+    for edit in &edits {
+        current.push_str(&original[cursor..edit.start]);
+        current.push_str(&edit.replace);
+        cursor = edit.end;
+    }
+    current.push_str(&original[cursor..]);
 
     fs::write(abs, current).map_err(|e| PatchError::new(e.to_string()))?;
 
@@ -123,6 +168,31 @@ pub fn apply_search_replace_in(
             level: highest_level,
         })
     }
+}
+
+#[derive(Debug, Clone)]
+struct PlannedEdit {
+    start: usize,
+    end: usize,
+    replace: String,
+    order: usize,
+}
+
+fn reject_overlapping_edits(edits: &[PlannedEdit]) -> Result<(), PatchError> {
+    for pair in edits.windows(2) {
+        let previous = &pair[0];
+        let next = &pair[1];
+        let previous_is_insert = previous.start == previous.end;
+        let next_is_insert = next.start == next.end;
+        if previous.end > next.start && !(previous_is_insert && next_is_insert) {
+            return Err(PatchError::new(format!(
+                "SEARCH/REPLACE blocks overlap at byte ranges {}..{} and {}..{}",
+                previous.start, previous.end, next.start, next.end
+            )));
+        }
+    }
+
+    Ok(())
 }
 
 fn validate_file_header(text: &str, allowed_file: &str) -> Result<(), PatchError> {
@@ -151,18 +221,11 @@ enum ParserState {
     Replace,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct MatchSpan {
-    start: usize,
-    end: usize,
-    level: MatchLevel,
-}
-
-fn find_unique_match(haystack: &str, needle: &str) -> Result<MatchSpan, PatchError> {
+fn find_unique_match(haystack: &str, needle: &str) -> Result<MatchOutcome, PatchError> {
     let exact = find_exact_spans(haystack, needle);
     match exact.len() {
         1 => {
-            return Ok(MatchSpan {
+            return Ok(MatchOutcome {
                 start: exact[0],
                 end: exact[0] + needle.len(),
                 level: MatchLevel::Exact,
@@ -179,7 +242,7 @@ fn find_unique_match(haystack: &str, needle: &str) -> Result<MatchSpan, PatchErr
 
     let trimmed = find_line_spans(haystack, needle, normalize_line_trim_end);
     match trimmed.len() {
-        1 => Ok(MatchSpan {
+        1 => Ok(MatchOutcome {
             start: trimmed[0].0,
             end: trimmed[0].1,
             level: MatchLevel::TrimTrailingWhitespace,
@@ -188,7 +251,7 @@ fn find_unique_match(haystack: &str, needle: &str) -> Result<MatchSpan, PatchErr
             let normalized_indent =
                 find_line_spans(haystack, needle, normalize_line_indent_and_trim_end);
             match normalized_indent.len() {
-                1 => Ok(MatchSpan {
+                1 => Ok(MatchOutcome {
                     start: normalized_indent[0].0,
                     end: normalized_indent[0].1,
                     level: MatchLevel::NormalizeIndent,
