@@ -1395,6 +1395,12 @@ async fn generate_replacement_file(
     {
         replacement = extracted;
     }
+    if !matches!(
+        detect_format(&replacement),
+        PatchFormat::Empty | PatchFormat::Unknown
+    ) {
+        return Ok(None);
+    }
 
     let replacement = normalize_replacement_file(&replacement, &content);
     if replacement.is_empty() || replacement == content {

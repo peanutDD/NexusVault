@@ -11,6 +11,32 @@ use crate::utils::AppError;
 
 use super::FileService;
 
+const MIN_TRASH_RETENTION_DAYS: i64 = 1;
+const MAX_TRASH_RETENTION_DAYS: i64 = 3650;
+const MIN_TRASH_PURGE_BATCH_LIMIT: i64 = 1;
+const MAX_TRASH_PURGE_BATCH_LIMIT: i64 = 10_000;
+
+fn validate_purge_expired_trash_input(
+    retention_days: i64,
+    batch_limit: i64,
+) -> Result<(), AppError> {
+    if !(MIN_TRASH_RETENTION_DAYS..=MAX_TRASH_RETENTION_DAYS).contains(&retention_days) {
+        return Err(AppError::Validation(format!(
+            "retention_days must be between {} and {}",
+            MIN_TRASH_RETENTION_DAYS, MAX_TRASH_RETENTION_DAYS
+        )));
+    }
+
+    if !(MIN_TRASH_PURGE_BATCH_LIMIT..=MAX_TRASH_PURGE_BATCH_LIMIT).contains(&batch_limit) {
+        return Err(AppError::Validation(format!(
+            "batch_limit must be between {} and {}",
+            MIN_TRASH_PURGE_BATCH_LIMIT, MAX_TRASH_PURGE_BATCH_LIMIT
+        )));
+    }
+
+    Ok(())
+}
+
 impl FileService {
     pub async fn delete_file(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
         self.get_file(file_id, user_id).await?;
@@ -134,6 +160,8 @@ impl FileService {
         retention_days: i64,
         batch_limit: i64,
     ) -> Result<u64, AppError> {
+        validate_purge_expired_trash_input(retention_days, batch_limit)?;
+
         let files = self
             .files_repo
             .purge_expired_deleted(retention_days, batch_limit)
@@ -155,28 +183,64 @@ impl FileService {
             .collect();
         let ref_counts = self.files_repo.count_by_file_paths(&paths).await?;
 
-        futures::stream::iter(files.iter())
-            .map(|file| self.delete_derived_assets(file.id, file.user_id))
+        let derived_targets = files
+            .iter()
+            .map(|file| (file.id, file.user_id))
+            .collect::<Vec<_>>();
+        let storage_paths = paths
+            .into_iter()
+            .filter(|path| ref_counts.get(path).copied().unwrap_or(0) == 0)
+            .collect::<Vec<_>>();
+
+        let derived_results = futures::stream::iter(derived_targets)
+            .map(|(file_id, user_id)| self.delete_derived_assets(file_id, user_id))
             .buffer_unordered(10)
-            .for_each(|_| async {})
+            .collect::<Vec<_>>()
             .await;
 
-        futures::stream::iter(paths.into_iter())
-            .filter(|path| {
-                let path = path.clone();
-                let ref_counts = &ref_counts;
-                async move { ref_counts.get(&path).copied().unwrap_or(0) == 0 }
-            })
-            .for_each_concurrent(10, |path| async move {
-                let _ = self.storage.delete_file(&path).await;
-            })
+        let storage_results = futures::stream::iter(storage_paths)
+            .map(|path| async move { self.storage.delete_file(&path).await })
+            .buffer_unordered(10)
+            .collect::<Vec<_>>()
             .await;
+
+        let errors = derived_results
+            .into_iter()
+            .chain(storage_results)
+            .filter_map(Result::err)
+            .map(|error| error.to_string())
+            .collect::<Vec<_>>();
+
+        if !errors.is_empty() {
+            return Err(AppError::Storage(format!(
+                "deleted file cleanup failed: {}",
+                errors.join("; ")
+            )));
+        }
+
         Ok(())
     }
 
-    async fn delete_derived_assets(&self, file_id: Uuid, user_id: Uuid) {
-        let _ = self.delete_thumbnail(file_id, user_id).await;
-        let _ = self.delete_hls(file_id).await;
-        let _ = self.delete_gif_preview_video(file_id).await;
+    async fn delete_derived_assets(&self, file_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        self.delete_thumbnail(file_id, user_id).await?;
+        self.delete_hls(file_id).await?;
+        self.delete_gif_preview_video(file_id).await?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_purge_expired_trash_input;
+
+    #[test]
+    fn purge_expired_trash_rejects_unsafe_retention_and_batch_limits() {
+        assert!(validate_purge_expired_trash_input(30, 500).is_ok());
+        assert!(validate_purge_expired_trash_input(0, 500).is_err());
+        assert!(validate_purge_expired_trash_input(-1, 500).is_err());
+        assert!(validate_purge_expired_trash_input(30, 0).is_err());
+        assert!(validate_purge_expired_trash_input(30, -1).is_err());
+        assert!(validate_purge_expired_trash_input(3651, 500).is_err());
+        assert!(validate_purge_expired_trash_input(30, 10_001).is_err());
     }
 }

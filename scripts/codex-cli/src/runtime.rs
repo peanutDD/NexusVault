@@ -7,7 +7,8 @@ use crate::skills::{
     fixed_explanations, review_issue_key, review_issue_statuses,
 };
 use crate::types::{
-    PrAutoFixOutput, ReviewData, ReviewLedgerEntryInput, is_review_severity_medium_or_higher,
+    PrAutoFixOutput, ReviewData, ReviewIssue, ReviewLedgerEntryInput,
+    is_review_severity_medium_or_higher,
 };
 use std::env;
 
@@ -158,6 +159,9 @@ async fn run_auto_fix_loop(
     } else {
         post_fix_pipeline.run(&mut ctx, client).await?;
     }
+    if remediate_security_findings_once(&mut ctx, client).await? {
+        post_fix_pipeline.run(&mut ctx, client).await?;
+    }
 
     enforce_review_policy(&mut ctx);
     record_security_findings_as_pending(&mut ctx);
@@ -206,13 +210,63 @@ async fn run_auto_fix_loop(
     Ok(serde_json::to_string(&output)?)
 }
 
+async fn remediate_security_findings_once(
+    ctx: &mut SkillContext,
+    client: &CodexClient,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    if ctx.security_passed || ctx.security_findings.is_empty() {
+        return Ok(false);
+    }
+
+    let issues = security_findings_as_review_issues(&ctx.security_findings);
+    if issues.is_empty() {
+        return Ok(false);
+    }
+
+    eprintln!(
+        "🛡️ [AutoFix] SecurityCheck 发现可修复问题，进入安全修复补丁轮: {} 条",
+        issues.len()
+    );
+
+    ctx.selected_issues = issues;
+    let fixed_before = ctx.fixed_files.len();
+    let security_fix_pipeline = Pipeline::new().with_skill(Box::new(BatchFixSkill));
+    security_fix_pipeline.run(ctx, client).await?;
+
+    Ok(ctx.fixed_files.len() > fixed_before)
+}
+
+fn security_findings_as_review_issues(findings: &[String]) -> Vec<ReviewIssue> {
+    findings
+        .iter()
+        .filter_map(|finding| {
+            let (file, reason) = finding.split_once(": ")?;
+            let file = file.trim();
+            if file.is_empty() || !file.contains('/') {
+                return None;
+            }
+
+            Some(ReviewIssue {
+                file: file.to_string(),
+                line: None,
+                severity: "High".to_string(),
+                description: format!("SecurityCheck finding: {}", reason.trim()),
+                suggestion: "修复 SecurityCheck 发现的安全风险，并保持改动限于当前文件。"
+                    .to_string(),
+                constraints: vec![format!("Only modify `{file}`")],
+                reason: Some(finding.clone()),
+            })
+        })
+        .collect()
+}
+
 fn record_security_findings_as_pending(ctx: &mut SkillContext) {
     if ctx.security_passed || ctx.security_findings.is_empty() {
         return;
     }
 
     for finding in &ctx.security_findings {
-        let explanation = format!("[Security] 未自动推送：{}", finding);
+        let explanation = format!("[Security] SecurityCheck 未自动修复：{}", finding);
         if !ctx.pending_explanations.contains(&explanation) {
             ctx.pending_explanations.push(explanation);
         }

@@ -343,6 +343,45 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
 }
 
 #[test]
+fn auto_fix_local_remediates_security_findings_before_feedback() {
+    let workspace = TestWorkspace::new("security-remediation");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 和 SecurityCheck 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("security_remediation");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["security_passed"], true);
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["pending_count"], 0);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    3\n}\n");
+    assert!(
+        stderr(&output).contains("SecurityCheck 发现可修复问题，进入安全修复补丁轮"),
+        "stderr={}",
+        stderr(&output)
+    );
+}
+
+#[test]
 fn auto_fix_local_retries_patch_generation_after_apply_failure() {
     let workspace = TestWorkspace::new("apply-retry");
     let repo = workspace.create_repo();
@@ -844,6 +883,36 @@ pub fn value() -> i32 {{
 PATCH
       exit 0
     fi
+    if [ "$mode" = "security_remediation" ]; then
+      if printf '%s' "$prompt" | grep -q "SecurityCheck finding"; then
+        cat <<'PATCH'
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    2
+}}
+=======
+pub fn value() -> i32 {{
+    3
+}}
+>>>>>>> REPLACE
+PATCH
+      else
+        cat <<'PATCH'
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    1
+}}
+=======
+pub fn value() -> i32 {{
+    2
+}}
+>>>>>>> REPLACE
+PATCH
+      fi
+      exit 0
+    fi
     if [ "$mode" = "full_file_fallback" ]; then
       if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
         cat <<'FILE'
@@ -977,16 +1046,16 @@ PATCH
     fi
     if [ "$mode" = "same_file_partial" ]; then
       cat <<'PATCH'
-diff --git a/src/lib.rs b/src/lib.rs
---- a/src/lib.rs
-+++ b/src/lib.rs
-@@ -1,5 +1,5 @@
- pub fn value() -> i32 {{
--    1
-+    2
- }}
-
- pub fn other() -> i32 {{
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    1
+}}
+=======
+pub fn value() -> i32 {{
+    2
+}}
+>>>>>>> REPLACE
 PATCH
     else
       cat <<'PATCH'
@@ -1004,6 +1073,17 @@ PATCH
   *"安全审计专家"*)
     if [ "$mode" = "security_fail" ]; then
       printf '%s\n' '{{"passed":false,"reason":"synthetic security finding"}}'
+    elif [ "$mode" = "security_remediation" ]; then
+      state="$0.security-count"
+      count=0
+      if [ -f "$state" ]; then count="$(cat "$state")"; fi
+      count=$((count + 1))
+      printf '%s' "$count" > "$state"
+      if [ "$count" -eq 1 ]; then
+        printf '%s\n' '{{"passed":false,"reason":"synthetic security finding"}}'
+      else
+        printf '%s\n' '{{"passed":true,"reason":"ok"}}'
+      fi
     else
       printf '%s\n' '{{"passed":true,"reason":"ok"}}'
     fi

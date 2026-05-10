@@ -193,14 +193,36 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(|| async { "ok" }))
         .route("/metrics", get(metrics_handler));
 
-    let port: u16 = std::env::var("WORKER_PORT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(3001);
-    let addr = format!("0.0.0.0:{}", port);
+    let host = std::env::var("WORKER_HOST").ok();
+    let port = std::env::var("WORKER_PORT").ok();
+    let addr = worker_bind_addr(host.as_deref(), port.as_deref());
     tracing::info!("Worker listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+fn worker_bind_addr(host: Option<&str>, port: Option<&str>) -> String {
+    let host = host.unwrap_or("127.0.0.1");
+    let port: u16 = port.and_then(|value| value.parse().ok()).unwrap_or(3001);
+    format!("{host}:{port}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::worker_bind_addr;
+
+    #[test]
+    fn worker_metrics_bind_addr_defaults_to_loopback() {
+        assert_eq!(worker_bind_addr(None, None), "127.0.0.1:3001");
+    }
+
+    #[test]
+    fn worker_metrics_bind_addr_allows_explicit_host_and_port() {
+        assert_eq!(
+            worker_bind_addr(Some("0.0.0.0"), Some("4001")),
+            "0.0.0.0:4001"
+        );
+    }
 }
