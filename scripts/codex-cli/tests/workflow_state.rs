@@ -172,25 +172,33 @@ fn codex_auto_fix_supports_markdown_rollback_switch() {
 }
 
 #[test]
-fn codex_auto_fix_checks_out_pr_head_before_pr_branch_checkout() {
+fn codex_auto_fix_bootstraps_pr_head_without_git_https_checkout() {
     let workflow = fs::read_to_string(codex_auto_fix_workflow())
         .expect("codex auto-fix workflow should be readable");
 
     assert!(
-        workflow.contains("ref: ${{ github.event.pull_request.head.sha || github.sha }}"),
-        "pull_request_review runs should checkout the PR head SHA instead of the volatile merge ref"
+        !workflow.contains("uses: actions/checkout@v4"),
+        "self-hosted auto-fix should not depend on actions/checkout Git HTTPS fetch as the first step"
     );
     assert!(
-        workflow.contains("fetch-depth: 0"),
-        "codex-fix needs enough history for gh pr checkout and later pushes"
+        workflow.contains("CODEX_LOCAL_REPO_SEED"),
+        "workflow should seed the workspace from a local repository before contacting GitHub"
     );
     assert!(
-        workflow.contains("for attempt in 1 2 3"),
-        "PR branch checkout should retry transient GitHub/self-hosted runner network failures"
+        workflow.contains("headRefOid") && workflow.contains("headRefName"),
+        "workflow should resolve the exact PR head branch and SHA through the GitHub API"
     );
     assert!(
-        workflow.contains("gh pr checkout \"${PR_NUMBER}\" --repo \"${GITHUB_REPOSITORY}\""),
-        "PR branch checkout should be explicit about the source repository"
+        workflow.contains("tarball/${HEAD_SHA}"),
+        "workflow should use the GitHub API tarball path instead of Git smart HTTP fetch when needed"
+    );
+    assert!(
+        workflow.contains("Cannot verify exact PR head"),
+        "workflow should fail closed instead of auto-fixing a stale local seed"
+    );
+    assert!(
+        workflow.contains("CODEX_PUBLISH_VIA_GH_API=true"),
+        "synthetic local checkout should force codex-cli to publish via GitHub API rather than git push"
     );
 }
 

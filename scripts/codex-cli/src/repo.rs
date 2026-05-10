@@ -377,6 +377,14 @@ pub fn commit_and_push_in(
             .args(["commit", "-m", &msg]),
     )?;
     if push {
+        if publish_via_github_api_only() {
+            eprintln!(
+                "⚠️ CODEX_PUBLISH_VIA_GH_API=true，跳过 git push 并改用 GitHub API 发布当前提交"
+            );
+            push_head_via_github_api(repo_root)?;
+            return Ok(());
+        }
+
         let push_result = checked_output_with_retry(
             || {
                 let mut cmd = StdCommand::new("git");
@@ -400,6 +408,16 @@ pub fn commit_and_push_in(
     }
 
     Ok(())
+}
+
+fn publish_via_github_api_only() -> bool {
+    env_flag_enabled(std::env::var("CODEX_PUBLISH_VIA_GH_API").ok().as_deref())
+}
+
+fn env_flag_enabled(value: Option<&str>) -> bool {
+    value
+        .map(|value| matches!(value.to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
+        .unwrap_or(false)
 }
 
 fn push_head_via_github_api(repo_root: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -869,6 +887,18 @@ fn parse_skill_md(text: &str) -> (Option<String>, Option<String>, Option<String>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn publish_via_github_api_flag_accepts_only_truthy_values() {
+        assert!(env_flag_enabled(Some("true")));
+        assert!(env_flag_enabled(Some("TRUE")));
+        assert!(env_flag_enabled(Some("1")));
+        assert!(env_flag_enabled(Some("yes")));
+        assert!(!env_flag_enabled(Some("false")));
+        assert!(!env_flag_enabled(Some("0")));
+        assert!(!env_flag_enabled(Some("")));
+        assert!(!env_flag_enabled(None));
+    }
 
     #[test]
     fn parse_skill_md_supports_frontmatter_and_body() {
