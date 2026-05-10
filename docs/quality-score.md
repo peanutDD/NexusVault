@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-11 | codex-cli remote publish fallback | 95 | 修复 PR Auto-Fix 因 `git push` transient HTTPS 抖动直接失败的问题：保留 `git push` 快路径和 retry；当 3 次均为 transient network error 时，自动改用 GitHub Git Data API 创建 tree/commit 并 non-force 更新当前分支 ref。新增 C-060 永久约束和红绿测试，模拟 `Empty reply from server` 后 API fallback 成功。 |
 | 2026-05-10 | codex-cli security remediation loop | 95 | 修复自动闭环缺口：SecurityCheck finding 不再只写 pending，而是在反馈/推送前转成受限 High issue 进入一次安全修复补丁轮，并重跑安全检查；完整文件兜底拒绝 diff/SR 输出，避免把 patch 文本写成源码。同步修复真实安全项：回收站过期清理校验 retention/batch 范围并传播派生资源/存储清理错误，worker metrics 默认绑定 127.0.0.1，显式 `WORKER_HOST=0.0.0.0` 才外露。验证通过 codex-cli fmt/test/clippy、backend fmt/目标测试/clippy。 |
 | 2026-05-10 | codex-cli SEARCH/REPLACE six-phase completion | 95 | 补齐 auto-fix patch reliability 6 个 Phase：新增 `Patch`/`RawPatch` 契约、`patch::apply` 统一入口、SR parser/matcher public API、顺序无关与重叠检测、prompt 模块、`CODEX_PATCH_FORMAT` 支持、golden fixtures 5/5、网络错误分类诊断与文档入口。验证通过：`cargo fmt --all -- --check`、`cargo test --all`（86 tests）、`cargo clippy --all-targets --all-features -- -D warnings`、`cargo llvm-cov --all --summary-only`；SR 核心行覆盖率 92.91%，全局既有覆盖率 80.68%。 |
 | 2026-05-10 | frontend hardcoding audit | 95 | 新增 `check:hardcoding` 治理脚本与 5 条红绿测试，覆盖 deploy URL、裸 Tailwind 主题色、TSX inline color function、未命名 timing literal，并排除 CSS token 源头、SVG namespace、example URL 与显式 allow。修复运行时代码中的 `localhost:3000` fallback、裸色类、内联 rgba 与 timeout 数字，新增 C-058 和 exec-plan。 |

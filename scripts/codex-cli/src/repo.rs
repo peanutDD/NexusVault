@@ -1,6 +1,7 @@
 use crate::types::{
     ChangelogEntryInput, ReviewLedgerEntryInput, SkillPackResolvedSkill, SkillPackSkillMeta,
 };
+use serde_json::json;
 use std::fs;
 use std::path::Path;
 use std::process::Command as StdCommand;
@@ -376,17 +377,223 @@ pub fn commit_and_push_in(
             .args(["commit", "-m", &msg]),
     )?;
     if push {
-        checked_output_with_retry(
+        let push_result = checked_output_with_retry(
             || {
                 let mut cmd = StdCommand::new("git");
                 cmd.args(["-C", repo_root]).args(["push", "origin", "HEAD"]);
                 cmd
             },
             "git push",
-        )?;
+        );
+        if let Err(error) = push_result {
+            let message = error.to_string();
+            if classify_git_network_error(&message).is_some() {
+                eprintln!(
+                    "⚠️ git push 多次网络失败，改用 GitHub API 发布当前提交: {}",
+                    message
+                );
+                push_head_via_github_api(repo_root)?;
+            } else {
+                return Err(error);
+            }
+        }
     }
 
     Ok(())
+}
+
+fn push_head_via_github_api(repo_root: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let repo = github_repo_full_name()?;
+    let branch = current_branch(repo_root)?;
+    let remote_head = gh_api_get_jq(
+        &format!("repos/{repo}/git/ref/heads/{branch}"),
+        ".object.sha",
+    )?;
+    let base_tree = gh_api_get_jq(
+        &format!("repos/{repo}/git/commits/{remote_head}"),
+        ".tree.sha",
+    )?;
+    let tree_entries = api_tree_entries_for_head(repo_root)?;
+    if tree_entries.is_empty() {
+        return Ok(());
+    }
+
+    let tree = gh_api_json_jq(
+        "POST",
+        &format!("repos/{repo}/git/trees"),
+        json!({
+            "base_tree": base_tree,
+            "tree": tree_entries,
+        }),
+        ".sha",
+    )?;
+    let message = git_stdout(repo_root, &["log", "-1", "--pretty=%B"])?;
+    let commit = gh_api_json_jq(
+        "POST",
+        &format!("repos/{repo}/git/commits"),
+        json!({
+            "message": message.trim_end(),
+            "tree": tree,
+            "parents": [remote_head],
+        }),
+        ".sha",
+    )?;
+    gh_api_json(
+        "PATCH",
+        &format!("repos/{repo}/git/refs/heads/{branch}"),
+        json!({
+            "sha": commit,
+            "force": false,
+        }),
+    )?;
+    eprintln!("✅ GitHub API fallback 已更新远端分支 {branch}");
+    Ok(())
+}
+
+fn github_repo_full_name() -> Result<String, Box<dyn std::error::Error>> {
+    if let Ok(repo) = std::env::var("GITHUB_REPOSITORY")
+        && !repo.trim().is_empty()
+    {
+        return Ok(repo);
+    }
+
+    let output = checked_output_with_retry(
+        || {
+            let mut cmd = StdCommand::new("gh");
+            cmd.args([
+                "repo",
+                "view",
+                "--json",
+                "nameWithOwner",
+                "-q",
+                ".nameWithOwner",
+            ]);
+            cmd
+        },
+        "gh repo view",
+    )?;
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn current_branch(repo_root: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let branch = git_stdout(repo_root, &["branch", "--show-current"])?;
+    let branch = branch.trim();
+    if !branch.is_empty() {
+        return Ok(branch.to_string());
+    }
+    if let Ok(branch) = std::env::var("GITHUB_HEAD_REF")
+        && !branch.trim().is_empty()
+    {
+        return Ok(branch);
+    }
+    Err("无法确定当前分支，无法使用 GitHub API fallback 推送".into())
+}
+
+fn api_tree_entries_for_head(
+    repo_root: &str,
+) -> Result<Vec<serde_json::Value>, Box<dyn std::error::Error>> {
+    let changed = git_stdout(
+        repo_root,
+        &["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
+    )?;
+    let mut entries = Vec::new();
+    for path in changed
+        .lines()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+    {
+        match git_stdout(repo_root, &["show", &format!("HEAD:{path}")]) {
+            Ok(content) => entries.push(json!({
+                "path": path,
+                "mode": git_file_mode(repo_root, path),
+                "type": "blob",
+                "content": content,
+            })),
+            Err(_) => entries.push(json!({
+                "path": path,
+                "mode": "100644",
+                "type": "blob",
+                "sha": serde_json::Value::Null,
+            })),
+        }
+    }
+    Ok(entries)
+}
+
+fn git_file_mode(repo_root: &str, path: &str) -> String {
+    git_stdout(repo_root, &["ls-tree", "HEAD", "--", path])
+        .ok()
+        .and_then(|line| line.split_whitespace().next().map(ToString::to_string))
+        .filter(|mode| mode == "100755")
+        .unwrap_or_else(|| "100644".to_string())
+}
+
+fn git_stdout(repo_root: &str, args: &[&str]) -> Result<String, Box<dyn std::error::Error>> {
+    let output = checked_output(StdCommand::new("git").arg("-C").arg(repo_root).args(args))?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+fn gh_api_get_jq(endpoint: &str, jq: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let endpoint = endpoint.to_string();
+    let jq = jq.to_string();
+    let output = checked_output_with_retry(
+        || {
+            let mut cmd = StdCommand::new("gh");
+            cmd.args(["api", &endpoint, "--jq", &jq]);
+            cmd
+        },
+        "gh api",
+    )?;
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn gh_api_json_jq(
+    method: &str,
+    endpoint: &str,
+    payload: serde_json::Value,
+    jq: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let output = gh_api_json_output(method, endpoint, payload, Some(jq))?;
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn gh_api_json(
+    method: &str,
+    endpoint: &str,
+    payload: serde_json::Value,
+) -> Result<(), Box<dyn std::error::Error>> {
+    gh_api_json_output(method, endpoint, payload, None)?;
+    Ok(())
+}
+
+fn gh_api_json_output(
+    method: &str,
+    endpoint: &str,
+    payload: serde_json::Value,
+    jq: Option<&str>,
+) -> Result<Output, Box<dyn std::error::Error>> {
+    let tmp = std::env::temp_dir().join(format!(
+        "codex-cli-gh-api-{}.json",
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    fs::write(&tmp, serde_json::to_vec(&payload)?)?;
+    let method = method.to_string();
+    let endpoint = endpoint.to_string();
+    let jq = jq.map(ToString::to_string);
+    let input = tmp.to_string_lossy().to_string();
+    let result = checked_output_with_retry(
+        || {
+            let mut cmd = StdCommand::new("gh");
+            cmd.args(["api", "-X", &method, &endpoint, "--input", &input]);
+            if let Some(jq) = &jq {
+                cmd.args(["--jq", jq]);
+            }
+            cmd
+        },
+        "gh api",
+    );
+    let _ = fs::remove_file(&tmp);
+    result
 }
 
 fn checked_output_with_retry<F>(
@@ -440,7 +647,13 @@ where
             stderr.trim()
         );
         if sleep_between_attempts {
-            std::thread::sleep(std::time::Duration::from_secs((attempt * 10) as u64));
+            let sleep_secs = std::env::var("CODEX_REMOTE_RETRY_SLEEP_SECONDS")
+                .ok()
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or((attempt * 10) as u64);
+            if sleep_secs > 0 {
+                std::thread::sleep(std::time::Duration::from_secs(sleep_secs));
+            }
         }
     }
 
@@ -935,5 +1148,145 @@ BODY
 
         assert_eq!(attempt_count, "3");
         assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "ok");
+    }
+
+    #[test]
+    fn commit_and_push_falls_back_to_github_api_when_git_push_network_fails() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-api-push-fallback-{}", now));
+        let repo = dir.join("repo");
+        let bin = dir.join("bin");
+        fs::create_dir_all(repo.join("src")).unwrap();
+        fs::create_dir_all(&bin).unwrap();
+
+        let real_git = StdCommand::new("sh")
+            .arg("-c")
+            .arg("command -v git")
+            .output()
+            .unwrap();
+        let real_git = String::from_utf8_lossy(&real_git.stdout).trim().to_string();
+
+        StdCommand::new(&real_git)
+            .arg("init")
+            .arg(&repo)
+            .output()
+            .unwrap();
+        StdCommand::new(&real_git)
+            .arg("-C")
+            .arg(&repo)
+            .args(["checkout", "-b", "codex/test"])
+            .output()
+            .unwrap();
+        StdCommand::new(&real_git)
+            .arg("-C")
+            .arg(&repo)
+            .args(["config", "user.name", "Codex Test"])
+            .output()
+            .unwrap();
+        StdCommand::new(&real_git)
+            .arg("-C")
+            .arg(&repo)
+            .args(["config", "user.email", "codex-test@example.invalid"])
+            .output()
+            .unwrap();
+        fs::write(
+            repo.join("src/lib.rs"),
+            "pub fn value() -> i32 {\n    1\n}\n",
+        )
+        .unwrap();
+        StdCommand::new(&real_git)
+            .arg("-C")
+            .arg(&repo)
+            .args(["add", "."])
+            .output()
+            .unwrap();
+        StdCommand::new(&real_git)
+            .arg("-C")
+            .arg(&repo)
+            .args(["commit", "-m", "initial"])
+            .output()
+            .unwrap();
+        let parent = StdCommand::new(&real_git)
+            .arg("-C")
+            .arg(&repo)
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .unwrap();
+        let parent = String::from_utf8_lossy(&parent.stdout).trim().to_string();
+        let tree = StdCommand::new(&real_git)
+            .arg("-C")
+            .arg(&repo)
+            .args(["rev-parse", "HEAD^{tree}"])
+            .output()
+            .unwrap();
+        let tree = String::from_utf8_lossy(&tree.stdout).trim().to_string();
+        fs::write(
+            repo.join("src/lib.rs"),
+            "pub fn value() -> i32 {\n    2\n}\n",
+        )
+        .unwrap();
+
+        let push_attempts = dir.join("push-attempts");
+        let git_script = bin.join("git");
+        fs::write(
+            &git_script,
+            format!(
+                "#!/bin/sh\nset -eu\nrepo_arg=\"\"\nif [ \"${{1:-}}\" = \"-C\" ]; then repo_arg=\"-C $2\"; shift 2; fi\nif [ \"${{1:-}}\" = \"push\" ]; then\n  count=0\n  if [ -f '{push_attempts}' ]; then count=$(cat '{push_attempts}'); fi\n  count=$((count + 1))\n  printf '%s' \"$count\" > '{push_attempts}'\n  printf '%s\\n' 'fatal: unable to access https://github.com/owner/repo/: Empty reply from server' >&2\n  exit 128\nfi\nexec '{real_git}' $repo_arg \"$@\"\n",
+                push_attempts = push_attempts.display(),
+                real_git = real_git
+            ),
+        )
+        .unwrap();
+
+        let gh_invocations = dir.join("gh-invocations");
+        let gh_script = bin.join("gh");
+        fs::write(
+            &gh_script,
+            format!(
+                "#!/bin/sh\nset -eu\nprintf '%s\\n' \"$*\" >> '{gh_invocations}'\nif [ \"$1\" = \"repo\" ]; then printf '%s\\n' 'owner/repo'; exit 0; fi\nif [ \"$1\" = \"api\" ]; then\n  args=\"$*\"\n  case \"$args\" in\n    *'-X PATCH'*'git/refs/heads/codex/test'*) printf '%s\\n' '{{}}'; exit 0 ;;\n    *'git/ref/heads/codex/test'*) printf '%s\\n' '{parent}'; exit 0 ;;\n    *'git/commits/{parent}'*) printf '%s\\n' '{tree}'; exit 0 ;;\n    *'-X POST'*'git/trees'*) printf '%s\\n' 'api-tree-sha'; exit 0 ;;\n    *'-X POST'*'git/commits'*) printf '%s\\n' 'api-commit-sha'; exit 0 ;;\n  esac\nfi\nprintf '%s\\n' \"unexpected gh $*\" >&2\nexit 1\n",
+                gh_invocations = gh_invocations.display(),
+                parent = parent,
+                tree = tree
+            ),
+        )
+        .unwrap();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            for script in [&git_script, &gh_script] {
+                let mut permissions = fs::metadata(script).unwrap().permissions();
+                permissions.set_mode(0o755);
+                fs::set_permissions(script, permissions).unwrap();
+            }
+        }
+
+        let original_path = std::env::var("PATH").unwrap_or_default();
+        let original_sleep = std::env::var("CODEX_REMOTE_RETRY_SLEEP_SECONDS").ok();
+        let path = format!("{}:{}", bin.display(), original_path);
+        unsafe {
+            std::env::set_var("PATH", &path);
+            std::env::set_var("CODEX_REMOTE_RETRY_SLEEP_SECONDS", "0");
+        }
+        let result = commit_and_push_in(repo.to_str().unwrap(), &["src/lib.rs".to_string()], true);
+        unsafe {
+            std::env::set_var("PATH", original_path);
+            if let Some(original_sleep) = original_sleep {
+                std::env::set_var("CODEX_REMOTE_RETRY_SLEEP_SECONDS", original_sleep);
+            } else {
+                std::env::remove_var("CODEX_REMOTE_RETRY_SLEEP_SECONDS");
+            }
+        }
+        let push_attempt_count = fs::read_to_string(&push_attempts).unwrap();
+        let gh_calls = fs::read_to_string(&gh_invocations).unwrap_or_default();
+        let _ = fs::remove_dir_all(&dir);
+
+        assert!(result.is_ok(), "result={result:?}");
+        assert_eq!(push_attempt_count, "3");
+        assert!(gh_calls.contains("-X PATCH"));
+        assert!(gh_calls.contains("git/refs/heads/codex/test"));
     }
 }
