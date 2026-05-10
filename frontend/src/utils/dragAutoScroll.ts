@@ -1,8 +1,53 @@
 const EDGE_THRESHOLD_PX = 96;
 const MAX_SCROLL_DELTA_PX = 22;
 
-let rafId: number | null = null;
-let latestClientY: number | null = null;
+export class DragAutoScroller {
+  private rafId: number | null = null;
+  private latestClientY: number | null = null;
+
+  private tick = () => {
+    if (this.latestClientY == null) {
+      this.rafId = null;
+      return;
+    }
+
+    const delta = calculateDragAutoScrollDelta(this.latestClientY, window.innerHeight);
+    if (delta !== 0) {
+      window.scrollBy({ top: delta, behavior: "auto" });
+      this.rafId = window.requestAnimationFrame(this.tick);
+      return;
+    }
+
+    this.rafId = null;
+  };
+
+  start() {
+    if (this.rafId != null) return;
+    this.rafId = window.requestAnimationFrame(this.tick);
+  }
+
+  update(clientY: number) {
+    this.latestClientY = clientY;
+    if (calculateDragAutoScrollDelta(clientY, window.innerHeight) === 0) {
+      return;
+    }
+    this.start();
+  }
+
+  stop() {
+    this.latestClientY = null;
+    if (this.rafId != null) {
+      window.cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+}
+
+export function createDragAutoScroller() {
+  return new DragAutoScroller();
+}
+
+const defaultDragAutoScroller = createDragAutoScroller();
 
 export function calculateDragAutoScrollDelta(
   clientY: number,
@@ -24,39 +69,14 @@ export function calculateDragAutoScrollDelta(
   return 0;
 }
 
-function tick() {
-  if (latestClientY == null) {
-    rafId = null;
-    return;
-  }
-
-  const delta = calculateDragAutoScrollDelta(latestClientY, window.innerHeight);
-  if (delta !== 0) {
-    window.scrollBy({ top: delta, behavior: "auto" });
-    rafId = window.requestAnimationFrame(tick);
-    return;
-  }
-
-  rafId = null;
-}
-
 export function startDragAutoScroll() {
-  if (rafId != null) return;
-  rafId = window.requestAnimationFrame(tick);
+  defaultDragAutoScroller.start();
 }
 
 export function updateDragAutoScroll(clientY: number) {
-  latestClientY = clientY;
-  if (calculateDragAutoScrollDelta(clientY, window.innerHeight) === 0) {
-    return;
-  }
-  startDragAutoScroll();
+  defaultDragAutoScroller.update(clientY);
 }
 
 export function stopDragAutoScroll() {
-  latestClientY = null;
-  if (rafId != null) {
-    window.cancelAnimationFrame(rafId);
-    rafId = null;
-  }
+  defaultDragAutoScroller.stop();
 }

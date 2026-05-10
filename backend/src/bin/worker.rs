@@ -104,8 +104,8 @@ async fn main() -> anyhow::Result<()> {
         let state_for_scheduler = state.clone();
         tokio::spawn(async move {
             loop {
-                let today = chrono::Utc::now().date_naive();
-                let dedupe_key = format!("trash_cleanup:{}", today);
+                let cleanup_slot = chrono::Utc::now().format("%Y-%m-%dT%H").to_string();
+                let dedupe_key = format!("trash_cleanup:{}", cleanup_slot);
                 let payload = json!({
                     "retention_days": 30,
                     "batch_limit": 500,

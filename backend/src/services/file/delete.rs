@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use futures::future::join_all;
+use futures::StreamExt;
 
 use crate::models::file::{BatchTrashFailure, BatchTrashResult, FileResponse};
 use uuid::Uuid;
@@ -155,18 +155,20 @@ impl FileService {
             .collect();
         let ref_counts = self.files_repo.count_by_file_paths(&paths).await?;
 
-        join_all(
-            files
-                .iter()
-                .map(|file| self.delete_derived_assets(file.id, file.user_id)),
-        )
-        .await;
+        futures::stream::iter(files.iter())
+            .for_each_concurrent(10, |file| self.delete_derived_assets(file.id, file.user_id))
+            .await;
 
-        join_all(paths.into_iter().filter_map(|path| {
-            (ref_counts.get(&path).copied().unwrap_or(0) == 0)
-                .then_some(async move { self.storage.delete_file(&path).await })
-        }))
-        .await;
+        futures::stream::iter(paths.into_iter())
+            .filter(|path| {
+                let path = path.clone();
+                let ref_counts = &ref_counts;
+                async move { ref_counts.get(&path).copied().unwrap_or(0) == 0 }
+            })
+            .for_each_concurrent(10, |path| async move {
+                let _ = self.storage.delete_file(&path).await;
+            })
+            .await;
         Ok(())
     }
 
