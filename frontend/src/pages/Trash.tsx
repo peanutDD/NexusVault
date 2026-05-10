@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -37,8 +37,9 @@ const EMPTY_FILES: FileMetadata[] = [];
 const TRASH_RETENTION_DAYS = 30;
 const RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const TRASH_RETENTION_REFRESH_MS = 60 * 1000;
 
-function getRetentionState(value?: string | null) {
+function getRetentionState(value?: string | null, now = Date.now()) {
   if (!value) {
     return {
       daysLeft: TRASH_RETENTION_DAYS,
@@ -54,7 +55,7 @@ function getRetentionState(value?: string | null) {
     };
   }
 
-  const elapsed = Math.min(Math.max(Date.now() - deletedAt, 0), RETENTION_MS);
+  const elapsed = Math.min(Math.max(now - deletedAt, 0), RETENTION_MS);
   const daysLeft = Math.max(0, Math.ceil((RETENTION_MS - elapsed) / ONE_DAY_MS));
 
   return {
@@ -67,6 +68,20 @@ function getCountdownClass(daysLeft: number) {
   if (daysLeft <= 3) return "text-[var(--trash-countdown-danger)]";
   if (daysLeft <= 10) return "text-[var(--trash-countdown-warn)]";
   return "text-[var(--trash-countdown-text)]";
+}
+
+function useTrashRetentionClock() {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, TRASH_RETENTION_REFRESH_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  return now;
 }
 
 type TrashLocationState = {
@@ -115,6 +130,7 @@ export default function Trash() {
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const retentionNow = useTrashRetentionClock();
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["trash"],
@@ -380,7 +396,7 @@ export default function Trash() {
               className="grid grid-cols-3 gap-x-[clamp(0.4rem,1vw,0.5rem)] gap-y-[clamp(0.6rem,1.4vw,0.75rem)] sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
             >
               {files.map((file) => {
-                const retention = getRetentionState(file.deleted_at);
+                const retention = getRetentionState(file.deleted_at, retentionNow);
                 const isSelected = selectedIdSet.has(file.id);
                 const mimeTypeLabel = getMimeTypeLabel(
                   file.mime_type,

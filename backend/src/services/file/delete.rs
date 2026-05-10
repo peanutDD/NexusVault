@@ -156,7 +156,9 @@ impl FileService {
         let ref_counts = self.files_repo.count_by_file_paths(&paths).await?;
 
         futures::stream::iter(files.iter())
-            .for_each_concurrent(10, |file| self.delete_derived_assets(file.id, file.user_id))
+            .map(|file| self.delete_derived_assets(file.id, file.user_id))
+            .buffer_unordered(10)
+            .for_each(|_| async {})
             .await;
 
         futures::stream::iter(paths.into_iter())
