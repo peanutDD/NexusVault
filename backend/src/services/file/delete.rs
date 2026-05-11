@@ -112,7 +112,8 @@ impl FileService {
             .find_deleted_by_id(file_id, user_id)
             .await?
             .ok_or(AppError::NotFound)?;
-        self.cleanup_unreferenced_deleted_files(&[file.clone()]).await?;
+        self.cleanup_unreferenced_deleted_files(std::slice::from_ref(&file), false)
+            .await?;
         let affected = self
             .files_repo
             .hard_delete_deleted(file_id, user_id)
@@ -146,7 +147,8 @@ impl FileService {
             }
         }
 
-        self.cleanup_unreferenced_deleted_files(&files).await?;
+        self.cleanup_unreferenced_deleted_files(&files, false)
+            .await?;
 
         let file_ids = files.iter().map(|file| file.id).collect::<Vec<_>>();
         let deleted_files = self
@@ -184,7 +186,8 @@ impl FileService {
                 break;
             }
 
-            self.cleanup_unreferenced_deleted_files(&files).await?;
+            self.cleanup_unreferenced_deleted_files(&files, false)
+                .await?;
 
             let ids = files.iter().map(|file| file.id).collect::<Vec<_>>();
             deleted += self
@@ -213,13 +216,15 @@ impl FileService {
             .purge_expired_deleted(retention_days, batch_limit)
             .await?;
         let deleted = files.len() as u64;
-        self.cleanup_unreferenced_deleted_files(&files).await?;
+        self.cleanup_unreferenced_deleted_files(&files, true)
+            .await?;
         Ok(deleted)
     }
 
     async fn cleanup_unreferenced_deleted_files(
         &self,
         files: &[crate::entities::file::File],
+        rows_already_deleted: bool,
     ) -> Result<(), AppError> {
         let mut purge_counts: HashMap<_, HashSet<_>> = HashMap::new();
         for file in files {
@@ -244,7 +249,12 @@ impl FileService {
                     .get(path)
                     .map(|file_ids| file_ids.len() as u64)
                     .unwrap_or(0);
-                total_refs.saturating_sub(purging_refs) == 0
+                let remaining_refs = if rows_already_deleted {
+                    total_refs
+                } else {
+                    total_refs.saturating_sub(purging_refs)
+                };
+                remaining_refs == 0
             })
             .collect::<Vec<_>>();
 
@@ -268,8 +278,8 @@ impl FileService {
             .collect::<Vec<_>>();
 
         if !errors.is_empty() {
-            return Err(AppError::Internal(format!(
-                "deleted file cleanup failed before database rows were removed: {}",
+            return Err(AppError::Storage(format!(
+                "deleted file cleanup failed: {}",
                 errors.join("; ")
             )));
         }
