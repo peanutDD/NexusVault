@@ -2,11 +2,14 @@
 
 - **计划编号**: AFPR-001
 - **日期**: 2026-05-09
+- **状态**: ✅ 已完成（人类签收 2026-05-09，方案 A）
 - **作者**: Corust AI（人类批准后执行）
 - **关联**: PR #26 自动修复失败日志（`backend/src/services/file/delete.rs` 多次 `corrupt patch`）
 - **影响范围**: `scripts/codex-cli/`（不涉及业务后端/前端代码）
-- **预计工时**: 1.5 ~ 2 个工作日
+- **预计工时**: 1.5 ~ 2 个工作日（实际：分多个 commit 已落地，T6.1 黄金集留作 backlog）
 - **遵循**: `AGENTS.md` 15 条黄金规则、`CLAUDE.md` Hook 自迭代机制
+
+> **执行回顾（2026-05-09）**：核心 Phase 1~5 在前序提交（`68950cd`/`960c60d`/`beab0b7`/`e3844fa`/`4a4f99f`）中已落地并通过 `cargo test --all`；本次签收补齐 Phase 6 文档与永久约束（C-057），并在 `docs/quality-score.md` 入档；T6.1 真实黄金集为避免历史 PR 数据脱敏风险，记入 backlog，等待下次自然失败案例触发再补。
 
 ---
 
@@ -151,27 +154,30 @@ LLM 输出（auto-detect format）
 
 ### Phase 1: 模块脚手架与契约（半天）
 
-- [ ] **T1.1** 新建 `patch::PatchFormat` 枚举与 `Patch` trait
+- [x] **T1.1** 新建 `patch::PatchFormat` 枚举与 `Patch` trait
   - 测试：`patch_format_detection_test`（5 个用例：纯 SR / 纯 diff / 混合 / 空 / 噪声）
   - 实现：`mod.rs` 中 `detect_format(text: &str) -> PatchFormat`
   - 验收：`cargo test patch_format_detection_test`
+  - **完成证据**：`scripts/codex-cli/src/patch/mod.rs` + `scripts/codex-cli/tests/patch_search_replace.rs::patch_format_detection_test` ✅
 
-- [ ] **T1.2** 迁移 unified_diff 实现到 `patch/unified_diff.rs`
+- [x] **T1.2** 迁移 unified_diff 实现到 `patch/unified_diff.rs`
   - 测试：原 `repo.rs` 中所有 `apply_patch_*` 测试**直接复制并通过**（路径变更不算回归）
   - 实现：`pub use` re-export 保留向后兼容
   - 验收：`cargo test --all` 全绿
+  - **完成证据**：`scripts/codex-cli/src/repo.rs` 头部 `pub use crate::patch::unified_diff::*` re-export；现存 `apply_patch_*` 单测全部从新模块运行 ✅
 
 ### Phase 2: SEARCH/REPLACE 核心（1 天）
 
-- [ ] **T2.1** SR Block 解析器（含语法校验）
+- [x] **T2.1** SR Block 解析器（含语法校验）
   - 测试 `sr_parser_test.rs`：
     - 单 block / 多 block / 空 SEARCH / 空 REPLACE
     - 缺少分隔符（`=======` / `>>>>>>> REPLACE`）→ 明确错误
     - `### File:` 与 `Allowed file` 不一致 → 拒绝
     - block 数 > `CODEX_SR_MAX_BLOCKS` → 拒绝
   - 实现：`SearchReplaceParser::parse(text, allowed_file) -> Result<Vec<Block>, ParseError>`
+  - **完成证据**：`scripts/codex-cli/src/patch/search_replace.rs::parse_search_replace_blocks` + `tests/patch_search_replace.rs::sr_parser_*`（3 个测试） ✅
 
-- [ ] **T2.2** 三级匹配引擎
+- [x] **T2.2** 三级匹配引擎
   - 测试 `sr_match_test.rs`：
     - L1 精确单匹配 → 成功
     - L1 多匹配 → `MatchAmbiguous`
@@ -179,8 +185,9 @@ LLM 输出（auto-detect format）
     - L3 单匹配 → 成功（标记降级 +warning）
     - L3 仍 0 匹配 → `MatchNotFound`
   - 实现：`MatchEngine::find(haystack, needle) -> MatchOutcome`
+  - **完成证据**：`patch/search_replace.rs::find_unique_match` 实现三级降级 + `tests/patch_search_replace.rs::sr_apply_uses_trimmed_line_match_but_rejects_ambiguous_matches` / `sr_apply_uses_normalized_indent_match` ✅
 
-- [ ] **T2.3** 应用器
+- [x] **T2.3** 应用器
   - 测试 `sr_apply_test.rs`（用 tempdir + 真实文件 IO）：
     - 单 block 替换持久化
     - 多 block 顺序无关（按文件偏移自动排序）
@@ -188,72 +195,83 @@ LLM 输出（auto-detect format）
     - 空 SEARCH → 末尾追加
     - 空 REPLACE → 等价删除
   - 实现：`apply_search_replace_in(repo_root, file, blocks) -> Result<ApplyOutcome>`
+  - **完成证据**：`patch/search_replace.rs::apply_search_replace_in` + `tests/patch_search_replace.rs::sr_apply_replaces_deletes_and_appends` ✅
 
 ### Phase 3: Prompt 与 LLM 集成（半天）
 
-- [ ] **T3.1** 新增 `prompts::search_replace_system_prompt()`
+- [x] **T3.1** 新增 `prompts::search_replace_system_prompt()`
   - 测试：snapshot 测试，确保关键约束句存在（`Allowed file`、`### File:`、`<<<<<<< SEARCH`、`max blocks`）
   - 内容要点：
     - 强制使用 SR block，禁止 unified diff
     - 强制 `### File: <exact path>` 头
     - 单文件唯一性、上下文 ≥3 行（含义稳定）
     - 失败重试 prompt 携带 `match_reason`（ambiguous / not_found）
+  - **完成证据**：`scripts/codex-cli/src/skills.rs::search_replace_system_prompt` 内嵌 `### File:` / `<<<<<<< SEARCH` / `>>>>>>> REPLACE` 等关键约束文本 ✅
 
-- [ ] **T3.2** 改写 `generate_fix_patch` / `generate_retry_fix_patch`
+- [x] **T3.2** 改写 `generate_fix_patch` / `generate_retry_fix_patch`
   - 测试：mock LLM client（已有 `MockCodexClient` 模式？若无则在 `tests/` 下加 trait 桩）
   - 实现：根据 `CODEX_PATCH_FORMAT` 决定走 SR / diff，默认 `auto = SR 优先`
-  - 兼容：保留旧函数签名作为 thin wrapper，标记 `#[deprecated]`
+  - 兼容：保留旧函数签名作为 thin wrapper（未标 `#[deprecated]`，因仍是双格式入口）
+  - **完成证据**：`skills.rs::generate_fix_patch` + `requested_patch_format()` 路由 + `RequestedPatchFormat::{Auto,SearchReplace,UnifiedDiff}` 枚举；端到端覆盖在 `tests/e2e_auto_fix.rs` ✅
 
 ### Phase 4: BatchFix 编排修复（半天）
 
-- [ ] **T4.1** 改造 `BatchFixSkill::execute` 走新 `patch::apply` 入口
+- [x] **T4.1** 改造 `BatchFixSkill::execute` 走新 `patch::apply` 入口
   - 测试 `batch_fix_pipeline_test.rs`（覆盖三层兜底序列）：
     - SR 一次成功 → `fixed_files.len() == 1`，无 fallback
     - SR 失败 + diff 成功 → `fix_attempts` 含降级标记
     - SR 失败 + diff 失败 + 整文件兜底成功
     - 全部失败 → `fixed_files.is_empty()` 且 `fix_attempts` 完整记录
   - 实现：将现有重试 / 兜底分支统一进 `patch::apply` 内部
+  - **完成证据**：`skills.rs::apply_generated_patch` 统一入口 + `BatchFixSkill::execute` 串联 `generate_fix_patch → apply → 重试 → apply_full_file_fallback`；`tests/e2e_auto_fix.rs` 覆盖三层兜底序列 ✅
 
-- [ ] **T4.2** 修复 `apply_full_file_fallback` 走"整文件 SR" 优先
+- [x] **T4.2** 修复 `apply_full_file_fallback` 走"整文件 SR" 优先
   - 测试：兜底单测中验证调用顺序（SR-fullfile → raw-fullfile）
   - 实现：新增 `generate_replacement_via_sr_block` helper，失败再用 `generate_replacement_file`
+  - **完成证据**：`skills.rs::apply_full_file_fallback` 内部先调 `generate_replacement_via_search_replace`，失败再走 `generate_replacement_file`；e2e 覆盖 ✅
 
 ### Phase 5: 衍生问题修复（半天）
 
-- [ ] **T5.1** 失败短路逻辑
+- [x] **T5.1** 失败短路逻辑
   - 测试 `pipeline_short_circuit_test.rs`：
     - `selected=3, fixed=0` → SecurityCheck / QualityScore / Documentation 全 skip
     - `selected=3, fixed=2` → 三者都跑
     - `selected=0` → 现有行为保持
   - 实现：`pipeline.rs` 在执行 Skill 前用 `should_skip_post_fix(&ctx)` 判断
+  - **完成证据**：`skills.rs::should_skip_post_fix_checks` + `SecurityCheckSkill / QualityScoreSkill / DocumentationSkill` 顶部短路；e2e 断言 `quality_score_available=false` 与 `pending_explanations` ✅
 
-- [ ] **T5.2** Push retry 覆盖扩大
+- [x] **T5.2** Push retry 覆盖扩大
   - 测试：用 `Command::env("PATH", fake_git_dir)` 注入失败 git → 验证 retry 次数
   - 实现：抽 `git_with_retry(args)` helper，替换 `commit_and_push_in` / Feedback 阶段所有 `git`/`gh` 远程操作
   - 重点：`gh pr comment` 失败时，根据 stderr 判断是网络（重试）还是权限（直接失败）
+  - **完成证据**：`repo.rs::checked_output_with_retry` + `push_with_retry` + `post_comment` 共用；`tests/repo` 中 `checked_output_with_retry_retries_empty_reply_from_server` ✅
 
-- [ ] **T5.3** Empty reply from server 专用诊断
+- [x] **T5.3** Empty reply from server 专用诊断
   - 测试：注入 `Empty reply from server` stderr → retry 提示中包含「网络抖动，已重试 N/3」
   - 实现：`classify_git_network_error` 新分类
+  - **完成证据**：`repo.rs::classify_git_network_error` 识别 `Empty reply from server` / `Failed to connect` / `connection reset` / `timeout`；`transient_remote_errors_are_retryable` 单测 ✅
 
 ### Phase 6: 黄金集回归 + 文档（半天）
 
-- [ ] **T6.1** 黄金集（golden tests）
+- [ ] **T6.1** 黄金集（golden tests）— **backlog（人类批准跳过）**
   - 数据：`scripts/codex-cli/tests/fixtures/golden/`
     - 5 个真实历史失败的 (review_issue, source_file) 对（脱敏）
   - 测试：mock LLM 返回 SR 块，断言修复后文件 hash 与预期一致
   - 验收：5/5 全绿
+  - **当前状态**：合成 SR 单测（`tests/patch_search_replace.rs` 6 个）已覆盖三级匹配 / 重叠 / 歧义 / 末尾追加 / 删除 / 多 block 等关键路径；真实历史 PR review JSON 涉及私有数据脱敏成本，按方案 A 决定**留作 backlog**，遇到下一次真实失败时自然补入此目录。
 
-- [ ] **T6.2** 文档
-  - `scripts/codex-cli/docs/architecture.md`：补 §「补丁应用策略」
-  - `scripts/codex-cli/docs/troubleshooting.md`：新增 §「BatchFix 失败排查」
-  - `scripts/codex-cli/docs/configuration.md`：补 `CODEX_PATCH_FORMAT` 等新变量
-  - `scripts/codex-cli/AGENTS.md`：在 §「Skills 概览」下加 SR 链路说明
-  - `docs/quality-score.md`：本任务结束追加分数 ≥ 95 的记录
+- [x] **T6.2** 文档
+  - `scripts/codex-cli/docs/architecture.md`：补 §「补丁应用策略」 ✅
+  - `scripts/codex-cli/docs/troubleshooting.md`：新增 §「BatchFix 失败排查」 ✅
+  - `scripts/codex-cli/docs/configuration.md`：补 `CODEX_PATCH_FORMAT` 等新变量 ✅
+  - `scripts/codex-cli/docs/references/troubleshooting.md` §5/§7/§8：扩展 SR 应用失败、未修复短路、`Empty reply from server` 重试 ✅
+  - `scripts/codex-cli/docs/references/configuration.md`：补全 SR 主路径与变量表 ✅
+  - `scripts/codex-cli/AGENTS.md`：在现有结构下保留 SR 链路引用（无强制新增小节）
+  - `docs/quality-score.md`：本任务结束追加分数 ≥ 95 的记录 ✅（2026-05-09 行：`codex-cli SEARCH/REPLACE auto-fix reliability`）
 
-- [ ] **T6.3** 更新 `docs/constraints/`
-  - 新增 `constraints/codex-cli-patch-format.md`：永久约束「禁止再让 LLM 直接产 unified diff 作为主路径」
-  - 防止下次倒退
+- [x] **T6.3** 更新 `docs/constraints/`
+  - 新增 `docs/constraints/C-057-codex-auto-fix-search-replace-format.md`：永久约束「禁止再让 LLM 直接产 unified diff 作为主路径」+ 历史教训表 + 失效条件 ✅
+  - 姊妹文档 `scripts/codex-cli/docs/constraints/codex-cli-patch-format.md`：落地行为细则 ✅
 
 ---
 
@@ -329,6 +347,15 @@ PR 合并前以下**全部**为绿：
 
 ---
 
-**计划状态**: 🟡 待人类批准
-**批准人**: ____________________
-**批准时间**: ____________________
+**计划状态**: ✅ 已完成并签收
+**批准人**: 人类（项目所有者，2026-05-09）
+**执行选择**: 方案 A（跳过 T6.1 黄金集，作为 backlog；其余 T6.2/T6.3 全部完成）
+**最终验证**:
+- `cd scripts/codex-cli && cargo fmt --all -- --check` ✅
+- `cd scripts/codex-cli && cargo clippy --all-targets --all-features -- -D warnings` ✅
+- `cd scripts/codex-cli && cargo test --all` ✅
+- `docs/quality-score.md` 已追加 ≥95 分记录 ✅
+- C-057 永久约束已入档 ✅
+
+**Backlog（不阻塞合并）**:
+- T6.1 真实黄金集：等待下一次真实失败案例自然触发再补入 `scripts/codex-cli/tests/fixtures/golden/`
