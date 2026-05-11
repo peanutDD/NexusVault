@@ -255,17 +255,42 @@ pub fn build_auto_review_ledger_entry(input: &ReviewLedgerEntryInput) -> String 
         }
     }
 
-    entry.push_str("\n| # | Severity | File:line | Gemini 问题 | 状态 | 解决答案 / 未解决原因 |\n");
-    entry.push_str("|---|---|---|---|---|---|\n");
+    entry.push_str("\n| # | Severity | File:line | Gemini 问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |\n");
+    entry.push_str("|---|---|---|---|---|---|---|---|---|---|---|\n");
     for (index, status) in input.statuses.iter().enumerate() {
+        let constraints = if status.constraints.is_empty() {
+            "(none)".to_string()
+        } else {
+            status.constraints.join("; ")
+        };
+        let related_files = if status.related_files.is_empty() {
+            "(none)".to_string()
+        } else {
+            status
+                .related_files
+                .iter()
+                .map(|file| format!("`{}`", file))
+                .collect::<Vec<_>>()
+                .join("<br>")
+        };
+        let method_or_failure = status
+            .failure_reason
+            .as_deref()
+            .filter(|reason| !reason.trim().is_empty())
+            .unwrap_or(&status.fix_method);
         entry.push_str(&format!(
-            "| {} | {} | `{}`:{} | {} | {} | {} |\n",
+            "| {} | {} | `{}`:{} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             index + 1,
             markdown_table_cell(&status.severity),
             markdown_table_cell(&status.file),
             status.line,
             markdown_table_cell(&status.description),
+            markdown_table_cell(&status.suggestion),
+            markdown_table_cell(&constraints),
+            markdown_table_cell(&status.auto_fix_scope),
             markdown_table_cell(&status.status),
+            markdown_table_cell(method_or_failure),
+            markdown_table_cell(&related_files),
             markdown_table_cell(&status.explanation)
         ));
     }

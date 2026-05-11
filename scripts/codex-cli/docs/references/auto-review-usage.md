@@ -8,10 +8,10 @@
 2. Gemini Code Assist 在 PR 中生成 Review 评论。
 3. `.github/workflows/codex-auto-fix.yml` 监听 Gemini 评论。
 4. self-hosted runner 拉取 PR 分支，调用 `codex-auto-fix pr-auto-fix`。
-5. `scripts/codex-cli` 解析 Review，筛选 `Critical/High/Medium+/Medium` 问题。
-6. 本地 Codex GPT-5.5 生成 unified diff，`git apply` 应用补丁。
+5. `scripts/codex-cli` 解析 Review，完整保留所有 severity，并筛选 `Critical/High/Medium+/Medium` 问题进入自动修复。
+6. 本地 Codex GPT-5.5 优先生成 SEARCH/REPLACE block，本地应用补丁。
 7. 安全审计、质量评分、changelog 记录通过后，自动 commit/push。
-8. 若本轮解决了 `Critical/High/Medium+/Medium` 问题，写入 `docs/auto-review-ledger.md`，逐条记录 Gemini 问题、Codex 状态、解决答案和修改文件。
+8. 只要本轮解析到 Review 问题，就写入 `docs/auto-review-ledger.md` 和 per-PR ledger，逐条记录原问题、建议、约束、是否进入自动修复、修复方式/失败原因、关联文件和最终答案。
 9. workflow 根据标签最多请求第二轮 Gemini Review。
 10. 人类查看最终 diff、评论和本地 ledger，决定 merge 或重跑。
 
@@ -181,25 +181,28 @@ CODEX_EXCLUDE_DOCS=true
 
 - `fixed=true`：本轮有变更且已允许进入后续轮次。
 - `review_record_path`：本轮写入的本地逐项处理台账；无可记录问题或禁用文档记录时为 `null`。
-- `issue_statuses`：Gemini 每条 `Medium/Medium+/High/Critical` 问题的一一对应状态。
+- `issue_statuses`：Gemini 每条结构化 review 问题的一一对应状态；Low/Info 会以 `tracked` 记录。
 
 ## 本地处理台账
 
-默认情况下，`codex-auto-fix` 会在修复提交前追加 `docs/auto-review-ledger.md`，并同步追加 `docs/auto-review-ledgers/pr-<number>.md`（本地运行写入 `docs/auto-review-ledgers/local.md`）。这些文件不是汇总 changelog，而是逐项诊断记录：
+默认情况下，`codex-auto-fix` 会在反馈/提交前追加 `docs/auto-review-ledger.md`，并同步追加 `docs/auto-review-ledgers/pr-<number>.md`（本地运行写入 `docs/auto-review-ledgers/local.md`）。这些文件不是汇总 changelog，而是逐项 PR review 审计记录：
 
 - Gemini 提出的问题是什么。
 - 问题位于哪个文件和行。
-- Codex 标记为 `resolved`、`pending` 还是 `blocked`。
-- 已解决时的答案，例如“已自动修复”。
+- Gemini 建议、约束和该 issue 是否进入自动修复范围。
+- Codex 标记为 `resolved`、`pending`、`blocked` 还是 `tracked`。
+- 已解决时的修复摘要和修复方式。
 - 未解决或阻塞时的原因。
-- 本轮修改了哪些文件。
+- 本轮关联了哪些文件。
+
+Ledger 会记录 Low/Info 问题；它们默认是 `tracked` / `not_selected`，用于审计追踪，不会因此进入自动修复或 pending 阻塞。
 
 `--disable-changelog` 会同时关闭 changelog 和 ledger 写入，主要用于测试或不希望产生文档变更的本地运行。
 - `fixed=false`：没有变更，或变更被安全门禁拦截。
 - `push_blocked=true`：生成了变更，但安全审计 fail-closed，未 commit/push。
 - `has_pending=true` / `pending_count>0`：仍有 `Medium/Medium+/High/Critical` 问题没有自动修复，PR 不可视为 clean。
 - `review_clean=true`：当前 Codex 解析出的 `Medium/Medium+/High/Critical` 问题全部修复或不存在，且未被安全门禁阻断。
-- `issue_statuses`：当前 Gemini Review 中每个 `Medium/Medium+/High/Critical` 问题的一一对应状态；PR 评论会用同一份数据渲染 `Medium/Medium+/High/Critical 对应状态` 表。
+- `issue_statuses`：当前 Gemini Review 中每个结构化问题的一一对应状态；PR 评论会用同一份数据渲染 `Review 问题对应状态` 表。
 - `fixed_explanations`：`Medium/Medium+/High/Critical` 问题已自动修复时的 issue 级说明。
 - `pending_explanations`：`Medium/Medium+/High/Critical` 问题未修复时的原因。
 - `quality_score_available=false`：质量评分不可用，不等于真实 0 分。

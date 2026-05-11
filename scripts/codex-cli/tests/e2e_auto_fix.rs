@@ -143,10 +143,10 @@ fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
     let review = workspace.path.join("review.md");
     fs::write(
         &review,
-        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+        "## Gemini Code Assist Review\n\nMedium: fix value.\nLow: document naming.\nInfo: add context.\n",
     )
     .unwrap();
-    let fake_agent = workspace.fake_agent("success");
+    let fake_agent = workspace.fake_agent("audit_mixed_success");
 
     let output = run_auto_fix_with_docs(&repo, &review, &fake_agent, false);
     assert!(output.status.success(), "stderr={}", stderr(&output));
@@ -173,7 +173,14 @@ fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
     assert!(ledger.contains("Medium"));
     assert!(ledger.contains("fix value"));
     assert!(ledger.contains("resolved"));
-    assert!(ledger.contains("已自动修复"));
+    assert!(ledger.contains("修复摘要"));
+    assert!(ledger.contains("Low"));
+    assert!(ledger.contains("Info"));
+    assert!(ledger.contains("consider renaming"));
+    assert!(ledger.contains("no public API change"));
+    assert!(ledger.contains("not_selected"));
+    assert!(ledger.contains("Suggestion"));
+    assert!(ledger.contains("Constraints"));
     assert!(ledger.contains("src/lib.rs"));
     assert!(ledger.contains("修改文件"));
 
@@ -181,7 +188,71 @@ fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
     assert!(per_pr_ledger.contains("Medium"));
     assert!(per_pr_ledger.contains("fix value"));
     assert!(per_pr_ledger.contains("resolved"));
+    assert!(per_pr_ledger.contains("Low"));
+    assert!(per_pr_ledger.contains("Info"));
     assert!(per_pr_ledger.contains("src/lib.rs"));
+
+    let statuses = json["issue_statuses"].as_array().unwrap();
+    assert_eq!(statuses.len(), 3);
+    assert_eq!(statuses[0]["status"], "resolved");
+    assert_eq!(statuses[0]["fix_method"], "unified_diff");
+    assert!(
+        statuses[0]["explanation"]
+            .as_str()
+            .unwrap()
+            .contains("修复摘要")
+    );
+    assert_eq!(statuses[1]["severity"], "Low");
+    assert_eq!(statuses[1]["status"], "tracked");
+    assert_eq!(statuses[1]["auto_fix_scope"], "not_selected");
+    assert_eq!(statuses[2]["severity"], "Info");
+    assert_eq!(statuses[2]["status"], "tracked");
+}
+
+#[test]
+fn auto_fix_local_writes_full_review_ledger_even_when_no_fix_applies() {
+    let workspace = TestWorkspace::new("review-ledger-no-fix");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "记录 Gemini Review 的完整审计状态，即使没有自动修复。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nLow: document naming.\nInfo: add context.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("audit_no_fix");
+
+    let output = run_auto_fix_with_docs(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], false);
+    assert_eq!(json["review_record_path"], "docs/auto-review-ledger.md");
+    assert_eq!(json["review_clean"], true);
+    assert!(
+        json["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|file| { file.as_str() == Some("docs/auto-review-ledgers/local.md") })
+    );
+
+    let per_pr_ledger = fs::read_to_string(repo.join("docs/auto-review-ledgers/local.md")).unwrap();
+    assert!(per_pr_ledger.contains("Low"));
+    assert!(per_pr_ledger.contains("Info"));
+    assert!(per_pr_ledger.contains("document naming"));
+    assert!(per_pr_ledger.contains("add context"));
+    assert!(per_pr_ledger.contains("tracked"));
+    assert!(per_pr_ledger.contains("not_selected"));
+    assert!(per_pr_ledger.contains("未进入自动修复范围"));
 }
 
 #[test]
@@ -223,7 +294,7 @@ fn pr_auto_fix_posts_issue_status_checklist_comment_in_dry_run() {
 
     let comment = fs::read_to_string(gh_comment).unwrap();
     assert!(comment.contains("Codex 已在本地生成并应用补丁"));
-    assert!(comment.contains("📋 Medium/Medium+/High/Critical 对应状态"));
+    assert!(comment.contains("📋 Review 问题对应状态"));
     assert!(comment.contains("| # | Gemini 问题 | 状态 | 说明 |"));
     assert!(comment.contains("✅ 已解决"));
     assert!(comment.contains("🧭 未解决"));
@@ -285,7 +356,7 @@ fn auto_fix_local_warns_but_pushes_when_security_audit_fails() {
         json["issue_statuses"][0]["explanation"]
             .as_str()
             .unwrap()
-            .contains("已自动修复")
+            .contains("修复摘要")
     );
 
     let commit_count = workspace.git_stdout(&repo, &["rev-list", "--count", "HEAD"]);
@@ -343,7 +414,7 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
         statuses[0]["explanation"]
             .as_str()
             .unwrap()
-            .contains("已自动修复")
+            .contains("修复摘要")
     );
     assert_eq!(statuses[1]["status"], "pending");
     assert_eq!(statuses[1]["line"], 5);
@@ -874,6 +945,10 @@ case "$prompt" in
     fi
     if [ "$mode" = "same_file_partial" ]; then
       printf '%s\n' '{{"summary":"two same-file issues","issues":[{{"severity":"Medium","file":"src/lib.rs","line":1,"description":"fix value","suggestion":"","reason":"first"}},{{"severity":"Medium","file":"src/lib.rs","line":5,"description":"fix other","suggestion":"","reason":"second"}}]}}'
+    elif [ "$mode" = "audit_mixed_success" ]; then
+      printf '%s\n' '{{"summary":"mixed review audit","issues":[{{"severity":"Medium","file":"src/lib.rs","line":1,"description":"fix value","suggestion":"return 2","constraints":["only modify src/lib.rs"],"reason":"medium review"}},{{"severity":"Low","file":"src/lib.rs","line":2,"description":"document naming","suggestion":"consider renaming","constraints":["no public API change"],"reason":"low review"}},{{"severity":"Info","file":"README.md","line":1,"description":"add context","suggestion":"mention runtime behavior","constraints":[],"reason":"info review"}}]}}'
+    elif [ "$mode" = "audit_no_fix" ]; then
+      printf '%s\n' '{{"summary":"low info audit","issues":[{{"severity":"Low","file":"src/lib.rs","line":2,"description":"document naming","suggestion":"consider renaming","constraints":["no public API change"],"reason":"low review"}},{{"severity":"Info","file":"README.md","line":1,"description":"add context","suggestion":"mention runtime behavior","constraints":[],"reason":"info review"}}]}}'
     else
       printf '%s\n' '{{"summary":"one medium issue","issues":[{{"severity":"Medium","file":"src/lib.rs","line":1,"description":"fix value","suggestion":"","reason":"review text"}}]}}'
     fi

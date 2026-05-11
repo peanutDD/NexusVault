@@ -167,6 +167,7 @@ async fn run_auto_fix_loop(
     record_security_findings_as_pending(&mut ctx);
 
     let summary = ctx.parsed_data.as_ref().map(|d| d.summary.clone());
+    let source_fixed = source_fix_created(&ctx);
     let review_record_path = append_review_ledger(&mut ctx, summary.clone())?;
 
     let feedback_pipeline = Pipeline::new()
@@ -184,9 +185,9 @@ async fn run_auto_fix_loop(
 
     let output = PrAutoFixOutput {
         fixed: if ctx.auto_push {
-            !files.is_empty() && !ctx.push_blocked
+            source_fixed && !ctx.push_blocked
         } else {
-            !files.is_empty()
+            source_fixed
         },
         files,
         quality_score: ctx.quality_score,
@@ -277,7 +278,7 @@ fn append_review_ledger(
     ctx: &mut SkillContext,
     summary: Option<String>,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    if ctx.disable_changelog || ctx.fixed_files.is_empty() {
+    if ctx.disable_changelog {
         return Ok(None);
     }
 
@@ -296,6 +297,10 @@ fn append_review_ledger(
     };
 
     repo::append_auto_review_ledger_in(&ctx.repo_root, &mut ctx.fixed_files, &input)
+}
+
+fn source_fix_created(ctx: &SkillContext) -> bool {
+    !ctx.fixed_issue_keys.is_empty() || ctx.fix_attempts.iter().any(|attempt| attempt.success)
 }
 
 fn apply_fail_reason(attempts: &[crate::skills::FixAttempt]) -> Option<String> {

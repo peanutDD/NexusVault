@@ -157,15 +157,27 @@ pub struct PrAutoFixOutput {
     pub issue_statuses: Vec<ReviewIssueStatus>,
 }
 
-/// One-to-one status for a Medium/Medium+/High/Critical review issue.
+/// One-to-one audit status for a parsed review issue.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct ReviewIssueStatus {
     pub severity: String,
     pub file: String,
     pub line: u32,
     pub description: String,
+    #[serde(default)]
+    pub suggestion: String,
+    #[serde(default)]
+    pub constraints: Vec<String>,
+    #[serde(default)]
+    pub auto_fix_scope: String,
     pub status: String,
     pub explanation: String,
+    #[serde(default)]
+    pub fix_method: String,
+    #[serde(default)]
+    pub failure_reason: Option<String>,
+    #[serde(default)]
+    pub related_files: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]

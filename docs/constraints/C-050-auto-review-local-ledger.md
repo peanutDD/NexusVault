@@ -4,6 +4,8 @@
 
 When `codex-auto-fix` resolves any `Medium`, `Medium+`, `High`, or `Critical` Gemini Review issue, the local project must keep a durable per-issue record in `docs/auto-review-ledger.md`.
 
+Superseded audit requirement: C-067 expands this rule. The ledger must now record every parsed review issue, including Low/Info and no-fix runs, while keeping automatic fix eligibility separate from audit visibility.
+
 The record must include:
 
 - Gemini issue severity
