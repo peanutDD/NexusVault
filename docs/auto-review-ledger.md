@@ -86,3 +86,23 @@
 | # | Severity | File:line | Gemini 问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | Medium | `scripts/codex-cli/src/repo.rs`:718 | The temporary file created here for the `gh api` payload is manually deleted later in the function (line 734). This approach is not robust against panics. If a panic occurs between file creation and deletion, the temporary file could be left on the filesystem. To ensure cleanup even in case of panics, it's more idiomatic and robust in Rust to use a RAII guard that deletes the file in its `Drop` implementation. Consider using a crate like `tempfile` which handles this securely and automatically, or implementing a simple wrapper struct with a `Drop` trait for this purpose. | Address the review comment. | (none) | not_selected | resolved | search_replace | `scripts/codex-cli/src/repo.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/repo.rs`，按建议处理：Address the review comment. |
+## Codex Auto Review - PR #29 round 1 - ts=1778525990
+
+总结：2 actionable issues
+## Codex Auto Review - PR #28 round 1 - ts=1778520011
+
+总结：1 actionable issues
+
+修改文件：
+- `docs/CHANGELOG.md`
+- `scripts/codex-cli/src/repo.rs`
+- `scripts/codex-cli/src/review_ledger.rs`
+
+| # | Severity | File:line | 原始问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Medium | `scripts/codex-cli/src/repo.rs`:304 | The current implementation of directory creation has a potential race condition (TOCTOU). If another process creates the directory between the `exists()` check and the `create_dir()` call, the latter will return an error. It is more robust to use `fs::create_dir_all` or handle the `AlreadyExists` error kind explicitly. | if !current.exists() {                     if let Err(e) = fs::create_dir(&current) {                         if e.kind() != std::io::ErrorKind::AlreadyExists {                             return Err(e.into());                         }                     }                 }                 if current.exists() {                     let metadata = fs::symlink_metadata(&current)?; | (none) | not_selected | resolved | search_replace | `scripts/codex-cli/src/repo.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/repo.rs`，按建议处理：                if !current.exists() {                     if let Err(e) = fs::create_dir(&current) {                         if e.kind() != std::io::ErrorKind::AlreadyExists {                             return Err(e.into());                         }                     }                 }                 if current.exists() {                     let metadata = fs::symlink_metadata(&current)?; |
+| 2 | Medium | `scripts/codex-cli/src/review_ledger.rs`:265 | There is a potential concurrency issue here. The ledger file is read entirely into memory, modified, and then written back. If multiple instances of the CLI run concurrently (e.g., in parallel CI jobs or rapid local executions), one process might overwrite the changes made by another. While likely rare in the current workflow, consider using file locking if parallel execution is expected. | Address the review comment. | (none) | not_selected | resolved | search_replace | `scripts/codex-cli/src/review_ledger.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/review_ledger.rs`，按建议处理：Address the review comment. |
+
+| # | Severity | File:line | Gemini 问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Medium | `scripts/codex-cli/src/repo.rs`:406 | `parent.canonicalize()?` 会在父目录不存在时报错。这会导致 `write_repo_file` 无法在尚未创建的子目录中创建新文件（例如在创建新的 ledger 文件时）。建议在调用此函数前确保父目录已存在，或者优化此处的逻辑以支持新目录的安全校验。 | Address the review comment. | (none) | selected | resolved | search_replace | `scripts/codex-cli/src/repo.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/repo.rs`，按建议处理：Address the review comment. |

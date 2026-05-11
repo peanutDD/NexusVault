@@ -15,4 +15,4 @@ A single ledger file makes it easy to confuse a current PR's partial review hist
 
 ## Enforcement
 
-`scripts/codex-cli/tests/e2e_auto_fix.rs::auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled` asserts the local scoped ledger is written. `repo::tests::auto_review_scoped_ledger_path_is_stable_per_pr` locks the stable PR path format.
+`scripts/codex-cli/tests/e2e_auto_fix.rs::auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled` asserts the local scoped ledger is written. `scripts/codex-cli/tests/review_ledger.rs::scoped_path_is_stable` locks the stable PR path format.

@@ -88,16 +88,44 @@ fn codex_auto_fix_concurrency_is_job_scoped() {
     let jobs = &workflow[jobs_index..];
 
     assert!(
-        !top_level.contains("\nconcurrency:"),
-        "workflow-level concurrency runs before job filters and can cancel actionable review events"
+        top_level.contains("\nconcurrency:\n"),
+        "workflow-level concurrency is required to cancel stale same-PR review runs before they wait for the self-hosted runner"
     );
     assert!(
-        jobs.contains("    concurrency:\n"),
-        "codex-fix job should serialize actionable runs after skipped events are filtered"
+        top_level.contains("github.ref") && top_level.contains("github.actor"),
+        "workflow-level concurrency must use fields available during workflow initialization"
     );
     assert!(
-        jobs.contains("      cancel-in-progress: false"),
-        "codex-fix job should queue actionable review runs instead of canceling in-progress fixes"
+        top_level.contains("  cancel-in-progress: true"),
+        "a newer Gemini review should cancel stale same-PR codex-fix runs instead of building an unbounded queue"
+    );
+    assert!(
+        !jobs.contains("    concurrency:\n"),
+        "job-level concurrency starts too late on self-hosted runners and can still leave newer runs waiting"
+    );
+}
+
+#[test]
+fn codex_auto_fix_serial_runner_has_timeouts() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        workflow.contains("    timeout-minutes: 35"),
+        "codex-fix job should have a hard timeout so one stale run cannot block the PR queue forever"
+    );
+    assert!(
+        workflow.contains("        timeout-minutes: 30\n        if: steps.round.outputs.current_round != 'gemini-review-round-max'"),
+        "the pr-auto-fix step should time out before the job timeout and release the concurrency group"
+    );
+    assert!(
+        workflow.contains("CODEX_AGENT_TIMEOUT_SECONDS: 1200"),
+        "the local Codex child process should have a bounded timeout below the step timeout"
+    );
+    assert!(
+        workflow.contains("name: Auto-fix queue guard diagnostics")
+            && workflow.contains("codex_queue_group=codex-auto-fix-${PR_NUMBER}"),
+        "codex-fix should print queue guard diagnostics so stale-run waits are explainable"
     );
 }
 
