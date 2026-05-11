@@ -291,6 +291,13 @@ fn resolve_repo_path_for_create(
             }
             Component::Normal(part) => {
                 current.push(part);
+                if !current.exists() {
+                    if let Err(e) = fs::create_dir(&current) {
+                        if e.kind() != std::io::ErrorKind::AlreadyExists {
+                            return Err(e.into());
+                        }
+                    }
+                }
                 if current.exists() {
                     let metadata = fs::symlink_metadata(&current)?;
                     if metadata.file_type().is_symlink() {
@@ -299,8 +306,6 @@ fn resolve_repo_path_for_create(
                     if !metadata.is_dir() {
                         return Err(format!("写入路径父级不是目录: {}", path).into());
                     }
-                } else {
-                    fs::create_dir(&current)?;
                 }
                 let canonical = current.canonicalize()?;
                 if !canonical.starts_with(&root) {
@@ -441,10 +446,7 @@ pub fn commit_and_push_in(
         if let Err(error) = push_result {
             let message = error.to_string();
             if classify_git_network_error(&message).is_some() {
-                eprintln!(
-                    "⚠️ git push 多次网络失败，改用 GitHub API 发布当前提交: {}",
-                    message
-                );
+                eprintln!("⚠️ git push 多次网络失败，改用 GitHub API 发布当前提交");
                 push_head_via_github_api(repo_root)?;
             } else {
                 return Err(error);
@@ -485,6 +487,7 @@ fn push_head_via_github_api(repo_root: &str) -> Result<(), Box<dyn std::error::E
         &format!("repos/{repo}/git/ref/heads/{branch}"),
         ".object.sha",
     )?;
+    ensure_api_fallback_fast_forward_safe(repo_root, &remote_head)?;
     let base_tree = gh_api_get_jq(
         &format!("repos/{repo}/git/commits/{remote_head}"),
         ".tree.sha",
@@ -563,6 +566,37 @@ fn current_branch(repo_root: &str) -> Result<String, Box<dyn std::error::Error>>
         return Ok(branch);
     }
     Err("无法确定当前分支，无法使用 GitHub API fallback 推送".into())
+}
+
+fn ensure_api_fallback_fast_forward_safe(
+    repo_root: &str,
+    remote_head: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let local_head = git_stdout(repo_root, &["rev-parse", "HEAD"])?;
+    let local_parent = git_stdout(repo_root, &["rev-parse", "HEAD^"])?;
+    if remote_head.trim() != local_parent.trim() {
+        return Err(format!(
+            "拒绝 GitHub API fallback 推送：远端 HEAD 与本地提交父提交不一致（local_head={}, remote_head={}）",
+            local_head.trim(),
+            remote_head.trim()
+        )
+        .into());
+    }
+
+    let output = StdCommand::new("git")
+        .args(["-C", repo_root])
+        .args(["merge-base", "--is-ancestor", remote_head.trim(), local_head.trim()])
+        .output()?;
+    if output.status.success() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "拒绝 GitHub API fallback 推送：远端 HEAD 不是本地 HEAD 的祖先（local_head={}, remote_head={}）",
+        local_head.trim(),
+        remote_head.trim()
+    )
+    .into())
 }
 
 fn api_tree_entries_for_head(
@@ -723,10 +757,9 @@ where
         }
 
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let message = format!(
-            "{} failed attempt {}/{} status={} stdout={} stderr={}",
-            label, attempt, max_attempts, output.status, stdout, stderr
+            "{} failed attempt {}/{} status={}",
+            label, attempt, max_attempts, output.status
         );
         last_error = Some(message.clone());
 
@@ -738,12 +771,8 @@ where
         }
 
         eprintln!(
-            "⚠️ {} 网络抖动（{}），已重试 {}/{}: {}",
-            label,
-            network_reason,
-            attempt,
-            max_attempts,
-            stderr.trim()
+            "⚠️ {} 网络抖动（{}），已重试 {}/{}",
+            label, network_reason, attempt, max_attempts
         );
         if sleep_between_attempts {
             let sleep_secs = std::env::var("CODEX_REMOTE_RETRY_SLEEP_SECONDS")
@@ -809,13 +838,7 @@ fn checked_output(cmd: &mut StdCommand) -> Result<Output, Box<dyn std::error::Er
         return Ok(output);
     }
 
-    Err(format!(
-        "命令执行失败 status={} stdout={} stderr={}",
-        output.status,
-        String::from_utf8_lossy(&output.stdout).trim(),
-        String::from_utf8_lossy(&output.stderr).trim()
-    )
-    .into())
+    Err(format!("命令执行失败 status={}", output.status).into())
 }
 
 pub fn discover_skill_pack_skills(

@@ -4,8 +4,14 @@ use crate::types::{
     ReviewIssue, ReviewIssueStatus, ReviewLedgerEntryInput, is_review_severity_medium_or_higher,
 };
 use std::collections::HashSet;
+use std::fs;
+use std::path::PathBuf;
+use std::thread;
+use std::time::{Duration, Instant};
 
 const GLOBAL_LEDGER_PATH: &str = "docs/auto-review-ledger.md";
+const LEDGER_LOCK_TIMEOUT: Duration = Duration::from_secs(30);
+const LEDGER_LOCK_RETRY: Duration = Duration::from_millis(50);
 
 pub fn scoped_path(pr_number: u32) -> String {
     if pr_number == 0 {
@@ -258,6 +264,7 @@ fn append_ledger_file(
     entry: &str,
     fixed_files: &mut Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let _lock = LedgerFileLock::acquire(repo_root, rel_path)?;
     let next = match repo::read_repo_file(repo_root, rel_path) {
         Ok(original) => format!("{}\n{}", original.trim_end(), entry.trim_end()),
         Err(_) => format!("{}\n\n{}", title, entry.trim_end()),
@@ -269,6 +276,43 @@ fn append_ledger_file(
     }
 
     Ok(())
+}
+
+struct LedgerFileLock {
+    path: PathBuf,
+}
+
+impl LedgerFileLock {
+    fn acquire(repo_root: &str, rel_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let path = PathBuf::from(repo_root).join(format!("{}.lock", rel_path));
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let start = Instant::now();
+        loop {
+            match fs::create_dir(&path) {
+                Ok(()) => return Ok(Self { path }),
+                Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+                    if start.elapsed() >= LEDGER_LOCK_TIMEOUT {
+                        return Err(format!(
+                            "timed out waiting for ledger lock `{}`",
+                            path.display()
+                        )
+                        .into());
+                    }
+                    thread::sleep(LEDGER_LOCK_RETRY);
+                }
+                Err(err) => return Err(err.into()),
+            }
+        }
+    }
+}
+
+impl Drop for LedgerFileLock {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir(&self.path);
+    }
 }
 
 fn resolved_summary_for_issue(issue: &ReviewIssue, fix_method: &str) -> String {
