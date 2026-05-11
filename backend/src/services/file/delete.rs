@@ -212,10 +212,11 @@ impl FileService {
             .collect::<Vec<_>>();
 
         if !errors.is_empty() {
-            return Err(AppError::Storage(format!(
-                "deleted file cleanup failed: {}",
-                errors.join("; ")
-            )));
+            tracing::warn!(
+                error_count = errors.len(),
+                errors = %errors.join("; "),
+                "deleted file cleanup failed after database rows were removed; continuing"
+            );
         }
 
         Ok(())

@@ -420,7 +420,10 @@ export default function Trash() {
                       >
                         <SelectionCheckbox
                           isSelected={isSelected}
-                          onClick={() => toggleSelected(file.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleSelected(file.id);
+                          }}
                           size="responsive"
                           positionClassName="absolute left-[clamp(0.15rem,0.35vw,0.25rem)] top-[clamp(0.15rem,0.35vw,0.25rem)]"
                         />
