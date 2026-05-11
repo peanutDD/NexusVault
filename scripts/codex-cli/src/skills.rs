@@ -2,9 +2,10 @@ use crate::llm::CodexClient;
 use crate::patch::{PatchFormat, apply as apply_patch_text, detect_format};
 use crate::prompts::{search_replace_retry_system_prompt, search_replace_system_prompt};
 use crate::repo;
+use crate::review_ledger;
 use crate::types::{
-    ChangelogEntryInput, ReviewData, ReviewIssue, ReviewIssueStatus,
-    is_review_severity_medium_or_higher, review_severity_matches_allowed, review_severity_token,
+    ChangelogEntryInput, ReviewData, ReviewIssue, is_review_severity_medium_or_higher,
+    review_severity_matches_allowed, review_severity_token,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -702,7 +703,7 @@ pub(crate) fn fixed_explanations(ctx: &SkillContext) -> Vec<String> {
         return Vec::new();
     }
 
-    let fixed = fixed_issue_keys(ctx);
+    let fixed = review_ledger::fixed_issue_keys(ctx);
     let Some(data) = &ctx.parsed_data else {
         return Vec::new();
     };
@@ -728,7 +729,7 @@ fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
         return ctx.pending_explanations.clone();
     }
 
-    let fixed = fixed_issue_keys(ctx);
+    let fixed = review_ledger::fixed_issue_keys(ctx);
     let selected: HashSet<String> = ctx.selected_issues.iter().map(review_issue_key).collect();
     let Some(data) = &ctx.parsed_data else {
         return Vec::new();
@@ -742,7 +743,11 @@ fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
             if fixed.contains(&issue_key) {
                 return None;
             }
-            let reason = pending_reason_for_issue(ctx, &issue_key, selected.contains(&issue_key));
+            let reason = review_ledger::pending_reason_for_issue(
+                ctx,
+                &issue_key,
+                selected.contains(&issue_key),
+            );
             Some(format!(
                 "[{}] `{}`:{} 未自动修复：{}",
                 issue.severity,
@@ -754,156 +759,12 @@ fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
         .collect()
 }
 
-pub(crate) fn review_issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus> {
-    let Some(data) = &ctx.parsed_data else {
-        return Vec::new();
-    };
-
-    let fixed = fixed_issue_keys(ctx);
-    let selected: HashSet<String> = ctx.selected_issues.iter().map(review_issue_key).collect();
-
-    data.issues
-        .iter()
-        .map(|issue| {
-            let issue_key = review_issue_key(issue);
-            let line = issue.line.unwrap_or(0);
-            let is_actionable = is_review_severity_medium_or_higher(&issue.severity);
-            let was_selected = selected.contains(&issue_key);
-            let failure_reason = latest_failure_reason_for_issue(ctx, &issue_key);
-            let fix_method = fix_method_for_issue(ctx, &issue_key);
-            let related_files = related_files_for_issue(ctx, issue, fixed.contains(&issue_key));
-            let (status, explanation) = if fixed.contains(&issue_key) && ctx.push_blocked {
-                (
-                    "blocked".to_string(),
-                    "已生成修复，但推送被自动化保护策略阻止".to_string(),
-                )
-            } else if fixed.contains(&issue_key) {
-                (
-                    "resolved".to_string(),
-                    resolved_summary_for_issue(issue, &fix_method),
-                )
-            } else if !is_actionable {
-                (
-                    "tracked".to_string(),
-                    "审计追踪：Low/Info 问题未进入自动修复范围".to_string(),
-                )
-            } else {
-                (
-                    "pending".to_string(),
-                    pending_reason_for_issue(ctx, &issue_key, was_selected),
-                )
-            };
-
-            ReviewIssueStatus {
-                severity: issue.severity.clone(),
-                file: issue.file.clone(),
-                line,
-                description: issue.description.clone(),
-                suggestion: issue.suggestion.clone(),
-                constraints: issue.constraints.clone(),
-                auto_fix_scope: if was_selected {
-                    "selected".to_string()
-                } else {
-                    "not_selected".to_string()
-                },
-                status,
-                explanation,
-                fix_method,
-                failure_reason,
-                related_files,
-            }
-        })
-        .collect()
-}
-
-fn resolved_summary_for_issue(issue: &ReviewIssue, fix_method: &str) -> String {
-    if issue.suggestion.trim().is_empty() {
-        format!(
-            "修复摘要：通过 {} 更新 `{}`，处理 review 指出的 `{}`。",
-            fix_method, issue.file, issue.description
-        )
-    } else {
-        format!(
-            "修复摘要：通过 {} 更新 `{}`，按建议处理：{}",
-            fix_method, issue.file, issue.suggestion
-        )
-    }
-}
-
-fn latest_failure_reason_for_issue(ctx: &SkillContext, issue_key: &str) -> Option<String> {
-    ctx.fix_attempts
-        .iter()
-        .rev()
-        .find(|attempt| attempt.issue_key == issue_key && !attempt.success)
-        .and_then(|attempt| attempt.reason.clone())
-}
-
-fn fix_method_for_issue(ctx: &SkillContext, issue_key: &str) -> String {
-    ctx.fix_attempts
-        .iter()
-        .rev()
-        .find(|attempt| attempt.issue_key == issue_key && attempt.success)
-        .map(|attempt| {
-            attempt
-                .reason
-                .as_deref()
-                .and_then(|reason| reason.strip_prefix("fix_method:"))
-                .unwrap_or(match attempt.stage.as_str() {
-                    "patch_apply" | "patch_apply_retry" => "generated_patch",
-                    "file_replacement_fallback" => "file_replacement_fallback",
-                    _ => "unknown",
-                })
-                .to_string()
-        })
-        .unwrap_or_else(|| "not_attempted".to_string())
-}
-
-fn related_files_for_issue(
-    ctx: &SkillContext,
-    issue: &ReviewIssue,
-    issue_fixed: bool,
-) -> Vec<String> {
-    if !issue_fixed {
-        return Vec::new();
-    }
-
-    if ctx.fixed_files.iter().any(|file| file == &issue.file) {
-        vec![issue.file.clone()]
-    } else {
-        Vec::new()
-    }
-}
-
-fn pending_reason_for_issue(ctx: &SkillContext, issue_key: &str, selected: bool) -> String {
-    ctx.fix_attempts
-        .iter()
-        .rev()
-        .find(|attempt| attempt.issue_key == issue_key && !attempt.success)
-        .and_then(|attempt| attempt.reason.clone())
-        .unwrap_or_else(|| {
-            if selected {
-                "未产生可应用补丁".to_string()
-            } else {
-                "策略过滤或受保护路径，未自动修复".to_string()
-            }
-        })
-}
-
-fn fixed_issue_keys(ctx: &SkillContext) -> HashSet<String> {
-    ctx.fix_attempts
-        .iter()
-        .filter(|attempt| attempt.success)
-        .map(|attempt| attempt.issue_key.clone())
-        .chain(ctx.fixed_issue_keys.iter().cloned())
-        .collect()
-}
-
 fn review_status_block(ctx: &SkillContext) -> String {
     let Some(_) = &ctx.parsed_data else {
         return String::new();
     };
 
-    let statuses = review_issue_statuses(ctx);
+    let statuses = review_ledger::issue_statuses(ctx);
     if statuses.is_empty() {
         return "\n\n📋 Review 问题对应状态：\n- 本轮 Gemini Review 未解析到结构化问题。"
             .to_string();

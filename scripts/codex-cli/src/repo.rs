@@ -1,9 +1,7 @@
-use crate::types::{
-    ChangelogEntryInput, ReviewLedgerEntryInput, SkillPackResolvedSkill, SkillPackSkillMeta,
-};
+use crate::types::{ChangelogEntryInput, SkillPackResolvedSkill, SkillPackSkillMeta};
 use serde_json::json;
 use std::fs;
-use std::path::Path;
+use std::path::{Component, Path};
 use std::process::Command as StdCommand;
 use std::process::Output;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -227,162 +225,6 @@ pub fn append_ai_changelog_in(
     Ok(())
 }
 
-/// 构建自动 Review 台账条目，保留每条 Gemini 问题的处理答案。
-pub fn build_auto_review_ledger_entry(input: &ReviewLedgerEntryInput) -> String {
-    let mut files = input.files.clone();
-    files.sort();
-    files.dedup();
-
-    let pr_label = if input.pr_number == 0 {
-        "local".to_string()
-    } else {
-        format!("#{}", input.pr_number)
-    };
-    let mut entry = format!(
-        "## Codex Auto Review - PR {} round {} - ts={}\n\n",
-        pr_label, input.round, input.unix_ts
-    );
-
-    if let Some(summary) = input.summary.as_deref().filter(|s| !s.trim().is_empty()) {
-        entry.push_str(&format!("总结：{}\n\n", markdown_table_cell(summary)));
-    }
-
-    entry.push_str("修改文件：\n");
-    if files.is_empty() {
-        entry.push_str("- 无代码或文档文件变更\n");
-    } else {
-        for file in &files {
-            entry.push_str(&format!("- `{}`\n", file));
-        }
-    }
-
-    entry.push_str("\n| # | Severity | File:line | Gemini 问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |\n");
-    entry.push_str("|---|---|---|---|---|---|---|---|---|---|---|\n");
-    for (index, status) in input.statuses.iter().enumerate() {
-        let constraints = if status.constraints.is_empty() {
-            "(none)".to_string()
-        } else {
-            status.constraints.join("; ")
-        };
-        let related_files = if status.related_files.is_empty() {
-            "(none)".to_string()
-        } else {
-            status
-                .related_files
-                .iter()
-                .map(|file| format!("`{}`", file))
-                .collect::<Vec<_>>()
-                .join("<br>")
-        };
-        let method_or_failure = if status.status == "resolved" || status.status == "blocked" {
-            &status.fix_method
-        } else {
-            status
-                .failure_reason
-                .as_deref()
-                .filter(|reason| !reason.trim().is_empty())
-                .unwrap_or(&status.fix_method)
-        };
-        entry.push_str(&format!(
-            "| {} | {} | `{}`:{} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
-            index + 1,
-            markdown_table_cell(&status.severity),
-            markdown_table_cell(&status.file),
-            status.line,
-            markdown_table_cell(&status.description),
-            markdown_table_cell(&status.suggestion),
-            markdown_table_cell(&constraints),
-            markdown_table_cell(&status.auto_fix_scope),
-            markdown_table_cell(&status.status),
-            markdown_table_cell(method_or_failure),
-            markdown_table_cell(&related_files),
-            markdown_table_cell(&status.explanation)
-        ));
-    }
-    entry.push('\n');
-    entry
-}
-
-/// 在 repo 根目录下写入全局 ledger 与 per-PR ledger，并把文件加入本轮提交列表。
-pub fn append_auto_review_ledger_in(
-    repo_root: &str,
-    fixed_files: &mut Vec<String>,
-    input: &ReviewLedgerEntryInput,
-) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    if input.statuses.is_empty() {
-        return Ok(None);
-    }
-
-    let entry = build_auto_review_ledger_entry(input);
-    let global_rel_path = "docs/auto-review-ledger.md";
-    append_ledger_file(
-        repo_root,
-        global_rel_path,
-        "# Auto Review Ledger",
-        &entry,
-        fixed_files,
-    )?;
-
-    let scoped_rel_path = auto_review_scoped_ledger_path(input.pr_number);
-    let scoped_title = if input.pr_number == 0 {
-        "# Auto Review Ledger - local".to_string()
-    } else {
-        format!("# Auto Review Ledger - PR #{}", input.pr_number)
-    };
-    append_ledger_file(
-        repo_root,
-        &scoped_rel_path,
-        &scoped_title,
-        &entry,
-        fixed_files,
-    )?;
-
-    Ok(Some(global_rel_path.to_string()))
-}
-
-fn auto_review_scoped_ledger_path(pr_number: u32) -> String {
-    if pr_number == 0 {
-        "docs/auto-review-ledgers/local.md".to_string()
-    } else {
-        format!("docs/auto-review-ledgers/pr-{}.md", pr_number)
-    }
-}
-
-fn append_ledger_file(
-    repo_root: &str,
-    rel_path: &str,
-    title: &str,
-    entry: &str,
-    fixed_files: &mut Vec<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let abs_path = Path::new(repo_root).join(rel_path);
-    if let Some(parent) = abs_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-
-    let next = if abs_path.exists() {
-        let original = fs::read_to_string(&abs_path)?;
-        format!("{}\n{}", original.trim_end(), entry.trim_end())
-    } else {
-        format!("{}\n\n{}", title, entry.trim_end())
-    };
-    fs::write(&abs_path, format!("{}\n", next.trim_end()))?;
-
-    if !fixed_files.iter().any(|f| f == rel_path) {
-        fixed_files.push(rel_path.to_string());
-    }
-
-    Ok(())
-}
-
-fn markdown_table_cell(value: &str) -> String {
-    value
-        .replace('|', "\\|")
-        .replace('\n', " ")
-        .trim()
-        .to_string()
-}
-
 /// 获取当前 Unix 时间戳（秒）。
 pub fn now_unix_ts() -> Result<u64, Box<dyn std::error::Error>> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
@@ -425,6 +267,54 @@ fn resolve_existing_repo_path(
     Ok(resolved)
 }
 
+fn resolve_repo_path_for_create(
+    repo_root: &str,
+    path: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    let root = canonical_repo_root(repo_root)?;
+    let raw_path = Path::new(path);
+    let relative = if raw_path.is_absolute() {
+        raw_path
+            .strip_prefix(&root)
+            .map_err(|_| format!("拒绝访问仓库外路径: {}", path))?
+    } else {
+        raw_path
+    };
+
+    let mut components = relative.components().peekable();
+    let mut current = root.clone();
+    while let Some(component) = components.next() {
+        let is_final = components.peek().is_none();
+        match component {
+            Component::Normal(part) if is_final => {
+                return Ok(current.join(part));
+            }
+            Component::Normal(part) => {
+                current.push(part);
+                if current.exists() {
+                    let metadata = fs::symlink_metadata(&current)?;
+                    if metadata.file_type().is_symlink() {
+                        return Err(format!("拒绝通过符号链接目录写入: {}", path).into());
+                    }
+                    if !metadata.is_dir() {
+                        return Err(format!("写入路径父级不是目录: {}", path).into());
+                    }
+                } else {
+                    fs::create_dir(&current)?;
+                }
+                let canonical = current.canonicalize()?;
+                if !canonical.starts_with(&root) {
+                    return Err(format!("拒绝访问仓库外路径: {}", path).into());
+                }
+                current = canonical;
+            }
+            _ => return Err(format!("无效文件路径: {}", path).into()),
+        }
+    }
+
+    Err(format!("无效文件路径: {}", path).into())
+}
+
 pub fn read_repo_file(repo_root: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
     let abs = resolve_existing_repo_path(repo_root, path)?;
     Ok(fs::read_to_string(abs)?)
@@ -436,6 +326,33 @@ pub fn write_repo_file(
     content: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let abs = resolve_repo_path(repo_root, path)?;
+    let parent = abs
+        .parent()
+        .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    let tmp = parent.join(format!(
+        ".codex-cli-write-{}-{}.tmp",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    let _tmp_cleanup = TempFileCleanup { path: tmp.clone() };
+    {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        std::io::Write::write_all(&mut file, content.as_bytes())?;
+        file.sync_all()?;
+    }
+    fs::rename(&tmp, &abs)?;
+    Ok(())
+}
+
+pub(crate) fn write_repo_file_creating_parent(
+    repo_root: &str,
+    path: &str,
+    content: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let abs = resolve_repo_path_for_create(repo_root, path)?;
     let parent = abs
         .parent()
         .ok_or_else(|| format!("无效文件路径: {}", path))?;
@@ -765,7 +682,7 @@ fn gh_api_json_output(
     let endpoint = endpoint.to_string();
     let jq = jq.map(ToString::to_string);
     let input = tmp.to_string_lossy().to_string();
-    let result = checked_output_with_retry(
+    checked_output_with_retry(
         || {
             let mut cmd = StdCommand::new("gh");
             cmd.args(["api", "-X", &method, &endpoint, "--input", &input]);
@@ -775,8 +692,7 @@ fn gh_api_json_output(
             cmd
         },
         "gh api",
-    );
-    result
+    )
 }
 
 fn checked_output_with_retry<F>(
@@ -1063,18 +979,6 @@ mod tests {
         assert!(!env_flag_enabled(Some("0")));
         assert!(!env_flag_enabled(Some("")));
         assert!(!env_flag_enabled(None));
-    }
-
-    #[test]
-    fn auto_review_scoped_ledger_path_is_stable_per_pr() {
-        assert_eq!(
-            auto_review_scoped_ledger_path(26),
-            "docs/auto-review-ledgers/pr-26.md"
-        );
-        assert_eq!(
-            auto_review_scoped_ledger_path(0),
-            "docs/auto-review-ledgers/local.md"
-        );
     }
 
     #[test]

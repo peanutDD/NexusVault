@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-12 | auto review ledger module boundary | 95 | 将 `scripts/codex-cli` auto-review ledger 从 `repo.rs`/`skills.rs`/`runtime.rs` 收敛到独立 `review_ledger.rs` 模块：模块统一负责 per-PR/local 路径、完整审计表格、所有 severity 状态、Low/Info tracked 语义、source-fix 判断与 ledger 写入；`repo.rs` 仅保留安全 I/O helper。新增 C-069 与模块红绿测试。 |
 | 2026-05-11 | codex-cli symlink write boundary | 95 | 修复 SecurityCheck 指出的 `scripts/codex-cli/src/repo.rs` 符号链接写越界风险：repo/changelog/ledger 写入统一走 no-final-symlink 安全写 helper，Unix 上额外使用 `O_NOFOLLOW`，新增 symlink 指向仓库外文件的红绿回归测试和 C-068 永久约束。 |
 | 2026-05-11 | auto review ledger full audit archive | 95 | 将 auto-review ledger 从“已修复项记录”升级为完整 PR review 审计档案：所有 severity（含 Low/Info）都会进入 per-PR/local ledger；无源码修复也写 ledger；每条 issue 记录 suggestion、constraints、auto-fix scope、status、fix method/failure reason、related files 和修复摘要；同时修正只写 ledger 时 JSON `fixed=false`。 |
 | 2026-05-11 | auto review ledger cross-PR archive | 95 | 修复 `docs/auto-review-ledger.md` 只像当前 PR 局部流水账、缺少按 PR 归档的问题：`codex-auto-fix` 现在同时写全局 ledger 与 `docs/auto-review-ledgers/pr-<number>.md` / `local.md`，并新增 C-066、E2E 测试和 PR 路径单测，避免后续 review 记录丢失上下文。 |
