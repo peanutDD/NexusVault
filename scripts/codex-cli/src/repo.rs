@@ -68,15 +68,17 @@ pub fn read_agents_rules() -> String {
 }
 
 pub fn read_rules(repo_root: Option<&str>, rules_file: Option<&str>) -> String {
-    if let Some(p) = rules_file
-        && let Ok(content) = fs::read_to_string(p)
-    {
-        return content;
-    }
-
     if let Some(root) = repo_root {
-        let path = format!("{}/AGENTS.md", root);
-        if let Ok(content) = fs::read_to_string(path) {
+        if let Some(p) = rules_file
+            && let Ok(path) = resolve_existing_repo_path(root, p)
+            && let Ok(content) = fs::read_to_string(path)
+        {
+            return content;
+        }
+
+        if let Ok(path) = resolve_existing_repo_path(root, "AGENTS.md")
+            && let Ok(content) = fs::read_to_string(path)
+        {
             return content;
         }
     }
@@ -180,15 +182,14 @@ pub fn append_ai_changelog(
 
 pub fn resolve_changelog_path(repo_root: &str, changelog_path: Option<&str>) -> Option<String> {
     if let Some(p) = changelog_path {
-        if Path::new(p).is_absolute() {
-            return Some(p.to_string());
-        }
-        return Some(Path::new(repo_root).join(p).to_string_lossy().to_string());
+        return resolve_repo_path(repo_root, p)
+            .ok()
+            .map(|path| path.to_string_lossy().to_string());
     }
 
-    let default_path = format!("{}/docs/CHANGELOG.md", repo_root);
-    if Path::new(&default_path).exists() {
-        Some(default_path)
+    let default_path = resolve_repo_path(repo_root, "docs/CHANGELOG.md").ok()?;
+    if default_path.exists() {
+        Some(default_path.to_string_lossy().to_string())
     } else {
         None
     }
@@ -255,17 +256,46 @@ pub fn build_auto_review_ledger_entry(input: &ReviewLedgerEntryInput) -> String 
         }
     }
 
-    entry.push_str("\n| # | Severity | File:line | Gemini 问题 | 状态 | 解决答案 / 未解决原因 |\n");
-    entry.push_str("|---|---|---|---|---|---|\n");
+    entry.push_str("\n| # | Severity | File:line | Gemini 问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |\n");
+    entry.push_str("|---|---|---|---|---|---|---|---|---|---|---|\n");
     for (index, status) in input.statuses.iter().enumerate() {
+        let constraints = if status.constraints.is_empty() {
+            "(none)".to_string()
+        } else {
+            status.constraints.join("; ")
+        };
+        let related_files = if status.related_files.is_empty() {
+            "(none)".to_string()
+        } else {
+            status
+                .related_files
+                .iter()
+                .map(|file| format!("`{}`", file))
+                .collect::<Vec<_>>()
+                .join("<br>")
+        };
+        let method_or_failure = if status.status == "resolved" || status.status == "blocked" {
+            &status.fix_method
+        } else {
+            status
+                .failure_reason
+                .as_deref()
+                .filter(|reason| !reason.trim().is_empty())
+                .unwrap_or(&status.fix_method)
+        };
         entry.push_str(&format!(
-            "| {} | {} | `{}`:{} | {} | {} | {} |\n",
+            "| {} | {} | `{}`:{} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             index + 1,
             markdown_table_cell(&status.severity),
             markdown_table_cell(&status.file),
             status.line,
             markdown_table_cell(&status.description),
+            markdown_table_cell(&status.suggestion),
+            markdown_table_cell(&constraints),
+            markdown_table_cell(&status.auto_fix_scope),
             markdown_table_cell(&status.status),
+            markdown_table_cell(method_or_failure),
+            markdown_table_cell(&related_files),
             markdown_table_cell(&status.explanation)
         ));
     }
@@ -358,8 +388,45 @@ pub fn now_unix_ts() -> Result<u64, Box<dyn std::error::Error>> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
 }
 
+fn canonical_repo_root(repo_root: &str) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    Ok(Path::new(repo_root).canonicalize()?)
+}
+
+fn resolve_repo_path(
+    repo_root: &str,
+    path: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    let root = canonical_repo_root(repo_root)?;
+    let candidate = if Path::new(path).is_absolute() {
+        std::path::PathBuf::from(path)
+    } else {
+        root.join(path)
+    };
+    let parent = candidate.parent().unwrap_or(&root);
+    let canonical_parent = parent.canonicalize()?;
+    if !canonical_parent.starts_with(&root) {
+        return Err(format!("拒绝访问仓库外路径: {}", path).into());
+    }
+    let file_name = candidate
+        .file_name()
+        .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    Ok(canonical_parent.join(file_name))
+}
+
+fn resolve_existing_repo_path(
+    repo_root: &str,
+    path: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    let root = canonical_repo_root(repo_root)?;
+    let resolved = resolve_repo_path(repo_root, path)?.canonicalize()?;
+    if !resolved.starts_with(&root) {
+        return Err(format!("拒绝访问仓库外路径: {}", path).into());
+    }
+    Ok(resolved)
+}
+
 pub fn read_repo_file(repo_root: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let abs = Path::new(repo_root).join(path);
+    let abs = resolve_existing_repo_path(repo_root, path)?;
     Ok(fs::read_to_string(abs)?)
 }
 
@@ -368,8 +435,25 @@ pub fn write_repo_file(
     path: &str,
     content: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let abs = Path::new(repo_root).join(path);
-    fs::write(abs, content)?;
+    let abs = resolve_repo_path(repo_root, path)?;
+    let parent = abs
+        .parent()
+        .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    let tmp = parent.join(format!(
+        ".codex-cli-write-{}-{}.tmp",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    let _tmp_cleanup = TempFileCleanup { path: tmp.clone() };
+    {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        std::io::Write::write_all(&mut file, content.as_bytes())?;
+        file.sync_all()?;
+    }
+    fs::rename(&tmp, &abs)?;
     Ok(())
 }
 
@@ -405,11 +489,15 @@ pub fn commit_and_push_in(
         fixed_files.len()
     );
 
+    let safe_fixed_files = fixed_files
+        .iter()
+        .map(|file| validate_git_pathspec_file(file))
+        .collect::<Result<Vec<_>, _>>()?;
     checked_output(
         StdCommand::new("git")
             .args(["-C", repo_root])
-            .args(["add"])
-            .args(fixed_files),
+            .args(["add", "--"])
+            .args(safe_fixed_files.iter().map(String::as_str)),
     )?;
     checked_output(
         StdCommand::new("git")
@@ -448,6 +536,19 @@ pub fn commit_and_push_in(
     }
 
     Ok(())
+}
+
+fn validate_git_pathspec_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    if path.is_empty()
+        || path.starts_with(':')
+        || Path::new(path).is_absolute()
+        || Path::new(path)
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Err(format!("拒绝不安全 git pathspec: {}", path).into());
+    }
+    Ok(format!(":(literal){}", path))
 }
 
 fn publish_via_github_api_only() -> bool {
@@ -624,6 +725,16 @@ fn gh_api_json(
     Ok(())
 }
 
+struct TempFileCleanup {
+    path: std::path::PathBuf,
+}
+
+impl Drop for TempFileCleanup {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
 fn gh_api_json_output(
     method: &str,
     endpoint: &str,
@@ -631,10 +742,25 @@ fn gh_api_json_output(
     jq: Option<&str>,
 ) -> Result<Output, Box<dyn std::error::Error>> {
     let tmp = std::env::temp_dir().join(format!(
-        "codex-cli-gh-api-{}.json",
+        "codex-cli-gh-api-{}-{}.json",
+        std::process::id(),
         SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
     ));
-    fs::write(&tmp, serde_json::to_vec(&payload)?)?;
+    let _tmp_cleanup = TempFileCleanup { path: tmp.clone() };
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&tmp)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = file.metadata()?.permissions();
+        permissions.set_mode(0o600);
+        fs::set_permissions(&tmp, permissions)?;
+    }
+    std::io::Write::write_all(&mut file, &serde_json::to_vec(&payload)?)?;
+    file.sync_all()?;
+    drop(file);
     let method = method.to_string();
     let endpoint = endpoint.to_string();
     let jq = jq.map(ToString::to_string);
@@ -650,7 +776,6 @@ fn gh_api_json_output(
         },
         "gh api",
     );
-    let _ = fs::remove_file(&tmp);
     result
 }
 

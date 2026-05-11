@@ -1,0 +1,33 @@
+{
+  "date": "2026-05-11",
+  "task": "auto-review-ledger-audit",
+  "goal": "Make per-PR auto-review ledgers preserve every review issue and the automation answer, even when no fix was produced.",
+  "assumptions": [
+    "ReviewData.issues is the canonical structured issue list.",
+    "Per-PR ledgers from C-066 remain the durable archive path.",
+    "Automatic fix eligibility remains separate from audit visibility.",
+    "A review with issues should create a ledger entry even if fixed_files is empty before ledger writing."
+  ],
+  "risks": [
+    "Ledger entries become more verbose.",
+    "Markdown table cells must escape multi-line suggestions and constraints.",
+    "ReviewIssueStatus JSON changes must be additive for consumers.",
+    "Documentation-only ledger writes must not change final auto-fix status semantics."
+  ],
+  "steps": [
+    "Add red tests for all severities and zero-fix ledger writing.",
+    "Extend ReviewIssueStatus with audit fields.",
+    "Render richer ledger table columns.",
+    "Update append_review_ledger write timing.",
+    "Document the invariant and add a permanent constraint.",
+    "Run fmt, tests, and clippy."
+  ],
+  "verification": [
+    "cargo test --test e2e_auto_fix auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled",
+    "cargo test --test e2e_auto_fix auto_fix_local_writes_full_review_ledger_even_when_no_fix_applies",
+    "cargo fmt --all -- --check",
+    "cargo test --all",
+    "cargo clippy --all-targets --all-features -- -D warnings"
+  ]
+}
+
