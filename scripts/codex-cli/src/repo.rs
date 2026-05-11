@@ -244,14 +244,31 @@ fn resolve_repo_path(
     } else {
         root.join(path)
     };
-    let parent = candidate.parent().unwrap_or(&root);
-    let canonical_parent = parent.canonicalize()?;
-    if !canonical_parent.starts_with(&root) {
-        return Err(format!("拒绝访问仓库外路径: {}", path).into());
-    }
     let file_name = candidate
         .file_name()
         .ok_or_else(|| format!("无效文件路径: {}", path))?;
+
+    let parent = candidate.parent().unwrap_or(&root);
+    let mut existing_parent = parent;
+    let mut missing_components = Vec::new();
+    while !existing_parent.exists() {
+        let Some(name) = existing_parent.file_name() else {
+            return Err(format!("无效文件路径: {}", path).into());
+        };
+        missing_components.push(name.to_os_string());
+        existing_parent = existing_parent
+            .parent()
+            .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    }
+
+    let mut canonical_parent = existing_parent.canonicalize()?;
+    if !canonical_parent.starts_with(&root) {
+        return Err(format!("拒绝访问仓库外路径: {}", path).into());
+    }
+    for component in missing_components.iter().rev() {
+        canonical_parent.push(component);
+    }
+
     Ok(canonical_parent.join(file_name))
 }
 
@@ -334,6 +351,7 @@ pub fn write_repo_file(
     let parent = abs
         .parent()
         .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    fs::create_dir_all(parent)?;
     let tmp = parent.join(format!(
         ".codex-cli-write-{}-{}.tmp",
         std::process::id(),
