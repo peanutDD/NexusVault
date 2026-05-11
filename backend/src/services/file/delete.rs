@@ -181,7 +181,10 @@ impl FileService {
             .collect::<HashSet<_>>()
             .into_iter()
             .collect();
-        let ref_counts = self.files_repo.count_by_file_paths(&paths).await?;
+        // Counts are read after the DB rows above have been hard-deleted.
+        // Do not subtract the cleaned files again; any remaining count means
+        // another file record still owns the same storage object.
+        let remaining_ref_counts = self.files_repo.count_by_file_paths(&paths).await?;
 
         let derived_targets = files
             .iter()
@@ -189,7 +192,7 @@ impl FileService {
             .collect::<Vec<_>>();
         let storage_paths = paths
             .into_iter()
-            .filter(|path| ref_counts.get(path).copied().unwrap_or(0) == 0)
+            .filter(|path| remaining_ref_counts.get(path).copied().unwrap_or(0) == 0)
             .collect::<Vec<_>>();
 
         let derived_results = futures::stream::iter(derived_targets)

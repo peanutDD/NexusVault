@@ -1072,3 +1072,50 @@ async fn test_file_service_purge_expired_trash_deletes_only_old_deleted_files() 
     assert!(remaining.contains(&recent_deleted));
     assert!(remaining.contains(&active));
 }
+
+#[tokio::test]
+async fn test_file_service_purge_expired_trash_keeps_storage_when_active_file_shares_path() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "purge_shared_path").await;
+    let expired_deleted = create_test_file(&pool, user_id, "old-shared.txt").await;
+    let active = create_test_file(&pool, user_id, "active-shared.txt").await;
+    let shared_path = format!(
+        "/tmp/test_uploads/shared-path-purge-safety-{}.bin",
+        uuid::Uuid::new_v4()
+    );
+    let service = create_test_service(pool.clone()).await;
+
+    if let Some(parent) = std::path::Path::new(&shared_path).parent() {
+        tokio::fs::create_dir_all(parent).await.unwrap();
+    }
+    tokio::fs::write(&shared_path, b"still referenced")
+        .await
+        .unwrap();
+
+    sqlx::query("UPDATE files SET file_path = $1 WHERE id = ANY($2)")
+        .bind(&shared_path)
+        .bind([expired_deleted, active])
+        .execute(&pool)
+        .await
+        .unwrap();
+    service.delete_file(expired_deleted, user_id).await.unwrap();
+    sqlx::query("UPDATE files SET deleted_at = $1 WHERE id = $2")
+        .bind(Utc::now() - ChronoDuration::days(31))
+        .bind(expired_deleted)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let purged = service.purge_expired_trash(30, 500).await.unwrap();
+
+    assert_eq!(purged, 1);
+    assert!(service.get_file(active, user_id).await.is_ok());
+    assert!(
+        tokio::fs::metadata(&shared_path).await.is_ok(),
+        "purging one deleted row must not delete storage while another row still references file_path"
+    );
+    let _ = tokio::fs::remove_file(&shared_path).await;
+}
