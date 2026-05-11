@@ -2,6 +2,7 @@
 
 | Date | Task | Score | Notes |
 | --- | --- | --- | --- |
+| 2026-05-11 | codex auto-fix tarball retry | 95 | 修复 self-hosted Codex Auto-Fix 在 resilient checkout 中遇到 GitHub API tarball `stream ID 1; CANCEL` 后立即 fail-closed 的问题：新增 tarball 下载 helper，`gh api` 与 `curl --http1.1 --retry-all-errors` 双路径校验 tarball 可解压后才继续，保留无法验证 exact PR head 时拒绝运行的安全边界；新增 C-064 与 workflow_state 契约测试。 |
 | 2026-05-11 | trash purge shared storage safety | 95 | 针对安全扫描指出的 `purge_expired_trash` 共享 `file_path` 误删风险补强：确认当前实现按 hard-delete 后剩余 DB 引用计数决定是否删存储，不再扣减本次清理数量；新增共享路径回归测试，证明 expired trash 与 active file 共用底层对象时 purge 只删 DB 行、不删存储文件；同步新增 C-063 永久约束。 |
 | 2026-05-11 | restore modified migration 034 | 95 | 修复启动失败 `migration 34 was previously applied but has been modified`：恢复已应用的 `034_add_files_deleted_at.sql` 原始内容，把后续 active filename 唯一索引改写移入新增 `035_rewrite_active_file_name_unique_indexes.sql`，并新增 C-062 与 migration governance 红绿测试防止再次回改历史 migration。 |
 | 2026-05-11 | codex auto-fix resilient checkout | 95 | 修复 self-hosted runner 在 `actions/checkout` 阶段因 GitHub Git HTTPS `Empty reply from server` / `Failed to connect` 失败、尚未进入 codex-cli 的根因：`codex-auto-fix` 改为本地 seed bootstrap，要求精确 PR head 可验证，缺失 commit 时用 GitHub API tarball 覆盖工作区，并设置 `CODEX_PUBLISH_VIA_GH_API=true` 让后续发布走 GitHub API。新增 C-061 永久约束和 workflow/API 开关红绿测试。 |

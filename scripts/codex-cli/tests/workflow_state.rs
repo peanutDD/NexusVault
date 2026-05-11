@@ -193,6 +193,17 @@ fn codex_auto_fix_bootstraps_pr_head_without_git_https_checkout() {
         "workflow should use the GitHub API tarball path instead of Git smart HTTP fetch when needed"
     );
     assert!(
+        workflow.contains("download_pr_head_archive")
+            && workflow.contains("for attempt in 1 2 3 4 5"),
+        "workflow should retry transient PR tarball stream failures before failing closed"
+    );
+    assert!(
+        workflow.contains("curl")
+            && workflow.contains("--http1.1")
+            && workflow.contains("--retry-all-errors"),
+        "workflow should fall back to HTTP/1.1 curl retries when gh api streaming is cancelled"
+    );
+    assert!(
         workflow.contains("Cannot verify exact PR head"),
         "workflow should fail closed instead of auto-fixing a stale local seed"
     );
