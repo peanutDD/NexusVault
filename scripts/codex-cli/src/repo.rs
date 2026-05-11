@@ -308,12 +308,11 @@ fn resolve_repo_path_for_create(
             }
             Component::Normal(part) => {
                 current.push(part);
-                if !current.exists() {
-                    if let Err(e) = fs::create_dir(&current) {
-                        if e.kind() != std::io::ErrorKind::AlreadyExists {
-                            return Err(e.into());
-                        }
-                    }
+                if !current.exists()
+                    && let Err(e) = fs::create_dir(&current)
+                    && e.kind() != std::io::ErrorKind::AlreadyExists
+                {
+                    return Err(e.into());
                 }
                 if current.exists() {
                     let metadata = fs::symlink_metadata(&current)?;
@@ -603,7 +602,12 @@ fn ensure_api_fallback_fast_forward_safe(
 
     let output = StdCommand::new("git")
         .args(["-C", repo_root])
-        .args(["merge-base", "--is-ancestor", remote_head.trim(), local_head.trim()])
+        .args([
+            "merge-base",
+            "--is-ancestor",
+            remote_head.trim(),
+            local_head.trim(),
+        ])
         .output()?;
     if output.status.success() {
         return Ok(());
@@ -776,8 +780,12 @@ where
 
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         let message = format!(
-            "{} failed attempt {}/{} status={}",
-            label, attempt, max_attempts, output.status
+            "{} failed attempt {}/{} status={} stderr={}",
+            label,
+            attempt,
+            max_attempts,
+            output.status,
+            stderr.trim()
         );
         last_error = Some(message.clone());
 
