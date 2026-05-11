@@ -3,6 +3,7 @@ import { FolderOpen, PencilLine, Trash2, MoreVertical } from "lucide-react";
 import type { Folder } from "../../../types/folders";
 import { cn } from "../../../utils/cn";
 import { findFolderDropTargetFromPoint } from "../../../utils/dropTargets";
+import { stopDragAutoScroll, updateDragAutoScroll } from "../../../utils/dragAutoScroll";
 import { SelectionCheckbox } from "../../common/form/SelectionCheckbox";
 
 interface FolderCardProps {
@@ -130,6 +131,7 @@ const FolderCard = memo(function FolderCard({
       e.stopPropagation();
       mobileDragActiveRef.current = false;
       setIsMobileDragging(false);
+      stopDragAutoScroll();
 
       const target = findFolderDropTargetFromPoint(
         e.clientX,
@@ -184,9 +186,10 @@ const FolderCard = memo(function FolderCard({
         return;
       }
 
-      if (mobileDragActiveRef.current) {
-        e.preventDefault();
-      }
+    if (mobileDragActiveRef.current) {
+      e.preventDefault();
+      updateDragAutoScroll(e.clientY);
+    }
     },
     [clearLongPressTimer],
   );
@@ -197,6 +200,7 @@ const FolderCard = memo(function FolderCard({
     if (mobileDragActiveRef.current) {
       mobileDragActiveRef.current = false;
       setIsMobileDragging(false);
+      stopDragAutoScroll();
       onMobileFolderDragEnd?.();
     }
   }, [clearLongPressTimer, onMobileFolderDragEnd]);
@@ -208,7 +212,7 @@ const FolderCard = memo(function FolderCard({
   return (
     <div
       className={cn(
-        "glass-card group relative cursor-pointer rounded-md transition-colors",
+        "glass-card group relative cursor-pointer rounded-[clamp(0.3rem,0.8vw,0.375rem)] transition-colors",
         isSelected && "border-[var(--cta-primary-border)]",
         isDragOver && "border-[var(--color-border-strong)]",
         isMobileDragging &&
@@ -228,10 +232,10 @@ const FolderCard = memo(function FolderCard({
       }}
       data-oid="y3sabdy"
     >
-      <div className="p-3" data-oid="tw-paus">
+      <div className="p-[clamp(0.6rem,1.4vw,0.75rem)]" data-oid="tw-paus">
         {/* 文件夹图标：使用和视频文件相同的主色（text-purple-400），但缩小尺寸避免过于抢眼 */}
         <div
-          className="relative mb-3 flex aspect-square items-center justify-center rounded-sm bg-[var(--file-card-thumb-bg)]"
+          className="relative mb-[clamp(0.6rem,1.4vw,0.75rem)] flex aspect-square items-center justify-center rounded-[clamp(0.2rem,0.6vw,0.25rem)] bg-[var(--file-card-thumb-bg)]"
           draggable
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
@@ -268,7 +272,7 @@ const FolderCard = memo(function FolderCard({
           <button
             type="button"
             onClick={handleToggleMenu}
-            className="absolute right-0 top-0 z-10 inline-flex translate-x-[0.375rem] items-center justify-center rounded-md leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
+            className="absolute right-0 top-0 z-10 inline-flex translate-x-[0.375rem] items-center justify-center rounded-[clamp(0.3rem,0.8vw,0.375rem)] leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
             aria-label="更多操作"
             data-oid="v.ta39e"
           >
@@ -289,7 +293,7 @@ const FolderCard = memo(function FolderCard({
               />
 
               <div
-                className="absolute bottom-full right-0 z-50 mb-1 w-max origin-bottom-right scale-[0.7] rounded-md border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-1 pl-2 pr-4 shadow-xl sm:scale-90 md:scale-100"
+                className="absolute bottom-full right-0 z-50 mb-[clamp(0.2rem,0.7vw,0.25rem)] w-max origin-bottom-right scale-[0.7] rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-[clamp(0.2rem,0.7vw,0.25rem)] pl-[clamp(0.4rem,1vw,0.5rem)] pr-[clamp(0.75rem,2vw,1rem)] shadow-xl sm:scale-90 md:scale-100"
                 data-folder-menu="true"
                 data-oid="9xqi6te"
               >
@@ -332,7 +336,7 @@ const FolderCard = memo(function FolderCard({
                     </span>
                   </button>
                   <div
-                    className="my-0.5 border-t border-[var(--filelist-menu-divider)]"
+                    className="my-[clamp(0.0975rem,0.3vw,0.125rem)] border-t border-[var(--filelist-menu-divider)]"
                     data-oid="ux:37vq"
                   />
 

@@ -228,7 +228,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
       )}
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-[clamp(0.75rem,2vw,1rem)] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           <FileCardSkeleton count={12} />
         </div>
       ) : files.length + displayFolders.length === 0 ? (
@@ -308,7 +308,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
               onCloseMenu={closeMenu}
             />
           ) : (
-            <div className="space-y-4 pt-1">
+            <div className="space-y-[clamp(0.75rem,2vw,1rem)] pt-[clamp(0.2rem,0.7vw,0.25rem)]">
               <FileListVirtualScroller
                 isPlainSort={isPlainSort}
                 shouldUseVirtualList={shouldUseVirtualList}
@@ -363,7 +363,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
 function EmptyIcon() {
   return (
     <svg
-      className="h-10 w-10 text-[var(--glass-text-muted)]"
+      className="h-[clamp(2rem,5vw,2.5rem)] w-[clamp(2rem,5vw,2.5rem)] text-[var(--glass-text-muted)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"

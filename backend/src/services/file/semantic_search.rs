@@ -92,6 +92,7 @@ impl SemanticSearchService {
             SELECT id
             FROM files
             WHERE user_id = $1
+              AND deleted_at IS NULL
               AND embedding IS NOT NULL
               AND (1 - (embedding <=> $2::vector)) >= $3
             ORDER BY embedding <=> $2::vector

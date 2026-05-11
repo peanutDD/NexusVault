@@ -11,6 +11,7 @@ mod common;
 use std::sync::Arc;
 
 use bytes::Bytes;
+use chrono::{Duration as ChronoDuration, Utc};
 use common::{
     cleanup_test_data, create_test_file, create_test_pool, create_test_user, init_test_env,
 };
@@ -761,6 +762,63 @@ async fn test_file_service_delete_file_happy_path() {
 }
 
 #[tokio::test]
+async fn test_file_service_delete_file_soft_deletes_into_trash() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "delete_soft").await;
+    let file_id = create_test_file(&pool, user_id, "to_trash.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(file_id, user_id).await.unwrap();
+
+    assert!(service.get_file(file_id, user_id).await.is_err());
+
+    let deleted_at: Option<chrono::DateTime<Utc>> =
+        sqlx::query_scalar("SELECT deleted_at FROM files WHERE id = $1 AND user_id = $2")
+            .bind(file_id)
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(deleted_at.is_some());
+
+    let (files, total, _) = service
+        .list_files(user_id, FileListQuery::default())
+        .await
+        .unwrap();
+    assert!(files.is_empty());
+    assert_eq!(total, Some(0));
+
+    let trash = service.list_trash(user_id).await.unwrap();
+    assert_eq!(trash.len(), 1);
+    assert_eq!(trash[0].id, file_id);
+}
+
+#[tokio::test]
+async fn test_file_service_thumbnail_lookup_allows_deleted_owner_file() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "deleted_thumb").await;
+    let file_id = create_test_file(&pool, user_id, "deleted_image.png").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(file_id, user_id).await.unwrap();
+
+    assert!(service.get_file(file_id, user_id).await.is_err());
+
+    let file = service
+        .get_file_for_thumbnail(file_id, user_id)
+        .await
+        .unwrap();
+    assert_eq!(file.id, file_id);
+    assert!(file.deleted_at.is_some());
+}
+
+#[tokio::test]
 async fn test_file_service_delete_nonexistent_file() {
     init_test_env();
     let pool = create_test_pool().await;
@@ -802,4 +860,262 @@ async fn test_file_service_batch_delete() {
 
     // 第三个文件应该还存在
     assert!(service.get_file(file3_id, user_id).await.is_ok());
+}
+
+#[tokio::test]
+async fn test_file_service_batch_delete_soft_deletes_files() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "batch_soft_delete").await;
+    let file1_id = create_test_file(&pool, user_id, "file1.txt").await;
+    let file2_id = create_test_file(&pool, user_id, "file2.txt").await;
+    let file3_id = create_test_file(&pool, user_id, "file3.txt").await;
+
+    let service = create_test_service(pool.clone()).await;
+
+    let deleted = service
+        .batch_delete(&[file1_id, file2_id], user_id)
+        .await
+        .unwrap();
+    assert_eq!(deleted, 2);
+
+    let trash = service.list_trash(user_id).await.unwrap();
+    let trash_ids: std::collections::HashSet<_> = trash.into_iter().map(|f| f.id).collect();
+    assert!(trash_ids.contains(&file1_id));
+    assert!(trash_ids.contains(&file2_id));
+    assert!(!trash_ids.contains(&file3_id));
+    assert!(service.get_file(file3_id, user_id).await.is_ok());
+}
+
+#[tokio::test]
+async fn test_file_service_restore_deleted_file() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "restore_deleted").await;
+    let file_id = create_test_file(&pool, user_id, "restore.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(file_id, user_id).await.unwrap();
+    let restored = service.restore_file(file_id, user_id).await.unwrap();
+
+    assert_eq!(restored.id, file_id);
+    assert!(service.get_file(file_id, user_id).await.is_ok());
+    assert!(service.list_trash(user_id).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn test_file_service_restore_deleted_file_rejects_name_conflict() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "restore_conflict").await;
+    let file_id = create_test_file(&pool, user_id, "conflict.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(file_id, user_id).await.unwrap();
+    create_test_file(&pool, user_id, "conflict.txt").await;
+
+    let result = service.restore_file(file_id, user_id).await;
+    assert!(result.is_err());
+    assert!(format!("{}", result.err().unwrap()).contains("同名文件已存在"));
+}
+
+#[tokio::test]
+async fn test_file_service_batch_restore_reports_partial_failures() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "batch_restore_partial").await;
+    let restorable_id = create_test_file(&pool, user_id, "batch-ok.txt").await;
+    let conflict_id = create_test_file(&pool, user_id, "batch-conflict.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(restorable_id, user_id).await.unwrap();
+    service.delete_file(conflict_id, user_id).await.unwrap();
+    create_test_file(&pool, user_id, "batch-conflict.txt").await;
+
+    let result = service
+        .batch_restore_files(&[restorable_id, conflict_id], user_id)
+        .await
+        .unwrap();
+
+    assert_eq!(result.succeeded, 1);
+    assert_eq!(result.failed.len(), 1);
+    assert_eq!(result.failed[0].id, conflict_id);
+    assert!(service.get_file(restorable_id, user_id).await.is_ok());
+}
+
+#[tokio::test]
+async fn test_file_service_permanently_delete_file_removes_deleted_record() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "permanent_delete").await;
+    let file_id = create_test_file(&pool, user_id, "gone.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(file_id, user_id).await.unwrap();
+    service
+        .permanently_delete_file(file_id, user_id)
+        .await
+        .unwrap();
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*)::BIGINT FROM files WHERE id = $1")
+        .bind(file_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
+}
+
+#[tokio::test]
+async fn test_file_service_batch_permanently_delete_files_removes_deleted_records() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "batch_permanent").await;
+    let deleted_one = create_test_file(&pool, user_id, "delete-one.txt").await;
+    let deleted_two = create_test_file(&pool, user_id, "delete-two.txt").await;
+    let active_file = create_test_file(&pool, user_id, "keep-active.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(deleted_one, user_id).await.unwrap();
+    service.delete_file(deleted_two, user_id).await.unwrap();
+
+    let result = service
+        .batch_permanently_delete_files(&[deleted_one, deleted_two, active_file], user_id)
+        .await
+        .unwrap();
+
+    assert_eq!(result.succeeded, 2);
+    assert_eq!(result.failed.len(), 1);
+    assert_eq!(result.failed[0].id, active_file);
+    assert!(service.get_file(active_file, user_id).await.is_ok());
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*)::BIGINT FROM files WHERE id = ANY($1)")
+        .bind([deleted_one, deleted_two])
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
+}
+
+#[tokio::test]
+async fn test_file_service_empty_trash_removes_only_deleted_user_files() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "empty_trash").await;
+    let (other_user_id, _, _) = create_test_user(&pool, "empty_trash_other").await;
+    let deleted_file = create_test_file(&pool, user_id, "deleted.txt").await;
+    let active_file = create_test_file(&pool, user_id, "active.txt").await;
+    let other_deleted_file = create_test_file(&pool, other_user_id, "other.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(deleted_file, user_id).await.unwrap();
+    service
+        .delete_file(other_deleted_file, other_user_id)
+        .await
+        .unwrap();
+
+    let removed = service.empty_trash(user_id).await.unwrap();
+    assert_eq!(removed, 1);
+    assert!(service.get_file(active_file, user_id).await.is_ok());
+
+    let other_deleted_at: Option<chrono::DateTime<Utc>> =
+        sqlx::query_scalar("SELECT deleted_at FROM files WHERE id = $1")
+            .bind(other_deleted_file)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(other_deleted_at.is_some());
+}
+
+#[tokio::test]
+async fn test_file_service_purge_expired_trash_deletes_only_old_deleted_files() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "purge_expired").await;
+    let old_deleted = create_test_file(&pool, user_id, "old.txt").await;
+    let recent_deleted = create_test_file(&pool, user_id, "recent.txt").await;
+    let active = create_test_file(&pool, user_id, "active.txt").await;
+    let service = create_test_service(pool.clone()).await;
+
+    service.delete_file(old_deleted, user_id).await.unwrap();
+    service.delete_file(recent_deleted, user_id).await.unwrap();
+    sqlx::query("UPDATE files SET deleted_at = $1 WHERE id = $2")
+        .bind(Utc::now() - ChronoDuration::days(31))
+        .bind(old_deleted)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let purged = service.purge_expired_trash(30, 500).await.unwrap();
+    assert_eq!(purged, 1);
+
+    let remaining: Vec<uuid::Uuid> = sqlx::query_scalar("SELECT id FROM files ORDER BY id")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+    assert!(!remaining.contains(&old_deleted));
+    assert!(remaining.contains(&recent_deleted));
+    assert!(remaining.contains(&active));
+}
+
+#[tokio::test]
+async fn test_file_service_purge_expired_trash_keeps_storage_when_active_file_shares_path() {
+    init_test_env();
+    let pool = create_test_pool().await;
+    cleanup_test_data(&pool).await;
+
+    let (user_id, _, _) = create_test_user(&pool, "purge_shared_path").await;
+    let expired_deleted = create_test_file(&pool, user_id, "old-shared.txt").await;
+    let active = create_test_file(&pool, user_id, "active-shared.txt").await;
+    let shared_path = format!(
+        "/tmp/test_uploads/shared-path-purge-safety-{}.bin",
+        uuid::Uuid::new_v4()
+    );
+    let service = create_test_service(pool.clone()).await;
+
+    if let Some(parent) = std::path::Path::new(&shared_path).parent() {
+        tokio::fs::create_dir_all(parent).await.unwrap();
+    }
+    tokio::fs::write(&shared_path, b"still referenced")
+        .await
+        .unwrap();
+
+    sqlx::query("UPDATE files SET file_path = $1 WHERE id = ANY($2)")
+        .bind(&shared_path)
+        .bind([expired_deleted, active])
+        .execute(&pool)
+        .await
+        .unwrap();
+    service.delete_file(expired_deleted, user_id).await.unwrap();
+    sqlx::query("UPDATE files SET deleted_at = $1 WHERE id = $2")
+        .bind(Utc::now() - ChronoDuration::days(31))
+        .bind(expired_deleted)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let purged = service.purge_expired_trash(30, 500).await.unwrap();
+
+    assert_eq!(purged, 1);
+    assert!(service.get_file(active, user_id).await.is_ok());
+    assert!(
+        tokio::fs::metadata(&shared_path).await.is_ok(),
+        "purging one deleted row must not delete storage while another row still references file_path"
+    );
+    let _ = tokio::fs::remove_file(&shared_path).await;
 }

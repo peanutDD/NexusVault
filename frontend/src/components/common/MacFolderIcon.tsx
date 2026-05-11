@@ -20,7 +20,7 @@ export const MacFolderIcon = memo(function MacFolderIcon({
   return (
     <svg
       viewBox="0 0 24 24"
-      className={cn("h-5 w-5", className)}
+      className={cn("h-[clamp(1rem,2.5vw,1.25rem)] w-[clamp(1rem,2.5vw,1.25rem)]", className)}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"

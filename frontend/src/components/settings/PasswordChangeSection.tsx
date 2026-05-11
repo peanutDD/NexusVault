@@ -108,7 +108,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
       title="Security"
       description="Change your password periodically and avoid reusing it across services."
       icon={
-        <KeyRound className="h-5 w-5" aria-hidden="true" data-oid="8hmxl4n" />
+        <KeyRound className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" aria-hidden="true" data-oid="8hmxl4n" />
       }
       data-oid="ne71trr"
     >
@@ -118,7 +118,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
           onClose={handleCloseError}
           type="error"
           autoDismissMs={5000}
-          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
+          className="mb-[clamp(0.78rem,1.8vw,1rem)] [&_p]:text-[length:var(--settings-text-sm)]"
           data-oid="h9n6kem"
         />
       )}
@@ -128,14 +128,14 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
           onClose={handleCloseSuccess}
           type="info"
           autoDismissMs={3000}
-          className="mb-4 [&_p]:text-[length:var(--settings-text-sm)]"
+          className="mb-[clamp(0.78rem,1.8vw,1rem)] [&_p]:text-[length:var(--settings-text-sm)]"
           data-oid="s.:7sdp"
         />
       )}
       <form
         onSubmit={handleSubmit(onSubmit)}
         noValidate
-        className="space-y-4"
+        className="space-y-[clamp(0.78rem,1.8vw,1rem)]"
         data-oid="be5kts_"
       >
         <div data-oid="0h03yxf">

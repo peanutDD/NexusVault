@@ -10,7 +10,7 @@ function IconBadge({
 }) {
   return (
     <span
-      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base ${className}`}
+      className={`inline-flex h-[clamp(1.5rem,3.15vw,1.75rem)] w-[clamp(1.5rem,3.15vw,1.75rem)] shrink-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.875rem,2vw,1rem)] ${className}`}
       aria-hidden
       data-oid="cw-rwls"
     >

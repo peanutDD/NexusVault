@@ -1,0 +1,29 @@
+{
+  "date": "2026-05-09",
+  "task": "codex-auto-fix-warn-only-security",
+  "goal": "Let High priority auto-fixes proceed when blocked only by the old full-file line cap or prompt-based security fail-closed.",
+  "assumptions": [
+    "Prompt-based SecurityCheck is useful as warning evidence but too noisy as a hard blocker.",
+    "Files over 300 lines are normal in the current frontend codebase.",
+    "Protected-file and allow-list fallback gates still provide necessary bounds."
+  ],
+  "risks": [
+    "Full-file fallback becomes more powerful without a line cap.",
+    "Warn-only security findings must remain visible in outputs and comments."
+  ],
+  "steps": [
+    "Add red e2e coverage for warn-only security push behavior.",
+    "Add red e2e coverage for large-file full-file fallback.",
+    "Remove SecurityCheck push blocking while preserving findings.",
+    "Remove the global full-file fallback line-count cap.",
+    "Update constraints and quality score.",
+    "Run focused and full codex-cli verification."
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml auto_fix_local_warns_but_pushes_when_security_audit_fails -- --nocapture",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml full_file_fallback_allows_large_files -- --nocapture",
+    "cargo fmt --manifest-path scripts/codex-cli/Cargo.toml",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml",
+    "cargo clippy --manifest-path scripts/codex-cli/Cargo.toml --all-targets -- -D warnings"
+  ]
+}

@@ -6,9 +6,9 @@ interface SpinnerProps {
 }
 
 const sizeClasses = {
-  sm: "w-5 h-5 border-2",
-  md: "w-10 h-10 border-2",
-  lg: "w-16 h-16 border-4",
+  sm: "w-[clamp(1rem,2.25vw,1.25rem)] h-[clamp(1rem,2.25vw,1.25rem)] border-2",
+  md: "w-[clamp(2.25rem,4.5vw,2.5rem)] h-[clamp(2.25rem,4.5vw,2.5rem)] border-2",
+  lg: "w-[clamp(3.75rem,7.2vw,4rem)] h-[clamp(3.75rem,7.2vw,4rem)] border-4",
 } as const;
 
 export default function Spinner({ size = "md", className }: SpinnerProps) {

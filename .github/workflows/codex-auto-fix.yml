@@ -41,15 +41,109 @@ jobs:
       REVIEW_ID: ${{ github.event.review.id || '' }}
 
     steps:
-      - name: Checkout 仓库
-        uses: actions/checkout@v4
-
-      - name: Checkout PR 分支
+      - name: Resilient checkout PR branch
         run: |
-          gh pr checkout "${PR_NUMBER}"
+          set -euo pipefail
+
+          HEAD_REF="$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json headRefName -q '.headRefName')"
+          HEAD_SHA="$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json headRefOid -q '.headRefOid')"
+          echo "PR head: ${HEAD_REF}@${HEAD_SHA}"
+
+          archive_is_valid() {
+            tar -tzf "$1" >/dev/null 2>&1
+          }
+
+          download_pr_head_archive() {
+            local archive="$1"
+            local tmp_archive="${archive}.tmp"
+            local api_path="repos/${GITHUB_REPOSITORY}/tarball/${HEAD_SHA}"
+            local api_url="https://api.github.com/${api_path}"
+
+            rm -f "${archive}" "${tmp_archive}"
+            for attempt in 1 2 3 4 5; do
+              if gh api -H "Accept: application/vnd.github+json" "${api_path}" > "${tmp_archive}" \
+                && archive_is_valid "${tmp_archive}"; then
+                mv "${tmp_archive}" "${archive}"
+                return 0
+              fi
+
+              rm -f "${tmp_archive}"
+              if curl --fail --location --silent --show-error \
+                --http1.1 \
+                --retry 3 \
+                --retry-all-errors \
+                --connect-timeout 20 \
+                --max-time 180 \
+                -H "Authorization: Bearer ${GH_TOKEN}" \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "${api_url}" \
+                --output "${tmp_archive}" \
+                && archive_is_valid "${tmp_archive}"; then
+                mv "${tmp_archive}" "${archive}"
+                return 0
+              fi
+
+              rm -f "${tmp_archive}"
+              echo "::warning::PR tarball download failed for ${HEAD_SHA}, attempt ${attempt}/5"
+              sleep $((attempt * 10))
+            done
+
+            return 1
+          }
+
+          workspace="${GITHUB_WORKSPACE}"
+          seed="${CODEX_LOCAL_REPO_SEED}"
+          mkdir -p "${workspace}"
+
+          if [[ -d "${workspace}/.git" ]]; then
+            git -C "${workspace}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+          elif [[ -d "${seed}/.git" ]]; then
+            git clone --no-hardlinks "${seed}" "${workspace}"
+            git -C "${workspace}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+          else
+            echo "::error::Cannot find local checkout seed at ${seed}"
+            exit 1
+          fi
+
+          cd "${workspace}"
+          git config --global --add safe.directory "${workspace}" || true
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          exact_head=false
+          if git cat-file -e "${HEAD_SHA}^{commit}" 2>/dev/null; then
+            git checkout -B "${HEAD_REF}" "${HEAD_SHA}"
+            git reset --hard "${HEAD_SHA}"
+            git clean -ffdx
+            exact_head=true
+          else
+            archive="${RUNNER_TEMP:-/tmp}/codex-pr-head-${HEAD_SHA}.tar.gz"
+            extract_dir="${RUNNER_TEMP:-/tmp}/codex-pr-head-${HEAD_SHA}"
+            rm -rf "${extract_dir}"
+            mkdir -p "${extract_dir}"
+
+            if download_pr_head_archive "${archive}"; then
+              tar -xzf "${archive}" -C "${extract_dir}" --strip-components=1
+              rsync -a --delete --exclude ".git" "${extract_dir}/" "${workspace}/"
+              git checkout -B "${HEAD_REF}"
+              git add -A
+              if ! git diff --cached --quiet; then
+                git commit -m "bootstrap PR head ${HEAD_SHA}"
+              fi
+              exact_head=true
+            fi
+          fi
+
+          if [[ "${exact_head}" != "true" ]]; then
+            echo "::error::Cannot verify exact PR head ${HEAD_SHA}; refusing to run auto-fix on a stale local seed."
+            exit 1
+          fi
+
+          echo "CODEX_PUBLISH_VIA_GH_API=true" >> "${GITHUB_ENV}"
+          echo "Checked out PR branch ${HEAD_REF} with resilient local/API bootstrap."
         env:
+          CODEX_LOCAL_REPO_SEED: /Users/tyone/github/upload-download-util
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 获取当前轮次标签

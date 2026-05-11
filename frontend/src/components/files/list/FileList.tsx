@@ -1,7 +1,8 @@
-import { lazy, Suspense, useCallback } from "react";
+import { lazy, Suspense, useCallback, useEffect } from "react";
 import "./FileListGlass.css";
 import { useFileList } from "../useFileList";
 import { useThrottledCallback } from "../../../hooks/useThrottledCallback";
+import { stopDragAutoScroll, updateDragAutoScroll } from "../../../utils/dragAutoScroll";
 import { FileCardSkeleton } from "../../common/feedback/Skeleton";
 
 interface FileListProps {
@@ -92,6 +93,28 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     void loadMore();
   }, 400);
 
+  useEffect(() => {
+    const handleDragOver = (event: DragEvent) => {
+      const types = Array.from(event.dataTransfer?.types ?? []);
+      if (
+        types.includes("application/file-id") ||
+        types.includes("application/folder-id")
+      ) {
+        updateDragAutoScroll(event.clientY);
+      }
+    };
+
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("drop", stopDragAutoScroll);
+    window.addEventListener("dragend", stopDragAutoScroll);
+    return () => {
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("drop", stopDragAutoScroll);
+      window.removeEventListener("dragend", stopDragAutoScroll);
+      stopDragAutoScroll();
+    };
+  }, []);
+
   // 适配器函数，处理类型不匹配问题
   const handleSortChangeAdapter = useCallback(
     (value: string) =>
@@ -170,7 +193,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       <Suspense
         fallback={
           <div
-            className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
+            className="grid grid-cols-3 gap-[clamp(0.6rem,1.4vw,0.75rem)] sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
             data-oid="_2vkq1p"
           >
             <FileCardSkeleton count={12} data-oid=".8oa0_j" />

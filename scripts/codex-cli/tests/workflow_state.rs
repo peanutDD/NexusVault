@@ -172,6 +172,63 @@ fn codex_auto_fix_supports_markdown_rollback_switch() {
 }
 
 #[test]
+fn codex_auto_fix_bootstraps_pr_head_without_git_https_checkout() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        !workflow.contains("uses: actions/checkout@v4"),
+        "self-hosted auto-fix should not depend on actions/checkout Git HTTPS fetch as the first step"
+    );
+    assert!(
+        workflow.contains("CODEX_LOCAL_REPO_SEED"),
+        "workflow should seed the workspace from a local repository before contacting GitHub"
+    );
+    assert!(
+        workflow.contains("headRefOid") && workflow.contains("headRefName"),
+        "workflow should resolve the exact PR head branch and SHA through the GitHub API"
+    );
+    assert!(
+        workflow.contains("tarball/${HEAD_SHA}"),
+        "workflow should use the GitHub API tarball path instead of Git smart HTTP fetch when needed"
+    );
+    assert!(
+        workflow.contains("download_pr_head_archive")
+            && workflow.contains("for attempt in 1 2 3 4 5"),
+        "workflow should retry transient PR tarball stream failures before failing closed"
+    );
+    assert!(
+        workflow.contains("curl")
+            && workflow.contains("--http1.1")
+            && workflow.contains("--retry-all-errors"),
+        "workflow should fall back to HTTP/1.1 curl retries when gh api streaming is cancelled"
+    );
+    assert!(
+        workflow.contains("Cannot verify exact PR head"),
+        "workflow should fail closed instead of auto-fixing a stale local seed"
+    );
+    assert!(
+        workflow.contains("CODEX_PUBLISH_VIA_GH_API=true"),
+        "synthetic local checkout should force codex-cli to publish via GitHub API rather than git push"
+    );
+}
+
+#[test]
+fn gemini_kickoff_only_skips_actual_auto_fix_commit_subjects() {
+    let workflow = fs::read_to_string(gemini_kickoff_workflow())
+        .expect("gemini kickoff workflow should be readable");
+
+    assert!(
+        !workflow.contains("*codex auto-fix*"),
+        "Gemini kickoff must not skip any human commit that merely mentions codex auto-fix"
+    );
+    assert!(
+        workflow.contains("\"$LAST_COMMIT_MESSAGE\" == \"🤖 codex auto-fix:\"*"),
+        "Gemini kickoff should only skip the exact auto-fix bot commit subject prefix"
+    );
+}
+
+#[test]
 fn state_script_names_medium_and_medium_plus_as_pending_scope() {
     let script =
         fs::read_to_string(workflow_script()).expect("workflow state script should be readable");
@@ -241,4 +298,10 @@ fn codex_auto_fix_workflow() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
         .join(".github/workflows/codex-auto-fix.yml")
+}
+
+fn gemini_kickoff_workflow() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(".github/workflows/gemini-review-kickoff.yml")
 }

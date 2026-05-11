@@ -14,6 +14,7 @@ export interface FileMetadata {
   category: string | null;
   folder_id: string | null;
   created_at: string;
+  deleted_at?: string | null;
 }
 
 /**
@@ -27,6 +28,10 @@ export interface FileListResponse {
   limit?: number;
   // 游标分页字段（当使用 cursor 参数时）
   next_cursor?: string | null;
+}
+
+export interface TrashListResponse {
+  files: FileMetadata[];
 }
 
 /**

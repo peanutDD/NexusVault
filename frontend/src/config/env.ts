@@ -14,6 +14,8 @@ const rawBase =
   import.meta.env.VITE_API_BASE_URL ||
   '';
 
+export const LOCAL_DEV_API_ORIGIN = 'http://localhost:3000'; // hardcoding-allow: local dev fallback for non-browser rendering
+
 // 规范化 API_BASE_URL：
 // - 默认使用 VITE_API_BASE_URL
 // - 如果当前页面是 HTTPS 且 VITE_API_BASE_URL 是 http:// 开头，则改用相对路径，
@@ -40,7 +42,11 @@ export const API_BASE_URL = resolveApiBase();
 
 export const ORIGIN =
   rawBase ||
-  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  (typeof window !== 'undefined' ? window.location.origin : LOCAL_DEV_API_ORIGIN);
+
+export function apiBaseForMessage(): string {
+  return API_BASE_URL || LOCAL_DEV_API_ORIGIN;
+}
 
 export const APP_NAME = 'File Upload Download Server';
 

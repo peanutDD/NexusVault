@@ -1,7 +1,7 @@
 import { type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
 
 const inputBase =
-  "w-full px-3 py-2 bg-[var(--control-input-bg)] border border-[var(--control-input-border)] rounded-lg text-[var(--control-input-text)] placeholder:text-[var(--control-input-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)] disabled:opacity-50";
+  "w-full rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--control-input-bg)] px-[clamp(0.625rem,1.5vw,0.75rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[var(--control-input-text)] placeholder:text-[var(--control-input-placeholder)] border border-[var(--control-input-border)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)] disabled:opacity-50";
 
 interface FormFieldProps {
   label: string;
@@ -22,7 +22,7 @@ export function FormFieldRoot({
     <div data-oid="-:u35xb">
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-[var(--control-label-text)] mb-2"
+        className="mb-[clamp(0.4rem,1vw,0.5rem)] block text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--control-label-text)]"
         data-oid="-czwnhi"
       >
         {label}
@@ -30,7 +30,7 @@ export function FormFieldRoot({
       {children}
       {hint && (
         <p
-          className="text-[var(--control-hint-text)] text-xs mt-1"
+          className="mt-[clamp(0.2rem,0.7vw,0.25rem)] text-[clamp(0.65rem,1.5vw,0.75rem)] text-[var(--control-hint-text)]"
           data-oid="h.lpxj_"
         >
           {hint}
@@ -38,7 +38,7 @@ export function FormFieldRoot({
       )}
       {error && (
         <p
-          className="text-[var(--control-error-text)] text-sm mt-1"
+          className="mt-[clamp(0.2rem,0.7vw,0.25rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--control-error-text)]"
           role="alert"
           data-oid="w_in_wi"
         >

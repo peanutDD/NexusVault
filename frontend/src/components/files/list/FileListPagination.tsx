@@ -71,7 +71,7 @@ const FileListPagination = memo(function FileListPagination({
     if (totalPages <= 1) return null;
 
     return (
-      <div className="mt-8 flex items-center justify-center" data-oid="cmewoht">
+      <div className="mt-[clamp(1.5rem,4vw,2rem)] flex items-center justify-center" data-oid="cmewoht">
         <div
           className="flex flex-col items-center justify-center"
           data-oid="wg3:z8y"
@@ -81,16 +81,16 @@ const FileListPagination = memo(function FileListPagination({
             onClick={onLoadMore}
             disabled={!hasMore || loadingMore}
             className={cn(
-              "glass-btn toolbarActionBtn loadMoreCyber font-brand px-6 py-2 text-sm font-normal tracking-widest disabled:opacity-50",
+              "glass-btn toolbarActionBtn loadMoreCyber font-brand px-[clamp(1.25rem,3vw,1.5rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest disabled:opacity-50",
               "scale-[0.8]",
-              "flex items-center justify-center gap-2",
+              "flex items-center justify-center gap-[clamp(0.4rem,1vw,0.5rem)]",
             )}
             data-oid="s9zyj-k"
           >
             {loadingMore ? (
               <>
                 <span
-                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                  className="inline-block h-[clamp(0.875rem,2vw,1rem)] w-[clamp(0.875rem,2vw,1rem)] animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
                   data-oid="fqqa704"
                 />
                 Loading...
@@ -117,27 +117,27 @@ const FileListPagination = memo(function FileListPagination({
 
   return (
     <div
-      className="mt-8 flex items-center justify-center gap-3"
+      className="mt-[clamp(1.5rem,4vw,2rem)] flex items-center justify-center gap-[clamp(0.6rem,1.4vw,0.75rem)]"
       data-oid="njc2d5."
     >
       <button
         type="button"
         onClick={() => onPageChange?.(Math.max(1, page - 1))}
         disabled={page === 1}
-        className="glass-btn flex items-center gap-1 px-4 py-2 text-sm"
+        className="glass-btn flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.75rem,2vw,1rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)]"
         data-oid="23jcn1t"
       >
         <ChevronLeftIcon data-oid="g28pw:_" />
         上一页
       </button>
-      <div className="flex items-center gap-1" data-oid="8.bt50r">
+      <div className="flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)]" data-oid="8.bt50r">
         {pageNumbers.map((pageNum) => (
           <button
             key={pageNum}
             type="button"
             onClick={() => onPageChange?.(pageNum)}
             className={cn(
-              "glass-btn h-9 w-9 text-sm font-medium transition-colors",
+              "glass-btn h-[clamp(2rem,4.5vw,2.25rem)] w-[clamp(2rem,4.5vw,2.25rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium transition-colors",
               page === pageNum
                 ? "border-[var(--color-border-medium)] bg-[var(--glass-bg-soft)] text-[var(--glass-text)]"
                 : "text-[var(--glass-text-muted)] hover:text-[var(--glass-text)]",
@@ -152,7 +152,7 @@ const FileListPagination = memo(function FileListPagination({
         type="button"
         onClick={() => onPageChange?.(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
-        className="glass-btn flex items-center gap-1 px-4 py-2 text-sm"
+        className="glass-btn flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.75rem,2vw,1rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)]"
         data-oid="wyq2pvx"
       >
         下一页
@@ -165,7 +165,7 @@ const FileListPagination = memo(function FileListPagination({
 function ChevronLeftIcon() {
   return (
     <svg
-      className="h-4 w-4"
+      className="h-[clamp(0.875rem,2vw,1rem)] w-[clamp(0.875rem,2vw,1rem)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -185,7 +185,7 @@ function ChevronLeftIcon() {
 function ChevronRightIcon() {
   return (
     <svg
-      className="h-4 w-4"
+      className="h-[clamp(0.875rem,2vw,1rem)] w-[clamp(0.875rem,2vw,1rem)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"

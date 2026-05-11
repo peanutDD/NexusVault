@@ -83,10 +83,10 @@ export default function RenameFolderDialog({
   if (!open || !folder) return null;
 
   const inputClass =
-    "w-full rounded-lg border border-[var(--dialog-field-border)] bg-transparent px-2.5 py-1.5 text-xs text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:border-[var(--dialog-field-focus-border)] focus:outline-none";
+    "w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-transparent px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:border-[var(--dialog-field-focus-border)] focus:outline-none";
 
   const message = (
-    <div className="space-y-3" data-oid="-wv2vqd">
+    <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="-wv2vqd">
       {error && (
         <ErrorMessage
           message={error}
@@ -96,7 +96,7 @@ export default function RenameFolderDialog({
         />
       )}
       <div
-        className="rounded-lg border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-3 py-2"
+        className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-panel-border)] bg-[var(--dialog-panel-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]"
         data-oid="y9u739u"
       >
         <p
@@ -106,7 +106,7 @@ export default function RenameFolderDialog({
           当前名称
         </p>
         <p
-          className="mt-0.5 font-brand text-sm font-normal tracking-wide text-[var(--dialog-panel-text)]"
+          className="mt-[clamp(0.0975rem,0.3vw,0.125rem)] font-brand text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-wide text-[var(--dialog-panel-text)]"
           data-oid="68231ko"
         >
           <span className="font-semibold text-[var(--dialog-panel-accent)]" data-oid="ks9eoho">
@@ -116,13 +116,13 @@ export default function RenameFolderDialog({
       </div>
       <div data-oid="xc_-ycb">
         <p
-          className="mb-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="ug_.i2y"
         >
           新名称
         </p>
         <div
-          className="rounded-lg border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] p-2.5"
+          className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-list-border)] bg-[var(--dialog-list-bg)] p-[clamp(0.4875rem,1.125vw,0.625rem)]"
           data-oid="tk86h.r"
         >
           <form onSubmit={handleSubmit} data-oid="gkgdi8t">
@@ -148,7 +148,7 @@ export default function RenameFolderDialog({
       open={open}
       appearance="glass"
       variant="info"
-      icon={<PencilLine className="h-5 w-5" data-oid="r8z_ckl" />}
+      icon={<PencilLine className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" data-oid="r8z_ckl" />}
       iconBgClass="bg-[var(--dialog-accent-rose-bg)]"
       iconColorClass="text-[var(--dialog-accent-rose-text)]"
       title="重命名文件夹"

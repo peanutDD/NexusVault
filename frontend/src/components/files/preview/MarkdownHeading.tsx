@@ -16,7 +16,7 @@ export default function MarkdownHeading({
   const text = toPlainText(children);
   const id = getHeadingId(text);
   const Tag = `h${level}` as const;
-  const sizeClass = level <= 3 ? "text-sm" : "text-xs";
+  const sizeClass = level <= 3 ? "text-[clamp(0.75rem,1.8vw,0.875rem)]" : "text-[clamp(0.68rem,1.6vw,0.75rem)]";
   const colorClass =
     level === 1
       ? "text-[var(--preview-markdown-h1)]"
@@ -33,14 +33,14 @@ export default function MarkdownHeading({
   return (
     <Tag
       id={id}
-      className={cn("group mt-3 mb-1 font-semibold", sizeClass, colorClass)}
+      className={cn("group mt-[clamp(0.585rem,1.35vw,0.75rem)] mb-[clamp(0.195rem,0.45vw,0.25rem)] font-semibold", sizeClass, colorClass)}
       {...props}
     >
       {children}
       <a
         href={`#${id}`}
         className={cn(
-          "ml-1 inline-flex select-none items-center opacity-0 transition-opacity group-hover:opacity-100",
+          "ml-[clamp(0.195rem,0.45vw,0.25rem)] inline-flex select-none items-center opacity-0 transition-opacity group-hover:opacity-100",
           "text-[var(--preview-markdown-heading-link)] hover:text-[var(--preview-markdown-heading-link-hover)]",
         )}
         aria-label="Heading link"

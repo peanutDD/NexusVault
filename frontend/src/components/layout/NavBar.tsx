@@ -1,8 +1,14 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { APP_NAME } from "../../config/env";
 import { cn } from "../../utils/cn";
-import { ArrowLeft, LogOut, Settings } from "lucide-react";
+import { ArrowLeft, LogOut, Settings, Trash2 } from "lucide-react";
 import ThemeToggle from "../common/ThemeToggle";
+import {
+  currentFilesLocation,
+  readTrashReturnTarget,
+  rememberTrashReturnTarget,
+} from "../../utils/trashReturnTarget";
 
 interface NavBarProps {
   title?: string;
@@ -22,6 +28,13 @@ export default function NavBar({
   showSettings = true,
 }: NavBarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const filesLocation = currentFilesLocation(location.pathname, location.search);
+
+  useEffect(() => {
+    rememberTrashReturnTarget(filesLocation);
+  }, [filesLocation]);
+
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -44,7 +57,7 @@ export default function NavBar({
 
       {/* 底部青绿色分隔线（对齐参考图） */}
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-[var(--nav-bottom-line)]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[clamp(0.0975rem,0.3vw,0.125rem)] bg-[var(--nav-bottom-line)]"
         data-oid="mpflc4s"
       />
 
@@ -55,14 +68,14 @@ export default function NavBar({
       />
 
       <div
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+        className="mx-auto max-w-[80rem] px-[clamp(1rem,2.5vw,2rem)]"
         data-oid="q:y39os"
       >
         <div
           className="flex justify-between items-center h-[clamp(4.75rem,7.6vw,6.25rem)]"
           data-oid="qlp0jdz"
         >
-          <div className="flex items-center gap-4 min-w-0" data-oid="trr68n.">
+          <div className="flex min-w-0 items-center gap-[clamp(0.75rem,2vw,1rem)]" data-oid="trr68n.">
             {backTo && (
               <button
                 type="button"
@@ -93,7 +106,7 @@ export default function NavBar({
               </button>
             )}
 
-            <div className="flex items-center gap-4 min-w-0" data-oid="iqbhzo8">
+            <div className="flex min-w-0 items-center gap-[clamp(0.75rem,2vw,1rem)]" data-oid="iqbhzo8">
               <div className="shrink-0 select-none" data-oid="mtnbm56">
                 <CyberPrismLogo
                   className="h-[clamp(2.6rem,4vw,3.3rem)] w-[clamp(2.6rem,4vw,3.3rem)]"
@@ -110,7 +123,7 @@ export default function NavBar({
           </div>
 
           <div
-            className="flex items-center gap-1.5 sm:gap-2"
+            className="flex items-center gap-[clamp(0.375rem,1vw,0.5rem)]"
             data-oid=".t1_g6i"
           >
             {extra}
@@ -182,6 +195,34 @@ export default function NavBar({
                   </span>
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const returnTo = filesLocation ?? readTrashReturnTarget() ?? "/files";
+                  rememberTrashReturnTarget(returnTo);
+                  navigate("/trash", {
+                    state: { from: returnTo },
+                  });
+                }}
+                aria-label="Trash"
+                title="Trash"
+                className={cn(
+                  "nav-btn inline-flex items-center justify-center whitespace-nowrap",
+                  "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
+                  "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
+                  "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
+                  "active:translate-y-px transition-all duration-200",
+                )}
+                data-oid="trash-nav"
+              >
+                <Trash2
+                  className="nav-icon shrink-0 text-[var(--nav-btn-icon)]"
+                  aria-hidden="true"
+                />
+
+                <span className="hidden sm:inline whitespace-nowrap">Trash</span>
+              </button>
 
               <ThemeToggle showLabel data-oid="zsuxs6n" />
 

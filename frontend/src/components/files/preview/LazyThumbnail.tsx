@@ -376,14 +376,14 @@ export default function LazyThumbnail({
   const renderContent = () => {
     if (effectiveState.error || !showThumbnail) {
       if (isImageType(mimeType))
-        return <ImageIcon className="h-8 w-8" data-oid="78tehfw" />;
+        return <ImageIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="78tehfw" />;
       if (isVideoType(mimeType))
-        return <VideoIcon className="h-8 w-8" data-oid="u16s9eb" />;
+        return <VideoIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="u16s9eb" />;
       if (isPdfType(mimeType))
-        return <PdfIcon className="h-8 w-8" data-oid="vke9l2f" />;
+        return <PdfIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="vke9l2f" />;
       if (isAudioType(mimeType))
-        return <AudioIcon className="h-8 w-8" data-oid="dc9_cfq" />;
-      return <FileIcon className="h-8 w-8" data-oid="o2qrgfz" />;
+        return <AudioIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="dc9_cfq" />;
+      return <FileIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="o2qrgfz" />;
     }
 
     if (effectiveState.imageUrl) {
@@ -395,7 +395,7 @@ export default function LazyThumbnail({
               data-oid="eknd:jz"
             >
               <div
-                className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
                 data-oid="hqtxk0v"
               />
             </div>

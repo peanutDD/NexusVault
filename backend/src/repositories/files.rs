@@ -121,7 +121,7 @@ impl FilesRepository for SqlxFilesRepo {
         file_size: u64,
     ) -> Result<Option<File>, AppError> {
         sqlx::query_as::<_, File>(
-            "SELECT * FROM files WHERE content_sha256 = $1 AND file_size = $2 LIMIT 1",
+            "SELECT * FROM files WHERE content_sha256 = $1 AND file_size = $2 AND deleted_at IS NULL LIMIT 1",
         )
         .bind(content_sha256) // 十六进制字符串
         .bind(file_size as i64)
@@ -172,12 +172,29 @@ impl FilesRepository for SqlxFilesRepo {
     /// **实现**：`SELECT * FROM files WHERE id = $1 AND user_id = $2`，返回 `Option<File>`，
     /// 不存在或不属于该用户时为 `None`。
     async fn find_by_id(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError> {
-        sqlx::query_as::<_, File>("SELECT * FROM files WHERE id = $1 AND user_id = $2")
-            .bind(file_id)
-            .bind(user_id) // 双重条件防止越权
-            .fetch_optional(self.r())
-            .await
-            .map_err(AppError::from)
+        sqlx::query_as::<_, File>(
+            "SELECT * FROM files WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(file_id)
+        .bind(user_id) // 双重条件防止越权
+        .fetch_optional(self.r())
+        .await
+        .map_err(AppError::from)
+    }
+
+    async fn find_deleted_by_id(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<File>, AppError> {
+        sqlx::query_as::<_, File>(
+            "SELECT * FROM files WHERE id = $1 AND user_id = $2 AND deleted_at IS NOT NULL",
+        )
+        .bind(file_id)
+        .bind(user_id)
+        .fetch_optional(self.r())
+        .await
+        .map_err(AppError::from)
     }
 
     /// 判断指定文件是否属于指定用户（仅做存在性检查，不返回实体）。
@@ -185,12 +202,13 @@ impl FilesRepository for SqlxFilesRepo {
     /// **实现**：`SELECT id FROM files WHERE id = $1 AND user_id = $2`，有行则 `true`。
     /// 比 `find_by_id` 更轻量，适合仅做权限/归属判断的场景。
     async fn belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
-        let result: Option<Uuid> =
-            sqlx::query_scalar("SELECT id FROM files WHERE id = $1 AND user_id = $2")
-                .bind(file_id)
-                .bind(user_id)
-                .fetch_optional(self.r())
-                .await?;
+        let result: Option<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM files WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(file_id)
+        .bind(user_id)
+        .fetch_optional(self.r())
+        .await?;
         Ok(result.is_some()) // 有行即属于该用户
     }
 
@@ -202,7 +220,7 @@ impl FilesRepository for SqlxFilesRepo {
     ) -> Result<Option<File>, AppError> {
         let file = if let Some(fid) = folder_id {
             sqlx::query_as::<_, File>(
-                "SELECT * FROM files WHERE user_id = $1 AND original_filename = $2 AND folder_id = $3 LIMIT 1",
+                "SELECT * FROM files WHERE user_id = $1 AND original_filename = $2 AND folder_id = $3 AND deleted_at IS NULL LIMIT 1",
             )
             .bind(user_id)
             .bind(original_filename)
@@ -211,7 +229,7 @@ impl FilesRepository for SqlxFilesRepo {
             .await?
         } else {
             sqlx::query_as::<_, File>(
-                "SELECT * FROM files WHERE user_id = $1 AND original_filename = $2 AND folder_id IS NULL LIMIT 1",
+                "SELECT * FROM files WHERE user_id = $1 AND original_filename = $2 AND folder_id IS NULL AND deleted_at IS NULL LIMIT 1",
             )
             .bind(user_id)
             .bind(original_filename)
@@ -231,7 +249,7 @@ impl FilesRepository for SqlxFilesRepo {
             r#"
             UPDATE files
             SET original_filename = $1, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2 AND user_id = $3
+            WHERE id = $2 AND user_id = $3 AND deleted_at IS NULL
             RETURNING *
             "#,
         )
@@ -256,7 +274,7 @@ impl FilesRepository for SqlxFilesRepo {
         folder_id: Option<Uuid>,
     ) -> Result<Vec<File>, AppError> {
         sqlx::query_as::<_, File>(
-            "SELECT * FROM files WHERE user_id = $1 AND ( (folder_id IS NULL AND $2::uuid IS NULL) OR (folder_id = $2) ) ORDER BY created_at DESC",
+            "SELECT * FROM files WHERE user_id = $1 AND deleted_at IS NULL AND ( (folder_id IS NULL AND $2::uuid IS NULL) OR (folder_id = $2) ) ORDER BY created_at DESC",
         )
         .bind(user_id)
         .bind(folder_id)
@@ -268,6 +286,125 @@ impl FilesRepository for SqlxFilesRepo {
     // =============================================================================
     // 删除（单条 / 批量）
     // =============================================================================
+
+    async fn soft_delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
+        let result = sqlx::query(
+            "UPDATE files SET deleted_at = COALESCE(deleted_at, NOW()), updated_at = NOW() WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(file_id)
+        .bind(user_id)
+        .execute(self.w())
+        .await?;
+        Ok(result.rows_affected())
+    }
+
+    async fn soft_delete_batch(&self, ids: &[Uuid], user_id: Uuid) -> Result<u64, AppError> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let result = sqlx::query(
+            "UPDATE files SET deleted_at = COALESCE(deleted_at, NOW()), updated_at = NOW() WHERE user_id = $1 AND id = ANY($2) AND deleted_at IS NULL",
+        )
+        .bind(user_id)
+        .bind(ids)
+        .execute(self.w())
+        .await?;
+        Ok(result.rows_affected())
+    }
+
+    async fn restore_deleted(&self, file_id: Uuid, user_id: Uuid) -> Result<File, AppError> {
+        sqlx::query_as::<_, File>(
+            r#"
+            UPDATE files
+            SET deleted_at = NULL, updated_at = NOW()
+            WHERE id = $1 AND user_id = $2 AND deleted_at IS NOT NULL
+            RETURNING *
+            "#,
+        )
+        .bind(file_id)
+        .bind(user_id)
+        .fetch_one(self.w())
+        .await
+        .map_err(AppError::from)
+    }
+
+    async fn list_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError> {
+        sqlx::query_as::<_, File>(
+            "SELECT * FROM files WHERE user_id = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC",
+        )
+        .bind(user_id)
+        .fetch_all(self.r())
+        .await
+        .map_err(AppError::from)
+    }
+
+    async fn hard_delete_deleted(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
+        let result = sqlx::query(
+            "DELETE FROM files WHERE id = $1 AND user_id = $2 AND deleted_at IS NOT NULL",
+        )
+        .bind(file_id)
+        .bind(user_id)
+        .execute(self.w())
+        .await?;
+        Ok(result.rows_affected())
+    }
+
+    async fn hard_delete_deleted_batch(
+        &self,
+        ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<Vec<File>, AppError> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        sqlx::query_as::<_, File>(
+            "DELETE FROM files WHERE user_id = $1 AND id = ANY($2) AND deleted_at IS NOT NULL RETURNING *",
+        )
+        .bind(user_id)
+        .bind(ids)
+        .fetch_all(self.w())
+        .await
+        .map_err(AppError::from)
+    }
+
+    async fn hard_delete_all_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError> {
+        sqlx::query_as::<_, File>(
+            "DELETE FROM files WHERE user_id = $1 AND deleted_at IS NOT NULL RETURNING *",
+        )
+        .bind(user_id)
+        .fetch_all(self.w())
+        .await
+        .map_err(AppError::from)
+    }
+
+    async fn purge_expired_deleted(
+        &self,
+        retention_days: i64,
+        batch_limit: i64,
+    ) -> Result<Vec<File>, AppError> {
+        sqlx::query_as::<_, File>(
+            r#"
+            WITH picked AS (
+                SELECT id
+                FROM files
+                WHERE deleted_at IS NOT NULL
+                  AND deleted_at < NOW() - ($1::int * INTERVAL '1 day')
+                ORDER BY deleted_at ASC
+                LIMIT $2
+            )
+            DELETE FROM files f
+            USING picked
+            WHERE f.id = picked.id
+            RETURNING f.*
+            "#,
+        )
+        .bind(retention_days as i32)
+        .bind(batch_limit)
+        .fetch_all(self.w())
+        .await
+        .map_err(AppError::from)
+    }
 
     async fn delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
         let result = sqlx::query("DELETE FROM files WHERE id = $1 AND user_id = $2")
@@ -314,7 +451,7 @@ impl FilesRepository for SqlxFilesRepo {
     /// 分类字段已逐步被 `folder_id` 替代，接口保留兼容。
     async fn list_categories(&self, user_id: Uuid) -> Result<Vec<String>, AppError> {
         sqlx::query_scalar::<_, String>(
-            "SELECT DISTINCT category FROM files WHERE user_id = $1 AND category IS NOT NULL AND TRIM(category) != '' ORDER BY category",
+            "SELECT DISTINCT category FROM files WHERE user_id = $1 AND deleted_at IS NULL AND category IS NOT NULL AND TRIM(category) != '' ORDER BY category",
         )
         .bind(user_id)
         .fetch_all(self.r()) // 返回单列多行，自动 Vec<String>
@@ -337,7 +474,7 @@ impl FilesRepository for SqlxFilesRepo {
             return Ok(0);
         }
         let result = sqlx::query(
-            "UPDATE files SET category = $1, updated_at = $2 WHERE user_id = $3 AND id = ANY($4)",
+            "UPDATE files SET category = $1, updated_at = $2 WHERE user_id = $3 AND id = ANY($4) AND deleted_at IS NULL",
         )
         .bind(category) // Option<&str>，可置 NULL
         .bind(updated_at)
@@ -363,7 +500,7 @@ impl FilesRepository for SqlxFilesRepo {
         }
         let (found_count, total_size): (i64, i64) = sqlx::query_as(
             "SELECT COUNT(*)::BIGINT, COALESCE(SUM(file_size)::BIGINT, 0) \
-             FROM files WHERE user_id = $1 AND id = ANY($2)",
+             FROM files WHERE user_id = $1 AND id = ANY($2) AND deleted_at IS NULL",
         )
         .bind(user_id)
         .bind(ids)
@@ -379,12 +516,14 @@ impl FilesRepository for SqlxFilesRepo {
         if ids.is_empty() {
             return Ok(Vec::new());
         }
-        sqlx::query_as::<_, File>("SELECT * FROM files WHERE user_id = $1 AND id = ANY($2)")
-            .bind(user_id)
-            .bind(ids)
-            .fetch_all(self.r()) // 顺序与 ids 不一定一致
-            .await
-            .map_err(AppError::from)
+        sqlx::query_as::<_, File>(
+            "SELECT * FROM files WHERE user_id = $1 AND id = ANY($2) AND deleted_at IS NULL",
+        )
+        .bind(user_id)
+        .bind(ids)
+        .fetch_all(self.r()) // 顺序与 ids 不一定一致
+        .await
+        .map_err(AppError::from)
     }
 
     /// 按 ID 列表批量查询 `(id, file_path)`，用于批量删除时先删存储再删 DB，避免 N+1。
@@ -399,7 +538,7 @@ impl FilesRepository for SqlxFilesRepo {
             return Ok(Vec::new());
         }
         sqlx::query_as::<_, (Uuid, String)>(
-            "SELECT id, file_path FROM files WHERE user_id = $1 AND id = ANY($2)",
+            "SELECT id, file_path FROM files WHERE user_id = $1 AND id = ANY($2) AND deleted_at IS NULL",
         )
         .bind(user_id)
         .bind(ids)
@@ -633,14 +772,15 @@ impl FilesRepository for SqlxFilesRepo {
 
         let mut qb: QueryBuilder<sqlx::Postgres> = if should_count_total {
             QueryBuilder::new(
-                "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at, COUNT(*) OVER() AS total_count FROM files WHERE user_id = "
+                "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at, deleted_at, COUNT(*) OVER() AS total_count FROM files WHERE user_id = "
             )
         } else {
             QueryBuilder::new(
-                "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at FROM files WHERE user_id = "
+                "SELECT id, user_id, filename, original_filename, file_path, file_size, mime_type, storage_backend, category, folder_id, content_sha256, created_at, updated_at, deleted_at FROM files WHERE user_id = "
             )
         };
         qb.push_bind(user_id); // 首绑：user_id，后续条件用 push + push_bind 避免 SQL 注入
+        qb.push(" AND deleted_at IS NULL");
 
         if category_filter_uncategorized {
             qb.push(" AND (category IS NULL OR category = '' OR TRIM(category) = '')");

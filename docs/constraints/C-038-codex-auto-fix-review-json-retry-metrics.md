@@ -9,8 +9,10 @@ When a generated diff fails `git apply`, the retry prompt must include the real
 explicit change budget. Retrying without new context is not allowed.
 
 Full-file fallback is a last resort after initial and retry diffs fail. It must
-be blocked for protected files, paths outside the allowed source/script
-prefixes, and files above the configured line budget.
+be blocked for protected files and paths outside the allowed source/script
+prefixes. It must not use a line-count cap: large source files such as dense
+frontend components still need auto-fix fallback when the review issue is
+actionable.
 
 The command output must expose enough state for workflow decisions and weekly
 review: `apply_fail_reason`, `retry_count`, `fallback_used`, and
@@ -20,8 +22,8 @@ review: `apply_fail_reason`, `retry_count`, `fallback_used`, and
 
 Markdown review parsing drift, context-mismatched patches, and broad fallback
 writes can all turn an automated safety mechanism into noisy or risky work.
-Structured input, stderr-aware retry, and bounded fallback keep the loop
-predictable while preserving human fallback.
+Structured input, stderr-aware retry, protected-path bounds, and explicit
+fallback metrics keep the loop predictable while preserving human fallback.
 
 ## Enforcement
 

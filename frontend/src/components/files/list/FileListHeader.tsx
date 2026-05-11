@@ -64,7 +64,7 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
 
       {/* 顶部工具区（复刻截图布局，整体缩放到 0.75） */}
       <div
-        className="glass-panel glass-panel-toolbar fileListToolbarScale75 p-3"
+        className="glass-panel glass-panel-toolbar fileListToolbarScale75 p-[clamp(0.6rem,1.4vw,0.75rem)]"
         data-oid="x7gq7h9"
       >
         <FileListFilters
@@ -77,13 +77,13 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
           onSortChange={onSortChange}
           actions={
             <div
-              className="flex flex-nowrap items-center gap-2"
+              className="flex flex-nowrap items-center gap-[clamp(0.4rem,1vw,0.5rem)]"
               data-oid="-qrfhc7"
             >
               <button
                 type="button"
                 onClick={() => navigateToFolder(null)}
-                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="All Files"
                 data-oid="k350jq9"
               >
@@ -98,7 +98,7 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCreateFolder(true)}
-                className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="New Folder"
                 data-oid=":iv9u9g"
               >
@@ -114,7 +114,7 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenUpload}
-                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-1.5 px-2 py-1.5 font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                   aria-label="Upload File"
                   data-oid="zanhkec"
                 >

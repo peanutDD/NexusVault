@@ -148,6 +148,13 @@ pub trait FilesRepository: Send + Sync {
     /// 根据 ID 和用户 ID 查询文件
     async fn find_by_id(&self, file_id: Uuid, user_id: Uuid) -> Result<Option<File>, AppError>;
 
+    /// 根据 ID 和用户 ID 查询回收站文件
+    async fn find_deleted_by_id(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<File>, AppError>;
+
     /// 检查文件是否属于指定用户
     async fn belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError>;
 
@@ -178,7 +185,39 @@ pub trait FilesRepository: Send + Sync {
         folder_id: Option<Uuid>,
     ) -> Result<Vec<File>, AppError>;
 
-    /// 删除单个文件记录
+    /// 软删除单个 active 文件记录
+    async fn soft_delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError>;
+
+    /// 批量软删除 active 文件记录
+    async fn soft_delete_batch(&self, ids: &[Uuid], user_id: Uuid) -> Result<u64, AppError>;
+
+    /// 还原回收站文件
+    async fn restore_deleted(&self, file_id: Uuid, user_id: Uuid) -> Result<File, AppError>;
+
+    /// 列出回收站文件
+    async fn list_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError>;
+
+    /// 彻底删除单个回收站文件记录
+    async fn hard_delete_deleted(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError>;
+
+    /// 批量彻底删除回收站文件记录，返回被删文件
+    async fn hard_delete_deleted_batch(
+        &self,
+        ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<Vec<File>, AppError>;
+
+    /// 彻底删除用户回收站所有文件记录，返回被删文件
+    async fn hard_delete_all_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError>;
+
+    /// 清理超过保留期的回收站文件记录，返回被删文件
+    async fn purge_expired_deleted(
+        &self,
+        retention_days: i64,
+        batch_limit: i64,
+    ) -> Result<Vec<File>, AppError>;
+
+    /// 删除单个文件记录（物理删除路径专用）
     async fn delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError>;
 
     /// 批量删除文件记录

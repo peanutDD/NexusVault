@@ -33,7 +33,7 @@ export function VideoPreview({
     >
       {!videoReady && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-transparent">
-          <SpinnerIcon className="h-10 w-10 text-[var(--preview-spinner)]" />
+          <SpinnerIcon className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)] text-[var(--preview-spinner)]" />
         </div>
       )}
       <video
@@ -46,7 +46,7 @@ export function VideoPreview({
         preload="metadata"
         poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3C/svg%3E"
         className={cn(
-          "pointer-events-auto max-h-full max-w-full rounded-lg object-contain shadow-2xl transition-opacity duration-200 cursor-pointer",
+          "pointer-events-auto max-h-full max-w-full rounded-[clamp(0.4rem,1vw,0.5rem)] object-contain shadow-2xl transition-opacity duration-200 cursor-pointer",
           videoReady ? "opacity-100" : "opacity-0",
         )}
         style={{ backgroundColor: "transparent" }}

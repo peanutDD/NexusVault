@@ -58,35 +58,35 @@ export default function Register() {
 
   return (
     <div className={AUTH_PAGE_CLASSES} data-oid="gscu-88">
-      <div className="w-full max-w-md mx-4 animate-fade-in" data-oid="3ffslsk">
+      <div className="w-full max-w-[clamp(22rem,92vw,28rem)] mx-[clamp(0.78rem,1.8vw,1rem)] animate-fade-in" data-oid="3ffslsk">
         <div className={AUTH_CARD_CLASSES} data-oid="l6j05_4">
           {/* 顶部渐变光效，与主页卡片呼应 */}
           <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 via-transparent to-emerald-400/10"
+            className="pointer-events-none absolute inset-0 bg-[image:var(--auth-card-glow-bg)]"
             data-oid="0q6535j"
           />
 
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/40 to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[image:var(--auth-card-edge-bg)]"
             data-oid="q40rv1l"
           />
 
           <div className="relative z-10" data-oid="ic-zt:0">
             <div
-              className="flex items-center justify-center mb-8"
+              className="flex items-center justify-center mb-[clamp(1.75rem,3.6vw,2rem)]"
               data-oid="6967a3d"
             >
               <div className="relative" data-oid="4tynibj">
                 <div
-                  className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-tr from-emerald-400/60 via-fuchsia-500/60 to-cyan-400/60 opacity-60 blur-md"
+                  className="pointer-events-none absolute -inset-[clamp(0.195rem,0.45vw,0.25rem)] rounded-[clamp(0.8rem,2vw,1rem)] bg-[image:var(--auth-logo-aura-bg)] opacity-60 blur-[clamp(0.6rem,1.4vw,0.75rem)]"
                   data-oid="zdazne6"
                 />
 
                 <div
-                  className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-300/40 bg-slate-950/90 shadow-[0_18px_70px_rgba(0,0,0,0.65)]"
+                  className="relative flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-[clamp(0.8rem,2vw,1rem)] border border-[var(--auth-logo-shell-border)] bg-[var(--auth-logo-shell-bg)] shadow-[var(--auth-logo-shell-shadow)]"
                   data-oid="7s9x215"
                 >
-                  <CyberPrismLogo className="h-10 w-10" data-oid="1hcfwy6" />
+                  <CyberPrismLogo className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)]" data-oid="1hcfwy6" />
                 </div>
               </div>
             </div>
@@ -106,7 +106,7 @@ export default function Register() {
 
             <form
               onSubmit={handleSubmit(onSubmit)}
-              className="space-y-4"
+              className="space-y-[clamp(0.78rem,1.8vw,1rem)]"
               data-oid="frpuy1l"
             >
               <div data-oid="9-qoq2b">
@@ -198,13 +198,13 @@ export default function Register() {
             </form>
 
             <p
-              className="font-brand mt-6 text-center text-slate-400 text-sm"
+              className="font-brand mt-[clamp(1.25rem,2.7vw,1.5rem)] text-center text-[var(--auth-footer-text)] text-[clamp(0.75rem,1.8vw,0.875rem)]"
               data-oid="qzf9ydv"
             >
               Already have an account?{" "}
               <Link
                 to="/login"
-                className="font-brand text-emerald-300 hover:text-emerald-200 font-medium"
+                className="font-brand text-[var(--auth-footer-link-text)] hover:text-[var(--auth-footer-link-text-hover)] font-medium"
                 data-oid="3uwc8l9"
               >
                 Sign in

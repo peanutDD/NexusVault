@@ -11,9 +11,9 @@ interface PreviewFileInfo {
 
 export function PreviewLoadingState() {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4">
-      <SpinnerIcon className="h-12 w-12 text-[var(--preview-spinner)]" />
-      <span className="text-sm text-[var(--preview-text-muted)]">加载中…</span>
+    <div className="flex h-full w-full flex-col items-center justify-center gap-[clamp(0.78rem,1.8vw,1rem)]">
+      <SpinnerIcon className="h-[clamp(2.75rem,5.4vw,3rem)] w-[clamp(2.75rem,5.4vw,3rem)] text-[var(--preview-spinner)]" />
+      <span className="text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-text-muted)]">加载中…</span>
     </div>
   );
 }
@@ -26,15 +26,15 @@ export function PreviewErrorState({
   onClose: () => void;
 }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-2xl bg-[var(--preview-surface-soft)] px-8 py-10 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--preview-error-icon-bg)]">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.8rem,2vw,1rem)] bg-[var(--preview-surface-soft)] px-[clamp(1.75rem,3.6vw,2rem)] py-[clamp(2.25rem,4.5vw,2.5rem)] text-center">
+      <div className="flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-full bg-[var(--preview-error-icon-bg)]">
         <ErrorIcon />
       </div>
-      <p className="text-lg text-[var(--preview-text-primary)]">{error}</p>
+      <p className="text-[clamp(1rem,2.4vw,1.125rem)] text-[var(--preview-text-primary)]">{error}</p>
       <button
         type="button"
         onClick={onClose}
-        className="mt-2 rounded-full bg-[var(--preview-action-bg)] px-6 py-2.5 text-sm text-[var(--preview-text-primary)] transition-colors hover:bg-[var(--preview-action-bg-hover)]"
+        className="mt-[clamp(0.39rem,0.9vw,0.5rem)] rounded-full bg-[var(--preview-action-bg)] px-[clamp(1.25rem,2.7vw,1.5rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-text-primary)] transition-colors hover:bg-[var(--preview-action-bg-hover)]"
       >
         关闭
       </button>
@@ -51,24 +51,24 @@ export function UnsupportedPreviewState({
 }) {
   return (
     <div className="flex h-full w-full items-center justify-center pointer-events-none">
-      <article className="pointer-events-auto group relative rounded-md transition-colors bg-[var(--preview-unsupported-bg)] backdrop-blur-md hover:bg-[var(--preview-unsupported-hover-bg)] max-w-[min(92vw,22rem)] scale-[2]">
-        <div className="p-3">
-          <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-[var(--preview-unsupported-thumb-bg)]">
+      <article className="pointer-events-auto group relative rounded-[clamp(0.3rem,0.8vw,0.375rem)] transition-colors bg-[var(--preview-unsupported-bg)] backdrop-blur-md hover:bg-[var(--preview-unsupported-hover-bg)] max-w-[min(92vw,22rem)] scale-[2]">
+        <div className="p-[clamp(0.585rem,1.35vw,0.75rem)]">
+          <div className="relative mb-[clamp(0.585rem,1.35vw,0.75rem)] aspect-square overflow-hidden rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--preview-unsupported-thumb-bg)]">
             <div className="flex h-full w-full items-center justify-center rounded overflow-hidden shrink-0 bg-[var(--preview-unsupported-thumb-inner-bg)]">
               <FileIcon />
             </div>
           </div>
           <div className="flex w-full items-center justify-center">
-            <div className="min-w-0 flex-1 space-y-0.5 text-center">
+            <div className="min-w-0 flex-1 space-y-[clamp(0.0975rem,0.3vw,0.125rem)] text-center">
               <p
                 className="truncate whitespace-nowrap text-[clamp(7px,2vw,9px)] font-medium text-[var(--preview-text-primary)]"
                 title={file.original_filename}
               >
                 不支持预览
               </p>
-              <p className="flex items-center justify-center gap-1 whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-[var(--preview-text-muted)]">
+              <p className="flex items-center justify-center gap-[clamp(0.195rem,0.45vw,0.25rem)] whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-[var(--preview-text-muted)]">
                 <span>{formatFileSize(file.file_size)}</span>
-                <span className="h-0.5 w-0.5 rounded-full bg-[var(--preview-divider)]" />
+                <span className="h-[clamp(0.0975rem,0.3vw,0.125rem)] w-[clamp(0.0975rem,0.3vw,0.125rem)] rounded-full bg-[var(--preview-divider)]" />
                 <span>{getMimeTypeLabel(file.mime_type, file.original_filename)}</span>
               </p>
               <p className="whitespace-nowrap text-[clamp(6px,1.6vw,7px)] text-[var(--preview-text-muted)]">

@@ -55,6 +55,136 @@
     --file-card-menu-trigger-hover-bg: rgba(var(--rgb-white), 0.08);
     --file-card-menu-divider: rgb(var(--rgb-purple-900));
 
+    --trash-page-bg:
+        radial-gradient(
+            66rem circle at 8% 0%,
+            rgba(var(--rgb-emerald-400), 0.14),
+            transparent 58%
+        ),
+        radial-gradient(
+            58rem circle at 92% 12%,
+            rgba(var(--rgb-cyan-400), 0.12),
+            transparent 62%
+        ),
+        radial-gradient(
+            44rem circle at 50% 92%,
+            rgba(var(--rgb-rose-400), 0.08),
+            transparent 64%
+        ),
+        linear-gradient(
+            180deg,
+            rgb(var(--rgb-slate-950)),
+            rgb(var(--rgb-slate-900)) 48%,
+            rgb(var(--rgb-slate-950))
+        );
+    --trash-panel-bg:
+        radial-gradient(
+            44rem circle at 0% 0%,
+            rgba(var(--rgb-emerald-400), 0.12),
+            transparent 58%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-slate-950), 0.72),
+            rgba(var(--rgb-slate-900), 0.56),
+            rgba(var(--rgb-white), 0.04)
+        );
+    --trash-panel-border: rgba(var(--rgb-emerald-300), 0.18);
+    --trash-panel-shadow:
+        0 0.75rem 2rem rgba(var(--rgb-black), 0.26),
+        0 0 1.5rem rgba(var(--rgb-emerald-400), 0.12),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.08);
+    --trash-tech-grid:
+        linear-gradient(rgba(var(--rgb-emerald-300), 0.13) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-cyan-400), 0.1) 1px, transparent 1px);
+    --trash-tech-beam:
+        linear-gradient(
+            120deg,
+            transparent 0 27%,
+            rgba(var(--rgb-cyan-400), 0.3) 27.2%,
+            transparent 27.8% 64%,
+            rgba(var(--rgb-emerald-300), 0.2) 64.2%,
+            transparent 65%
+        );
+    --trash-tech-scanline:
+        repeating-linear-gradient(
+            0deg,
+            transparent 0 0.7rem,
+            rgba(var(--rgb-white), 0.07) 0.76rem,
+            transparent 0.86rem
+        );
+    --trash-tech-panel: rgba(var(--rgb-slate-950), 0.58);
+    --trash-tech-panel-strong: rgba(var(--rgb-slate-950), 0.78);
+    --trash-tech-border: rgba(var(--rgb-emerald-300), 0.24);
+    --trash-tech-border-strong: rgba(var(--rgb-emerald-300), 0.44);
+    --trash-tech-corner:
+        linear-gradient(90deg, rgba(var(--rgb-emerald-300), 0.64), transparent 22%, transparent 78%, rgba(var(--rgb-cyan-400), 0.5)),
+        linear-gradient(0deg, rgba(var(--rgb-cyan-400), 0.34), transparent 18%, transparent 82%, rgba(var(--rgb-emerald-300), 0.36));
+    --trash-tech-shadow:
+        0 0.75rem 2rem rgba(var(--rgb-black), 0.3),
+        0 0 0 1px rgba(var(--rgb-emerald-300), 0.16),
+        0 0 1.75rem rgba(var(--rgb-cyan-400), 0.12);
+    --trash-grid-bg:
+        linear-gradient(rgba(var(--rgb-white), 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-white), 0.055) 1px, transparent 1px);
+    --trash-grid-size: clamp(1.25rem, 2.4vw, 1.75rem) clamp(1.25rem, 2.4vw, 1.75rem);
+    --trash-hairline: linear-gradient(90deg, transparent, var(--color-border-strong), transparent);
+    --trash-chip-bg: rgba(var(--rgb-emerald-400), 0.08);
+    --trash-chip-border: rgba(var(--rgb-emerald-300), 0.18);
+    --trash-chip-text: rgba(var(--rgb-slate-300), 0.94);
+    --trash-accent: rgba(var(--rgb-emerald-400), 0.96);
+    --trash-action-bg: rgba(var(--rgb-slate-950), 0.4);
+    --trash-action-bg-hover: rgba(var(--rgb-emerald-400), 0.12);
+    --trash-action-border: rgba(var(--rgb-emerald-300), 0.18);
+    --trash-action-text: rgba(var(--rgb-slate-300), 0.94);
+    --trash-danger-bg: rgba(var(--rgb-red-500), 0.1);
+    --trash-danger-bg-hover: rgba(var(--rgb-red-500), 0.16);
+    --trash-danger-border: rgba(var(--rgb-rose-400), 0.25);
+    --trash-danger-text: rgba(var(--rgb-rose-400), 0.95);
+    --trash-card-bg: transparent;
+    --trash-card-border: var(--color-border-soft);
+    --trash-card-border-hover: var(--color-border-strong);
+    --trash-card-shadow:
+        0 0.35rem 1.1rem rgba(var(--rgb-black), 0.28),
+        0 0 1rem rgba(var(--rgb-emerald-400), 0.08);
+    --trash-card-title: var(--color-text-primary);
+    --trash-card-muted: var(--color-text-muted);
+    --trash-countdown-text: rgba(var(--rgb-emerald-400), 0.98);
+    --trash-countdown-warn: rgba(var(--rgb-pistachio-400), 0.98);
+    --trash-countdown-danger: rgba(var(--rgb-rose-400), 0.98);
+    --trash-thumb-bg:
+        radial-gradient(
+            120% 90% at 18% 0%,
+            rgba(var(--rgb-cyan-400), 0.12),
+            transparent 55%
+        ),
+        radial-gradient(
+            70% 80% at 100% 100%,
+            rgba(var(--rgb-emerald-400), 0.08),
+            transparent 60%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-slate-950), 0.96),
+            rgba(var(--rgb-slate-900), 0.84)
+        );
+    --trash-thumb-overlay: linear-gradient(180deg, rgba(var(--rgb-black), 0.06), rgba(var(--rgb-black), 0.22));
+    --trash-placeholder-bg:
+        linear-gradient(135deg, rgba(var(--rgb-white), 0.08), rgba(var(--rgb-black), 0.22)),
+        linear-gradient(45deg, transparent 0 46%, rgba(var(--rgb-white), 0.06) 46% 54%, transparent 54% 100%);
+    --trash-placeholder-icon: var(--preview-icon-file);
+    --trash-placeholder-text: var(--color-text-muted);
+    --trash-badge-bg: rgba(var(--rgb-black), 0.42);
+    --trash-badge-text: rgba(var(--rgb-white), 0.9);
+    --trash-restore-bg: rgba(var(--rgb-emerald-400), 0.1);
+    --trash-restore-bg-hover: rgba(var(--rgb-emerald-400), 0.22);
+    --trash-restore-border: rgba(var(--rgb-emerald-300), 0.22);
+    --trash-restore-text: rgba(var(--rgb-emerald-300), 0.96);
+    --trash-purge-bg: rgba(var(--rgb-red-500), 0.1);
+    --trash-purge-bg-hover: rgba(var(--rgb-red-500), 0.2);
+    --trash-purge-border: rgba(var(--rgb-rose-400), 0.24);
+    --trash-purge-text: rgba(var(--rgb-rose-400), 0.96);
+
     --spinner-track-color: rgba(var(--rgb-white), 0.18);
     --spinner-accent-color: rgba(var(--rgb-malachite-500), 0.7);
     --loading-text: rgba(var(--rgb-white), 0.5);
@@ -193,6 +323,41 @@
     --preview-floating-btn-muted: rgba(var(--rgb-white), 0.8);
     --preview-floating-btn-hover-bg: rgba(var(--rgb-white), 0.1);
     --preview-floating-btn-active-bg: rgba(var(--rgb-white), 0.15);
+    --preview-modal-bg: rgba(var(--preview-ink), 0.92);
+    --preview-nav-bg: linear-gradient(
+        to bottom right,
+        rgba(var(--rgb-white), 0.1),
+        rgba(var(--rgb-white), 0.05),
+        transparent
+    );
+    --preview-nav-border: rgba(var(--rgb-white), 0.25);
+    --preview-nav-border-hover: rgba(var(--rgb-white), 0.4);
+    --preview-nav-shadow:
+        0 clamp(0.25rem, 1vw, 0.75rem)
+        clamp(0.5rem, 2.5vw, 1.5rem) rgba(var(--rgb-slate-950), 0.75);
+    --preview-nav-hover-text: rgba(var(--rgb-white), 1);
+    --preview-toolbar-mobile-bg: linear-gradient(
+        to bottom,
+        rgba(var(--rgb-black), 0.7),
+        rgba(var(--rgb-black), 0.4),
+        transparent
+    );
+    --preview-toolbar-mobile-bottom-bg: linear-gradient(
+        to top,
+        rgba(var(--rgb-black), 0.7),
+        transparent
+    );
+    --preview-counter-bg: rgba(var(--rgb-white), 0.1);
+    --preview-counter-border: rgba(var(--rgb-white), 0.2);
+    --preview-counter-shadow:
+        0 clamp(0.25rem, 0.8vw, 0.6rem)
+        clamp(0.5rem, 1.5vw, 1rem) rgba(var(--rgb-slate-950), 0.85);
+    --preview-caption-bg: rgba(var(--rgb-white), 0.05);
+    --preview-caption-border: rgba(var(--rgb-white), 0.1);
+    --preview-caption-shadow:
+        0 clamp(0.2rem, 0.6vw, 0.4rem)
+        clamp(0.4rem, 1.2vw, 0.8rem) rgba(var(--rgb-black), 0.2);
+    --preview-pdf-frame-bg: rgba(var(--rgb-white), 1);
 
     --preview-pdf-toolbar-bg: rgba(var(--rgb-black), 0.7);
     --preview-pdf-toolbar-border: rgba(var(--rgb-white), 0.1);
@@ -577,6 +742,38 @@
         0 0 0 1px rgba(var(--rgb-white), 0.04),
         0 clamp(0.875rem, 1.8vw, 1.375rem) clamp(3rem, 6.5vw, 5rem) rgba(var(--rgb-black), 0.75);
     --auth-card-backdrop: blur(var(--glass-blur-strong));
+    --auth-card-glow-bg: linear-gradient(
+        to right,
+        rgba(var(--rgb-fuchsia-500), 0.1),
+        transparent,
+        rgba(var(--rgb-emerald-400), 0.1)
+    );
+    --auth-card-edge-bg: linear-gradient(
+        to right,
+        transparent,
+        rgba(var(--rgb-emerald-300), 0.4),
+        transparent
+    );
+    --auth-logo-aura-bg: linear-gradient(
+        to top right,
+        rgba(var(--rgb-emerald-400), 0.6),
+        rgba(var(--rgb-fuchsia-500), 0.6),
+        rgba(var(--rgb-cyan-400), 0.6)
+    );
+    --auth-logo-shell-border: rgba(var(--rgb-emerald-300), 0.4);
+    --auth-logo-shell-bg: rgba(var(--rgb-slate-950), 0.9);
+    --auth-logo-shell-shadow: 0 clamp(0.875rem, 2vw, 1.125rem)
+        clamp(3rem, 6vw, 4.375rem) rgba(var(--rgb-black), 0.65);
+    --auth-oauth-button-border: rgba(var(--rgb-slate-700), 1);
+    --auth-oauth-button-bg: rgba(var(--rgb-slate-900), 0.8);
+    --auth-oauth-button-text: rgba(var(--rgb-white), 0.94);
+    --auth-oauth-button-bg-hover: rgba(var(--rgb-slate-800), 0.8);
+    --auth-oauth-disabled-border: rgba(var(--rgb-slate-700), 0.6);
+    --auth-oauth-disabled-bg: rgba(var(--rgb-slate-900), 0.4);
+    --auth-oauth-disabled-text: rgba(var(--rgb-slate-500), 1);
+    --auth-footer-text: rgba(var(--rgb-slate-400), 1);
+    --auth-footer-link-text: rgba(var(--rgb-emerald-300), 1);
+    --auth-footer-link-text-hover: rgba(var(--rgb-emerald-300), 0.86);
 
     --auth-input-bg: rgba(var(--rgb-white), 0.1);
     --auth-input-bg-dark: rgba(var(--rgb-slate-800), 0.5);
@@ -609,6 +806,15 @@
     --auth-button-ring: rgba(var(--rgb-emerald-300), 0.6);
     --auth-button-ring-offset: rgba(var(--rgb-slate-950), 1);
 
+    /* Error boundary semantic tokens */
+    --error-boundary-bg: rgba(var(--rgb-slate-900), 1);
+    --error-boundary-text: rgba(var(--rgb-slate-300), 1);
+    --error-boundary-title: rgba(var(--rgb-white), 1);
+    --error-boundary-muted: rgba(var(--rgb-slate-400), 1);
+    --error-boundary-action-bg: rgba(var(--rgb-purple-500), 0.92);
+    --error-boundary-action-bg-hover: rgba(var(--rgb-purple-900), 0.95);
+    --error-boundary-action-text: rgba(var(--rgb-white), 1);
+
     /* File list semantic tokens */
     --filelist-glass-bg-strong: var(--glass-bg-strong);
     --filelist-glass-bg-soft: var(--glass-bg-soft);
@@ -619,6 +825,12 @@
     --filelist-glass-border-strong: rgba(var(--rgb-white), 0.2);
     --filelist-text: rgba(var(--rgb-white), 0.92);
     --filelist-text-muted: rgba(var(--rgb-white), 0.65);
+    --filelist-breadcrumb-text: rgba(var(--rgb-slate-300), 1);
+    --filelist-breadcrumb-text-active: rgba(var(--rgb-white), 1);
+    --filelist-breadcrumb-text-muted: rgba(var(--rgb-slate-400), 1);
+    --filelist-breadcrumb-separator: rgba(var(--rgb-slate-500), 1);
+    --filelist-batch-action-border-hover: rgba(var(--rgb-white), 0.25);
+    --filelist-batch-selection-text: rgba(var(--rgb-white), 0.86);
 
     --filelist-shadow-panel: var(--shadow-glass-lg);
     --filelist-shadow-panel-soft: var(--shadow-glass-md);
@@ -2025,6 +2237,159 @@
     --nav-user-dot-bg: rgba(var(--rgb-cyan-400), 0.8);
     --nav-user-dot-shadow: 0 0 0.875rem rgba(var(--rgb-cyan-400), 0.55);
 
+    --trash-page-bg:
+        radial-gradient(
+            64rem circle at 12% 0%,
+            rgba(var(--rgb-emerald-400), 0.22),
+            transparent 54%
+        ),
+        radial-gradient(
+            50rem circle at 90% 10%,
+            rgba(var(--rgb-rose-400), 0.12),
+            transparent 58%
+        ),
+        radial-gradient(
+            48rem circle at 36% 92%,
+            rgba(var(--rgb-slate-950), 0.12),
+            transparent 64%
+        ),
+        linear-gradient(
+            180deg,
+            rgba(var(--rgb-white), 0.92),
+            rgb(225, 229, 224) 44%,
+            rgb(207, 214, 211)
+        );
+    --trash-panel-bg:
+        radial-gradient(
+            42rem circle at -4% 0%,
+            rgba(var(--rgb-emerald-400), 0.2),
+            transparent 55%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-white), 0.62),
+            rgba(var(--rgb-slate-950), 0.08) 42%,
+            rgba(var(--rgb-white), 0.44)
+        );
+    --trash-panel-border: rgba(var(--rgb-slate-950), 0.22);
+    --trash-panel-shadow:
+        0 0.9rem 2.4rem rgba(var(--rgb-slate-950), 0.13),
+        0 0 1.5rem rgba(var(--rgb-emerald-400), 0.12),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.72);
+    --trash-tech-grid:
+        linear-gradient(rgba(var(--rgb-slate-950), 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-emerald-400), 0.12) 1px, transparent 1px);
+    --trash-tech-beam:
+        linear-gradient(
+            120deg,
+            transparent 0 28%,
+            rgba(var(--rgb-emerald-400), 0.24) 28.2%,
+            transparent 28.8% 62%,
+            rgba(var(--rgb-slate-950), 0.1) 62.2%,
+            transparent 63%
+        );
+    --trash-tech-scanline:
+        repeating-linear-gradient(
+            0deg,
+            transparent 0 0.7rem,
+            rgba(var(--rgb-slate-950), 0.045) 0.76rem,
+            transparent 0.86rem
+        );
+    --trash-tech-panel: rgba(var(--rgb-white), 0.68);
+    --trash-tech-panel-strong: rgba(var(--rgb-white), 0.9);
+    --trash-tech-border: rgba(var(--rgb-slate-950), 0.14);
+    --trash-tech-border-strong: rgba(var(--rgb-emerald-400), 0.34);
+    --trash-tech-corner:
+        linear-gradient(90deg, rgba(var(--rgb-slate-950), 0.34), transparent 22%, transparent 78%, rgba(var(--rgb-emerald-400), 0.5)),
+        linear-gradient(0deg, rgba(var(--rgb-emerald-400), 0.26), transparent 18%, transparent 82%, rgba(var(--rgb-slate-950), 0.22));
+    --trash-tech-shadow:
+        0 0.9rem 2.25rem rgba(var(--rgb-slate-950), 0.16),
+        0 0 0 1px rgba(var(--rgb-white), 0.72),
+        0 0 1.5rem rgba(var(--rgb-emerald-400), 0.12);
+    --trash-grid-bg:
+        linear-gradient(rgba(var(--rgb-slate-950), 0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-emerald-400), 0.12) 1px, transparent 1px);
+    --trash-chip-bg: rgba(var(--rgb-white), 0.54);
+    --trash-chip-border: rgba(var(--rgb-slate-950), 0.16);
+    --trash-chip-text: rgba(var(--rgb-slate-950), 0.86);
+    --trash-accent: rgba(var(--rgb-emerald-400), 1);
+    --trash-action-bg: rgba(var(--rgb-white), 0.46);
+    --trash-action-bg-hover: rgba(var(--rgb-emerald-400), 0.14);
+    --trash-action-border: rgba(var(--rgb-slate-950), 0.2);
+    --trash-action-text: rgba(var(--rgb-slate-950), 0.88);
+    --trash-danger-bg: rgba(var(--rgb-rose-400), 0.1);
+    --trash-danger-bg-hover: rgba(var(--rgb-rose-400), 0.17);
+    --trash-danger-border: rgba(var(--rgb-rose-400), 0.42);
+    --trash-danger-text: rgba(var(--rgb-red-500), 0.9);
+    --trash-card-bg: transparent;
+    --trash-card-shadow:
+        0 0.45rem 1.25rem rgba(var(--rgb-slate-950), 0.2),
+        0 0 0 1px rgba(var(--rgb-white), 0.56),
+        0 0 1rem rgba(var(--rgb-emerald-400), 0.1);
+    --trash-card-title: rgba(var(--rgb-slate-950), 0.95);
+    --trash-card-muted: rgba(var(--rgb-slate-700), 0.78);
+    --trash-countdown-text: color-mix(
+        in srgb,
+        rgba(var(--rgb-emerald-400), 1) 68%,
+        rgba(var(--rgb-slate-950), 1)
+    );
+    --trash-countdown-warn: color-mix(
+        in srgb,
+        rgba(var(--rgb-emerald-400), 1) 44%,
+        rgba(var(--rgb-rose-400), 1) 20%,
+        rgba(var(--rgb-slate-950), 1)
+    );
+    --trash-countdown-danger: color-mix(
+        in srgb,
+        rgba(var(--rgb-rose-400), 1) 76%,
+        rgba(var(--rgb-slate-950), 1)
+    );
+    --trash-thumb-bg:
+        radial-gradient(
+            120% 90% at 20% 0%,
+            rgba(var(--rgb-emerald-400), 0.16),
+            transparent 54%
+        ),
+        radial-gradient(
+            70% 80% at 100% 100%,
+            rgba(var(--rgb-rose-400), 0.08),
+            transparent 60%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-slate-950), 0.96),
+            rgba(var(--rgb-slate-900), 0.88)
+        );
+    --trash-thumb-overlay: linear-gradient(
+        180deg,
+        rgba(var(--rgb-white), 0.02),
+        rgba(var(--rgb-slate-950), 0.22)
+    );
+    --trash-placeholder-bg:
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-slate-950), 0.9),
+            rgba(var(--rgb-slate-900), 0.78)
+        ),
+        linear-gradient(
+            45deg,
+            transparent 0 46%,
+            rgba(var(--rgb-emerald-400), 0.16) 46% 54%,
+            transparent 54% 100%
+        );
+    --trash-placeholder-icon: rgba(var(--rgb-slate-300), 0.95);
+    --trash-placeholder-text: rgba(var(--rgb-slate-300), 0.8);
+    --trash-badge-bg: rgba(var(--rgb-slate-950), 0.82);
+    --trash-badge-text: rgba(var(--rgb-white), 0.94);
+    --trash-restore-bg: rgba(var(--rgb-emerald-400), 0.13);
+    --trash-restore-bg-hover: rgba(var(--rgb-emerald-400), 0.26);
+    --trash-restore-border: rgba(var(--rgb-emerald-400), 0.42);
+    --trash-restore-text: rgba(var(--rgb-emerald-400), 0.98);
+    --trash-purge-bg: rgba(var(--rgb-rose-400), 0.13);
+    --trash-purge-bg-hover: rgba(var(--rgb-rose-400), 0.24);
+    --trash-purge-border: rgba(var(--rgb-rose-400), 0.46);
+    --trash-purge-text: rgba(var(--rgb-rose-400), 0.98);
+
     --footer-border: rgba(var(--rgb-cyan-400), 0.24);
     --footer-surface-bg:
         radial-gradient(
@@ -2927,6 +3292,155 @@
     --nav-btn-border: rgba(var(--rgb-emerald-300), 0.15);
     --nav-btn-border-hover: rgba(var(--rgb-emerald-300), 0.3);
     --nav-btn-icon: rgba(var(--rgb-emerald-300), 0.8);
+
+    --trash-page-bg:
+        radial-gradient(
+            60rem circle at 14% 0%,
+            rgba(var(--rgb-fuchsia-500), 0.22),
+            transparent 58%
+        ),
+        radial-gradient(
+            56rem circle at 92% 16%,
+            rgba(var(--rgb-cyan-400), 0.16),
+            transparent 62%
+        ),
+        radial-gradient(
+            46rem circle at 42% 92%,
+            rgba(var(--rgb-purple-950), 0.64),
+            transparent 64%
+        ),
+        linear-gradient(
+            180deg,
+            rgb(var(--rgb-purple-950)),
+            rgb(var(--rgb-slate-950)) 48%,
+            rgb(var(--rgb-purple-950))
+        );
+    --trash-panel-bg:
+        radial-gradient(
+            46rem circle at 0% 0%,
+            rgba(var(--rgb-purple-500), 0.22),
+            transparent 56%
+        ),
+        radial-gradient(
+            32rem circle at 100% 0%,
+            rgba(var(--rgb-cyan-400), 0.12),
+            transparent 58%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-purple-950), 0.72),
+            rgba(var(--rgb-slate-950), 0.58),
+            rgba(var(--rgb-fuchsia-500), 0.08)
+        );
+    --trash-panel-border: rgba(var(--rgb-fuchsia-500), 0.24);
+    --trash-panel-shadow:
+        0 0.9rem 2.5rem rgba(var(--rgb-black), 0.3),
+        0 0 1.75rem rgba(var(--rgb-purple-500), 0.16),
+        0 0 1.25rem rgba(var(--rgb-cyan-400), 0.08),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.08);
+    --trash-tech-grid:
+        linear-gradient(rgba(var(--rgb-fuchsia-500), 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-cyan-400), 0.1) 1px, transparent 1px);
+    --trash-tech-beam:
+        linear-gradient(
+            120deg,
+            transparent 0 26%,
+            rgba(var(--rgb-cyan-400), 0.28) 26.2%,
+            transparent 26.8% 64%,
+            rgba(var(--rgb-fuchsia-500), 0.22) 64.2%,
+            transparent 65%
+        );
+    --trash-tech-scanline:
+        repeating-linear-gradient(
+            0deg,
+            transparent 0 0.7rem,
+            rgba(var(--rgb-white), 0.06) 0.76rem,
+            transparent 0.86rem
+        );
+    --trash-tech-panel: rgba(var(--rgb-purple-950), 0.58);
+    --trash-tech-panel-strong: rgba(var(--rgb-purple-950), 0.78);
+    --trash-tech-border: rgba(var(--rgb-fuchsia-500), 0.24);
+    --trash-tech-border-strong: rgba(var(--rgb-cyan-400), 0.36);
+    --trash-tech-corner:
+        linear-gradient(90deg, rgba(var(--rgb-fuchsia-500), 0.62), transparent 22%, transparent 78%, rgba(var(--rgb-cyan-400), 0.5)),
+        linear-gradient(0deg, rgba(var(--rgb-cyan-400), 0.34), transparent 18%, transparent 82%, rgba(var(--rgb-fuchsia-500), 0.34));
+    --trash-tech-shadow:
+        0 0.9rem 2.5rem rgba(var(--rgb-black), 0.34),
+        0 0 0 1px rgba(var(--rgb-fuchsia-500), 0.18),
+        0 0 1.75rem rgba(var(--rgb-cyan-400), 0.12);
+    --trash-grid-bg:
+        linear-gradient(rgba(var(--rgb-fuchsia-500), 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--rgb-cyan-400), 0.1) 1px, transparent 1px);
+    --trash-chip-bg: rgba(var(--rgb-purple-500), 0.16);
+    --trash-chip-border: rgba(var(--rgb-fuchsia-500), 0.26);
+    --trash-chip-text: rgba(var(--rgb-white), 0.9);
+    --trash-accent: rgba(var(--rgb-cyan-400), 0.96);
+    --trash-action-bg: rgba(var(--rgb-purple-950), 0.48);
+    --trash-action-bg-hover: rgba(var(--rgb-cyan-400), 0.12);
+    --trash-action-border: rgba(var(--rgb-fuchsia-500), 0.22);
+    --trash-action-text: rgba(var(--rgb-white), 0.9);
+    --trash-danger-bg: rgba(var(--rgb-rose-400), 0.12);
+    --trash-danger-bg-hover: rgba(var(--rgb-rose-400), 0.2);
+    --trash-danger-border: rgba(var(--rgb-rose-400), 0.38);
+    --trash-danger-text: rgba(var(--rgb-rose-400), 0.96);
+    --trash-card-shadow:
+        0 0.45rem 1.25rem rgba(var(--rgb-black), 0.3),
+        0 0 1.2rem rgba(var(--rgb-purple-500), 0.14);
+    --trash-card-title: rgba(var(--rgb-white), 0.94);
+    --trash-card-muted: rgba(var(--rgb-slate-300), 0.78);
+    --trash-countdown-text: rgba(var(--rgb-cyan-400), 0.98);
+    --trash-countdown-warn: color-mix(
+        in srgb,
+        rgba(var(--rgb-cyan-400), 1) 54%,
+        rgba(var(--rgb-fuchsia-500), 1) 28%,
+        rgba(var(--rgb-white), 1)
+    );
+    --trash-countdown-danger: rgba(var(--rgb-rose-400), 0.98);
+    --trash-thumb-bg:
+        radial-gradient(
+            120% 90% at 20% 0%,
+            rgba(var(--rgb-cyan-400), 0.14),
+            transparent 55%
+        ),
+        radial-gradient(
+            80% 80% at 100% 100%,
+            rgba(var(--rgb-fuchsia-500), 0.12),
+            transparent 62%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-purple-950), 0.96),
+            rgba(var(--rgb-slate-950), 0.86)
+        );
+    --trash-thumb-overlay: linear-gradient(
+        180deg,
+        rgba(var(--rgb-white), 0.03),
+        rgba(var(--rgb-purple-950), 0.28)
+    );
+    --trash-placeholder-bg:
+        linear-gradient(
+            135deg,
+            rgba(var(--rgb-purple-950), 0.94),
+            rgba(var(--rgb-slate-950), 0.82)
+        ),
+        linear-gradient(
+            45deg,
+            transparent 0 46%,
+            rgba(var(--rgb-cyan-400), 0.14) 46% 54%,
+            transparent 54% 100%
+        );
+    --trash-placeholder-icon: rgba(var(--rgb-slate-300), 0.95);
+    --trash-placeholder-text: rgba(var(--rgb-slate-300), 0.82);
+    --trash-badge-bg: rgba(var(--rgb-purple-950), 0.86);
+    --trash-badge-text: rgba(var(--rgb-white), 0.94);
+    --trash-restore-bg: rgba(var(--rgb-cyan-400), 0.12);
+    --trash-restore-bg-hover: rgba(var(--rgb-cyan-400), 0.24);
+    --trash-restore-border: rgba(var(--rgb-cyan-400), 0.38);
+    --trash-restore-text: rgba(var(--rgb-cyan-400), 0.98);
+    --trash-purge-bg: rgba(var(--rgb-rose-400), 0.13);
+    --trash-purge-bg-hover: rgba(var(--rgb-rose-400), 0.24);
+    --trash-purge-border: rgba(var(--rgb-rose-400), 0.42);
+    --trash-purge-text: rgba(var(--rgb-rose-400), 0.98);
 
     --footer-grid-bg-image: linear-gradient(rgba(var(--rgb-purple-500), 0.5) 1px, transparent 1px),
         linear-gradient(90deg, rgba(var(--rgb-purple-500), 0.5) 1px, transparent 1px);

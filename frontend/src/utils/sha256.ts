@@ -9,6 +9,8 @@ export function isSha256Supported(): boolean {
 }
 
 const CHUNK_SIZE = 2 * 1024 * 1024;
+const IDLE_CALLBACK_TIMEOUT_MS = 50;
+const YIELD_TO_EVENT_LOOP_MS = 0;
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
@@ -18,10 +20,10 @@ function throwIfAborted(signal?: AbortSignal): void {
 async function yieldToMain(): Promise<void> {
   await new Promise<void>((resolve) => {
     if (typeof requestIdleCallback === 'function') {
-      requestIdleCallback(() => resolve(), { timeout: 50 });
+      requestIdleCallback(() => resolve(), { timeout: IDLE_CALLBACK_TIMEOUT_MS });
       return;
     }
-    setTimeout(() => resolve(), 0);
+    setTimeout(() => resolve(), YIELD_TO_EVENT_LOOP_MS);
   });
 }
 

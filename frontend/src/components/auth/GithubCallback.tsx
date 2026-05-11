@@ -37,7 +37,7 @@ export default function GithubCallback() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center gap-3 bg-gray-900 text-gray-400"
+      className="min-h-screen flex flex-col items-center justify-center gap-[clamp(0.585rem,1.35vw,0.75rem)] bg-[var(--app-shell-loading-bg)] text-[var(--app-shell-loading-text)]"
       data-oid="3_gaj4w"
     >
       <Spinner size="lg" data-oid="a8rbjv8" />

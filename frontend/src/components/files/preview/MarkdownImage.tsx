@@ -30,7 +30,7 @@ export default function MarkdownImage({
       height={600}
       loading="lazy"
       className={cn(
-        "my-3 mx-auto block max-w-full max-h-[60vh] rounded-md border object-contain",
+        "my-[clamp(0.585rem,1.35vw,0.75rem)] mx-auto block max-w-full max-h-[60vh] rounded-[clamp(0.3rem,0.8vw,0.375rem)] border object-contain",
         "border-[var(--preview-markdown-img-border)] bg-[var(--preview-markdown-img-bg)]",
         typeof className === "string" ? className : undefined,
       )}

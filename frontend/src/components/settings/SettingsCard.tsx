@@ -25,13 +25,13 @@ export default function SettingsCard({
       id={id}
       className={cn(
         // Reserve space for the fixed NavBar when using anchor links.
-        "scroll-mt-28",
-        "relative overflow-hidden rounded-2xl",
+        "scroll-mt-[clamp(6.75rem,12.6vw,7rem)]",
+        "relative overflow-hidden rounded-[clamp(0.8rem,2vw,1rem)]",
         "border border-[var(--settings-surface-border)] bg-[var(--settings-surface-bg)]",
         "shadow-[var(--settings-surface-shadow)]",
         "backdrop-blur-md",
         "text-[length:var(--settings-text-md)]",
-        "p-5 sm:p-6",
+        "p-[clamp(1rem,2.25vw,1.25rem)] sm:p-[clamp(1.25rem,2.7vw,1.5rem)]",
         className,
       )}
       data-oid="au1p9wx"
@@ -48,12 +48,12 @@ export default function SettingsCard({
       />
 
       <header
-        className="relative z-10 flex items-start gap-3"
+        className="relative z-10 flex items-start gap-[clamp(0.585rem,1.35vw,0.75rem)]"
         data-oid="07m066k"
       >
         {icon && (
           <div
-            className="mt-0.5 shrink-0 rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-2 text-[var(--settings-chip-icon)]"
+            className="mt-[clamp(0.0975rem,0.3vw,0.125rem)] shrink-0 rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-chip-icon)]"
             data-oid="9ktkh.m"
           >
             {icon}
@@ -68,7 +68,7 @@ export default function SettingsCard({
           </h2>
           {description && (
             <p
-              className="font-brand mt-1 text-[length:var(--settings-text-sm)] font-normal leading-relaxed tracking-wide text-[var(--settings-subtitle)]"
+              className="font-brand mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-sm)] font-normal leading-relaxed tracking-wide text-[var(--settings-subtitle)]"
               data-oid="vftcw.7"
             >
               {description}
@@ -82,7 +82,7 @@ export default function SettingsCard({
         )}
       </header>
 
-      <div className="relative z-10 mt-5" data-oid="4462rmf">
+      <div className="relative z-10 mt-[clamp(1rem,2.25vw,1.25rem)]" data-oid="4462rmf">
         {children}
       </div>
     </section>

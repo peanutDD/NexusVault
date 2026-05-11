@@ -3,6 +3,9 @@
  * Uses try-finally to ensure URL is always released, preventing memory leaks.
  */
 
+const BLOB_URL_REVOKE_FALLBACK_DELAY_MS = 30_000;
+const BLOB_URL_REVOKE_IDLE_TIMEOUT_MS = 5_000;
+
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -27,9 +30,11 @@ export function downloadBlob(blob: Blob, filename: string): void {
       URL.revokeObjectURL(url);
     };
 
-    window.setTimeout(revoke, 30_000);
+    window.setTimeout(revoke, BLOB_URL_REVOKE_FALLBACK_DELAY_MS);
     if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(revoke, { timeout: 5_000 });
+      window.requestIdleCallback(revoke, {
+        timeout: BLOB_URL_REVOKE_IDLE_TIMEOUT_MS,
+      });
     }
   }
 }

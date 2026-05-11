@@ -1,0 +1,10 @@
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn run() {
+    cleanup();
+}
+=======
+pub fn run() {
+    cleanup_once();
+}
+>>>>>>> REPLACE

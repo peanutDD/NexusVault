@@ -157,7 +157,7 @@ export default function VirtualizedMixedGrid({
     updateViewport();
   }, [items.length, columns, updateViewport]);
 
-// ── Pretext-based per-row heights ──────────────────────────────────────────
+// ── Pretext-[clamp(0.875rem,2vw,1rem)]d per-row heights ──────────────────────────────────────────
   const itemDescriptors = useMemo<GridItemDescriptor[]>(
     () => items.map((item) => item.type === "folder" ? { kind: "folder" as const, name: item.folder.name } : { kind: "file" as const, filename: item.file.original_filename }),
     [items],
@@ -243,11 +243,11 @@ export default function VirtualizedMixedGrid({
             return (
               <div
                 key={rowIndex}
-                className="virtualized-row mb-2 pt-1 last:mb-0"
+                className="virtualized-row mb-[clamp(0.4rem,1vw,0.5rem)] pt-[clamp(0.2rem,0.7vw,0.25rem)] last:mb-0"
                 data-oid="jzokoas"
               >
                 <div
-                  className="grid gap-2 bg-transparent [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
+                  className="grid gap-[clamp(0.4rem,1vw,0.5rem)] bg-transparent [grid-template-columns:repeat(var(--grid-cols,3),minmax(0,1fr))]"
                   data-oid="u0k78u0"
                 >
                   {rowItems.map((item) => {

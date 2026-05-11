@@ -308,15 +308,15 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             data-oid="ev5n:_x"
           >
             <div
-              className="flex flex-col items-center gap-3"
+              className="flex flex-col items-center gap-[clamp(0.585rem,1.35vw,0.75rem)]"
               data-oid="b0znml7"
             >
               <div
-                className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)] animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
                 data-oid="rqtmjzh"
               />
 
-              <span className="text-sm text-[var(--loading-text)]" data-oid="sca1ymm">
+              <span className="text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--loading-text)]" data-oid="sca1ymm">
                 正在加载 PDF…
               </span>
             </div>
@@ -326,19 +326,19 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
         {/* 出错 */}
         {error && !docLoading && (
           <div
-            className="flex h-full w-full min-h-[12.5rem] items-center justify-center px-6"
+            className="flex h-full w-full min-h-[12.5rem] items-center justify-center px-[clamp(1.25rem,2.7vw,1.5rem)]"
             data-oid="8s9gc03"
           >
             <div
-              className="flex flex-col items-center gap-4 text-center"
+              className="flex flex-col items-center gap-[clamp(0.78rem,1.8vw,1rem)] text-center"
               data-oid="ko1orak"
             >
               <div
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--preview-pdf-error-icon-bg)]"
+                className="flex h-[clamp(3.25rem,6.3vw,3.5rem)] w-[clamp(3.25rem,6.3vw,3.5rem)] items-center justify-center rounded-full bg-[var(--preview-pdf-error-icon-bg)]"
                 data-oid="69txr4y"
               >
                 <svg
-                  className="h-7 w-7 text-[var(--preview-pdf-error-icon-text)]"
+                  className="h-[clamp(1.5rem,3.15vw,1.75rem)] w-[clamp(1.5rem,3.15vw,1.75rem)] text-[var(--preview-pdf-error-icon-text)]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -353,14 +353,14 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
                   />
                 </svg>
               </div>
-              <p className="text-sm text-[var(--preview-pdf-error-text)]" data-oid="sao9zis">
+              <p className="text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-pdf-error-text)]" data-oid="sao9zis">
                 {error}
               </p>
               <a
                 href={blobUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-full bg-[var(--preview-pdf-open-btn-bg)] px-5 py-2 text-sm text-[var(--preview-pdf-open-btn-text)] transition-colors hover:bg-[var(--preview-pdf-open-btn-hover-bg)] active:bg-[var(--preview-pdf-open-btn-active-bg)]"
+                className="rounded-full bg-[var(--preview-pdf-open-btn-bg)] px-[clamp(1rem,2.25vw,1.25rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-pdf-open-btn-text)] transition-colors hover:bg-[var(--preview-pdf-open-btn-hover-bg)] active:bg-[var(--preview-pdf-open-btn-active-bg)]"
                 data-oid="hj9.2ui"
               >
                 在新标签中打开
@@ -372,7 +372,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
         {/* Canvas 页面内容 */}
         {!docLoading && !error && (
           <div
-            className="relative p-1 flex items-start justify-center w-full"
+            className="relative p-[clamp(0.195rem,0.45vw,0.25rem)] flex items-start justify-center w-full"
             data-oid="o-dennq"
           >
             {/* 每页渲染 Loading 遮罩 */}
@@ -382,14 +382,14 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
                 data-oid="qcfzi3o"
               >
                 <div
-                  className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
+                  className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] animate-spin rounded-full border-2 border-[var(--spinner-track-color)] border-t-[var(--spinner-accent-color)]"
                   data-oid="6wantz-"
                 />
               </div>
             )}
             <canvas
               ref={canvasRef}
-              className="block max-w-full rounded-lg shadow-2xl"
+              className="block max-w-full rounded-[clamp(0.4rem,1vw,0.5rem)] shadow-2xl"
               aria-label={`${title} — 第 ${currentPage} 页，共 ${numPages} 页`}
               style={{
                 opacity: pageLoading ? 0.55 : 1,
@@ -406,7 +406,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
       {/* ------------------------------------------------------------------ */}
       {numPages > 0 && (
         <div
-          className="flex shrink-0 items-center justify-between gap-2 px-3 py-2
+          className="flex shrink-0 items-center justify-between gap-[clamp(0.39rem,0.9vw,0.5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]
                      bg-[var(--preview-pdf-toolbar-bg)] backdrop-blur-md border-t border-[var(--preview-pdf-toolbar-border)]"
           onClick={(e) => e.stopPropagation()}
           data-oid="s1eh5vm"
@@ -416,14 +416,14 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             type="button"
             onClick={goToPrev}
             disabled={currentPage <= 1}
-            className="flex h-9 w-9 items-center justify-center rounded-full
+            className="flex h-[clamp(2rem,4.05vw,2.25rem)] w-[clamp(2rem,4.05vw,2.25rem)] items-center justify-center rounded-full
                        bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-text)] transition-colors
                        disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
             aria-label="上一页"
             data-oid="ddcus-n"
           >
             <svg
-              className="h-5 w-5"
+              className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -444,14 +444,14 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             type="button"
             onClick={zoomOut}
             disabled={userScale <= MIN_SCALE}
-            className="flex h-8 w-8 items-center justify-center rounded-full
-                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] text-lg font-bold transition-colors
+            className="flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] items-center justify-center rounded-full
+                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] text-[clamp(1rem,2.4vw,1.125rem)] font-bold transition-colors
                        disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
             aria-label="缩小"
             data-oid="c841dnq"
           >
             <svg
-              className="h-4 w-4"
+              className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -473,11 +473,11 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             data-oid="hevdb4s"
           >
             <span
-              className="text-sm font-medium text-[var(--preview-pdf-page-text)]"
+              className="text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--preview-pdf-page-text)]"
               data-oid="h7dt3u6"
             >
               {currentPage}
-              <span className="text-[var(--preview-pdf-page-divider)] mx-1" data-oid="-_luic4">
+              <span className="text-[var(--preview-pdf-page-divider)] mx-[clamp(0.195rem,0.45vw,0.25rem)]" data-oid="-_luic4">
                 /
               </span>
               {numPages}
@@ -495,14 +495,14 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             type="button"
             onClick={zoomIn}
             disabled={userScale >= MAX_SCALE}
-            className="flex h-8 w-8 items-center justify-center rounded-full
+            className="flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] items-center justify-center rounded-full
                        bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] transition-colors
                        disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
             aria-label="放大"
             data-oid="9sco1ge"
           >
             <svg
-              className="h-4 w-4"
+              className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -523,14 +523,14 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             type="button"
             onClick={goToNext}
             disabled={currentPage >= numPages}
-            className="flex h-9 w-9 items-center justify-center rounded-full
+            className="flex h-[clamp(2rem,4.05vw,2.25rem)] w-[clamp(2rem,4.05vw,2.25rem)] items-center justify-center rounded-full
                        bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-text)] transition-colors
                        disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
             aria-label="下一页"
             data-oid="86hhplk"
           >
             <svg
-              className="h-5 w-5"
+              className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

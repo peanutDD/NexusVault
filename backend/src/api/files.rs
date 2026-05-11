@@ -19,13 +19,15 @@ use crate::constants::{
 };
 use crate::handlers::files::{
     batch_delete_handler, batch_download_zip_handler, batch_download_zip_post_handler,
-    batch_get_handler, batch_move_handler, categories_handler, chunked_upload_abort_handler,
+    batch_get_handler, batch_move_handler, batch_permanently_delete_files_handler,
+    batch_restore_files_handler, categories_handler, chunked_upload_abort_handler,
     chunked_upload_chunk_handler, chunked_upload_complete_handler, chunked_upload_init_handler,
     chunked_upload_status_handler, delete_file_handler, delete_version_handler,
-    download_file_handler, get_file_version_handler, gif_video_preview_handler, hls_asset_handler,
-    hls_playlist_handler, hls_prepare_handler, hls_status_handler, instant_upload_handler,
-    list_file_versions_handler, list_files_handler, preview_file_handler, rename_file_handler,
-    restore_version_handler, semantic_search_handler, storage_usage_handler,
+    download_file_handler, empty_trash_handler, get_file_version_handler,
+    gif_video_preview_handler, hls_asset_handler, hls_playlist_handler, hls_prepare_handler,
+    hls_status_handler, instant_upload_handler, list_file_versions_handler, list_files_handler,
+    list_trash_handler, permanently_delete_file_handler, preview_file_handler, rename_file_handler,
+    restore_file_handler, restore_version_handler, semantic_search_handler, storage_usage_handler,
     thumbnail_file_handler, update_version_label_handler, upload_file_handler,
     video_preview_prepare_handler, video_preview_status_handler,
 };
@@ -175,6 +177,15 @@ pub fn create_router() -> Router<AppState> {
         .route("/storage-usage", get(storage_usage_handler))
         .route("/categories", get(categories_handler))
         .route("/search/semantic", get(semantic_search_handler))
+        .route(
+            "/trash",
+            get(list_trash_handler).delete(empty_trash_handler),
+        )
+        .route("/trash/batch-restore", post(batch_restore_files_handler))
+        .route(
+            "/trash/batch-permanent",
+            post(batch_permanently_delete_files_handler),
+        )
         .route("/batch", post(batch_get_handler))
         .route("/batch-delete", post(batch_delete_handler))
         .route("/batch-move", post(batch_move_handler))
@@ -204,6 +215,8 @@ pub fn create_router() -> Router<AppState> {
             get(preview_file_handler).head(preview_file_handler),
         )
         .route("/{id}/thumbnail", get(thumbnail_file_handler))
+        .route("/{id}/restore", post(restore_file_handler))
+        .route("/{id}/permanent", delete(permanently_delete_file_handler))
         .route("/{id}/hls/prepare", post(hls_prepare_handler))
         .route("/{id}/hls/status", get(hls_status_handler))
         .route("/{id}/hls", get(hls_playlist_handler))

@@ -1,0 +1,7 @@
+### File: src/lib.rs
+<<<<<<< SEARCH
+    schedule();
+    schedule();
+=======
+    schedule();
+>>>>>>> REPLACE

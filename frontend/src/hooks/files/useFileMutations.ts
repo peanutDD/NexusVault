@@ -55,6 +55,7 @@ export function useFileMutations() {
       // 避免"取消进行中的 refetch → React Query 回滚缓存"的竞态问题。
       // 下次用户切换页面/窗口聚焦时会自动重新获取最新数据。
       void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
+      void queryClient.invalidateQueries({ queryKey: ['trash'], refetchType: 'none' });
     },
   });
 
@@ -89,6 +90,7 @@ export function useFileMutations() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
+      void queryClient.invalidateQueries({ queryKey: ['trash'], refetchType: 'none' });
     },
   });
 

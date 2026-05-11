@@ -54,12 +54,12 @@ export default function Settings() {
     >
       {/* Match NavBar width so the logo aligns with page content */}
       <div
-        className="mx-auto max-w-7xl text-[length:var(--settings-text-md)]"
+        className="mx-auto max-w-[80rem] text-[length:var(--settings-text-md)]"
         data-oid="ke2.spo"
       >
         {/* Page header (match Home neon/glass style) */}
         <div
-          className="relative mb-6 overflow-hidden rounded-2xl border border-[var(--settings-surface-border)] bg-[var(--settings-surface-bg)] p-5 shadow-[var(--settings-surface-shadow)] backdrop-blur-md sm:p-6"
+          className="relative mb-[clamp(1.25rem,2.7vw,1.5rem)] overflow-hidden rounded-[clamp(0.8rem,2vw,1rem)] border border-[var(--settings-surface-border)] bg-[var(--settings-surface-bg)] p-[clamp(1rem,2.25vw,1.25rem)] shadow-[var(--settings-surface-shadow)] backdrop-blur-md sm:p-[clamp(1.25rem,2.7vw,1.5rem)]"
           data-oid="8u-ne0x"
         >
           <div
@@ -73,33 +73,33 @@ export default function Settings() {
           />
 
           <div
-            className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            className="relative z-10 flex flex-col gap-[clamp(0.78rem,1.8vw,1rem)] sm:flex-row sm:items-center sm:justify-between"
             data-oid="5hj.--8"
           >
             <div className="min-w-0" data-oid="tc3yanx">
               <button
                 type="button"
                 onClick={handleBack}
-                className="font-brand mb-4 inline-flex items-center rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-3 py-2 text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:bg-[var(--settings-chip-bg-hover)] hover:border-[var(--settings-chip-border-hover)]"
+                className="font-brand mb-[clamp(0.78rem,1.8vw,1rem)] inline-flex items-center rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] hover:bg-[var(--settings-chip-bg-hover)] hover:border-[var(--settings-chip-border-hover)]"
                 data-oid="li-ft82"
               >
                 <ArrowLeft
-                  className="mr-2 h-4 w-4 shrink-0 text-[var(--settings-chip-icon)]"
+                  className="mr-[clamp(0.39rem,0.9vw,0.5rem)] h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)] shrink-0 text-[var(--settings-chip-icon)]"
                   aria-hidden="true"
                   data-oid="mf5bp9k"
                 />
                 Back
               </button>
-              <div className="flex items-center gap-3" data-oid="lvlcydi">
+              <div className="flex items-center gap-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="lvlcydi">
                 <button
                   type="button"
                   aria-label="Go to files home"
                   onClick={() => navigate("/files")}
-                  className="rounded-xl border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-2 text-[var(--settings-chip-icon)] transition-colors hover:border-[var(--settings-chip-border-hover)] hover:bg-[var(--settings-chip-bg-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]"
+                  className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-chip-icon)] transition-colors hover:border-[var(--settings-chip-border-hover)] hover:bg-[var(--settings-chip-bg-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]"
                   data-oid="06je80s"
                 >
                   <Settings2
-                    className="h-5 w-5"
+                    className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]"
                     aria-hidden="true"
                     data-oid="6q_g5bq"
                   />
@@ -112,7 +112,7 @@ export default function Settings() {
                 </h1>
               </div>
               <p
-                className="font-brand mt-2 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-subtitle)]"
+                className="font-brand mt-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-subtitle)]"
                 data-oid="59c-6-q"
               >
                 Account info, storage quota, security & token management.
@@ -120,11 +120,11 @@ export default function Settings() {
             </div>
 
             <div
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+              className="grid grid-cols-2 gap-[clamp(0.585rem,1.35vw,0.75rem)] sm:grid-cols-3"
               data-oid="duty7hg"
             >
               <div
-                className="rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3"
+                className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)]"
                 data-oid="u.f.93l"
               >
                 <p
@@ -134,14 +134,14 @@ export default function Settings() {
                   Files
                 </p>
                 <p
-                  className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
+                  className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
                   data-oid="xi:vm2r"
                 >
                   {storageUsage ? storageUsage.file_count : "-"}
                 </p>
               </div>
               <div
-                className="rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3"
+                className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)]"
                 data-oid="oj887ag"
               >
                 <p
@@ -151,14 +151,14 @@ export default function Settings() {
                   Usage
                 </p>
                 <p
-                  className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
+                  className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
                   data-oid="0mw84c0"
                 >
                   {storageUsage ? formatBytes(storageUsage.total_size) : "-"}
                 </p>
               </div>
               <div
-                className="hidden sm:block rounded-xl border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-3"
+                className="hidden sm:block rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)]"
                 data-oid="66o_98f"
               >
                 <p
@@ -168,7 +168,7 @@ export default function Settings() {
                   Tokens
                 </p>
                 <p
-                  className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
+                  className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-kpi-value)] tabular-nums"
                   data-oid="wij1zkh"
                 >
                   {apiTokens.length}
@@ -178,7 +178,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="space-y-6" data-oid="g884a9r">
+        <div className="space-y-[clamp(1.25rem,2.7vw,1.5rem)]" data-oid="g884a9r">
           <UserInfoSection data-oid="1jpbmmd" />
           <StorageUsageSection data-oid="jcf9:wl" />
           <ThemeSection data-oid="-93dk47" />

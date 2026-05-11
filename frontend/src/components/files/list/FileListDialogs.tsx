@@ -226,7 +226,7 @@ function DeleteMessage({ deleteConfirm }: { deleteConfirm: DeleteConfirmState })
         <br data-oid="at7fu0h" />
         <br data-oid="rg6ey42" />
         <span
-          className="text-[var(--confirm-warning-icon-text)] text-xs font-medium"
+          className="text-[var(--confirm-warning-icon-text)] text-[clamp(0.65rem,1.5vw,0.75rem)] font-medium"
           data-oid="9b-_hbd"
         >
           此操作不可撤销！
@@ -238,21 +238,21 @@ function DeleteMessage({ deleteConfirm }: { deleteConfirm: DeleteConfirmState })
   const isFolder = deleteConfirm.type === "folder";
   return (
     <>
-      <span className="text-[var(--confirm-message-text)] text-xs" data-oid="ds-rov4">
+      <span className="text-[var(--confirm-message-text)] text-[clamp(0.65rem,1.5vw,0.75rem)]" data-oid="ds-rov4">
         确定要删除{isFolder ? "文件夹" : "文件"}「
       </span>
       <span
-        className="text-[var(--confirm-danger-icon-text)] text-sm font-semibold"
+        className="text-[var(--confirm-danger-icon-text)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-semibold"
         data-oid="vhgtpiy"
       >
         {truncateNameForConfirm(deleteConfirm.name ?? "")}
       </span>
-      <span className="text-[var(--confirm-message-text)] text-xs" data-oid="b2ibywr">
+      <span className="text-[var(--confirm-message-text)] text-[clamp(0.65rem,1.5vw,0.75rem)]" data-oid="b2ibywr">
         」吗？
       </span>
       <br data-oid="0zg3ojk" />
       <br data-oid="8:hal45" />
-      <span className="text-[var(--confirm-warning-icon-text)] text-xs" data-oid="7fbxfgr">
+      <span className="text-[var(--confirm-warning-icon-text)] text-[clamp(0.65rem,1.5vw,0.75rem)]" data-oid="7fbxfgr">
         {isFolder ? "文件夹内的所有内容也会被删除！" : "此操作不可撤销。"}
       </span>
     </>

@@ -22,19 +22,19 @@ const StorageUsageSection = memo(function StorageUsageSection() {
       title="Storage"
       description="Monitor usage and quota to avoid upload/merge failures."
       icon={
-        <HardDrive className="h-5 w-5" aria-hidden="true" data-oid="no.1nu7" />
+        <HardDrive className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" aria-hidden="true" data-oid="no.1nu7" />
       }
       data-oid="31jeowi"
     >
       {!isLoading && storageUsage ? (
-        <div className="space-y-4" data-oid="yvquog4">
-          <div className="grid gap-3 sm:grid-cols-2" data-oid="ght-we:">
+        <div className="space-y-[clamp(0.78rem,1.8vw,1rem)]" data-oid="yvquog4">
+          <div className="grid gap-[clamp(0.585rem,1.35vw,0.75rem)] sm:grid-cols-2" data-oid="ght-we:">
             <div
-              className="rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4"
+              className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
               data-oid="5t21sp4"
             >
               <div
-                className="flex items-center justify-between gap-3"
+                className="flex items-center justify-between gap-[clamp(0.585rem,1.35vw,0.75rem)]"
                 data-oid="7l40t11"
               >
                 <p
@@ -62,13 +62,13 @@ const StorageUsageSection = memo(function StorageUsageSection() {
                 )}
               </div>
               <p
-                className="font-brand mt-2 text-[length:var(--settings-text-xl)] font-semibold tracking-wide text-[var(--settings-panel-value)]"
+                className="font-brand mt-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-xl)] font-semibold tracking-wide text-[var(--settings-panel-value)]"
                 data-oid="-eutq2_"
               >
                 {formatBytes(storageUsage.total_size)}
               </p>
               <p
-                className="mt-1 text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)]"
+                className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)]"
                 data-oid="sh1s269"
               >
                 {storageUsage.total_size_mb} MB
@@ -79,7 +79,7 @@ const StorageUsageSection = memo(function StorageUsageSection() {
             </div>
 
             <div
-              className="rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4"
+              className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
               data-oid="xg85hgm"
             >
               <p
@@ -89,13 +89,13 @@ const StorageUsageSection = memo(function StorageUsageSection() {
                 Files
               </p>
               <p
-                className="font-brand mt-2 text-[length:var(--settings-text-xl)] font-semibold tracking-wide text-[var(--settings-panel-value)] tabular-nums"
+                className="font-brand mt-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-xl)] font-semibold tracking-wide text-[var(--settings-panel-value)] tabular-nums"
                 data-oid="3.kgvaf"
               >
                 {storageUsage.file_count}
               </p>
               <p
-                className="mt-1 text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)]"
+                className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)]"
                 data-oid=".-wf3no"
               >
                 items
@@ -106,11 +106,11 @@ const StorageUsageSection = memo(function StorageUsageSection() {
           {storageUsage.quota !== null &&
             storageUsage.usage_percent !== null && (
               <div
-                className="rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4"
+                className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
                 data-oid="b.98t02"
               >
                 <div
-                  className="flex items-center justify-between gap-3"
+                  className="flex items-center justify-between gap-[clamp(0.585rem,1.35vw,0.75rem)]"
                   data-oid="yn8nwqk"
                 >
                   <p
@@ -127,13 +127,13 @@ const StorageUsageSection = memo(function StorageUsageSection() {
                   </p>
                 </div>
                 <div
-                  className="mt-3 h-3 w-full rounded-full bg-[var(--settings-progress-track-bg)] ring-1 ring-[var(--settings-progress-track-ring)]"
+                  className="mt-[clamp(0.585rem,1.35vw,0.75rem)] h-[clamp(0.585rem,1.35vw,0.75rem)] w-full rounded-full bg-[var(--settings-progress-track-bg)] ring-1 ring-[var(--settings-progress-track-ring)]"
                   data-oid="g8oyzf_"
                 >
                   <div
                     ref={progressBarRef}
                     className={cn(
-                      "storage-progress-fill h-3 rounded-full transition-all",
+                      "storage-progress-fill h-[clamp(0.585rem,1.35vw,0.75rem)] rounded-full transition-all",
                       "bg-[var(--settings-progress-fill)]",
                       storageUsage.usage_percent >= 90 &&
                         "bg-[var(--settings-progress-fill-danger)]",
@@ -147,7 +147,7 @@ const StorageUsageSection = memo(function StorageUsageSection() {
 
                 {storageUsage.usage_percent >= 90 && (
                   <p
-                    className="font-brand mt-3 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-progress-danger-text)]"
+                    className="font-brand mt-[clamp(0.585rem,1.35vw,0.75rem)] text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-progress-danger-text)]"
                     data-oid="cw62j27"
                   >
                     Storage quota almost full. Consider cleaning up or
@@ -157,7 +157,7 @@ const StorageUsageSection = memo(function StorageUsageSection() {
                 {storageUsage.usage_percent >= 75 &&
                   storageUsage.usage_percent < 90 && (
                     <p
-                      className="font-brand mt-3 text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-progress-warn-text)]"
+                      className="font-brand mt-[clamp(0.585rem,1.35vw,0.75rem)] text-[length:var(--settings-text-sm)] font-normal tracking-wide text-[var(--settings-progress-warn-text)]"
                       data-oid="z428nqx"
                     >
                       Storage usage is high. Consider regular cleanup or

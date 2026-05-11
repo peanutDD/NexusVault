@@ -24,18 +24,18 @@ export default function ThemeSection() {
       title="Appearance"
       description="Choose how the interface should look."
       icon={
-        <Palette className="h-5 w-5" aria-hidden="true" data-oid="gzpmni9" />
+        <Palette className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" aria-hidden="true" data-oid="gzpmni9" />
       }
       data-oid="gg52g.s"
     >
-      <div className="grid gap-2 sm:grid-cols-3" data-oid="yfy4n_7">
+      <div className="grid gap-[clamp(0.39rem,0.9vw,0.5rem)] sm:grid-cols-3" data-oid="yfy4n_7">
         {OPTIONS.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => setTheme(opt.value)}
             className={cn(
-              "rounded-xl border px-4 py-3 text-left transition-colors",
+              "rounded-[clamp(0.6rem,1.4vw,0.75rem)] border px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.585rem,1.35vw,0.75rem)] text-left transition-colors",
               "min-h-[5.75rem]",
               "bg-[var(--settings-panel-bg)] border-[var(--settings-panel-border)] text-[var(--color-text-primary)]",
               "hover:bg-[var(--glass-bg-strong)] hover:border-[var(--color-border-medium)]",
@@ -52,7 +52,7 @@ export default function ThemeSection() {
               {opt.title}
             </div>
             <div
-              className="font-brand mt-1 text-[length:var(--settings-text-xs)] tracking-wide text-[var(--color-text-muted)]"
+              className="font-brand mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] tracking-wide text-[var(--color-text-muted)]"
               data-oid="pb91c.w"
             >
               {opt.description}
@@ -62,7 +62,7 @@ export default function ThemeSection() {
       </div>
 
       <div
-        className="mt-4 rounded-xl border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-4"
+        className="mt-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
         data-oid="t8wonjh"
       >
         <div
@@ -72,7 +72,7 @@ export default function ThemeSection() {
           Current
         </div>
         <div
-          className="mt-1 text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
+          className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
           data-oid="48opr-f"
         >
           {effectiveTheme}

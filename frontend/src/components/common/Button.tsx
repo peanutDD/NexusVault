@@ -15,7 +15,7 @@ const variants: Record<Variant, string> = {
 };
 
 const base =
-  "px-4 py-2 rounded-lg font-medium transition-colors transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--btn-primary-ring-offset)] disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95";
+  "rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.75rem,2vw,1rem)] py-[clamp(0.4rem,1vw,0.5rem)] font-medium transition-colors transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--btn-primary-ring-offset)] disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;

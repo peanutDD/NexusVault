@@ -2,7 +2,7 @@
 
 ### 目标
 
-- 把“代码审查意见”变成可应用的变更（unified diff patch），并安全落地到工作区
+- 把“代码审查意见”变成可应用的变更（优先 SEARCH/REPLACE block，兼容 unified diff），并安全落地到工作区
 - 支持两种运行形态：
   - GitHub PR（可选 PR 评论、可选推送）
   - 本地仓库（不依赖 GitHub / gh CLI）
@@ -20,7 +20,8 @@
 
 - `types.rs`：数据结构与对外输出契约（ReviewData / ReviewIssue / PrAutoFixOutput 等）
 - `llm.rs`：本地 Codex 命令执行器（读取 `CODEX_AGENT_COMMAND`，只负责调用与错误回传）
-- `repo.rs`：仓库侧能力（读文件、git apply、提交推送、可选 gh 评论、changelog 更新）
+- `patch/`：模型补丁格式检测、SEARCH/REPLACE block 解析与应用
+- `repo.rs`：仓库侧能力（读文件、unified diff 应用、提交推送、可选 gh 评论、changelog 更新）
 - `skills.rs`：原子步骤（解析 review、决策、生成 patch、应用 patch、安全/质量评估、文档入档、反馈）
 - `pipeline.rs`：Skill 编排器（顺序执行、上下文传递）
 - `runtime.rs`：对外运行入口（PR 模式 / 本地模式），负责拼装 Pipeline 并构建上下文
@@ -41,13 +42,16 @@
 2. `ReadReviewSkill`：把 Markdown 转为严格 JSON，并反序列化为 `ReviewData`
 3. `DecisionSkill`：根据策略筛选允许自动修复的问题（严重级别/受保护文件/是否排除 docs）
 4. `BatchFixSkill`：
-   - 对每条 issue 调用模型生成 unified diff patch
-   - 用 `git apply` 以“可回滚”的方式尝试应用 patch
-5. `SecurityCheckSkill`：对已修改文件做 prompt-based 安全审计（软拦截/提示）
-6. `QualityScoreSkill`：对本轮修复打质量分（0-100）
-7. `DocumentationSkill`：可选把本轮修复落入 changelog（路径可配置、也可禁用）
-8. `DryRunFeedbackSkill`：未传 `--yes` 时，进入 Dry-Run（可选发 PR 评论说明）
-9. `FeedbackSkill`：在 `--yes` 时提交+推送，并可选发 PR 评论；若无修复，按 clean / pending 状态输出总结
+   - 对每条 issue 调用模型生成 SEARCH/REPLACE block
+   - 自动检测 SEARCH/REPLACE、unified diff、空输出或未知输出
+   - SEARCH/REPLACE 直接按单文件精确/行尾空白宽松匹配写回；unified diff 走兼容路径
+   - 失败后先按同格式重试，再进入 SEARCH/REPLACE 兜底，最后才允许完整文件覆写
+5. 如果没有任何修复文件，跳过 SecurityCheck / QualityScore / Documentation，避免对未修复代码误打分
+6. `SecurityCheckSkill`：对已修改文件做 prompt-based 安全审计（软拦截/提示）
+7. `QualityScoreSkill`：对本轮修复打质量分（0-100）
+8. `DocumentationSkill`：可选把本轮修复落入 changelog（路径可配置、也可禁用）
+9. `DryRunFeedbackSkill`：未传 `--yes` 时，进入 Dry-Run（可选发 PR 评论说明）
+10. `FeedbackSkill`：在 `--yes` 时提交+推送，并可选发 PR 评论；若无修复，按 clean / pending 状态输出总结
 
 ### 关键设计点
 
@@ -66,9 +70,11 @@
 
 **3）Patch 应用的安全性**
 
-- 使用 `git apply` 而非直接覆盖文件
-- patch 临时落在系统 temp 目录，避免污染仓库
-- patch 无 `@@` hunk 或为空会被视为无效（跳过）
+- 主路径使用 SEARCH/REPLACE block，避免 LLM 直接计算 unified diff hunk 行数
+- 每个 block 必须声明 `### File: <allowed-file>`，只能作用于当前 issue 文件
+- SEARCH 块必须唯一匹配；多匹配或零匹配会进入重试/兜底，而不是盲写
+- unified diff 仅作为兼容路径；仍由 `git apply` 处理，临时文件放在系统 temp 目录
+- 完整文件覆写只在受保护路径与允许前缀检查通过后使用
 
 **4）输出契约稳定**
 

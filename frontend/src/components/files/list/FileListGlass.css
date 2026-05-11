@@ -162,6 +162,88 @@
   margin-right: -33.333%;
 }
 
+.fileListGlassScope .glass-panel.glass-panel-toolbar.trashConsoleToolbar {
+  position: sticky;
+  z-index: var(--trash-console-z-index, 60);
+  opacity: var(--trash-console-opacity, 0.98);
+}
+
+.fileListGlassScope .trashConsoleToolbar .trashConsoleActions {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fileListGlassScope .trashConsoleToolbar .trashConsoleActions::-webkit-scrollbar {
+  display: none;
+}
+
+.fileListGlassScope .trashConsoleToolbar .glass-btn.toolbarActionBtn.trashConsoleButton {
+  height: clamp(1.78rem, 2.1vw, 2.08rem);
+  min-height: clamp(1.78rem, 2.1vw, 2.08rem);
+  box-shadow:
+    0 clamp(0.35rem, 0.8vw, 0.5rem) clamp(1rem, 1.9vw, 1.35rem) rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.fileListGlassScope .trashConsoleToolbar .trashConsoleSummaryRow {
+  width: max-content;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+  border: 1px solid rgba(var(--rgb-white), 0.08);
+  border-radius: 999px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(var(--rgb-white), 0.08), transparent 58%),
+    linear-gradient(135deg, rgba(var(--rgb-white), 0.05), rgba(var(--rgb-white), 0.018));
+  box-shadow:
+    inset 0 1px 0 rgba(var(--rgb-white), 0.1),
+    0 clamp(0.3rem, 0.8vw, 0.5rem) clamp(0.9rem, 1.6vw, 1.15rem) rgba(0, 0, 0, 0.16);
+  padding: clamp(0.2rem, 0.55vw, 0.34rem) clamp(0.35rem, 0.85vw, 0.6rem);
+}
+
+@media (max-width: 640px) {
+  .fileListGlassScope .trashConsoleToolbar {
+    --trash-console-mobile-row-gap: clamp(1rem, 2vw, 2rem);
+  }
+
+  .fileListGlassScope .trashConsoleToolbar .trashConsoleInner {
+    gap: var(--trash-console-mobile-row-gap);
+    align-items: stretch;
+  }
+
+  .fileListGlassScope .trashConsoleToolbar .trashConsoleActions {
+    gap: var(--trash-console-mobile-row-gap);
+  }
+
+  .fileListGlassScope .trashConsoleToolbar .trashConsoleSummaryRow {
+    --trash-console-summary-mobile-scale: 1.2;
+
+    display: inline-flex;
+    width: calc(100% / var(--trash-console-summary-mobile-scale));
+    inline-size: calc(100% / var(--trash-console-summary-mobile-scale));
+    max-width: calc(100% / var(--trash-console-summary-mobile-scale));
+    max-inline-size: calc(100% / var(--trash-console-summary-mobile-scale));
+    flex: 0 1 calc(100% / var(--trash-console-summary-mobile-scale));
+    align-self: flex-start;
+    box-sizing: border-box;
+    border-radius: 0.75rem;
+    transform: scale(var(--trash-console-summary-mobile-scale));
+    transform-origin: left top;
+  }
+}
+
+.fileListGlassScope .trashCardFrame {
+  border-color: var(--filelist-card-border);
+}
+
+.fileListGlassScope .trashCardFrame.trashCardSelected {
+  border-color: var(--cta-primary-border);
+}
+
+.fileListGlassScope .trashCardThumb {
+  background: var(--file-card-thumb-bg);
+}
+
 /* ALL FILES、批量栏：无圆角，容器高度与 padding 统一 */
 .fileListGlassScope .sticky .glass-panel-soft {
   border-radius: 0;

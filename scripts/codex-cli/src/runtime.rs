@@ -7,7 +7,8 @@ use crate::skills::{
     fixed_explanations, review_issue_key, review_issue_statuses,
 };
 use crate::types::{
-    PrAutoFixOutput, ReviewData, ReviewLedgerEntryInput, is_review_severity_medium_or_higher,
+    PrAutoFixOutput, ReviewData, ReviewIssue, ReviewLedgerEntryInput,
+    is_review_severity_medium_or_higher,
 };
 use std::env;
 
@@ -132,10 +133,11 @@ async fn run_auto_fix_loop(
     mut ctx: SkillContext,
     client: &CodexClient,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let round_pipeline = Pipeline::new()
+    let fix_pipeline = Pipeline::new()
         .with_skill(Box::new(ReadReviewSkill))
         .with_skill(Box::new(DecisionSkill))
-        .with_skill(Box::new(BatchFixSkill))
+        .with_skill(Box::new(BatchFixSkill));
+    let post_fix_pipeline = Pipeline::new()
         .with_skill(Box::new(SecurityCheckSkill))
         .with_skill(Box::new(QualityScoreSkill))
         .with_skill(Box::new(DocumentationSkill));
@@ -147,10 +149,22 @@ async fn run_auto_fix_loop(
             ctx.max_rounds
         );
     }
-    round_pipeline.run(&mut ctx, client).await?;
+    fix_pipeline.run(&mut ctx, client).await?;
+    if should_skip_post_fix_checks(&ctx) {
+        mark_post_fix_checks_skipped(&mut ctx);
+        eprintln!(
+            "⏭️ [AutoFix] 跳过 SecurityCheck/QualityScore/Documentation: {}",
+            ctx.quality_score_reason.as_deref().unwrap_or("无后续检查")
+        );
+    } else {
+        post_fix_pipeline.run(&mut ctx, client).await?;
+    }
+    if remediate_security_findings_once(&mut ctx, client).await? {
+        post_fix_pipeline.run(&mut ctx, client).await?;
+    }
 
     enforce_review_policy(&mut ctx);
-    apply_push_block_guard(&mut ctx);
+    record_security_findings_as_pending(&mut ctx);
 
     let summary = ctx.parsed_data.as_ref().map(|d| d.summary.clone());
     let review_record_path = append_review_ledger(&mut ctx, summary.clone())?;
@@ -196,9 +210,66 @@ async fn run_auto_fix_loop(
     Ok(serde_json::to_string(&output)?)
 }
 
-fn apply_push_block_guard(ctx: &mut SkillContext) {
-    if ctx.auto_push && !ctx.fixed_files.is_empty() && !ctx.security_passed {
-        ctx.push_blocked = true;
+async fn remediate_security_findings_once(
+    ctx: &mut SkillContext,
+    client: &CodexClient,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    if ctx.security_passed || ctx.security_findings.is_empty() {
+        return Ok(false);
+    }
+
+    let issues = security_findings_as_review_issues(&ctx.security_findings);
+    if issues.is_empty() {
+        return Ok(false);
+    }
+
+    eprintln!(
+        "🛡️ [AutoFix] SecurityCheck 发现可修复问题，进入安全修复补丁轮: {} 条",
+        issues.len()
+    );
+
+    ctx.selected_issues = issues;
+    let fixed_before = ctx.fixed_files.len();
+    let security_fix_pipeline = Pipeline::new().with_skill(Box::new(BatchFixSkill));
+    security_fix_pipeline.run(ctx, client).await?;
+
+    Ok(ctx.fixed_files.len() > fixed_before)
+}
+
+fn security_findings_as_review_issues(findings: &[String]) -> Vec<ReviewIssue> {
+    findings
+        .iter()
+        .filter_map(|finding| {
+            let (file, reason) = finding.split_once(": ")?;
+            let file = file.trim();
+            if file.is_empty() || !file.contains('/') {
+                return None;
+            }
+
+            Some(ReviewIssue {
+                file: file.to_string(),
+                line: None,
+                severity: "High".to_string(),
+                description: format!("SecurityCheck finding: {}", reason.trim()),
+                suggestion: "修复 SecurityCheck 发现的安全风险，并保持改动限于当前文件。"
+                    .to_string(),
+                constraints: vec![format!("Only modify `{file}`")],
+                reason: Some(finding.clone()),
+            })
+        })
+        .collect()
+}
+
+fn record_security_findings_as_pending(ctx: &mut SkillContext) {
+    if ctx.security_passed || ctx.security_findings.is_empty() {
+        return;
+    }
+
+    for finding in &ctx.security_findings {
+        let explanation = format!("[Security] SecurityCheck 未自动修复：{}", finding);
+        if !ctx.pending_explanations.contains(&explanation) {
+            ctx.pending_explanations.push(explanation);
+        }
     }
 }
 
@@ -254,6 +325,23 @@ fn fallback_used(attempts: &[crate::skills::FixAttempt]) -> bool {
     attempts
         .iter()
         .any(|attempt| attempt.stage == "file_replacement_fallback" && attempt.success)
+}
+
+pub(crate) fn should_skip_post_fix_checks(ctx: &SkillContext) -> bool {
+    ctx.fixed_files.is_empty()
+}
+
+pub(crate) fn mark_post_fix_checks_skipped(ctx: &mut SkillContext) {
+    if ctx.selected_issues.is_empty() {
+        ctx.security_passed = true;
+        ctx.quality_score_reason = Some("跳过：本轮未选择自动修复问题".to_string());
+    } else {
+        ctx.security_passed = false;
+        ctx.quality_score_reason = Some("跳过：本轮未产生可验证的修复文件".to_string());
+    }
+    ctx.quality_score = 0;
+    ctx.quality_score_available = false;
+    ctx.security_findings.clear();
 }
 
 fn final_status(push_blocked: bool, has_pending: bool, review_clean: bool) -> String {
@@ -376,6 +464,62 @@ mod tests {
             changelog_path: None,
             disable_changelog: true,
         })
+    }
+
+    #[test]
+    fn post_fix_checks_skip_when_no_fix_was_created_for_selected_issues() {
+        let mut ctx = test_ctx();
+        ctx.selected_issues.push(ReviewIssue {
+            file: "src/a.rs".to_string(),
+            line: Some(10),
+            severity: "Medium".to_string(),
+            description: "bug".to_string(),
+            suggestion: "fix".to_string(),
+            constraints: Vec::new(),
+            reason: None,
+        });
+
+        assert!(should_skip_post_fix_checks(&ctx));
+        mark_post_fix_checks_skipped(&mut ctx);
+
+        assert!(!ctx.security_passed);
+        assert!(!ctx.quality_score_available);
+        assert_eq!(
+            ctx.quality_score_reason.as_deref(),
+            Some("跳过：本轮未产生可验证的修复文件")
+        );
+    }
+
+    #[test]
+    fn post_fix_checks_run_when_at_least_one_fix_exists() {
+        let mut ctx = test_ctx();
+        ctx.selected_issues.push(ReviewIssue {
+            file: "src/a.rs".to_string(),
+            line: Some(10),
+            severity: "Medium".to_string(),
+            description: "bug".to_string(),
+            suggestion: "fix".to_string(),
+            constraints: Vec::new(),
+            reason: None,
+        });
+        ctx.fixed_files.push("src/a.rs".to_string());
+
+        assert!(!should_skip_post_fix_checks(&ctx));
+    }
+
+    #[test]
+    fn post_fix_checks_skip_cleanly_when_no_issue_was_selected() {
+        let mut ctx = test_ctx();
+
+        assert!(should_skip_post_fix_checks(&ctx));
+        mark_post_fix_checks_skipped(&mut ctx);
+
+        assert!(ctx.security_passed);
+        assert!(!ctx.quality_score_available);
+        assert_eq!(
+            ctx.quality_score_reason.as_deref(),
+            Some("跳过：本轮未选择自动修复问题")
+        );
     }
 
     #[test]

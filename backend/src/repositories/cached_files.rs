@@ -100,6 +100,14 @@ impl FilesRepository for CachedFilesRepo {
         self.inner.find_by_id(file_id, user_id).await
     }
 
+    async fn find_deleted_by_id(
+        &self,
+        file_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<File>, AppError> {
+        self.inner.find_deleted_by_id(file_id, user_id).await
+    }
+
     async fn belongs_to_user(&self, file_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
         self.inner.belongs_to_user(file_id, user_id).await
     }
@@ -147,6 +155,60 @@ impl FilesRepository for CachedFilesRepo {
         self.invalidate_cache(user_id).await;
 
         Ok(result)
+    }
+
+    async fn soft_delete(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
+        let result = self.inner.soft_delete(file_id, user_id).await?;
+        self.invalidate_cache(user_id).await;
+        Ok(result)
+    }
+
+    async fn soft_delete_batch(&self, ids: &[Uuid], user_id: Uuid) -> Result<u64, AppError> {
+        let result = self.inner.soft_delete_batch(ids, user_id).await?;
+        self.invalidate_cache(user_id).await;
+        Ok(result)
+    }
+
+    async fn restore_deleted(&self, file_id: Uuid, user_id: Uuid) -> Result<File, AppError> {
+        let result = self.inner.restore_deleted(file_id, user_id).await?;
+        self.invalidate_cache(user_id).await;
+        Ok(result)
+    }
+
+    async fn list_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError> {
+        self.inner.list_deleted(user_id).await
+    }
+
+    async fn hard_delete_deleted(&self, file_id: Uuid, user_id: Uuid) -> Result<u64, AppError> {
+        let result = self.inner.hard_delete_deleted(file_id, user_id).await?;
+        self.invalidate_cache(user_id).await;
+        Ok(result)
+    }
+
+    async fn hard_delete_deleted_batch(
+        &self,
+        ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<Vec<File>, AppError> {
+        let result = self.inner.hard_delete_deleted_batch(ids, user_id).await?;
+        self.invalidate_cache(user_id).await;
+        Ok(result)
+    }
+
+    async fn hard_delete_all_deleted(&self, user_id: Uuid) -> Result<Vec<File>, AppError> {
+        let result = self.inner.hard_delete_all_deleted(user_id).await?;
+        self.invalidate_cache(user_id).await;
+        Ok(result)
+    }
+
+    async fn purge_expired_deleted(
+        &self,
+        retention_days: i64,
+        batch_limit: i64,
+    ) -> Result<Vec<File>, AppError> {
+        self.inner
+            .purge_expired_deleted(retention_days, batch_limit)
+            .await
     }
 
     async fn delete_batch(&self, ids: &[Uuid], user_id: Uuid) -> Result<u64, AppError> {
@@ -274,6 +336,7 @@ mod tests {
                 content_sha256: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
+                deleted_at: None,
             })
         }
 
@@ -297,6 +360,14 @@ mod tests {
         }
 
         async fn find_by_id(
+            &self,
+            _file_id: Uuid,
+            _user_id: Uuid,
+        ) -> Result<Option<File>, AppError> {
+            Ok(None)
+        }
+
+        async fn find_deleted_by_id(
             &self,
             _file_id: Uuid,
             _user_id: Uuid,
@@ -337,6 +408,7 @@ mod tests {
                 content_sha256: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
+                deleted_at: None,
             })
         }
 
@@ -350,6 +422,65 @@ mod tests {
 
         async fn delete(&self, _file_id: Uuid, _user_id: Uuid) -> Result<u64, AppError> {
             Ok(1)
+        }
+
+        async fn soft_delete(&self, _file_id: Uuid, _user_id: Uuid) -> Result<u64, AppError> {
+            Ok(1)
+        }
+
+        async fn soft_delete_batch(&self, _ids: &[Uuid], _user_id: Uuid) -> Result<u64, AppError> {
+            Ok(1)
+        }
+
+        async fn restore_deleted(&self, _file_id: Uuid, _user_id: Uuid) -> Result<File, AppError> {
+            Ok(File {
+                id: Uuid::new_v4(),
+                user_id: Uuid::new_v4(),
+                filename: "restored.txt".to_string(),
+                original_filename: "restored.txt".to_string(),
+                file_path: "/restored.txt".to_string(),
+                file_size: 100,
+                mime_type: "text/plain".to_string(),
+                storage_backend: "local".to_string(),
+                category: None,
+                folder_id: None,
+                content_sha256: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                deleted_at: None,
+            })
+        }
+
+        async fn list_deleted(&self, _user_id: Uuid) -> Result<Vec<File>, AppError> {
+            Ok(Vec::new())
+        }
+
+        async fn hard_delete_deleted(
+            &self,
+            _file_id: Uuid,
+            _user_id: Uuid,
+        ) -> Result<u64, AppError> {
+            Ok(1)
+        }
+
+        async fn hard_delete_deleted_batch(
+            &self,
+            _ids: &[Uuid],
+            _user_id: Uuid,
+        ) -> Result<Vec<File>, AppError> {
+            Ok(Vec::new())
+        }
+
+        async fn hard_delete_all_deleted(&self, _user_id: Uuid) -> Result<Vec<File>, AppError> {
+            Ok(Vec::new())
+        }
+
+        async fn purge_expired_deleted(
+            &self,
+            _retention_days: i64,
+            _batch_limit: i64,
+        ) -> Result<Vec<File>, AppError> {
+            Ok(Vec::new())
         }
 
         async fn delete_batch(&self, _ids: &[Uuid], _user_id: Uuid) -> Result<u64, AppError> {

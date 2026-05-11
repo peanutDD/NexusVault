@@ -1,5 +1,7 @@
 import { UPLOAD_QUEUE } from '../constants';
 
+const PROCESS_LOOP_DEFER_MS = 0;
+
 /**
  * 单条队列项：支持优先级与成本（大文件占更多并发槽位）
  */
@@ -236,7 +238,7 @@ export class UploadQueue {
   private scheduleProcess(): void {
     if (this.isProcessing) return;
     this.isProcessing = true;
-    setTimeout(() => this.processLoop(), 0);
+    setTimeout(() => this.processLoop(), PROCESS_LOOP_DEFER_MS);
   }
 
   /**

@@ -185,7 +185,7 @@ CODEX_EXCLUDE_DOCS=true
 
 ## 本地处理台账
 
-默认情况下，`codex-auto-fix` 会在修复提交前追加 `docs/auto-review-ledger.md`。该文件不是汇总 changelog，而是逐项诊断记录：
+默认情况下，`codex-auto-fix` 会在修复提交前追加 `docs/auto-review-ledger.md`，并同步追加 `docs/auto-review-ledgers/pr-<number>.md`（本地运行写入 `docs/auto-review-ledgers/local.md`）。这些文件不是汇总 changelog，而是逐项诊断记录：
 
 - Gemini 提出的问题是什么。
 - 问题位于哪个文件和行。

@@ -129,6 +129,7 @@ mod tests {
             category: None,
             folder_id: None,
             created_at: chrono::Utc::now(),
+            deleted_at: None,
         };
 
         let body = serde_json::json!({

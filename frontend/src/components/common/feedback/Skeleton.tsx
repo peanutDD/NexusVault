@@ -37,7 +37,7 @@ export default function Skeleton({
   const variantClasses = {
     text: "rounded",
     circular: "rounded-full",
-    rectangular: "rounded-lg",
+    rectangular: "rounded-[clamp(0.4rem,1vw,0.5rem)]",
   };
 
   const animationClasses = {
@@ -74,7 +74,7 @@ export default function Skeleton({
 function FileRowSkeleton() {
   return (
     <tr className="border-b border-[var(--skeleton-border)]" data-oid="x8l3ect">
-      <td className="px-3 py-2" data-oid="ywhuc:c">
+      <td className="px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="ywhuc:c">
         <Skeleton
           variant="circular"
           width={18}
@@ -82,7 +82,7 @@ function FileRowSkeleton() {
           data-oid="1i2t86r"
         />
       </td>
-      <td className="px-2 py-2" data-oid="ciefws-">
+      <td className="px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="ciefws-">
         <Skeleton
           variant="rectangular"
           width={56}
@@ -91,22 +91,22 @@ function FileRowSkeleton() {
           data-oid="4k:mwl2"
         />
       </td>
-      <td className="px-3 py-2" data-oid=".hxzkt.">
+      <td className="px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid=".hxzkt.">
         <Skeleton variant="text" width="70%" height={16} data-oid="1wh3via" />
       </td>
-      <td className="px-3 py-2" data-oid="cso39lv">
+      <td className="px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="cso39lv">
         <Skeleton variant="text" width={48} height={14} data-oid="cov8.tb" />
       </td>
-      <td className="px-3 py-2" data-oid="1j8_6gz">
+      <td className="px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="1j8_6gz">
         <Skeleton variant="text" width={64} height={14} data-oid="_xw0328" />
       </td>
-      <td className="px-3 py-2" data-oid="zrdoru8">
+      <td className="px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="zrdoru8">
         <Skeleton variant="text" width={40} height={14} data-oid="ky-f-y4" />
       </td>
-      <td className="px-3 py-2" data-oid="ljq2vbn">
+      <td className="px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="ljq2vbn">
         <Skeleton variant="text" width={72} height={14} data-oid="mgegnuo" />
       </td>
-      <td className="px-3 py-2" data-oid=":j7l7j-">
+      <td className="px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid=":j7l7j-">
         <Skeleton variant="text" width={120} height={14} data-oid="s.lx-j5" />
       </td>
     </tr>
@@ -119,7 +119,7 @@ function FileRowSkeleton() {
 export function FileListSkeleton({ count = 5 }: { count?: number }) {
   return (
     <div
-      className="min-w-[60rem] overflow-hidden rounded-lg bg-[var(--skeleton-surface-bg-strong)]"
+      className="min-w-[60rem] overflow-hidden rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--skeleton-surface-bg-strong)]"
       data-oid="rzzj7yc"
     >
       <table className="w-full table-fixed border-collapse" data-oid="by7hc9y">
@@ -128,14 +128,14 @@ export function FileListSkeleton({ count = 5 }: { count?: number }) {
             className="border-b border-[var(--skeleton-border)] bg-[var(--skeleton-header-bg)]"
             data-oid="4yuyl-a"
           >
-            <th className="w-12 px-3 py-3" data-oid="xklb.0q" />
-            <th className="w-[4.5rem] px-2 py-3" data-oid="itq1s5-" />
-            <th className="min-w-[11.25rem] px-3 py-3" data-oid="vi91p5d" />
-            <th className="w-20 px-3 py-3" data-oid="._zf406" />
-            <th className="w-28 px-3 py-3" data-oid="5wyw3nr" />
-            <th className="w-24 px-3 py-3" data-oid="5kdefrh" />
-            <th className="w-28 px-3 py-3" data-oid="584ox3u" />
-            <th className="w-48 px-3 py-3" data-oid=".chb85." />
+            <th className="w-[clamp(2.75rem,5.4vw,3rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="xklb.0q" />
+            <th className="w-[4.5rem] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="itq1s5-" />
+            <th className="min-w-[11.25rem] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="vi91p5d" />
+            <th className="w-[clamp(4.75rem,9vw,5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="._zf406" />
+            <th className="w-[clamp(6.75rem,12.6vw,7rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="5wyw3nr" />
+            <th className="w-[clamp(5.75rem,10.8vw,6rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="5kdefrh" />
+            <th className="w-[clamp(6.75rem,12.6vw,7rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="584ox3u" />
+            <th className="w-[clamp(11.75rem,21.6vw,12rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid=".chb85." />
           </tr>
         </thead>
         <tbody data-oid="1y6_mwc">
@@ -154,13 +154,13 @@ export function FileListSkeleton({ count = 5 }: { count?: number }) {
 function FileCardSkeletonItem() {
   return (
     <div
-      className="rounded-md bg-[var(--skeleton-surface-bg)] p-3"
+      className="rounded-[clamp(0.3rem,0.8vw,0.375rem)] bg-[var(--skeleton-surface-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)]"
       data-oid="3yxzj:g"
     >
       {/* 缩略图占位 */}
       <Skeleton
         variant="rectangular"
-        className="mb-3 aspect-square w-full rounded-sm"
+        className="mb-[clamp(0.585rem,1.35vw,0.75rem)] aspect-square w-full rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
         data-oid="w0wgzbr"
       />
 
@@ -169,7 +169,7 @@ function FileCardSkeletonItem() {
         variant="text"
         width="80%"
         height={16}
-        className="mb-2"
+        className="mb-[clamp(0.39rem,0.9vw,0.5rem)]"
         data-oid="-yclzsc"
       />
 
@@ -178,7 +178,7 @@ function FileCardSkeletonItem() {
         variant="text"
         width="60%"
         height={12}
-        className="mb-1"
+        className="mb-[clamp(0.195rem,0.45vw,0.25rem)]"
         data-oid="db44g.1"
       />
 
@@ -187,21 +187,21 @@ function FileCardSkeletonItem() {
         variant="text"
         width="40%"
         height={12}
-        className="mb-3"
+        className="mb-[clamp(0.585rem,1.35vw,0.75rem)]"
         data-oid="uzt8yg9"
       />
 
       {/* 操作按钮区域 */}
       <div
-        className="flex items-center justify-between border-t border-[var(--skeleton-border)] pt-3"
+        className="flex items-center justify-between border-t border-[var(--skeleton-border)] pt-[clamp(0.585rem,1.35vw,0.75rem)]"
         data-oid="6nfbo63"
       >
-        <div className="flex gap-1" data-oid="o1sttbk">
+        <div className="flex gap-[clamp(0.195rem,0.45vw,0.25rem)]" data-oid="o1sttbk">
           <Skeleton
             variant="rectangular"
             width={32}
             height={32}
-            className="rounded-sm"
+            className="rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
             data-oid="ym1lppd"
           />
 
@@ -209,7 +209,7 @@ function FileCardSkeletonItem() {
             variant="rectangular"
             width={32}
             height={32}
-            className="rounded-sm"
+            className="rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
             data-oid="3tod3dm"
           />
         </div>
@@ -217,7 +217,7 @@ function FileCardSkeletonItem() {
           variant="rectangular"
           width={32}
           height={32}
-          className="rounded-sm"
+          className="rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
           data-oid="rmblrsk"
         />
       </div>

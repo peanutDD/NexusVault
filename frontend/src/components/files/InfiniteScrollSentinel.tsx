@@ -98,7 +98,7 @@ const InfiniteScrollSentinel: React.FC<InfiniteScrollSentinelProps> = ({
   return (
     <div
       ref={sentinelRef}
-      className="h-1 w-full"
+      className="h-[clamp(0.195rem,0.45vw,0.25rem)] w-full"
       aria-hidden
       data-oid="t6v14rz"
     />

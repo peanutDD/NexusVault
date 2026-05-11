@@ -44,6 +44,39 @@ fn auto_fix_local_applies_patch_with_local_codex_command() {
 }
 
 #[test]
+fn auto_fix_local_prefers_search_replace_blocks() {
+    let workspace = TestWorkspace::new("sr-success");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("sr_success");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["retry_count"], 0);
+    assert_eq!(json["fallback_used"], false);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
 fn auto_fix_local_uses_review_json_as_primary_input() {
     let workspace = TestWorkspace::new("json-primary");
     let repo = workspace.create_repo();
@@ -128,6 +161,13 @@ fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
             .iter()
             .any(|file| { file.as_str() == Some("docs/auto-review-ledger.md") })
     );
+    assert!(
+        json["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|file| { file.as_str() == Some("docs/auto-review-ledgers/local.md") })
+    );
 
     let ledger = fs::read_to_string(repo.join("docs/auto-review-ledger.md")).unwrap();
     assert!(ledger.contains("Medium"));
@@ -136,6 +176,12 @@ fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
     assert!(ledger.contains("已自动修复"));
     assert!(ledger.contains("src/lib.rs"));
     assert!(ledger.contains("修改文件"));
+
+    let per_pr_ledger = fs::read_to_string(repo.join("docs/auto-review-ledgers/local.md")).unwrap();
+    assert!(per_pr_ledger.contains("Medium"));
+    assert!(per_pr_ledger.contains("fix value"));
+    assert!(per_pr_ledger.contains("resolved"));
+    assert!(per_pr_ledger.contains("src/lib.rs"));
 }
 
 #[test]
@@ -188,8 +234,8 @@ fn pr_auto_fix_posts_issue_status_checklist_comment_in_dry_run() {
 }
 
 #[test]
-fn auto_fix_local_blocks_push_when_security_audit_fails() {
-    let workspace = TestWorkspace::new("blocked");
+fn auto_fix_local_warns_but_pushes_when_security_audit_fails() {
+    let workspace = TestWorkspace::new("security-warn");
     let repo = workspace.create_repo();
     write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
     write_repo_file(
@@ -199,6 +245,12 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
     );
     workspace.git(&repo, &["add", "."]);
     workspace.git(&repo, &["commit", "-m", "initial"]);
+    let remote = workspace.create_bare_remote();
+    workspace.git(
+        &repo,
+        &["remote", "add", "origin", remote.to_str().unwrap()],
+    );
+    workspace.git(&repo, &["push", "-u", "origin", "HEAD"]);
 
     let review = workspace.path.join("review.md");
     fs::write(
@@ -212,24 +264,32 @@ fn auto_fix_local_blocks_push_when_security_audit_fails() {
     assert!(output.status.success(), "stderr={}", stderr(&output));
 
     let json = parse_stdout(&output);
-    assert_eq!(json["fixed"], false);
+    assert_eq!(json["fixed"], true);
     assert_eq!(json["security_passed"], false);
-    assert_eq!(json["push_blocked"], true);
-    assert_eq!(json["has_pending"], false);
-    assert_eq!(json["pending_count"], 0);
+    assert_eq!(json["push_blocked"], false);
+    assert_eq!(json["has_pending"], true);
+    assert_eq!(json["pending_count"], 1);
     assert_eq!(json["review_clean"], false);
-    assert_eq!(json["pending_explanations"].as_array().unwrap().len(), 0);
-    assert_eq!(json["fixed_explanations"].as_array().unwrap().len(), 0);
-    assert_eq!(json["issue_statuses"][0]["status"], "blocked");
+    assert_eq!(json["final_status"], "pending");
+    let pending = json["pending_explanations"].as_array().unwrap();
+    assert_eq!(pending.len(), 1);
+    assert!(
+        pending[0]
+            .as_str()
+            .unwrap()
+            .contains("synthetic security finding")
+    );
+    assert_eq!(json["fixed_explanations"].as_array().unwrap().len(), 1);
+    assert_eq!(json["issue_statuses"][0]["status"], "resolved");
     assert!(
         json["issue_statuses"][0]["explanation"]
             .as_str()
             .unwrap()
-            .contains("阻止推送")
+            .contains("已自动修复")
     );
 
     let commit_count = workspace.git_stdout(&repo, &["rev-list", "--count", "HEAD"]);
-    assert_eq!(commit_count.trim(), "1");
+    assert_eq!(commit_count.trim(), "2");
     let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
     assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
 }
@@ -292,6 +352,45 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
             .as_str()
             .unwrap()
             .contains("模型未返回可应用")
+    );
+}
+
+#[test]
+fn auto_fix_local_remediates_security_findings_before_feedback() {
+    let workspace = TestWorkspace::new("security-remediation");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 和 SecurityCheck 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("security_remediation");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["security_passed"], true);
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["pending_count"], 0);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    3\n}\n");
+    assert!(
+        stderr(&output).contains("SecurityCheck 发现可修复问题，进入安全修复补丁轮"),
+        "stderr={}",
+        stderr(&output)
     );
 }
 
@@ -369,8 +468,8 @@ fn retry_prompt_includes_apply_stderr_latest_source_and_budget() {
 }
 
 #[test]
-fn full_file_fallback_is_blocked_for_large_files() {
-    let workspace = TestWorkspace::new("large-fallback-blocked");
+fn full_file_fallback_allows_large_files() {
+    let workspace = TestWorkspace::new("large-fallback-allowed");
     let repo = workspace.create_repo();
     let mut large_file = String::new();
     large_file.push_str("pub fn value() -> i32 {\n    1\n}\n");
@@ -398,18 +497,51 @@ fn full_file_fallback_is_blocked_for_large_files() {
     assert!(output.status.success(), "stderr={}", stderr(&output));
 
     let json = parse_stdout(&output);
-    assert_eq!(json["fixed"], false);
-    assert_eq!(json["fallback_used"], false);
-    assert_eq!(json["final_status"], "pending");
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["fallback_used"], true);
+    assert_eq!(json["final_status"], "clean");
+    assert_eq!(json["pending_count"], 0);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
+fn malformed_diff_goes_directly_to_full_file_fallback_without_retry_patch() {
+    let workspace = TestWorkspace::new("malformed-direct-fallback");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("malformed_direct_fallback");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["fallback_used"], true);
+    assert_eq!(json["retry_count"], 0);
     assert!(
-        json["pending_explanations"][0]
-            .as_str()
-            .unwrap()
-            .contains("完整文件兜底被阻止")
+        stderr(&output).contains("补丁格式无效，直接尝试完整文件兜底"),
+        "stderr={}",
+        stderr(&output)
     );
 
     let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
-    assert_eq!(updated, large_file);
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
 }
 
 #[test]
@@ -438,7 +570,7 @@ fn output_json_exposes_retry_fallback_and_final_status_metrics() {
 
     let json = parse_stdout(&output);
     assert_eq!(json["fixed"], true);
-    assert_eq!(json["retry_count"], 1);
+    assert_eq!(json["retry_count"], 0);
     assert_eq!(json["fallback_used"], true);
     assert_eq!(json["final_status"], "clean");
     assert_eq!(json["apply_fail_reason"], "malformed_diff");
@@ -637,6 +769,23 @@ impl TestWorkspace {
         repo
     }
 
+    fn create_bare_remote(&self) -> PathBuf {
+        let remote = self.path.join("remote.git");
+        let output = Command::new("git")
+            .arg("init")
+            .arg("--bare")
+            .arg(&remote)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git init --bare failed\nstdout={}\nstderr={}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        remote
+    }
+
     fn fake_agent(&self, mode: &str) -> PathBuf {
         let path = self.path.join(format!("fake-agent-{mode}.sh"));
         let script = fake_agent_script(mode);
@@ -730,6 +879,53 @@ case "$prompt" in
     fi
     ;;
   *"高级工程师"*)
+    if [ "$mode" = "sr_success" ]; then
+      printf '%s' "$prompt" | grep -q "SEARCH/REPLACE block" || exit 70
+      printf '%s' "$prompt" | grep -q '### File: src/lib.rs' || exit 71
+      cat <<'PATCH'
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    1
+}}
+=======
+pub fn value() -> i32 {{
+    2
+}}
+>>>>>>> REPLACE
+PATCH
+      exit 0
+    fi
+    if [ "$mode" = "security_remediation" ]; then
+      if printf '%s' "$prompt" | grep -q "SecurityCheck finding"; then
+        cat <<'PATCH'
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    2
+}}
+=======
+pub fn value() -> i32 {{
+    3
+}}
+>>>>>>> REPLACE
+PATCH
+      else
+        cat <<'PATCH'
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    1
+}}
+=======
+pub fn value() -> i32 {{
+    2
+}}
+>>>>>>> REPLACE
+PATCH
+      fi
+      exit 0
+    fi
     if [ "$mode" = "full_file_fallback" ]; then
       if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
         cat <<'FILE'
@@ -782,18 +978,21 @@ PATCH
         printf '%s' "$prompt" | grep -q "git apply stderr:" || exit 43
         printf '%s' "$prompt" | grep -q "patch does not apply" || exit 44
         printf '%s' "$prompt" | grep -q "Allowed file: src/lib.rs" || exit 45
-        printf '%s' "$prompt" | grep -q "max hunks: 3" || exit 46
-        printf '%s' "$prompt" | grep -q "max changed lines: 80" || exit 47
+        printf '%s' "$prompt" | grep -q "<<<<<<< SEARCH" || exit 46
+        printf '%s' "$prompt" | grep -q "max blocks: 5" || exit 47
+        printf '%s' "$prompt" | grep -q "match_reason" || exit 49
         printf '%s' "$prompt" | grep -q "pub fn value() -> i32" || exit 48
         cat <<'PATCH'
-diff --git a/src/lib.rs b/src/lib.rs
---- a/src/lib.rs
-+++ b/src/lib.rs
-@@ -1,3 +1,3 @@
- pub fn value() -> i32 {{
--    1
-+    2
- }}
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    1
+}}
+=======
+pub fn value() -> i32 {{
+    2
+}}
+>>>>>>> REPLACE
 PATCH
       else
         cat <<'PATCH'
@@ -830,21 +1029,46 @@ PATCH
       fi
       exit 0
     fi
+    if [ "$mode" = "malformed_direct_fallback" ]; then
+      if printf '%s' "$prompt" | grep -q "上一版补丁应用失败"; then
+        printf '%s\n' 'retry patch generation should be skipped for malformed diffs' >&2
+        exit 77
+      fi
+      if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
+        cat <<'FILE'
+pub fn value() -> i32 {{
+    2
+}}
+FILE
+      else
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3
+ pub fn value() -> i32 {{
+-    1
++    2
+ }}
+PATCH
+      fi
+      exit 0
+    fi
     if [ "$mode" = "same_file_partial" ] && printf '%s' "$prompt" | grep -q "fix other"; then
       exit 0
     fi
     if [ "$mode" = "same_file_partial" ]; then
       cat <<'PATCH'
-diff --git a/src/lib.rs b/src/lib.rs
---- a/src/lib.rs
-+++ b/src/lib.rs
-@@ -1,5 +1,5 @@
- pub fn value() -> i32 {{
--    1
-+    2
- }}
-
- pub fn other() -> i32 {{
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn value() -> i32 {{
+    1
+}}
+=======
+pub fn value() -> i32 {{
+    2
+}}
+>>>>>>> REPLACE
 PATCH
     else
       cat <<'PATCH'
@@ -862,6 +1086,17 @@ PATCH
   *"安全审计专家"*)
     if [ "$mode" = "security_fail" ]; then
       printf '%s\n' '{{"passed":false,"reason":"synthetic security finding"}}'
+    elif [ "$mode" = "security_remediation" ]; then
+      state="$0.security-count"
+      count=0
+      if [ -f "$state" ]; then count="$(cat "$state")"; fi
+      count=$((count + 1))
+      printf '%s' "$count" > "$state"
+      if [ "$count" -eq 1 ]; then
+        printf '%s\n' '{{"passed":false,"reason":"synthetic security finding"}}'
+      else
+        printf '%s\n' '{{"passed":true,"reason":"ok"}}'
+      fi
     else
       printf '%s\n' '{{"passed":true,"reason":"ok"}}'
     fi

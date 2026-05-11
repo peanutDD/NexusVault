@@ -47,27 +47,27 @@ const FileListBatchActions = memo(function FileListBatchActions({
   const rowClass =
     "font-brand font-normal tracking-widest text-[0.625rem] leading-none";
   const btnClass =
-    "glass-btn inline-flex items-center justify-center sm:justify-start gap-2 px-2 py-1 hover:border-white/25 " +
+    "glass-btn inline-flex items-center justify-center sm:justify-start gap-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.2rem,0.7vw,0.25rem)] hover:border-[var(--filelist-batch-action-border-hover)] " +
     rowClass;
 
   const wrapperClass = bare
-    ? "batch-actions-row flex items-center justify-between gap-4 animate-fade-in transition-all duration-200"
-    : "batch-actions-bar glass-panel-soft flex items-center justify-between gap-4 animate-fade-in transition-all duration-200";
+    ? "batch-actions-row flex items-center justify-between gap-[clamp(0.75rem,2vw,1rem)] animate-fade-in transition-all duration-200"
+    : "batch-actions-bar glass-panel-soft flex items-center justify-between gap-[clamp(0.75rem,2vw,1rem)] animate-fade-in transition-all duration-200";
 
   return (
     <div className={wrapperClass} data-oid="4faqf4j">
       <div
-        className="flex min-w-0 items-center gap-2 whitespace-nowrap text-[0.625rem]"
+        className="flex min-w-0 items-center gap-[clamp(0.4rem,1vw,0.5rem)] whitespace-nowrap text-[0.625rem]"
         data-oid="zvxz73n"
       >
         <span
-          className="inline-block h-4 w-4 shrink-0 rounded-sm"
+          className="inline-block h-[clamp(0.875rem,2vw,1rem)] w-[clamp(0.875rem,2vw,1rem)] shrink-0 rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
           aria-hidden
           data-oid="4y63_0t"
         />
 
         <span
-          className="font-brand min-w-0 shrink truncate font-normal tracking-widest leading-none text-[rgba(var(--rgb-white),0.86)] text-[clamp(0.5rem,1.2vw,0.625rem)]"
+          className="font-brand min-w-0 shrink truncate font-normal tracking-widest leading-none text-[var(--filelist-batch-selection-text)] text-[clamp(0.5rem,1.2vw,0.625rem)]"
           data-oid="z8d:i3l"
         >
           Already selected {getSelectionText()}
@@ -75,7 +75,7 @@ const FileListBatchActions = memo(function FileListBatchActions({
       </div>
 
       <div
-        className="flex min-w-0 items-center justify-end gap-1.5 overflow-x-auto whitespace-nowrap text-[0.625rem]"
+        className="flex min-w-0 items-center justify-end gap-[clamp(0.3rem,0.8vw,0.375rem)] overflow-x-auto whitespace-nowrap text-[0.625rem]"
         data-oid=":7zr0ik"
       >
         <button

@@ -67,7 +67,7 @@ export default function UploadDropzone({
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={cn(
-        "uploadDialogCyberDropzone relative mb-4 flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed px-6 py-5 text-center transition-colors duration-200 sm:py-6",
+        "uploadDialogCyberDropzone relative mb-[clamp(0.78rem,1.8vw,1rem)] flex flex-col items-center justify-center overflow-hidden rounded-[clamp(0.6rem,1.4vw,0.75rem)] border-2 border-dashed px-[clamp(1.25rem,2.7vw,1.5rem)] py-[clamp(1rem,2.25vw,1.25rem)] text-center transition-colors duration-200 sm:py-[clamp(1.25rem,2.7vw,1.5rem)]",
         dragActive
           ? "uploadDialogCyberDropzoneActive border-[var(--upload-accent)] bg-[var(--upload-accent-bg)]"
           : "border-[var(--upload-drop-border)] bg-[var(--upload-drop-bg)] hover:border-[var(--upload-drop-border-hover)]",
@@ -84,19 +84,19 @@ export default function UploadDropzone({
         data-oid="cmzy5dv"
       />
 
-      <div className="uploadDropzoneCore mb-3 flex h-14 w-14 items-center justify-center rounded-xl" data-oid="ybxiui-">
-        <Files className="uploadDropzoneCoreBack h-8 w-8" aria-hidden="true" />
-        <UploadCloud className="uploadDropzoneCoreFront h-8 w-8" aria-hidden="true" />
+      <div className="uploadDropzoneCore mb-[clamp(0.585rem,1.35vw,0.75rem)] flex h-[clamp(3.25rem,6.3vw,3.5rem)] w-[clamp(3.25rem,6.3vw,3.5rem)] items-center justify-center rounded-[clamp(0.6rem,1.4vw,0.75rem)]" data-oid="ybxiui-">
+        <Files className="uploadDropzoneCoreBack h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" aria-hidden="true" />
+        <UploadCloud className="uploadDropzoneCoreFront h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" aria-hidden="true" />
       </div>
 
       <p
-        className="font-brand mb-1 text-sm font-normal tracking-widest text-[var(--upload-text)]"
+        className="font-brand mb-[clamp(0.195rem,0.45vw,0.25rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--upload-text)]"
         data-oid="rg8qpyg"
       >
         Drag and drop your files
       </p>
       <p
-        className="font-brand mb-4 text-xs font-normal tracking-widest text-[var(--upload-text-muted)]"
+        className="font-brand mb-[clamp(0.78rem,1.8vw,1rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-text-muted)]"
         data-oid="-vtfj4r"
       >
         Max. File size:{" "}
@@ -106,14 +106,14 @@ export default function UploadDropzone({
       <button
         type="button"
         onClick={handleSelectClick}
-        className="uploadDialogCyberPrimaryBtn font-brand inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-5 py-2.5 text-sm font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)]"
+        className="uploadDialogCyberPrimaryBtn font-brand inline-flex items-center justify-center gap-[clamp(0.39rem,0.9vw,0.5rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--btn-primary-bg)] px-[clamp(1rem,2.25vw,1.25rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)]"
         data-oid="xdol0-4"
       >
-        <UploadCloud className="h-4 w-4" aria-hidden="true" />
+        <UploadCloud className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]" aria-hidden="true" />
         Select files
       </button>
       <p
-        className="font-brand mt-2 text-xs text-[var(--upload-text-muted)]"
+        className="font-brand mt-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--upload-text-muted)]"
         data-oid="d5m9iy1"
       >
         支持多选；若多选只显示 1 个，请将多个文件

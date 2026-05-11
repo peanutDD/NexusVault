@@ -14,6 +14,7 @@ pub struct FileResponse {
     pub category: Option<String>,
     pub folder_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -65,6 +66,18 @@ pub struct BatchMoveRequest {
 #[derive(Debug, Deserialize)]
 pub struct BatchGetRequest {
     pub ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BatchTrashFailure {
+    pub id: Uuid,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BatchTrashResult {
+    pub succeeded: u64,
+    pub failed: Vec<BatchTrashFailure>,
 }
 
 #[derive(Debug, Deserialize)]
