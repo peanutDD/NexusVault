@@ -273,7 +273,7 @@ pub fn build_auto_review_ledger_entry(input: &ReviewLedgerEntryInput) -> String 
     entry
 }
 
-/// 在 repo 根目录下写入 `docs/auto-review-ledger.md`，并把该文件加入本轮提交列表。
+/// 在 repo 根目录下写入全局 ledger 与 per-PR ledger，并把文件加入本轮提交列表。
 pub fn append_auto_review_ledger_in(
     repo_root: &str,
     fixed_files: &mut Vec<String>,
@@ -283,18 +283,58 @@ pub fn append_auto_review_ledger_in(
         return Ok(None);
     }
 
-    let rel_path = "docs/auto-review-ledger.md";
+    let entry = build_auto_review_ledger_entry(input);
+    let global_rel_path = "docs/auto-review-ledger.md";
+    append_ledger_file(
+        repo_root,
+        global_rel_path,
+        "# Auto Review Ledger",
+        &entry,
+        fixed_files,
+    )?;
+
+    let scoped_rel_path = auto_review_scoped_ledger_path(input.pr_number);
+    let scoped_title = if input.pr_number == 0 {
+        "# Auto Review Ledger - local".to_string()
+    } else {
+        format!("# Auto Review Ledger - PR #{}", input.pr_number)
+    };
+    append_ledger_file(
+        repo_root,
+        &scoped_rel_path,
+        &scoped_title,
+        &entry,
+        fixed_files,
+    )?;
+
+    Ok(Some(global_rel_path.to_string()))
+}
+
+fn auto_review_scoped_ledger_path(pr_number: u32) -> String {
+    if pr_number == 0 {
+        "docs/auto-review-ledgers/local.md".to_string()
+    } else {
+        format!("docs/auto-review-ledgers/pr-{}.md", pr_number)
+    }
+}
+
+fn append_ledger_file(
+    repo_root: &str,
+    rel_path: &str,
+    title: &str,
+    entry: &str,
+    fixed_files: &mut Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let abs_path = Path::new(repo_root).join(rel_path);
     if let Some(parent) = abs_path.parent() {
         fs::create_dir_all(parent)?;
     }
 
-    let entry = build_auto_review_ledger_entry(input);
     let next = if abs_path.exists() {
         let original = fs::read_to_string(&abs_path)?;
         format!("{}\n{}", original.trim_end(), entry.trim_end())
     } else {
-        format!("# Auto Review Ledger\n\n{}", entry.trim_end())
+        format!("{}\n\n{}", title, entry.trim_end())
     };
     fs::write(&abs_path, format!("{}\n", next.trim_end()))?;
 
@@ -302,7 +342,7 @@ pub fn append_auto_review_ledger_in(
         fixed_files.push(rel_path.to_string());
     }
 
-    Ok(Some(rel_path.to_string()))
+    Ok(())
 }
 
 fn markdown_table_cell(value: &str) -> String {
@@ -898,6 +938,18 @@ mod tests {
         assert!(!env_flag_enabled(Some("0")));
         assert!(!env_flag_enabled(Some("")));
         assert!(!env_flag_enabled(None));
+    }
+
+    #[test]
+    fn auto_review_scoped_ledger_path_is_stable_per_pr() {
+        assert_eq!(
+            auto_review_scoped_ledger_path(26),
+            "docs/auto-review-ledgers/pr-26.md"
+        );
+        assert_eq!(
+            auto_review_scoped_ledger_path(0),
+            "docs/auto-review-ledgers/local.md"
+        );
     }
 
     #[test]

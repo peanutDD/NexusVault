@@ -161,6 +161,13 @@ fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
             .iter()
             .any(|file| { file.as_str() == Some("docs/auto-review-ledger.md") })
     );
+    assert!(
+        json["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|file| { file.as_str() == Some("docs/auto-review-ledgers/local.md") })
+    );
 
     let ledger = fs::read_to_string(repo.join("docs/auto-review-ledger.md")).unwrap();
     assert!(ledger.contains("Medium"));
@@ -169,6 +176,12 @@ fn auto_fix_local_records_review_issue_solution_ledger_when_docs_enabled() {
     assert!(ledger.contains("已自动修复"));
     assert!(ledger.contains("src/lib.rs"));
     assert!(ledger.contains("修改文件"));
+
+    let per_pr_ledger = fs::read_to_string(repo.join("docs/auto-review-ledgers/local.md")).unwrap();
+    assert!(per_pr_ledger.contains("Medium"));
+    assert!(per_pr_ledger.contains("fix value"));
+    assert!(per_pr_ledger.contains("resolved"));
+    assert!(per_pr_ledger.contains("src/lib.rs"));
 }
 
 #[test]
