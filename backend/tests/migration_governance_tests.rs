@@ -18,9 +18,13 @@ WHERE deleted_at IS NOT NULL;\n\
 ALTER TABLE files\n\
 DROP CONSTRAINT IF EXISTS uq_files_user_folder_filename;\n\
 \n\
+CREATE UNIQUE INDEX IF NOT EXISTS uq_files_active_user_root_filename\n\
+ON files(user_id, original_filename)\n\
+WHERE deleted_at IS NULL AND folder_id IS NULL;\n\
+\n\
 CREATE UNIQUE INDEX IF NOT EXISTS uq_files_active_user_folder_filename\n\
-ON files(user_id, folder_id, original_filename) NULLS NOT DISTINCT\n\
-WHERE deleted_at IS NULL;\n"
+ON files(user_id, folder_id, original_filename)\n\
+WHERE deleted_at IS NULL AND folder_id IS NOT NULL;\n"
     );
 }
 

@@ -232,7 +232,10 @@ const FileCard = memo(
           >
             <SelectionCheckbox
               isSelected={isSelected}
-              onClick={() => onSelect(file.id, !isSelected)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(file.id, !isSelected);
+              }}
               size="responsive"
               positionClassName="absolute left-[clamp(0.15rem,0.35vw,0.25rem)] top-[clamp(0.15rem,0.35vw,0.25rem)]"
               data-oid="jgxtjef"

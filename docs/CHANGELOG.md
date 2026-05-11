@@ -267,6 +267,27 @@ Jaeger UI 访问地址：http://localhost:16686
 
 ### 🤖 AI 自动修复
 
+#### 🤖 Codex Auto-Fix (PR #26, round 1) — ts=1778473007
+
+- 安全扫描：发现潜在风险
+- 质量评分：22 / 100
+- 变更文件：
+  - `backend/migrations/035_rewrite_active_file_name_unique_indexes.sql`
+  - `backend/src/services/file/delete.rs`
+  - `backend/tests/migration_governance_tests.rs`
+  - `docs/CHANGELOG.md`
+  - `frontend/src/components/files/grid/FileCard.tsx`
+
+#### 🤖 Codex Auto-Fix (PR #26, round 1) — ts=1778471910
+
+- 安全扫描：发现潜在风险
+- 质量评分：28 / 100
+- 变更文件：
+  - `backend/migrations/035_rewrite_active_file_name_unique_indexes.sql`
+  - `backend/src/services/file/delete.rs`
+  - `backend/tests/migration_governance_tests.rs`
+  - `frontend/src/components/files/grid/FileCard.tsx`
+
 #### 🤖 Codex Auto-Fix (PR #26, round 1) — ts=1778469810
 
 - 安全扫描：通过

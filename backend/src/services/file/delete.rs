@@ -1,6 +1,6 @@
 //! 删除相关（软删除 / 回收站 / 彻底删除）
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use futures::StreamExt;
 
@@ -112,6 +112,7 @@ impl FileService {
             .find_deleted_by_id(file_id, user_id)
             .await?
             .ok_or(AppError::NotFound)?;
+        self.cleanup_unreferenced_deleted_files(&[file.clone()]).await?;
         let affected = self
             .files_repo
             .hard_delete_deleted(file_id, user_id)
@@ -119,7 +120,6 @@ impl FileService {
         if affected == 0 {
             return Err(AppError::NotFound);
         }
-        self.cleanup_unreferenced_deleted_files(vec![file]).await?;
         Ok(())
     }
 
@@ -128,30 +128,76 @@ impl FileService {
         ids: &[Uuid],
         user_id: Uuid,
     ) -> Result<BatchTrashResult, AppError> {
-        let files = self
-            .files_repo
-            .hard_delete_deleted_batch(ids, user_id)
-            .await?;
-        let deleted_ids: HashSet<Uuid> = files.iter().map(|file| file.id).collect();
-        let failed = ids
-            .iter()
-            .filter(|id| !deleted_ids.contains(id))
-            .map(|id| BatchTrashFailure {
-                id: *id,
-                message: AppError::NotFound.to_string(),
-            })
-            .collect();
-        let succeeded = files.len() as u64;
+        let mut files = Vec::new();
+        let mut failed = Vec::new();
+        let mut seen_ids = HashSet::new();
 
-        self.cleanup_unreferenced_deleted_files(files).await?;
+        for id in ids {
+            if !seen_ids.insert(*id) {
+                continue;
+            }
+
+            match self.files_repo.find_deleted_by_id(*id, user_id).await? {
+                Some(file) => files.push(file),
+                None => failed.push(BatchTrashFailure {
+                    id: *id,
+                    message: AppError::NotFound.to_string(),
+                }),
+            }
+        }
+
+        self.cleanup_unreferenced_deleted_files(&files).await?;
+
+        let file_ids = files.iter().map(|file| file.id).collect::<Vec<_>>();
+        let deleted_files = self
+            .files_repo
+            .hard_delete_deleted_batch(&file_ids, user_id)
+            .await?;
+        let deleted_ids: HashSet<Uuid> = deleted_files.iter().map(|file| file.id).collect();
+        failed.extend(
+            file_ids
+                .iter()
+                .filter(|id| !deleted_ids.contains(id))
+                .map(|id| BatchTrashFailure {
+                    id: *id,
+                    message: AppError::NotFound.to_string(),
+                }),
+        );
+        let succeeded = deleted_files.len() as u64;
 
         Ok(BatchTrashResult { succeeded, failed })
     }
 
     pub async fn empty_trash(&self, user_id: Uuid) -> Result<u64, AppError> {
-        let files = self.files_repo.hard_delete_all_deleted(user_id).await?;
-        let deleted = files.len() as u64;
-        self.cleanup_unreferenced_deleted_files(files).await?;
+        let mut deleted = 0;
+
+        loop {
+            let files = self
+                .files_repo
+                .list_deleted(user_id)
+                .await?
+                .into_iter()
+                .take(MAX_TRASH_PURGE_BATCH_LIMIT as usize)
+                .collect::<Vec<_>>();
+
+            if files.is_empty() {
+                break;
+            }
+
+            self.cleanup_unreferenced_deleted_files(&files).await?;
+
+            let ids = files.iter().map(|file| file.id).collect::<Vec<_>>();
+            deleted += self
+                .files_repo
+                .hard_delete_deleted_batch(&ids, user_id)
+                .await?
+                .len() as u64;
+
+            if files.len() < MAX_TRASH_PURGE_BATCH_LIMIT as usize {
+                break;
+            }
+        }
+
         Ok(deleted)
     }
 
@@ -167,24 +213,24 @@ impl FileService {
             .purge_expired_deleted(retention_days, batch_limit)
             .await?;
         let deleted = files.len() as u64;
-        self.cleanup_unreferenced_deleted_files(files).await?;
+        self.cleanup_unreferenced_deleted_files(&files).await?;
         Ok(deleted)
     }
 
     async fn cleanup_unreferenced_deleted_files(
         &self,
-        files: Vec<crate::entities::file::File>,
+        files: &[crate::entities::file::File],
     ) -> Result<(), AppError> {
-        let paths: Vec<String> = files
-            .iter()
-            .map(|file| file.file_path.clone())
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect();
-        // Counts are read after the DB rows above have been hard-deleted.
-        // Do not subtract the cleaned files again; any remaining count means
-        // another file record still owns the same storage object.
-        let remaining_ref_counts = self.files_repo.count_by_file_paths(&paths).await?;
+        let mut purge_counts: HashMap<_, HashSet<_>> = HashMap::new();
+        for file in files {
+            purge_counts
+                .entry(file.file_path.clone())
+                .or_default()
+                .insert(file.id);
+        }
+
+        let paths = purge_counts.keys().cloned().collect::<Vec<_>>();
+        let ref_counts = self.files_repo.count_by_file_paths(&paths).await?;
 
         let derived_targets = files
             .iter()
@@ -192,7 +238,14 @@ impl FileService {
             .collect::<Vec<_>>();
         let storage_paths = paths
             .into_iter()
-            .filter(|path| remaining_ref_counts.get(path).copied().unwrap_or(0) == 0)
+            .filter(|path| {
+                let total_refs = ref_counts.get(path).copied().unwrap_or(0);
+                let purging_refs = purge_counts
+                    .get(path)
+                    .map(|file_ids| file_ids.len() as u64)
+                    .unwrap_or(0);
+                total_refs.saturating_sub(purging_refs) == 0
+            })
             .collect::<Vec<_>>();
 
         let derived_results = futures::stream::iter(derived_targets)
@@ -215,11 +268,10 @@ impl FileService {
             .collect::<Vec<_>>();
 
         if !errors.is_empty() {
-            tracing::warn!(
-                error_count = errors.len(),
-                errors = %errors.join("; "),
-                "deleted file cleanup failed after database rows were removed; continuing"
-            );
+            return Err(AppError::Internal(format!(
+                "deleted file cleanup failed before database rows were removed: {}",
+                errors.join("; ")
+            )));
         }
 
         Ok(())
