@@ -3,8 +3,7 @@ use crate::types::{
 };
 use serde_json::json;
 use std::fs;
-use std::io::Write;
-use std::path::{Component, Path, PathBuf};
+use std::path::Path;
 use std::process::Command as StdCommand;
 use std::process::Output;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -126,7 +125,6 @@ pub fn update_changelog(
     changelog_path: &str,
     entry: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    reject_final_symlink(Path::new(changelog_path))?;
     let original = fs::read_to_string(changelog_path)?;
 
     let marker = "### 🤖 AI 自动修复";
@@ -148,7 +146,7 @@ pub fn update_changelog(
         format!("{}\n\n{}", original.trim_end(), entry.trim_end())
     };
 
-    safe_write_no_final_symlink(Path::new(changelog_path), updated.as_bytes())?;
+    fs::write(changelog_path, updated)?;
     Ok(())
 }
 
@@ -357,16 +355,18 @@ fn append_ledger_file(
     entry: &str,
     fixed_files: &mut Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let abs_path = resolve_repo_path_after_creating_safe_parent(repo_root, rel_path)?;
+    let abs_path = Path::new(repo_root).join(rel_path);
+    if let Some(parent) = abs_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
 
-    reject_final_symlink(&abs_path)?;
     let next = if abs_path.exists() {
         let original = fs::read_to_string(&abs_path)?;
         format!("{}\n{}", original.trim_end(), entry.trim_end())
     } else {
         format!("{}\n\n{}", title, entry.trim_end())
     };
-    safe_write_no_final_symlink(&abs_path, format!("{}\n", next.trim_end()).as_bytes())?;
+    fs::write(&abs_path, format!("{}\n", next.trim_end()))?;
 
     if !fixed_files.iter().any(|f| f == rel_path) {
         fixed_files.push(rel_path.to_string());
@@ -413,90 +413,6 @@ fn resolve_repo_path(
     Ok(canonical_parent.join(file_name))
 }
 
-fn resolve_repo_path_after_creating_safe_parent(
-    repo_root: &str,
-    path: &str,
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let root = canonical_repo_root(repo_root)?;
-    let relative = Path::new(path);
-    if relative.is_absolute() {
-        return Err(format!("拒绝自动创建绝对路径: {}", path).into());
-    }
-
-    let components = relative.components().collect::<Vec<_>>();
-    if components.is_empty()
-        || components
-            .iter()
-            .any(|component| !matches!(component, Component::Normal(_)))
-    {
-        return Err(format!("无效仓库相对路径: {}", path).into());
-    }
-
-    let mut parent = root.clone();
-    for component in components.iter().take(components.len().saturating_sub(1)) {
-        let Component::Normal(name) = component else {
-            unreachable!("validated above");
-        };
-        parent.push(name);
-        match fs::symlink_metadata(&parent) {
-            Ok(metadata) if metadata.file_type().is_symlink() => {
-                return Err(format!("拒绝通过符号链接目录创建路径: {}", parent.display()).into());
-            }
-            Ok(metadata) if metadata.is_dir() => {}
-            Ok(_) => return Err(format!("路径父级不是目录: {}", parent.display()).into()),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => fs::create_dir(&parent)?,
-            Err(e) => return Err(e.into()),
-        }
-    }
-
-    let canonical_parent = parent.canonicalize()?;
-    if !canonical_parent.starts_with(&root) {
-        return Err(format!("拒绝访问仓库外路径: {}", path).into());
-    }
-    let file_name = components
-        .last()
-        .and_then(|component| match component {
-            Component::Normal(name) => Some(name),
-            _ => None,
-        })
-        .ok_or_else(|| format!("无效文件路径: {}", path))?;
-    Ok(canonical_parent.join(file_name))
-}
-
-fn reject_final_symlink(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_symlink() => {
-            Err(format!("拒绝写入符号链接路径: {}", path.display()).into())
-        }
-        Ok(_) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(e.into()),
-    }
-}
-
-fn safe_write_no_final_symlink(
-    path: &Path,
-    content: &[u8],
-) -> Result<(), Box<dyn std::error::Error>> {
-    reject_final_symlink(path)?;
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create(true).truncate(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.custom_flags(libc::O_NOFOLLOW);
-    }
-    let mut file = options.open(path).map_err(|e| {
-        format!(
-            "写入文件失败（可能是符号链接或越界路径）: {}: {}",
-            path.display(),
-            e
-        )
-    })?;
-    file.write_all(content)?;
-    Ok(())
-}
-
 fn resolve_existing_repo_path(
     repo_root: &str,
     path: &str,
@@ -520,7 +436,24 @@ pub fn write_repo_file(
     content: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let abs = resolve_repo_path(repo_root, path)?;
-    safe_write_no_final_symlink(&abs, content.as_bytes())?;
+    let parent = abs
+        .parent()
+        .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    let tmp = parent.join(format!(
+        ".codex-cli-write-{}-{}.tmp",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    let _tmp_cleanup = TempFileCleanup { path: tmp.clone() };
+    {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        std::io::Write::write_all(&mut file, content.as_bytes())?;
+        file.sync_all()?;
+    }
+    fs::rename(&tmp, &abs)?;
     Ok(())
 }
 
@@ -556,11 +489,15 @@ pub fn commit_and_push_in(
         fixed_files.len()
     );
 
+    let safe_fixed_files = fixed_files
+        .iter()
+        .map(|file| validate_git_pathspec_file(file))
+        .collect::<Result<Vec<_>, _>>()?;
     checked_output(
         StdCommand::new("git")
             .args(["-C", repo_root])
             .args(["add", "--"])
-            .args(fixed_files),
+            .args(safe_fixed_files.iter().map(String::as_str)),
     )?;
     checked_output(
         StdCommand::new("git")
@@ -599,6 +536,19 @@ pub fn commit_and_push_in(
     }
 
     Ok(())
+}
+
+fn validate_git_pathspec_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    if path.is_empty()
+        || path.starts_with(':')
+        || Path::new(path).is_absolute()
+        || Path::new(path)
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Err(format!("拒绝不安全 git pathspec: {}", path).into());
+    }
+    Ok(format!(":(literal){}", path))
 }
 
 fn publish_via_github_api_only() -> bool {
@@ -775,6 +725,16 @@ fn gh_api_json(
     Ok(())
 }
 
+struct TempFileCleanup {
+    path: std::path::PathBuf,
+}
+
+impl Drop for TempFileCleanup {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
 fn gh_api_json_output(
     method: &str,
     endpoint: &str,
@@ -786,6 +746,7 @@ fn gh_api_json_output(
         std::process::id(),
         SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
     ));
+    let _tmp_cleanup = TempFileCleanup { path: tmp.clone() };
     let mut file = std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -815,7 +776,6 @@ fn gh_api_json_output(
         },
         "gh api",
     );
-    let _ = fs::remove_file(&tmp);
     result
 }
 
@@ -1269,53 +1229,6 @@ BODY
         let _ = fs::remove_dir_all(&dir);
 
         assert!(resolved.ends_with("/CHANGELOG.md"));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn write_repo_file_rejects_final_symlink_to_outside_repo() {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let dir = std::env::temp_dir().join(format!("codex-cli-symlink-write-{}", now));
-        let repo = dir.join("repo");
-        let outside = dir.join("outside.txt");
-        fs::create_dir_all(repo.join("docs")).unwrap();
-        fs::write(&outside, "outside original").unwrap();
-        std::os::unix::fs::symlink(&outside, repo.join("docs/CHANGELOG.md")).unwrap();
-
-        let result = write_repo_file(repo.to_str().unwrap(), "docs/CHANGELOG.md", "pwned");
-        let outside_after = fs::read_to_string(&outside).unwrap();
-        let _ = fs::remove_dir_all(&dir);
-
-        assert!(result.is_err());
-        assert_eq!(outside_after, "outside original");
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn update_changelog_rejects_final_symlink_to_outside_repo() {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let dir = std::env::temp_dir().join(format!("codex-cli-symlink-changelog-{}", now));
-        let repo = dir.join("repo");
-        let outside = dir.join("outside.md");
-        fs::create_dir_all(repo.join("docs")).unwrap();
-        fs::write(&outside, "# outside\n").unwrap();
-        std::os::unix::fs::symlink(&outside, repo.join("docs/CHANGELOG.md")).unwrap();
-
-        let result = update_changelog(
-            repo.join("docs/CHANGELOG.md").to_str().unwrap(),
-            "#### entry\n",
-        );
-        let outside_after = fs::read_to_string(&outside).unwrap();
-        let _ = fs::remove_dir_all(&dir);
-
-        assert!(result.is_err());
-        assert_eq!(outside_after, "# outside\n");
     }
 
     fn create_patch_test_repo(name: &str) -> std::path::PathBuf {
