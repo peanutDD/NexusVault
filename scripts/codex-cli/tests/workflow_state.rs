@@ -78,7 +78,7 @@ fn fail_closed_security_blocks_loop() {
 }
 
 #[test]
-fn codex_auto_fix_concurrency_is_job_scoped() {
+fn codex_auto_fix_concurrency_serializes_without_canceling_active_runs() {
     let workflow = fs::read_to_string(codex_auto_fix_workflow())
         .expect("codex auto-fix workflow should be readable");
     let jobs_index = workflow
@@ -89,15 +89,15 @@ fn codex_auto_fix_concurrency_is_job_scoped() {
 
     assert!(
         top_level.contains("\nconcurrency:\n"),
-        "workflow-level concurrency is required to cancel stale same-PR review runs before they wait for the self-hosted runner"
+        "workflow-level concurrency is required to serialize same-PR review runs before they contend for the self-hosted runner"
     );
     assert!(
         top_level.contains("github.ref") && top_level.contains("github.actor"),
         "workflow-level concurrency must use fields available during workflow initialization"
     );
     assert!(
-        top_level.contains("  cancel-in-progress: true"),
-        "a newer Gemini review should cancel stale same-PR codex-fix runs instead of building an unbounded queue"
+        top_level.contains("  cancel-in-progress: false"),
+        "a newer Gemini review should wait for the active codex-fix run so it can finish state advancement and publish"
     );
     assert!(
         !jobs.contains("    concurrency:\n"),

@@ -23,7 +23,7 @@ env:
 
 concurrency:
   group: codex-auto-fix-${{ github.ref }}-${{ github.actor }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   codex-fix:
