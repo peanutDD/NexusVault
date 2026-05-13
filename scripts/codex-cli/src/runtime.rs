@@ -1,15 +1,13 @@
 use crate::llm::CodexClient;
 use crate::pipeline::Pipeline;
 use crate::repo;
+use crate::review_ledger;
 use crate::skills::{
     BatchFixSkill, DecisionSkill, DocumentationSkill, DryRunFeedbackSkill, FeedbackSkill,
     QualityScoreSkill, ReadReviewSkill, SecurityCheckSkill, SkillContext, SkillContextInit,
-    fixed_explanations, review_issue_key, review_issue_statuses,
+    fixed_explanations, review_issue_key,
 };
-use crate::types::{
-    PrAutoFixOutput, ReviewData, ReviewIssue, ReviewLedgerEntryInput,
-    is_review_severity_medium_or_higher,
-};
+use crate::types::{PrAutoFixOutput, ReviewData, ReviewIssue, is_review_severity_medium_or_higher};
 use std::env;
 
 #[derive(Debug, Clone)]
@@ -167,8 +165,8 @@ async fn run_auto_fix_loop(
     record_security_findings_as_pending(&mut ctx);
 
     let summary = ctx.parsed_data.as_ref().map(|d| d.summary.clone());
-    let source_fixed = source_fix_created(&ctx);
-    let review_record_path = append_review_ledger(&mut ctx, summary.clone())?;
+    let source_fixed = review_ledger::source_fix_created(&ctx);
+    let review_record_path = review_ledger::append_from_context(&mut ctx, summary.clone())?;
 
     let feedback_pipeline = Pipeline::new()
         .with_skill(Box::new(DryRunFeedbackSkill))
@@ -204,7 +202,7 @@ async fn run_auto_fix_loop(
         summary,
         review_record_path,
         fixed_explanations: fixed_explanations(&ctx),
-        issue_statuses: review_issue_statuses(&ctx),
+        issue_statuses: review_ledger::issue_statuses(&ctx),
         pending_explanations: ctx.pending_explanations,
     };
 
@@ -272,35 +270,6 @@ fn record_security_findings_as_pending(ctx: &mut SkillContext) {
             ctx.pending_explanations.push(explanation);
         }
     }
-}
-
-fn append_review_ledger(
-    ctx: &mut SkillContext,
-    summary: Option<String>,
-) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    if ctx.disable_changelog {
-        return Ok(None);
-    }
-
-    let statuses = review_issue_statuses(ctx);
-    if statuses.is_empty() {
-        return Ok(None);
-    }
-
-    let input = ReviewLedgerEntryInput {
-        pr_number: ctx.pr_number,
-        round: ctx.current_round,
-        unix_ts: repo::now_unix_ts()?,
-        summary,
-        files: ctx.fixed_files.clone(),
-        statuses,
-    };
-
-    repo::append_auto_review_ledger_in(&ctx.repo_root, &mut ctx.fixed_files, &input)
-}
-
-fn source_fix_created(ctx: &SkillContext) -> bool {
-    !ctx.fixed_issue_keys.is_empty() || ctx.fix_attempts.iter().any(|attempt| attempt.success)
 }
 
 fn apply_fail_reason(attempts: &[crate::skills::FixAttempt]) -> Option<String> {
