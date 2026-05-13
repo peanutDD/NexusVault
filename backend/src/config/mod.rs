@@ -88,6 +88,9 @@ impl Config {
                 "search.huggingface_api_url",
                 "https://api-inference.huggingface.co",
             )?
+            .set_default("search.fulltext_search_enabled", "true")?
+            .set_default("search.fulltext_index_path", "search-index")?
+            .set_default("search.ocr_enabled", "false")?
             .set_default("cache.enabled", "true")?
             .set_default("cache.default_ttl_secs", "60")?
             .set_default("cache.list_ttl_secs", "20")?
@@ -175,6 +178,9 @@ impl Config {
             ("HUGGINGFACE_API_TOKEN", "search.huggingface_api_token"),
             ("HUGGINGFACE_MODEL_ID", "search.huggingface_model_id"),
             ("HUGGINGFACE_API_URL", "search.huggingface_api_url"),
+            ("FULLTEXT_SEARCH_ENABLED", "search.fulltext_search_enabled"),
+            ("SEARCH_INDEX_PATH", "search.fulltext_index_path"),
+            ("OCR_ENABLED", "search.ocr_enabled"),
             ("CACHE_ENABLED", "cache.enabled"),
             ("CACHE_DEFAULT_TTL_SECS", "cache.default_ttl_secs"),
             ("LIST_CACHE_TTL_SECS", "cache.list_ttl_secs"),
@@ -309,6 +315,15 @@ impl Config {
                 huggingface_api_token: None,
                 huggingface_model_id: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
                 huggingface_api_url: "https://api-inference.huggingface.co".to_string(),
+                fulltext_search_enabled: true,
+                fulltext_index_path: std::env::temp_dir()
+                    .join(format!(
+                        "file-storage-test-search-index-{}",
+                        uuid::Uuid::new_v4()
+                    ))
+                    .to_string_lossy()
+                    .to_string(),
+                ocr_enabled: false,
             },
             cache: CacheConfig {
                 enabled: true,

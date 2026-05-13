@@ -162,7 +162,13 @@ describe("Settings page regressions", () => {
     );
 
     expect(mockCreateMutate).toHaveBeenCalledWith(
-      { name: "CI token", expires_in_days: 7 },
+      {
+        name: "CI token",
+        expires_in_days: 7,
+        webdav_enabled: true,
+        webdav_read_only: false,
+        webdav_root_folder_id: null,
+      },
       expect.objectContaining({
         onError: expect.any(Function),
         onSuccess: expect.any(Function),
@@ -177,6 +183,9 @@ describe("Settings page regressions", () => {
       created_at: "2026-05-04T00:00:00Z",
       last_used_at: null,
       expires_at: null,
+      webdav_enabled: true,
+      webdav_read_only: false,
+      webdav_root_folder_id: null,
     };
     vi.mocked(useApiTokens).mockReturnValue(asApiTokensQuery([token]));
 
@@ -257,5 +266,22 @@ describe("Settings page regressions", () => {
     await userEvent.click(screen.getByRole("button", { name: /Go to files home/i }));
 
     expect(screen.getByTestId("location")).toHaveTextContent("/files");
+  });
+
+  it("shows WebDAV access guidance without rendering a real token", () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("WebDAV Access")).toBeInTheDocument();
+    expect(screen.getByText("http://localhost:3000/dav")).toBeInTheDocument();
+    expect(screen.getByText(/macOS Finder: Connect to Server/i)).toBeInTheDocument();
+    expect(screen.getByText(/Password must be an API Token/i)).toBeInTheDocument();
+    expect(screen.getByText(/rclone: choose WebDAV/i)).toBeInTheDocument();
+    expect(screen.queryByText("test-token")).not.toBeInTheDocument();
   });
 });

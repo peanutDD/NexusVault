@@ -5,10 +5,10 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::config::CacheConfig;
-use crate::models::file::{FileListQuery, FileResponse};
+use crate::models::file::{File, FileListQuery, FileResponse};
 use crate::services::redis::RedisService;
 use crate::utils::crypto::sha256_hex;
-use crate::utils::AppError;
+use crate::utils::{is_macos_appledouble_filename, AppError};
 
 use super::FileService;
 
@@ -20,17 +20,79 @@ struct CachedFileListResponse {
 }
 
 impl FileService {
+    pub async fn list_by_folder(
+        &self,
+        user_id: Uuid,
+        folder_id: Option<Uuid>,
+    ) -> Result<Vec<crate::models::file::File>, AppError> {
+        let files = self.files_repo.list_by_folder(user_id, folder_id).await?;
+        Ok(self.visible_existing_files(files).await.0)
+    }
+
     pub async fn list_files(
         &self,
         user_id: Uuid,
         query: FileListQuery,
     ) -> Result<(Vec<FileResponse>, Option<u64>, Option<String>), AppError> {
         let result = self.files_repo.list(user_id, query).await?;
+        let (files, hidden_count) = self.visible_existing_files(result.files).await;
+        let total = result
+            .total
+            .map(|t| (t as u64).saturating_sub(hidden_count as u64));
         Ok((
-            result.files.into_iter().map(FileResponse::from).collect(),
-            result.total.map(|t| t as u64),
+            files.into_iter().map(FileResponse::from).collect(),
+            total,
             result.next_cursor,
         ))
+    }
+
+    async fn visible_existing_files(&self, files: Vec<File>) -> (Vec<File>, usize) {
+        let mut visible = Vec::with_capacity(files.len());
+        let mut hidden_count = 0usize;
+
+        for file in files {
+            if is_macos_appledouble_filename(&file.original_filename) {
+                hidden_count += 1;
+                tracing::info!(
+                    file_id = %file.id,
+                    user_id = %file.user_id,
+                    filename = %file.original_filename,
+                    "hid macOS AppleDouble file record from listing"
+                );
+                continue;
+            }
+
+            if file.storage_backend.eq_ignore_ascii_case("local") {
+                match self.storage.open_read_stream(&file.file_path).await {
+                    Ok(_) => {
+                        visible.push(file);
+                    }
+                    Err(AppError::NotFound) => {
+                        hidden_count += 1;
+                        tracing::warn!(
+                            file_id = %file.id,
+                            user_id = %file.user_id,
+                            file_path = %file.file_path,
+                            "hid local file record because storage object is missing"
+                        );
+                    }
+                    Err(err) => {
+                        tracing::warn!(
+                            file_id = %file.id,
+                            user_id = %file.user_id,
+                            file_path = %file.file_path,
+                            error = %err,
+                            "kept file record despite storage existence check error"
+                        );
+                        visible.push(file);
+                    }
+                }
+            } else {
+                visible.push(file);
+            }
+        }
+
+        (visible, hidden_count)
     }
 
     pub async fn list_files_cached(
@@ -51,7 +113,7 @@ impl FileService {
         {
             if let Some(pool) = redis_pool {
                 let fingerprint = format!(
-                    "page={:?}&limit={:?}&pagination={:?}&cursor={:?}&search={:?}&mime_type={:?}&category={:?}&folder_id={:?}&date_from={:?}&date_to={:?}&size_min={:?}&size_max={:?}&sort_by={:?}&sort_order={:?}&include_total={:?}",
+                    "visibility=v2&page={:?}&limit={:?}&pagination={:?}&cursor={:?}&search={:?}&mime_type={:?}&category={:?}&folder_id={:?}&date_from={:?}&date_to={:?}&size_min={:?}&size_max={:?}&sort_by={:?}&sort_order={:?}&include_total={:?}",
                     query.page,
                     query.limit,
                     query.pagination,

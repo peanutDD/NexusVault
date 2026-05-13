@@ -443,6 +443,9 @@ async fn test_api_token_create_and_verify() {
     let req = CreateApiTokenRequest {
         name: "test-token".to_string(),
         expires_in_days: None,
+        webdav_enabled: None,
+        webdav_read_only: None,
+        webdav_root_folder_id: None,
     };
     let (token, api_token) = token_service.create_token(user_id, req).await.unwrap();
 
@@ -488,10 +491,16 @@ async fn test_api_token_list() {
     let req1 = CreateApiTokenRequest {
         name: "token-1".to_string(),
         expires_in_days: None,
+        webdav_enabled: None,
+        webdav_read_only: None,
+        webdav_root_folder_id: None,
     };
     let req2 = CreateApiTokenRequest {
         name: "token-2".to_string(),
         expires_in_days: None,
+        webdav_enabled: None,
+        webdav_read_only: None,
+        webdav_root_folder_id: None,
     };
     token_service.create_token(user_id, req1).await.unwrap();
     token_service.create_token(user_id, req2).await.unwrap();
@@ -516,6 +525,9 @@ async fn test_api_token_delete() {
     let req = CreateApiTokenRequest {
         name: "to-delete".to_string(),
         expires_in_days: None,
+        webdav_enabled: None,
+        webdav_read_only: None,
+        webdav_root_folder_id: None,
     };
     let (_, api_token) = token_service.create_token(user_id, req).await.unwrap();
 

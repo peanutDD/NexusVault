@@ -17,6 +17,8 @@ use uuid::Uuid;
 // 依赖：内部模块
 // =============================================================================
 use crate::models::file::File;
+use crate::services::file_content_extractor::FileContentExtractor;
+use crate::services::fulltext_search::{SearchDocument, SearchIndexService};
 use crate::utils::AppError;
 
 // =============================================================================
@@ -935,6 +937,107 @@ pub async fn run_hls_worker(
 pub struct TrashCleanupPayload {
     pub retention_days: i64,
     pub batch_limit: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FulltextIndexPayload {
+    pub file_id: Uuid,
+    pub user_id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FulltextRemovePayload {
+    pub file_id: Uuid,
+}
+
+#[tracing::instrument(skip(state), fields(task_id))]
+pub async fn run_fulltext_index_worker(state: &crate::AppState) -> Result<(), AppError> {
+    let task = match state
+        .task_queue
+        .dequeue_pending_task("search_index_file")
+        .await?
+    {
+        Some(task) => task,
+        None => return Ok(()),
+    };
+    tracing::Span::current().record("task_id", tracing::field::display(task.id));
+    let payload: FulltextIndexPayload = serde_json::from_value(task.payload.clone())
+        .map_err(|e| AppError::File(format!("解析 search_index_file payload 失败: {}", e)))?;
+    let started_at = Instant::now();
+
+    let result = async {
+        let file = state
+            .file_service
+            .get_file(payload.file_id, payload.user_id)
+            .await?;
+        let data = state.file_service.get_file_data(&file).await?;
+        let extracted =
+            FileContentExtractor::extract_text(&data, &file.mime_type, &file.original_filename)
+                .unwrap_or_default();
+        let index = SearchIndexService::open_or_create(&state.config.search.fulltext_index_path)?;
+        index.upsert_document(SearchDocument {
+            file_id: file.id,
+            user_id: file.user_id,
+            filename: file.original_filename,
+            path: format!("/{}", file.filename),
+            extracted_text: extracted,
+            ocr_text: String::new(),
+            category: file.category.unwrap_or_default(),
+            mime_type: file.mime_type,
+        })
+    }
+    .await;
+
+    match result {
+        Ok(()) => {
+            histogram!("fulltext_index_duration_seconds")
+                .record(started_at.elapsed().as_secs_f64());
+            state.task_queue.mark_succeeded(task.id).await?;
+        }
+        Err(AppError::NotFound) => {
+            state
+                .task_queue
+                .mark_failed(task.id, "search_index_file source file not found")
+                .await?;
+        }
+        Err(e) => {
+            let msg = format!("search_index_file failed: {e}");
+            if task.attempts < MAX_ATTEMPTS {
+                state
+                    .task_queue
+                    .mark_pending_with_error(task.id, task.attempts, &msg)
+                    .await?;
+            } else {
+                state.task_queue.mark_failed(task.id, &msg).await?;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tracing::instrument(skip(state), fields(task_id))]
+pub async fn run_fulltext_remove_worker(state: &crate::AppState) -> Result<(), AppError> {
+    let task = match state
+        .task_queue
+        .dequeue_pending_task("search_remove_file")
+        .await?
+    {
+        Some(task) => task,
+        None => return Ok(()),
+    };
+    tracing::Span::current().record("task_id", tracing::field::display(task.id));
+    let payload: FulltextRemovePayload = serde_json::from_value(task.payload.clone())
+        .map_err(|e| AppError::File(format!("解析 search_remove_file payload 失败: {}", e)))?;
+    let result = SearchIndexService::open_or_create(&state.config.search.fulltext_index_path)
+        .and_then(|index| index.remove_document(payload.file_id));
+    match result {
+        Ok(()) => state.task_queue.mark_succeeded(task.id).await?,
+        Err(e) => {
+            let msg = format!("search_remove_file failed: {e}");
+            state.task_queue.mark_failed(task.id, &msg).await?;
+        }
+    }
+    Ok(())
 }
 
 #[tracing::instrument(skip(state), fields(task_id))]

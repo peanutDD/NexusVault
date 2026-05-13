@@ -22,6 +22,9 @@ import { getErrorMessage } from "../../utils/error";
 interface TokenFormValues {
   name: string;
   expires: number | "";
+  webdavEnabled: boolean;
+  webdavReadOnly: boolean;
+  webdavRootFolderId: string;
 }
 
 const ApiTokenSection = memo(function ApiTokenSection() {
@@ -43,6 +46,19 @@ const ApiTokenSection = memo(function ApiTokenSection() {
         z.literal(""),
         z.number().int().min(1, "Expires must be at least 1 day"),
       ]),
+      webdavEnabled: z.boolean(),
+      webdavReadOnly: z.boolean(),
+      webdavRootFolderId: z
+        .string()
+        .trim()
+        .refine(
+          (value) =>
+            value === "" ||
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+              value,
+            ),
+          "Root folder must be a folder UUID",
+        ),
     });
   }, []);
 
@@ -53,7 +69,13 @@ const ApiTokenSection = memo(function ApiTokenSection() {
     formState: { errors },
   } = useForm<TokenFormValues>({
     resolver: zodResolver(tokenSchema),
-    defaultValues: { name: "", expires: "" },
+    defaultValues: {
+      name: "",
+      expires: "",
+      webdavEnabled: true,
+      webdavReadOnly: false,
+      webdavRootFolderId: "",
+    },
     mode: "onBlur",
   });
 
@@ -64,6 +86,12 @@ const ApiTokenSection = memo(function ApiTokenSection() {
       {
         name: data.name.trim(),
         expires_in_days: data.expires === "" ? undefined : Number(data.expires),
+        webdav_enabled: data.webdavEnabled,
+        webdav_read_only: data.webdavReadOnly,
+        webdav_root_folder_id:
+          data.webdavRootFolderId.trim() === ""
+            ? null
+            : data.webdavRootFolderId.trim(),
       },
       {
         onSuccess: (response) => {
@@ -230,6 +258,44 @@ const ApiTokenSection = memo(function ApiTokenSection() {
             />
             {errors.expires && (
               <p className={settingsErrorClass()}>{errors.expires.message}</p>
+            )}
+          </div>
+          <div className="sm:col-span-2 grid gap-[clamp(0.585rem,1.35vw,0.75rem)] sm:grid-cols-2">
+            <label className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-sm)] text-[var(--settings-panel-value)]">
+              <input
+                type="checkbox"
+                {...register("webdavEnabled")}
+                className="h-4 w-4"
+              />
+              Enable WebDAV
+            </label>
+            <label className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-sm)] text-[var(--settings-panel-value)]">
+              <input
+                type="checkbox"
+                {...register("webdavReadOnly")}
+                className="h-4 w-4"
+              />
+              WebDAV read-only
+            </label>
+          </div>
+          <div className="sm:col-span-2">
+            <label
+              htmlFor="new-token-webdav-root"
+              className={settingsLabelClass()}
+            >
+              WebDAV root folder ID (optional)
+            </label>
+            <input
+              id="new-token-webdav-root"
+              type="text"
+              {...register("webdavRootFolderId")}
+              placeholder="Leave empty for full account"
+              className={settingsInputClass(Boolean(errors.webdavRootFolderId))}
+            />
+            {errors.webdavRootFolderId && (
+              <p className={settingsErrorClass()}>
+                {errors.webdavRootFolderId.message}
+              </p>
             )}
           </div>
           <button
@@ -400,6 +466,15 @@ const ApiTokenSection = memo(function ApiTokenSection() {
                         ) : (
                           " Never"
                         )}
+                      </p>
+                      <p className="font-brand font-normal tracking-wide">
+                        WebDAV: {token.webdav_enabled ? "Enabled" : "Disabled"}
+                      </p>
+                      <p className="font-brand font-normal tracking-wide">
+                        Mode: {token.webdav_read_only ? "Read-only" : "Read/write"}
+                      </p>
+                      <p className="font-brand sm:col-span-2 font-normal tracking-wide">
+                        Root: {token.webdav_root_folder_id ?? "Full account"}
                       </p>
                     </div>
                   </div>

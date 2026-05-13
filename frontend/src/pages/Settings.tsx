@@ -8,6 +8,7 @@ import StorageUsageSection from "../components/settings/StorageUsageSection";
 import ThemeSection from "../components/settings/ThemeSection";
 import PasswordChangeSection from "../components/settings/PasswordChangeSection";
 import ApiTokenSection from "../components/settings/ApiTokenSection";
+import WebDavAccessSection from "../components/settings/WebDavAccessSection";
 import { Settings2, ArrowLeft } from "lucide-react";
 import { useStorageUsage } from "../hooks/useStorageUsage";
 import { useApiTokens } from "../hooks/useApiTokens";
@@ -183,6 +184,7 @@ export default function Settings() {
           <StorageUsageSection data-oid="jcf9:wl" />
           <ThemeSection data-oid="-93dk47" />
           <PasswordChangeSection data-oid="0py-1mt" />
+          <WebDavAccessSection />
           <ApiTokenSection data-oid="y70j20v" />
         </div>
       </div>

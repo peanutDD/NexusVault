@@ -27,6 +27,7 @@ pub mod embeddings;
 pub mod file;
 pub mod file_content_extractor;
 pub mod folder;
+pub mod fulltext_search;
 pub mod maintenance;
 pub mod organization;
 pub mod redis;
