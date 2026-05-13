@@ -4,8 +4,8 @@ use serde::Serialize;
 use tantivy::{
     collector::TopDocs,
     doc,
-    query::QueryParser,
-    schema::{Field, Schema, TantivyDocument, Value, STORED, STRING, TEXT},
+    query::{BooleanQuery, Occur, QueryParser, TermQuery},
+    schema::{Field, IndexRecordOption, Schema, TantivyDocument, Value, STORED, STRING, TEXT},
     Index, IndexReader, IndexWriter, Term,
 };
 use uuid::Uuid;
@@ -138,9 +138,19 @@ impl SearchIndexService {
             ],
         );
         let parsed = parser.parse_query(query).map_err(to_app_error)?;
+        let scoped_query = BooleanQuery::new(vec![
+            (
+                Occur::Must,
+                Box::new(TermQuery::new(
+                    Term::from_field_text(self.fields.user_id, &user_id.to_string()),
+                    IndexRecordOption::Basic,
+                )),
+            ),
+            (Occur::Must, parsed),
+        ]);
         let top_docs = searcher
             .search(
-                &parsed,
+                &scoped_query,
                 &TopDocs::with_limit(limit.saturating_mul(4).max(limit)).order_by_score(),
             )
             .map_err(to_app_error)?;
@@ -148,12 +158,6 @@ impl SearchIndexService {
         let mut hits = Vec::new();
         for (score, addr) in top_docs {
             let doc: TantivyDocument = searcher.doc(addr).map_err(to_app_error)?;
-            let Some(doc_user_id) = text_field(&doc, self.fields.user_id) else {
-                continue;
-            };
-            if doc_user_id != user_id.to_string() {
-                continue;
-            }
             let path = text_field(&doc, self.fields.path).unwrap_or_default();
             if let Some(prefix) = folder_prefix {
                 if !path.starts_with(prefix) {

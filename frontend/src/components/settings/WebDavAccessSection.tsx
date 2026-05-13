@@ -1,4 +1,5 @@
 import { FolderSync } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import SettingsCard from "./SettingsCard";
 
 function webdavUrl() {
@@ -9,18 +10,19 @@ function webdavUrl() {
 }
 
 export default function WebDavAccessSection() {
+  const { t } = useTranslation();
   const url = webdavUrl();
 
   return (
     <SettingsCard
-      title="WebDAV Access"
-      description="Connect Finder, iOS Files, rclone, Obsidian, Joplin, and PicGo with an API token."
+      title={t("settings.webdavAccess.title")}
+      description={t("settings.webdavAccess.description")}
       icon={<FolderSync className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" aria-hidden="true" />}
     >
       <div className="grid gap-[clamp(0.78rem,1.8vw,1rem)] md:grid-cols-2">
         <div className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-[clamp(0.78rem,1.8vw,1rem)]">
           <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]">
-            Server URL
+            {t("settings.webdavAccess.serverUrl")}
           </p>
           <p className="mt-[clamp(0.39rem,0.9vw,0.5rem)] break-all font-mono text-[length:var(--settings-text-sm)] text-[var(--settings-kpi-value)]">
             {url}
@@ -28,10 +30,10 @@ export default function WebDavAccessSection() {
         </div>
         <div className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-[clamp(0.78rem,1.8vw,1rem)]">
           <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-kpi-label)]">
-            Credentials
+            {t("settings.webdavAccess.credentials")}
           </p>
           <p className="mt-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-sm)] leading-relaxed text-[var(--settings-kpi-value)]">
-            Username can be your email or any non-empty value. Password must be an API Token from the API Tokens card.
+            {t("settings.webdavAccess.credentialsDescription")}
           </p>
         </div>
       </div>

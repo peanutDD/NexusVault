@@ -1,5 +1,9 @@
 //! 文件列表查询（分页/过滤/搜索）
 
+use std::collections::HashMap;
+use std::sync::{OnceLock, RwLock};
+use std::time::{Duration, Instant};
+
 use deadpool_redis::{redis::cmd, Pool};
 use serde_json::json;
 use uuid::Uuid;
@@ -11,6 +15,17 @@ use crate::utils::crypto::sha256_hex;
 use crate::utils::{is_macos_appledouble_filename, AppError};
 
 use super::FileService;
+
+const LOCAL_STORAGE_EXISTENCE_TTL: Duration = Duration::from_secs(30);
+
+#[derive(Clone, Copy)]
+struct CachedStorageExistence {
+    exists: bool,
+    checked_at: Instant,
+}
+
+static LOCAL_STORAGE_EXISTENCE_CACHE: OnceLock<RwLock<HashMap<String, CachedStorageExistence>>> =
+    OnceLock::new();
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct CachedFileListResponse {
@@ -63,11 +78,28 @@ impl FileService {
             }
 
             if file.storage_backend.eq_ignore_ascii_case("local") {
+                if let Some(exists) = Self::cached_local_storage_exists(&file.file_path) {
+                    if exists {
+                        visible.push(file);
+                    } else {
+                        hidden_count += 1;
+                        tracing::warn!(
+                            file_id = %file.id,
+                            user_id = %file.user_id,
+                            file_path = %file.file_path,
+                            "hid local file record because cached storage object is missing"
+                        );
+                    }
+                    continue;
+                }
+
                 match self.storage.open_read_stream(&file.file_path).await {
                     Ok(_) => {
+                        Self::cache_local_storage_exists(&file.file_path, true);
                         visible.push(file);
                     }
                     Err(AppError::NotFound) => {
+                        Self::cache_local_storage_exists(&file.file_path, false);
                         hidden_count += 1;
                         tracing::warn!(
                             file_id = %file.id,
@@ -93,6 +125,31 @@ impl FileService {
         }
 
         (visible, hidden_count)
+    }
+
+    fn cached_local_storage_exists(file_path: &str) -> Option<bool> {
+        let cache = LOCAL_STORAGE_EXISTENCE_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+        let cached = cache.read().ok()?.get(file_path).copied()?;
+
+        if cached.checked_at.elapsed() <= LOCAL_STORAGE_EXISTENCE_TTL {
+            Some(cached.exists)
+        } else {
+            None
+        }
+    }
+
+    fn cache_local_storage_exists(file_path: &str, exists: bool) {
+        let cache = LOCAL_STORAGE_EXISTENCE_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+
+        if let Ok(mut cache) = cache.write() {
+            cache.insert(
+                file_path.to_string(),
+                CachedStorageExistence {
+                    exists,
+                    checked_at: Instant::now(),
+                },
+            );
+        }
     }
 
     pub async fn list_files_cached(

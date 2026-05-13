@@ -6,10 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     extractors::auth::AuthenticatedUser,
-    services::{
-        file_content_extractor::FileContentExtractor,
-        fulltext_search::{SearchDocument, SearchHit, SearchIndexService},
-    },
+    services::fulltext_search::{SearchDocument, SearchHit, SearchIndexService},
     utils::{json_response, AppError},
     AppState,
 };
@@ -86,22 +83,13 @@ async fn fallback_search(
     let files = state.file_service.list_by_folder(user_id, None).await?;
     let needle = query.to_lowercase();
     let mut hits = Vec::new();
-    for file in files.into_iter().take(500) {
+    for file in files.into_iter() {
         if let Some(filter) = mime_type {
             if file.mime_type != filter {
                 continue;
             }
         }
-        let data = state
-            .file_service
-            .get_file_data(&file)
-            .await
-            .unwrap_or_default();
-        let extracted =
-            FileContentExtractor::extract_text(&data, &file.mime_type, &file.original_filename)
-                .unwrap_or_default();
-        let haystack = format!("{} {}", file.original_filename, extracted).to_lowercase();
-        if !haystack.contains(&needle) {
+        if !file.original_filename.to_lowercase().contains(&needle) {
             continue;
         }
         hits.push(SearchHit {
@@ -110,12 +98,8 @@ async fn fallback_search(
             path: format!("/{}", file.original_filename),
             mime_type: file.mime_type.clone(),
             score: 0.1,
-            snippet: extracted.chars().take(160).collect(),
-            match_source: if file.original_filename.to_lowercase().contains(&needle) {
-                "filename".to_string()
-            } else {
-                "content".to_string()
-            },
+            snippet: file.original_filename.chars().take(160).collect(),
+            match_source: "filename".to_string(),
         });
         if hits.len() >= limit {
             break;

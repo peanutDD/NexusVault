@@ -228,19 +228,46 @@ async fn resolve_parent(
     principal: &WebDavPrincipal,
     folders: &[String],
 ) -> Result<Option<Uuid>, StatusCode> {
-    let repo = FoldersRepo::new(&state.pool);
-    let mut parent_id = principal.root_folder_id;
-    for name in folders {
-        let rows = repo
-            .list_by_parent(principal.user_id, parent_id)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let Some(folder) = rows.into_iter().find(|folder| folder.name == *name) else {
-            return Err(StatusCode::NOT_FOUND);
-        };
-        parent_id = Some(folder.id);
+    if folders.is_empty() {
+        return Ok(principal.root_folder_id);
     }
-    Ok(parent_id)
+
+    let folder_id = sqlx::query_scalar::<_, Uuid>(
+        r#"
+        WITH RECURSIVE path_match AS (
+            SELECT id, 1 AS depth
+            FROM folders
+            WHERE user_id = $1
+              AND name = ($3::text[])[1]
+              AND (
+                  ($2::uuid IS NULL AND parent_id IS NULL)
+                  OR parent_id = $2
+              )
+
+            UNION ALL
+
+            SELECT child.id, path_match.depth + 1
+            FROM path_match
+            JOIN folders child
+              ON child.parent_id = path_match.id
+             AND child.user_id = $1
+            WHERE child.name = ($3::text[])[path_match.depth + 1]
+              AND path_match.depth < cardinality($3::text[])
+        )
+        SELECT id
+        FROM path_match
+        WHERE depth = cardinality($3::text[])
+        LIMIT 1
+        "#,
+    )
+    .bind(principal.user_id)
+    .bind(principal.root_folder_id)
+    .bind(folders)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    folder_id.map(Some).ok_or(StatusCode::NOT_FOUND)
 }
 
 async fn resolve_parent_and_name(
@@ -1575,9 +1602,20 @@ async fn lock_conflicts(
     let request_tokens = request_lock_tokens(headers);
     let path = lock_key(segments);
     let rows: Vec<(String, String, String)> = sqlx::query_as(
-        "SELECT path, token, depth FROM webdav_locks WHERE user_id = $1 AND expires_at > NOW()",
+        r#"
+        SELECT path, token, depth
+        FROM webdav_locks
+        WHERE user_id = $1
+          AND expires_at > NOW()
+          AND (
+              path = $2
+              OR starts_with(path, $2 || '/')
+              OR (lower(depth) = 'infinity' AND starts_with($2, path || '/'))
+          )
+        "#,
     )
     .bind(user_id)
+    .bind(&path)
     .fetch_all(&state.pool)
     .await
     .unwrap_or_default();
