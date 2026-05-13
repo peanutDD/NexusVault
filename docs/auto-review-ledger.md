@@ -64,3 +64,45 @@
 | 2 | Medium | `frontend/src/components/files/grid/FileCard.tsx`:236 | The `SelectionCheckbox` is missing `event.stopPropagation()` in its `onClick` handler. Since it is nested within a `div` (line 222) that has an `onClick` handler for `onPreview`, clicking the checkbox will toggle the selection and simultaneously trigger the file preview. This should be fixed to match the implementation used in `Trash.tsx` to ensure selection doesn't trigger unwanted side effects. <SelectionCheckbox isSelected={isSelected} onClick={(e) => { e.stopPropagation(); onSelect(file.id, !isSelected); }} | resolved | 已自动修复 |
 | 3 | Medium | `backend/src/services/file/delete.rs`:156 | In `empty_trash` (and similarly in `purge_expired_trash`), database records are hard-deleted before the physical files and derived assets are cleaned up. If the cleanup process fails or the worker crashes after the DB deletion, the storage objects will be orphaned with no remaining DB records to track them for retry. Consider a two-phase approach: mark records as "purging" first, or perform storage cleanup before final DB deletion, ensuring that failures can be retried by the task queue. Additionally, `empty_trash` should ideally process deletions in batches to avoid long-running transactions and potential parameter limits in the repository calls if a user has a very large number of trashed items. | resolved | 已自动修复 |
 | 4 | Medium | `backend/migrations/035_rewrite_active_file_name_unique_indexes.sql`:11 | This migration appears to be redundant because `034_add_files_deleted_at.sql` (also introduced in this PR) already defines these unique indexes using the partial index strategy. If `034` is new to the project, these changes should be consolidated into it and `035` should be removed to keep the migration history clean. If `034` was intended to represent a "legacy" state for testing purposes, then the content of `034` in this PR should be reverted to the version using `NULLS NOT DISTINCT` to match the governance test expectation. | resolved | 已自动修复 |
+## Codex Auto Review - PR #27 round 1 - ts=1778483936
+
+总结：1 actionable issues
+
+修改文件：
+- `docs/CHANGELOG.md`
+- `scripts/codex-cli/src/repo.rs`
+
+| # | Severity | File:line | Gemini 问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Medium | `scripts/codex-cli/src/repo.rs`:280 | The current logic for `method_or_failure` prioritizes `failure_reason` even if the issue was eventually resolved (e.g., it failed on the first attempt but succeeded on retry). For resolved or blocked issues, we should prioritize showing the successful `fix_method` rather than a stale failure reason from a previous attempt. let method_or_failure = if status.status == "resolved" \|\| status.status == "blocked" { &status.fix_method } else { status .failure_reason .as_deref() .filter(\|reason\| !reason.trim().is_empty()) .unwrap_or(&status.fix_method) }; | Address the review comment. | (none) | not_selected | resolved | search_replace | `scripts/codex-cli/src/repo.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/repo.rs`，按建议处理：Address the review comment. |
+## Codex Auto Review - PR #27 round 1 - ts=1778485870
+
+总结：1 actionable issues
+
+修改文件：
+- `docs/CHANGELOG.md`
+- `scripts/codex-cli/src/repo.rs`
+
+| # | Severity | File:line | Gemini 问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Medium | `scripts/codex-cli/src/repo.rs`:718 | The temporary file created here for the `gh api` payload is manually deleted later in the function (line 734). This approach is not robust against panics. If a panic occurs between file creation and deletion, the temporary file could be left on the filesystem. To ensure cleanup even in case of panics, it's more idiomatic and robust in Rust to use a RAII guard that deletes the file in its `Drop` implementation. Consider using a crate like `tempfile` which handles this securely and automatically, or implementing a simple wrapper struct with a `Drop` trait for this purpose. | Address the review comment. | (none) | not_selected | resolved | search_replace | `scripts/codex-cli/src/repo.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/repo.rs`，按建议处理：Address the review comment. |
+## Codex Auto Review - PR #29 round 1 - ts=1778525990
+
+总结：2 actionable issues
+## Codex Auto Review - PR #28 round 1 - ts=1778520011
+
+总结：1 actionable issues
+
+修改文件：
+- `docs/CHANGELOG.md`
+- `scripts/codex-cli/src/repo.rs`
+- `scripts/codex-cli/src/review_ledger.rs`
+
+| # | Severity | File:line | 原始问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Medium | `scripts/codex-cli/src/repo.rs`:304 | The current implementation of directory creation has a potential race condition (TOCTOU). If another process creates the directory between the `exists()` check and the `create_dir()` call, the latter will return an error. It is more robust to use `fs::create_dir_all` or handle the `AlreadyExists` error kind explicitly. | if !current.exists() {                     if let Err(e) = fs::create_dir(&current) {                         if e.kind() != std::io::ErrorKind::AlreadyExists {                             return Err(e.into());                         }                     }                 }                 if current.exists() {                     let metadata = fs::symlink_metadata(&current)?; | (none) | not_selected | resolved | search_replace | `scripts/codex-cli/src/repo.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/repo.rs`，按建议处理：                if !current.exists() {                     if let Err(e) = fs::create_dir(&current) {                         if e.kind() != std::io::ErrorKind::AlreadyExists {                             return Err(e.into());                         }                     }                 }                 if current.exists() {                     let metadata = fs::symlink_metadata(&current)?; |
+| 2 | Medium | `scripts/codex-cli/src/review_ledger.rs`:265 | There is a potential concurrency issue here. The ledger file is read entirely into memory, modified, and then written back. If multiple instances of the CLI run concurrently (e.g., in parallel CI jobs or rapid local executions), one process might overwrite the changes made by another. While likely rare in the current workflow, consider using file locking if parallel execution is expected. | Address the review comment. | (none) | not_selected | resolved | search_replace | `scripts/codex-cli/src/review_ledger.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/review_ledger.rs`，按建议处理：Address the review comment. |
+
+| # | Severity | File:line | Gemini 问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Medium | `scripts/codex-cli/src/repo.rs`:406 | `parent.canonicalize()?` 会在父目录不存在时报错。这会导致 `write_repo_file` 无法在尚未创建的子目录中创建新文件（例如在创建新的 ledger 文件时）。建议在调用此函数前确保父目录已存在，或者优化此处的逻辑以支持新目录的安全校验。 | Address the review comment. | (none) | selected | resolved | search_replace | `scripts/codex-cli/src/repo.rs` | 修复摘要：通过 search_replace 更新 `scripts/codex-cli/src/repo.rs`，按建议处理：Address the review comment. |

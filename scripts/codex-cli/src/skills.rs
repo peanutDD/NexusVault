@@ -2,9 +2,10 @@ use crate::llm::CodexClient;
 use crate::patch::{PatchFormat, apply as apply_patch_text, detect_format};
 use crate::prompts::{search_replace_retry_system_prompt, search_replace_system_prompt};
 use crate::repo;
+use crate::review_ledger;
 use crate::types::{
-    ChangelogEntryInput, ReviewData, ReviewIssue, ReviewIssueStatus,
-    is_review_severity_medium_or_higher, review_severity_matches_allowed, review_severity_token,
+    ChangelogEntryInput, ReviewData, ReviewIssue, is_review_severity_medium_or_higher,
+    review_severity_matches_allowed, review_severity_token,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -223,6 +224,7 @@ impl Skill for BatchFixSkill {
 
             let apply_result = apply_generated_patch(&ctx.repo_root, &issue.file, &patch)
                 .map_err(|e| e.to_string());
+            let patch_method = generated_patch_method(&patch);
 
             match apply_result {
                 Ok(result) if result.applied => {
@@ -234,7 +236,7 @@ impl Skill for BatchFixSkill {
                         file: issue.file,
                         stage: "patch_apply".to_string(),
                         success: true,
-                        reason: None,
+                        reason: Some(format!("fix_method:{patch_method}")),
                     });
                 }
                 Ok(result) => {
@@ -321,6 +323,7 @@ impl Skill for BatchFixSkill {
                     let retry_apply_result =
                         apply_generated_patch(&ctx.repo_root, &issue.file, &retry_patch)
                             .map_err(|e| e.to_string());
+                    let retry_patch_method = generated_patch_method(&retry_patch);
                     match retry_apply_result {
                         Ok(result) if result.applied => {
                             ctx.fixed_files.push(issue.file.clone());
@@ -331,7 +334,7 @@ impl Skill for BatchFixSkill {
                                 file: issue.file,
                                 stage: "patch_apply_retry".to_string(),
                                 success: true,
-                                reason: None,
+                                reason: Some(format!("fix_method:{retry_patch_method}")),
                             });
                         }
                         Ok(result) => {
@@ -440,6 +443,14 @@ fn apply_generated_patch(
     patch: &str,
 ) -> Result<repo::PatchApplyResult, Box<dyn std::error::Error>> {
     apply_patch_text(repo_root, file_path, patch)
+}
+
+fn generated_patch_method(patch: &str) -> &'static str {
+    match detect_format(patch) {
+        PatchFormat::SearchReplace | PatchFormat::Mixed => "search_replace",
+        PatchFormat::UnifiedDiff => "unified_diff",
+        PatchFormat::Empty | PatchFormat::Unknown => "unknown_patch",
+    }
 }
 
 /// 对已修改文件做安全检查（prompt-based）。
@@ -692,7 +703,7 @@ pub(crate) fn fixed_explanations(ctx: &SkillContext) -> Vec<String> {
         return Vec::new();
     }
 
-    let fixed = fixed_issue_keys(ctx);
+    let fixed = review_ledger::fixed_issue_keys(ctx);
     let Some(data) = &ctx.parsed_data else {
         return Vec::new();
     };
@@ -718,7 +729,7 @@ fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
         return ctx.pending_explanations.clone();
     }
 
-    let fixed = fixed_issue_keys(ctx);
+    let fixed = review_ledger::fixed_issue_keys(ctx);
     let selected: HashSet<String> = ctx.selected_issues.iter().map(review_issue_key).collect();
     let Some(data) = &ctx.parsed_data else {
         return Vec::new();
@@ -732,7 +743,11 @@ fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
             if fixed.contains(&issue_key) {
                 return None;
             }
-            let reason = pending_reason_for_issue(ctx, &issue_key, selected.contains(&issue_key));
+            let reason = review_ledger::pending_reason_for_issue(
+                ctx,
+                &issue_key,
+                selected.contains(&issue_key),
+            );
             Some(format!(
                 "[{}] `{}`:{} 未自动修复：{}",
                 issue.severity,
@@ -744,78 +759,15 @@ fn pending_explanations(ctx: &SkillContext) -> Vec<String> {
         .collect()
 }
 
-pub(crate) fn review_issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus> {
-    let Some(data) = &ctx.parsed_data else {
-        return Vec::new();
-    };
-
-    let fixed = fixed_issue_keys(ctx);
-    let selected: HashSet<String> = ctx.selected_issues.iter().map(review_issue_key).collect();
-
-    data.issues
-        .iter()
-        .filter(|issue| is_review_severity_medium_or_higher(&issue.severity))
-        .map(|issue| {
-            let issue_key = review_issue_key(issue);
-            let line = issue.line.unwrap_or(0);
-            let (status, explanation) = if fixed.contains(&issue_key) && ctx.push_blocked {
-                (
-                    "blocked".to_string(),
-                    "已生成修复，但推送被自动化保护策略阻止".to_string(),
-                )
-            } else if fixed.contains(&issue_key) {
-                ("resolved".to_string(), "已自动修复".to_string())
-            } else {
-                (
-                    "pending".to_string(),
-                    pending_reason_for_issue(ctx, &issue_key, selected.contains(&issue_key)),
-                )
-            };
-
-            ReviewIssueStatus {
-                severity: issue.severity.clone(),
-                file: issue.file.clone(),
-                line,
-                description: issue.description.clone(),
-                status,
-                explanation,
-            }
-        })
-        .collect()
-}
-
-fn pending_reason_for_issue(ctx: &SkillContext, issue_key: &str, selected: bool) -> String {
-    ctx.fix_attempts
-        .iter()
-        .rev()
-        .find(|attempt| attempt.issue_key == issue_key && !attempt.success)
-        .and_then(|attempt| attempt.reason.clone())
-        .unwrap_or_else(|| {
-            if selected {
-                "未产生可应用补丁".to_string()
-            } else {
-                "策略过滤或受保护路径，未自动修复".to_string()
-            }
-        })
-}
-
-fn fixed_issue_keys(ctx: &SkillContext) -> HashSet<String> {
-    ctx.fix_attempts
-        .iter()
-        .filter(|attempt| attempt.success)
-        .map(|attempt| attempt.issue_key.clone())
-        .chain(ctx.fixed_issue_keys.iter().cloned())
-        .collect()
-}
-
 fn review_status_block(ctx: &SkillContext) -> String {
     let Some(_) = &ctx.parsed_data else {
         return String::new();
     };
 
-    let statuses = review_issue_statuses(ctx);
+    let statuses = review_ledger::issue_statuses(ctx);
     if statuses.is_empty() {
-        return "\n\n📋 Medium/Medium+/High/Critical 对应状态：\n- 本轮 Gemini Review 未解析到 Medium/Medium+/High/Critical 问题。".to_string();
+        return "\n\n📋 Review 问题对应状态：\n- 本轮 Gemini Review 未解析到结构化问题。"
+            .to_string();
     }
 
     let rows = statuses
@@ -864,7 +816,7 @@ fn review_status_block(ctx: &SkillContext) -> String {
     };
 
     format!(
-        "\n\n📋 Medium/Medium+/High/Critical 对应状态\n\n| # | Gemini 问题 | 状态 | 说明 |\n|---|---|---|---|\n{}{}{}",
+        "\n\n📋 Review 问题对应状态\n\n| # | Gemini 问题 | 状态 | 说明 |\n|---|---|---|---|\n{}{}{}",
         rows, fixed_section, pending_section
     )
 }
@@ -873,6 +825,7 @@ fn status_label(status: &str) -> &'static str {
     match status {
         "resolved" => "✅ 已解决",
         "blocked" => "⚠️ 推送阻塞",
+        "tracked" => "📘 已记录",
         _ => "🧭 未解决",
     }
 }
@@ -1235,7 +1188,7 @@ async fn apply_full_file_fallback(
                     file: issue.file.clone(),
                     stage: "file_replacement_fallback".to_string(),
                     success: true,
-                    reason: None,
+                    reason: Some("fix_method:search_replace_fallback".to_string()),
                 });
                 return Ok(true);
             }
@@ -1277,7 +1230,7 @@ async fn apply_full_file_fallback(
         file: issue.file.clone(),
         stage: "file_replacement_fallback".to_string(),
         success: true,
-        reason: None,
+        reason: Some("fix_method:full_file_replacement".to_string()),
     });
     Ok(true)
 }
@@ -1536,9 +1489,9 @@ mod tests {
 
         let block = review_status_block(&ctx);
 
-        assert!(block.contains("📋 Medium/Medium+/High/Critical 对应状态"));
+        assert!(block.contains("📋 Review 问题对应状态"));
         assert!(block.contains("| # | Gemini 问题 | 状态 | 说明 |"));
-        assert!(block.contains("| 1 | [Medium] `src/a.rs`:10 first | ✅ 已解决 | 已自动修复 |"));
+        assert!(block.contains("| 1 | [Medium] `src/a.rs`:10 first | ✅ 已解决 | 修复摘要"));
         assert!(block.contains("| 2 | [Medium+] `src/b.rs`:20 second | 🧭 未解决 | empty patch |"));
     }
 

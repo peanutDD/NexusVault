@@ -1,9 +1,7 @@
-use crate::types::{
-    ChangelogEntryInput, ReviewLedgerEntryInput, SkillPackResolvedSkill, SkillPackSkillMeta,
-};
+use crate::types::{ChangelogEntryInput, SkillPackResolvedSkill, SkillPackSkillMeta};
 use serde_json::json;
 use std::fs;
-use std::path::Path;
+use std::path::{Component, Path};
 use std::process::Command as StdCommand;
 use std::process::Output;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -68,15 +66,17 @@ pub fn read_agents_rules() -> String {
 }
 
 pub fn read_rules(repo_root: Option<&str>, rules_file: Option<&str>) -> String {
-    if let Some(p) = rules_file
-        && let Ok(content) = fs::read_to_string(p)
-    {
-        return content;
-    }
-
     if let Some(root) = repo_root {
-        let path = format!("{}/AGENTS.md", root);
-        if let Ok(content) = fs::read_to_string(path) {
+        if let Some(p) = rules_file
+            && let Ok(path) = resolve_existing_repo_path(root, p)
+            && let Ok(content) = fs::read_to_string(path)
+        {
+            return content;
+        }
+
+        if let Ok(path) = resolve_existing_repo_path(root, "AGENTS.md")
+            && let Ok(content) = fs::read_to_string(path)
+        {
             return content;
         }
     }
@@ -180,15 +180,14 @@ pub fn append_ai_changelog(
 
 pub fn resolve_changelog_path(repo_root: &str, changelog_path: Option<&str>) -> Option<String> {
     if let Some(p) = changelog_path {
-        if Path::new(p).is_absolute() {
-            return Some(p.to_string());
-        }
-        return Some(Path::new(repo_root).join(p).to_string_lossy().to_string());
+        return resolve_repo_path(repo_root, p)
+            .ok()
+            .map(|path| path.to_string_lossy().to_string());
     }
 
-    let default_path = format!("{}/docs/CHANGELOG.md", repo_root);
-    if Path::new(&default_path).exists() {
-        Some(default_path)
+    let default_path = resolve_repo_path(repo_root, "docs/CHANGELOG.md").ok()?;
+    if default_path.exists() {
+        Some(default_path.to_string_lossy().to_string())
     } else {
         None
     }
@@ -226,140 +225,119 @@ pub fn append_ai_changelog_in(
     Ok(())
 }
 
-/// 构建自动 Review 台账条目，保留每条 Gemini 问题的处理答案。
-pub fn build_auto_review_ledger_entry(input: &ReviewLedgerEntryInput) -> String {
-    let mut files = input.files.clone();
-    files.sort();
-    files.dedup();
-
-    let pr_label = if input.pr_number == 0 {
-        "local".to_string()
-    } else {
-        format!("#{}", input.pr_number)
-    };
-    let mut entry = format!(
-        "## Codex Auto Review - PR {} round {} - ts={}\n\n",
-        pr_label, input.round, input.unix_ts
-    );
-
-    if let Some(summary) = input.summary.as_deref().filter(|s| !s.trim().is_empty()) {
-        entry.push_str(&format!("总结：{}\n\n", markdown_table_cell(summary)));
-    }
-
-    entry.push_str("修改文件：\n");
-    if files.is_empty() {
-        entry.push_str("- 无代码或文档文件变更\n");
-    } else {
-        for file in &files {
-            entry.push_str(&format!("- `{}`\n", file));
-        }
-    }
-
-    entry.push_str("\n| # | Severity | File:line | Gemini 问题 | 状态 | 解决答案 / 未解决原因 |\n");
-    entry.push_str("|---|---|---|---|---|---|\n");
-    for (index, status) in input.statuses.iter().enumerate() {
-        entry.push_str(&format!(
-            "| {} | {} | `{}`:{} | {} | {} | {} |\n",
-            index + 1,
-            markdown_table_cell(&status.severity),
-            markdown_table_cell(&status.file),
-            status.line,
-            markdown_table_cell(&status.description),
-            markdown_table_cell(&status.status),
-            markdown_table_cell(&status.explanation)
-        ));
-    }
-    entry.push('\n');
-    entry
-}
-
-/// 在 repo 根目录下写入全局 ledger 与 per-PR ledger，并把文件加入本轮提交列表。
-pub fn append_auto_review_ledger_in(
-    repo_root: &str,
-    fixed_files: &mut Vec<String>,
-    input: &ReviewLedgerEntryInput,
-) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    if input.statuses.is_empty() {
-        return Ok(None);
-    }
-
-    let entry = build_auto_review_ledger_entry(input);
-    let global_rel_path = "docs/auto-review-ledger.md";
-    append_ledger_file(
-        repo_root,
-        global_rel_path,
-        "# Auto Review Ledger",
-        &entry,
-        fixed_files,
-    )?;
-
-    let scoped_rel_path = auto_review_scoped_ledger_path(input.pr_number);
-    let scoped_title = if input.pr_number == 0 {
-        "# Auto Review Ledger - local".to_string()
-    } else {
-        format!("# Auto Review Ledger - PR #{}", input.pr_number)
-    };
-    append_ledger_file(
-        repo_root,
-        &scoped_rel_path,
-        &scoped_title,
-        &entry,
-        fixed_files,
-    )?;
-
-    Ok(Some(global_rel_path.to_string()))
-}
-
-fn auto_review_scoped_ledger_path(pr_number: u32) -> String {
-    if pr_number == 0 {
-        "docs/auto-review-ledgers/local.md".to_string()
-    } else {
-        format!("docs/auto-review-ledgers/pr-{}.md", pr_number)
-    }
-}
-
-fn append_ledger_file(
-    repo_root: &str,
-    rel_path: &str,
-    title: &str,
-    entry: &str,
-    fixed_files: &mut Vec<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let abs_path = Path::new(repo_root).join(rel_path);
-    if let Some(parent) = abs_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-
-    let next = if abs_path.exists() {
-        let original = fs::read_to_string(&abs_path)?;
-        format!("{}\n{}", original.trim_end(), entry.trim_end())
-    } else {
-        format!("{}\n\n{}", title, entry.trim_end())
-    };
-    fs::write(&abs_path, format!("{}\n", next.trim_end()))?;
-
-    if !fixed_files.iter().any(|f| f == rel_path) {
-        fixed_files.push(rel_path.to_string());
-    }
-
-    Ok(())
-}
-
-fn markdown_table_cell(value: &str) -> String {
-    value
-        .replace('|', "\\|")
-        .replace('\n', " ")
-        .trim()
-        .to_string()
-}
-
 /// 获取当前 Unix 时间戳（秒）。
 pub fn now_unix_ts() -> Result<u64, Box<dyn std::error::Error>> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
 }
 
+fn canonical_repo_root(repo_root: &str) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    Ok(Path::new(repo_root).canonicalize()?)
+}
+
+fn resolve_repo_path(
+    repo_root: &str,
+    path: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    let root = canonical_repo_root(repo_root)?;
+    let candidate = if Path::new(path).is_absolute() {
+        std::path::PathBuf::from(path)
+    } else {
+        root.join(path)
+    };
+    let file_name = candidate
+        .file_name()
+        .ok_or_else(|| format!("无效文件路径: {}", path))?;
+
+    let parent = candidate.parent().unwrap_or(&root);
+    let mut existing_parent = parent;
+    let mut missing_components = Vec::new();
+    while !existing_parent.exists() {
+        let Some(name) = existing_parent.file_name() else {
+            return Err(format!("无效文件路径: {}", path).into());
+        };
+        missing_components.push(name.to_os_string());
+        existing_parent = existing_parent
+            .parent()
+            .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    }
+
+    let mut canonical_parent = existing_parent.canonicalize()?;
+    if !canonical_parent.starts_with(&root) {
+        return Err(format!("拒绝访问仓库外路径: {}", path).into());
+    }
+    for component in missing_components.iter().rev() {
+        canonical_parent.push(component);
+    }
+
+    Ok(canonical_parent.join(file_name))
+}
+
+fn resolve_existing_repo_path(
+    repo_root: &str,
+    path: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    let root = canonical_repo_root(repo_root)?;
+    let resolved = resolve_repo_path(repo_root, path)?.canonicalize()?;
+    if !resolved.starts_with(&root) {
+        return Err(format!("拒绝访问仓库外路径: {}", path).into());
+    }
+    Ok(resolved)
+}
+
+fn resolve_repo_path_for_create(
+    repo_root: &str,
+    path: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    let root = canonical_repo_root(repo_root)?;
+    let raw_path = Path::new(path);
+    let relative = if raw_path.is_absolute() {
+        raw_path
+            .strip_prefix(&root)
+            .map_err(|_| format!("拒绝访问仓库外路径: {}", path))?
+    } else {
+        raw_path
+    };
+
+    let mut components = relative.components().peekable();
+    let mut current = root.clone();
+    while let Some(component) = components.next() {
+        let is_final = components.peek().is_none();
+        match component {
+            Component::Normal(part) if is_final => {
+                return Ok(current.join(part));
+            }
+            Component::Normal(part) => {
+                current.push(part);
+                if !current.exists()
+                    && let Err(e) = fs::create_dir(&current)
+                    && e.kind() != std::io::ErrorKind::AlreadyExists
+                {
+                    return Err(e.into());
+                }
+                if current.exists() {
+                    let metadata = fs::symlink_metadata(&current)?;
+                    if metadata.file_type().is_symlink() {
+                        return Err(format!("拒绝通过符号链接目录写入: {}", path).into());
+                    }
+                    if !metadata.is_dir() {
+                        return Err(format!("写入路径父级不是目录: {}", path).into());
+                    }
+                }
+                let canonical = current.canonicalize()?;
+                if !canonical.starts_with(&root) {
+                    return Err(format!("拒绝访问仓库外路径: {}", path).into());
+                }
+                current = canonical;
+            }
+            _ => return Err(format!("无效文件路径: {}", path).into()),
+        }
+    }
+
+    Err(format!("无效文件路径: {}", path).into())
+}
+
 pub fn read_repo_file(repo_root: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let abs = Path::new(repo_root).join(path);
+    let abs = resolve_existing_repo_path(repo_root, path)?;
     Ok(fs::read_to_string(abs)?)
 }
 
@@ -368,8 +346,53 @@ pub fn write_repo_file(
     path: &str,
     content: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let abs = Path::new(repo_root).join(path);
-    fs::write(abs, content)?;
+    let abs = resolve_repo_path(repo_root, path)?;
+    let parent = abs
+        .parent()
+        .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    fs::create_dir_all(parent)?;
+    let tmp = parent.join(format!(
+        ".codex-cli-write-{}-{}.tmp",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    let _tmp_cleanup = TempFileCleanup { path: tmp.clone() };
+    {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        std::io::Write::write_all(&mut file, content.as_bytes())?;
+        file.sync_all()?;
+    }
+    fs::rename(&tmp, &abs)?;
+    Ok(())
+}
+
+pub(crate) fn write_repo_file_creating_parent(
+    repo_root: &str,
+    path: &str,
+    content: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let abs = resolve_repo_path_for_create(repo_root, path)?;
+    let parent = abs
+        .parent()
+        .ok_or_else(|| format!("无效文件路径: {}", path))?;
+    let tmp = parent.join(format!(
+        ".codex-cli-write-{}-{}.tmp",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
+    ));
+    let _tmp_cleanup = TempFileCleanup { path: tmp.clone() };
+    {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        std::io::Write::write_all(&mut file, content.as_bytes())?;
+        file.sync_all()?;
+    }
+    fs::rename(&tmp, &abs)?;
     Ok(())
 }
 
@@ -405,11 +428,15 @@ pub fn commit_and_push_in(
         fixed_files.len()
     );
 
+    let safe_fixed_files = fixed_files
+        .iter()
+        .map(|file| validate_git_pathspec_file(file))
+        .collect::<Result<Vec<_>, _>>()?;
     checked_output(
         StdCommand::new("git")
             .args(["-C", repo_root])
-            .args(["add"])
-            .args(fixed_files),
+            .args(["add", "--"])
+            .args(safe_fixed_files.iter().map(String::as_str)),
     )?;
     checked_output(
         StdCommand::new("git")
@@ -436,10 +463,7 @@ pub fn commit_and_push_in(
         if let Err(error) = push_result {
             let message = error.to_string();
             if classify_git_network_error(&message).is_some() {
-                eprintln!(
-                    "⚠️ git push 多次网络失败，改用 GitHub API 发布当前提交: {}",
-                    message
-                );
+                eprintln!("⚠️ git push 多次网络失败，改用 GitHub API 发布当前提交");
                 push_head_via_github_api(repo_root)?;
             } else {
                 return Err(error);
@@ -448,6 +472,19 @@ pub fn commit_and_push_in(
     }
 
     Ok(())
+}
+
+fn validate_git_pathspec_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    if path.is_empty()
+        || path.starts_with(':')
+        || Path::new(path).is_absolute()
+        || Path::new(path)
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Err(format!("拒绝不安全 git pathspec: {}", path).into());
+    }
+    Ok(format!(":(literal){}", path))
 }
 
 fn publish_via_github_api_only() -> bool {
@@ -467,6 +504,7 @@ fn push_head_via_github_api(repo_root: &str) -> Result<(), Box<dyn std::error::E
         &format!("repos/{repo}/git/ref/heads/{branch}"),
         ".object.sha",
     )?;
+    ensure_api_fallback_fast_forward_safe(repo_root, &remote_head)?;
     let base_tree = gh_api_get_jq(
         &format!("repos/{repo}/git/commits/{remote_head}"),
         ".tree.sha",
@@ -547,6 +585,42 @@ fn current_branch(repo_root: &str) -> Result<String, Box<dyn std::error::Error>>
     Err("无法确定当前分支，无法使用 GitHub API fallback 推送".into())
 }
 
+fn ensure_api_fallback_fast_forward_safe(
+    repo_root: &str,
+    remote_head: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let local_head = git_stdout(repo_root, &["rev-parse", "HEAD"])?;
+    let local_parent = git_stdout(repo_root, &["rev-parse", "HEAD^"])?;
+    if remote_head.trim() != local_parent.trim() {
+        return Err(format!(
+            "拒绝 GitHub API fallback 推送：远端 HEAD 与本地提交父提交不一致（local_head={}, remote_head={}）",
+            local_head.trim(),
+            remote_head.trim()
+        )
+        .into());
+    }
+
+    let output = StdCommand::new("git")
+        .args(["-C", repo_root])
+        .args([
+            "merge-base",
+            "--is-ancestor",
+            remote_head.trim(),
+            local_head.trim(),
+        ])
+        .output()?;
+    if output.status.success() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "拒绝 GitHub API fallback 推送：远端 HEAD 不是本地 HEAD 的祖先（local_head={}, remote_head={}）",
+        local_head.trim(),
+        remote_head.trim()
+    )
+    .into())
+}
+
 fn api_tree_entries_for_head(
     repo_root: &str,
 ) -> Result<Vec<serde_json::Value>, Box<dyn std::error::Error>> {
@@ -624,6 +698,16 @@ fn gh_api_json(
     Ok(())
 }
 
+struct TempFileCleanup {
+    path: std::path::PathBuf,
+}
+
+impl Drop for TempFileCleanup {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
 fn gh_api_json_output(
     method: &str,
     endpoint: &str,
@@ -631,15 +715,30 @@ fn gh_api_json_output(
     jq: Option<&str>,
 ) -> Result<Output, Box<dyn std::error::Error>> {
     let tmp = std::env::temp_dir().join(format!(
-        "codex-cli-gh-api-{}.json",
+        "codex-cli-gh-api-{}-{}.json",
+        std::process::id(),
         SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
     ));
-    fs::write(&tmp, serde_json::to_vec(&payload)?)?;
+    let _tmp_cleanup = TempFileCleanup { path: tmp.clone() };
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&tmp)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = file.metadata()?.permissions();
+        permissions.set_mode(0o600);
+        fs::set_permissions(&tmp, permissions)?;
+    }
+    std::io::Write::write_all(&mut file, &serde_json::to_vec(&payload)?)?;
+    file.sync_all()?;
+    drop(file);
     let method = method.to_string();
     let endpoint = endpoint.to_string();
     let jq = jq.map(ToString::to_string);
     let input = tmp.to_string_lossy().to_string();
-    let result = checked_output_with_retry(
+    checked_output_with_retry(
         || {
             let mut cmd = StdCommand::new("gh");
             cmd.args(["api", "-X", &method, &endpoint, "--input", &input]);
@@ -649,9 +748,7 @@ fn gh_api_json_output(
             cmd
         },
         "gh api",
-    );
-    let _ = fs::remove_file(&tmp);
-    result
+    )
 }
 
 fn checked_output_with_retry<F>(
@@ -682,10 +779,13 @@ where
         }
 
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let message = format!(
-            "{} failed attempt {}/{} status={} stdout={} stderr={}",
-            label, attempt, max_attempts, output.status, stdout, stderr
+            "{} failed attempt {}/{} status={} stderr={}",
+            label,
+            attempt,
+            max_attempts,
+            output.status,
+            stderr.trim()
         );
         last_error = Some(message.clone());
 
@@ -697,12 +797,8 @@ where
         }
 
         eprintln!(
-            "⚠️ {} 网络抖动（{}），已重试 {}/{}: {}",
-            label,
-            network_reason,
-            attempt,
-            max_attempts,
-            stderr.trim()
+            "⚠️ {} 网络抖动（{}），已重试 {}/{}",
+            label, network_reason, attempt, max_attempts
         );
         if sleep_between_attempts {
             let sleep_secs = std::env::var("CODEX_REMOTE_RETRY_SLEEP_SECONDS")
@@ -768,13 +864,7 @@ fn checked_output(cmd: &mut StdCommand) -> Result<Output, Box<dyn std::error::Er
         return Ok(output);
     }
 
-    Err(format!(
-        "命令执行失败 status={} stdout={} stderr={}",
-        output.status,
-        String::from_utf8_lossy(&output.stdout).trim(),
-        String::from_utf8_lossy(&output.stderr).trim()
-    )
-    .into())
+    Err(format!("命令执行失败 status={}", output.status).into())
 }
 
 pub fn discover_skill_pack_skills(
@@ -938,18 +1028,6 @@ mod tests {
         assert!(!env_flag_enabled(Some("0")));
         assert!(!env_flag_enabled(Some("")));
         assert!(!env_flag_enabled(None));
-    }
-
-    #[test]
-    fn auto_review_scoped_ledger_path_is_stable_per_pr() {
-        assert_eq!(
-            auto_review_scoped_ledger_path(26),
-            "docs/auto-review-ledgers/pr-26.md"
-        );
-        assert_eq!(
-            auto_review_scoped_ledger_path(0),
-            "docs/auto-review-ledgers/local.md"
-        );
     }
 
     #[test]

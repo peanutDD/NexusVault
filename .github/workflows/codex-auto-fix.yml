@@ -16,6 +16,10 @@ env:
   MAX_ROUNDS: 2
   USE_REVIEW_JSON: true
 
+concurrency:
+  group: codex-auto-fix-${{ github.ref }}-${{ github.actor }}
+  cancel-in-progress: true
+
 jobs:
   codex-fix:
     if: >
@@ -33,9 +37,7 @@ jobs:
         && github.event.review.user.login == 'gemini-code-assist[bot]'
       )
     runs-on: file-server
-    concurrency:
-      group: codex-auto-fix-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
-      cancel-in-progress: false
+    timeout-minutes: 35
     env:
       PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
       REVIEW_ID: ${{ github.event.review.id || '' }}
@@ -228,7 +230,17 @@ jobs:
           echo "REVIEW_JSON_PATH=/tmp/review.json" >> "$GITHUB_ENV"
           echo "review_issue_count=$(jq '.issues | length' /tmp/review.json)"
 
+      - name: Auto-fix queue guard diagnostics
+        if: steps.round.outputs.current_round != 'gemini-review-round-max'
+        run: |
+          echo "codex_queue_group=codex-auto-fix-${PR_NUMBER}"
+          echo "codex_job_timeout_minutes=35"
+          echo "codex_pr_auto_fix_step_timeout_minutes=30"
+          echo "codex_agent_timeout_seconds=1200"
+          echo "A newer Gemini review for the same PR cancels older codex-fix runs before they can stale-block the queue."
+
       - name: 调用 codex-auto-fix pr-auto-fix
+        timeout-minutes: 30
         if: steps.round.outputs.current_round != 'gemini-review-round-max'
         id: codex
         env:
@@ -236,6 +248,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CODEX_AGENT_COMMAND_SECRET: ${{ secrets.CODEX_AGENT_COMMAND }}
           CODEX_AGENT_COMMAND_VAR: ${{ vars.CODEX_AGENT_COMMAND }}
+          CODEX_AGENT_TIMEOUT_SECONDS: 1200
         run: |
           set -euo pipefail
 
