@@ -15,6 +15,11 @@ permissions:
 env:
   MAX_ROUNDS: 2
   USE_REVIEW_JSON: true
+  CODEX_JOB_TIMEOUT_MINUTES: 55
+  CODEX_PR_AUTO_FIX_STEP_TIMEOUT_MINUTES: 45
+  CODEX_AGENT_TIMEOUT_SECONDS: 360
+  CODEX_AUTO_FIX_BUDGET_SECONDS: 2400
+  CODEX_AUTO_FIX_RESERVE_SECONDS: 180
 
 concurrency:
   group: codex-auto-fix-${{ github.ref }}-${{ github.actor }}
@@ -37,7 +42,7 @@ jobs:
         && github.event.review.user.login == 'gemini-code-assist[bot]'
       )
     runs-on: file-server
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
       PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
       REVIEW_ID: ${{ github.event.review.id || '' }}
@@ -234,13 +239,15 @@ jobs:
         if: steps.round.outputs.current_round != 'gemini-review-round-max'
         run: |
           echo "codex_queue_group=codex-auto-fix-${PR_NUMBER}"
-          echo "codex_job_timeout_minutes=35"
-          echo "codex_pr_auto_fix_step_timeout_minutes=30"
-          echo "codex_agent_timeout_seconds=1200"
+          echo "codex_job_timeout_minutes=${CODEX_JOB_TIMEOUT_MINUTES}"
+          echo "codex_pr_auto_fix_step_timeout_minutes=${CODEX_PR_AUTO_FIX_STEP_TIMEOUT_MINUTES}"
+          echo "codex_agent_timeout_seconds=${CODEX_AGENT_TIMEOUT_SECONDS}"
+          echo "codex_auto_fix_budget_seconds=${CODEX_AUTO_FIX_BUDGET_SECONDS}"
+          echo "codex_auto_fix_reserve_seconds=${CODEX_AUTO_FIX_RESERVE_SECONDS}"
           echo "A newer Gemini review for the same PR cancels older codex-fix runs before they can stale-block the queue."
 
       - name: 调用 codex-auto-fix pr-auto-fix
-        timeout-minutes: 30
+        timeout-minutes: 45
         if: steps.round.outputs.current_round != 'gemini-review-round-max'
         id: codex
         env:
@@ -248,7 +255,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CODEX_AGENT_COMMAND_SECRET: ${{ secrets.CODEX_AGENT_COMMAND }}
           CODEX_AGENT_COMMAND_VAR: ${{ vars.CODEX_AGENT_COMMAND }}
-          CODEX_AGENT_TIMEOUT_SECONDS: 1200
+          CODEX_AGENT_TIMEOUT_SECONDS: ${{ env.CODEX_AGENT_TIMEOUT_SECONDS }}
+          CODEX_AUTO_FIX_BUDGET_SECONDS: ${{ env.CODEX_AUTO_FIX_BUDGET_SECONDS }}
+          CODEX_AUTO_FIX_RESERVE_SECONDS: ${{ env.CODEX_AUTO_FIX_RESERVE_SECONDS }}
         run: |
           set -euo pipefail
 

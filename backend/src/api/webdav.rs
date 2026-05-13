@@ -1664,6 +1664,7 @@ fn escape_xml(value: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
+        .replace('\'', "&apos;")
 }
 
 fn dav_href(segments: &[String], child: Option<&str>, is_collection: bool) -> String {

@@ -2,7 +2,7 @@ use dotenvy::dotenv;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::timeout;
@@ -21,6 +21,9 @@ const PROMPT_FILE_PLACEHOLDER: &str = "{prompt_file}";
 pub struct CodexClient {
     command: Vec<String>,
     timeout: Duration,
+    started_at: Instant,
+    budget: Option<Duration>,
+    budget_reserve: Duration,
 }
 
 impl CodexClient {
@@ -33,6 +36,9 @@ impl CodexClient {
         Ok(Self {
             command,
             timeout: agent_timeout(),
+            started_at: Instant::now(),
+            budget: auto_fix_budget(),
+            budget_reserve: auto_fix_budget_reserve(),
         })
     }
 
@@ -42,7 +48,17 @@ impl CodexClient {
         user_prompt: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let prompt = build_prompt(system_prompt, user_prompt);
-        run_local_codex_command(&self.command, &prompt, self.timeout).await
+        let remaining_budget = self
+            .budget
+            .map(|budget| budget.saturating_sub(self.started_at.elapsed()));
+        let timeout = effective_command_timeout_from(
+            self.timeout,
+            remaining_budget,
+            self.budget_reserve,
+            Duration::from_secs(30),
+        )
+        .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+        run_local_codex_command(&self.command, &prompt, timeout).await
     }
 }
 
@@ -164,6 +180,45 @@ fn agent_timeout_from(raw: Option<&str>) -> Duration {
     Duration::from_secs(seconds)
 }
 
+fn auto_fix_budget() -> Option<Duration> {
+    let raw = env::var("CODEX_AUTO_FIX_BUDGET_SECONDS").ok();
+    duration_from_env(raw.as_deref())
+}
+
+fn auto_fix_budget_reserve() -> Duration {
+    let raw = env::var("CODEX_AUTO_FIX_RESERVE_SECONDS").ok();
+    duration_from_env(raw.as_deref()).unwrap_or_else(|| Duration::from_secs(120))
+}
+
+fn duration_from_env(raw: Option<&str>) -> Option<Duration> {
+    raw.and_then(|v| v.parse::<u64>().ok())
+        .filter(|v| *v > 0)
+        .map(Duration::from_secs)
+}
+
+fn effective_command_timeout_from(
+    agent_timeout: Duration,
+    remaining_budget: Option<Duration>,
+    reserve: Duration,
+    minimum: Duration,
+) -> Result<Duration, String> {
+    let Some(remaining_budget) = remaining_budget else {
+        return Ok(agent_timeout);
+    };
+    let available = remaining_budget
+        .checked_sub(reserve)
+        .unwrap_or_else(|| Duration::from_secs(0));
+    if available < minimum {
+        return Err(format!(
+            "自动修复剩余时间不足（remaining={}s, reserve={}s, minimum={}s），跳过新的 Codex 调用以便返回 JSON",
+            remaining_budget.as_secs(),
+            reserve.as_secs(),
+            minimum.as_secs()
+        ));
+    }
+    Ok(agent_timeout.min(available))
+}
+
 fn reject_recursive_command(command: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let Some(program) = command.first() else {
         return Err("CODEX_AGENT_COMMAND 不能为空".into());
@@ -235,5 +290,31 @@ mod tests {
     fn agent_timeout_ignores_zero_and_invalid_values() {
         assert_eq!(agent_timeout_from(Some("0")), Duration::from_secs(900));
         assert_eq!(agent_timeout_from(Some("nope")), Duration::from_secs(900));
+    }
+
+    #[test]
+    fn effective_timeout_leaves_budget_reserve() {
+        assert_eq!(
+            effective_command_timeout_from(
+                Duration::from_secs(600),
+                Some(Duration::from_secs(500)),
+                Duration::from_secs(120),
+                Duration::from_secs(30),
+            )
+            .unwrap(),
+            Duration::from_secs(380)
+        );
+    }
+
+    #[test]
+    fn effective_timeout_fails_when_budget_is_too_low() {
+        let err = effective_command_timeout_from(
+            Duration::from_secs(600),
+            Some(Duration::from_secs(130)),
+            Duration::from_secs(120),
+            Duration::from_secs(30),
+        )
+        .unwrap_err();
+        assert!(err.contains("自动修复剩余时间不足"));
     }
 }

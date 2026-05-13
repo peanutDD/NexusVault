@@ -476,8 +476,26 @@ impl Skill for SecurityCheckSkill {
             let system_prompt = "你是一个安全审计专家。请检查代码是否存在注入、密钥泄露或严重逻辑漏洞。\n仅输出严格 JSON，不要 markdown，不要解释。Schema: {\"passed\": true, \"reason\": \"原因\"}";
             let user_prompt = format!("文件: {}\n内容: \n```\n{}\n```", file, content);
 
-            let result = client.call(system_prompt, &user_prompt).await?;
-            let audit = parse_security_audit(&result)?;
+            let result = match client.call(system_prompt, &user_prompt).await {
+                Ok(result) => result,
+                Err(e) => {
+                    all_passed = false;
+                    let finding = format!("{}: SecurityCheck 执行失败或超时：{}", file, e);
+                    ctx.security_findings.push(finding.clone());
+                    eprintln!("⚠️ 文件 {} 未通过安全扫描: {}", file, finding);
+                    continue;
+                }
+            };
+            let audit = match parse_security_audit(&result) {
+                Ok(audit) => audit,
+                Err(e) => {
+                    all_passed = false;
+                    let finding = format!("{}: SecurityCheck 输出不可解析：{}", file, e);
+                    ctx.security_findings.push(finding.clone());
+                    eprintln!("⚠️ 文件 {} 未通过安全扫描: {}", file, finding);
+                    continue;
+                }
+            };
             if !audit.passed {
                 all_passed = false;
                 let finding = format!("{}: {}", file, audit.reason);
@@ -510,12 +528,33 @@ impl Skill for QualityScoreSkill {
             ctx.fixed_files, ctx.raw_input
         );
 
-        let first = client.call(system_prompt, &user_prompt).await?;
+        let first = match client.call(system_prompt, &user_prompt).await {
+            Ok(first) => first,
+            Err(e) => {
+                ctx.quality_score = 0;
+                ctx.quality_score_available = false;
+                ctx.quality_score_reason = Some(format!("质量评分执行失败或超时：{}", e));
+                eprintln!("⚠️ 质量评分不可用: {}", e);
+                return Ok(());
+            }
+        };
         let parsed = match parse_quality_score(&first) {
             Ok(score) => Ok(score),
             Err(first_err) => {
                 eprintln!("⚠️ 质量评分解析失败，正在重试: {}", first_err);
-                let retry = client.call(system_prompt, &user_prompt).await?;
+                let retry = match client.call(system_prompt, &user_prompt).await {
+                    Ok(retry) => retry,
+                    Err(e) => {
+                        ctx.quality_score = 0;
+                        ctx.quality_score_available = false;
+                        ctx.quality_score_reason = Some(format!(
+                            "首次解析失败: {}; 重试执行失败或超时: {}",
+                            first_err, e
+                        ));
+                        eprintln!("⚠️ 质量评分不可用: {}", e);
+                        return Ok(());
+                    }
+                };
                 parse_quality_score(&retry).map_err(|second_err| {
                     format!("首次解析失败: {}; 重试解析失败: {}", first_err, second_err)
                 })

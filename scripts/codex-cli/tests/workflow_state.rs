@@ -111,15 +111,15 @@ fn codex_auto_fix_serial_runner_has_timeouts() {
         .expect("codex auto-fix workflow should be readable");
 
     assert!(
-        workflow.contains("    timeout-minutes: 35"),
+        workflow.contains("    timeout-minutes: 55"),
         "codex-fix job should have a hard timeout so one stale run cannot block the PR queue forever"
     );
     assert!(
-        workflow.contains("        timeout-minutes: 30\n        if: steps.round.outputs.current_round != 'gemini-review-round-max'"),
+        workflow.contains("        timeout-minutes: 45\n        if: steps.round.outputs.current_round != 'gemini-review-round-max'"),
         "the pr-auto-fix step should time out before the job timeout and release the concurrency group"
     );
     assert!(
-        workflow.contains("CODEX_AGENT_TIMEOUT_SECONDS: 1200"),
+        workflow.contains("CODEX_AGENT_TIMEOUT_SECONDS: 360"),
         "the local Codex child process should have a bounded timeout below the step timeout"
     );
     assert!(
@@ -165,6 +165,33 @@ fn codex_auto_fix_passes_review_json_to_auto_fix() {
     assert!(
         workflow.contains("--review-json \"$REVIEW_JSON_PATH\""),
         "workflow should drive pr-auto-fix from the validated JSON input"
+    );
+}
+
+#[test]
+fn codex_auto_fix_has_coherent_runtime_budget() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        workflow.contains("timeout-minutes: 55"),
+        "codex-fix job should leave enough room for checkout, JSON conversion, auto-fix, and state advancement"
+    );
+    assert!(
+        workflow.contains("timeout-minutes: 45"),
+        "pr-auto-fix step should not be killed at the old 30 minute boundary"
+    );
+    assert!(
+        workflow.contains("CODEX_AGENT_TIMEOUT_SECONDS: 360"),
+        "each model call should be bounded so one slow audit cannot consume the whole step"
+    );
+    assert!(
+        workflow.contains("CODEX_AUTO_FIX_BUDGET_SECONDS: 2400"),
+        "the CLI should receive a budget lower than the step timeout so it can return JSON before Actions kills it"
+    );
+    assert!(
+        workflow.contains("codex_auto_fix_budget_seconds=${CODEX_AUTO_FIX_BUDGET_SECONDS}"),
+        "queue diagnostics should print the effective CLI budget"
     );
 }
 
