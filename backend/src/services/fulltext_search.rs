@@ -141,7 +141,7 @@ impl SearchIndexService {
         let top_docs = searcher
             .search(
                 &parsed,
-                &TopDocs::with_limit(limit.saturating_mul(4).max(limit)),
+                &TopDocs::with_limit(limit.saturating_mul(4).max(limit)).order_by_score(),
             )
             .map_err(to_app_error)?;
 

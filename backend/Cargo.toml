@@ -108,7 +108,7 @@ pdf-extract = "0.10"
 docx-lite = "0.1"
 # Text encoding detection
 encoding_rs = "0.8"
-tantivy = "0.22"
+tantivy = "0.26"
 
 # Random token generation
 rand = "0.9"
