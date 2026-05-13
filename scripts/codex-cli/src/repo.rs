@@ -592,6 +592,9 @@ fn ensure_api_fallback_fast_forward_safe(
     let local_head = git_stdout(repo_root, &["rev-parse", "HEAD"])?;
     let local_parent = git_stdout(repo_root, &["rev-parse", "HEAD^"])?;
     if remote_head.trim() != local_parent.trim() {
+        if local_parent_is_synthetic_bootstrap_for(repo_root, remote_head.trim())? {
+            return Ok(());
+        }
         return Err(format!(
             "拒绝 GitHub API fallback 推送：远端 HEAD 与本地提交父提交不一致（local_head={}, remote_head={}）",
             local_head.trim(),
@@ -619,6 +622,14 @@ fn ensure_api_fallback_fast_forward_safe(
         remote_head.trim()
     )
     .into())
+}
+
+fn local_parent_is_synthetic_bootstrap_for(
+    repo_root: &str,
+    remote_head: &str,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    let subject = git_stdout(repo_root, &["log", "-1", "--pretty=%s", "HEAD^"])?;
+    Ok(subject.trim() == format!("bootstrap PR head {remote_head}"))
 }
 
 fn api_tree_entries_for_head(
@@ -1448,5 +1459,81 @@ BODY
         assert_eq!(push_attempt_count, "3");
         assert!(gh_calls.contains("-X PATCH"));
         assert!(gh_calls.contains("git/refs/heads/codex/test"));
+    }
+
+    #[test]
+    fn api_fallback_accepts_synthetic_tarball_bootstrap_parent() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-cli-bootstrap-parent-{}", now));
+        let repo = dir.join("repo");
+        fs::create_dir_all(repo.join("src")).unwrap();
+
+        StdCommand::new("git")
+            .arg("init")
+            .arg(&repo)
+            .output()
+            .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["config", "user.name", "Codex Test"])
+            .output()
+            .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["config", "user.email", "codex-test@example.invalid"])
+            .output()
+            .unwrap();
+        fs::write(
+            repo.join("src/lib.rs"),
+            "pub fn value() -> i32 {\n    1\n}\n",
+        )
+        .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["add", "."])
+            .output()
+            .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["commit", "-m", "remote head"])
+            .output()
+            .unwrap();
+        let remote_head = git_stdout(repo.to_str().unwrap(), &["rev-parse", "HEAD"]).unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["commit", "--allow-empty", "-m"])
+            .arg(format!("bootstrap PR head {}", remote_head.trim()))
+            .output()
+            .unwrap();
+        fs::write(
+            repo.join("src/lib.rs"),
+            "pub fn value() -> i32 {\n    2\n}\n",
+        )
+        .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["add", "."])
+            .output()
+            .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["commit", "-m", "auto fix"])
+            .output()
+            .unwrap();
+
+        let result = ensure_api_fallback_fast_forward_safe(repo.to_str().unwrap(), &remote_head);
+        let _ = fs::remove_dir_all(&dir);
+
+        assert!(result.is_ok(), "result={result:?}");
     }
 }
