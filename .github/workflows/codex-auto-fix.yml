@@ -20,6 +20,13 @@ env:
   CODEX_AGENT_TIMEOUT_SECONDS: 360
   CODEX_AUTO_FIX_BUDGET_SECONDS: 2400
   CODEX_AUTO_FIX_RESERVE_SECONDS: 180
+  CODEX_AUTO_FIX_VERIFY_COMMANDS: |
+    if git status --short -- frontend/ | grep -q .; then
+      cd frontend
+      npm ci
+      npm run lint
+      npx tsc -b --noEmit
+    fi
 
 concurrency:
   group: codex-auto-fix-${{ github.ref }}-${{ github.actor }}
@@ -244,7 +251,7 @@ jobs:
           echo "codex_agent_timeout_seconds=${CODEX_AGENT_TIMEOUT_SECONDS}"
           echo "codex_auto_fix_budget_seconds=${CODEX_AUTO_FIX_BUDGET_SECONDS}"
           echo "codex_auto_fix_reserve_seconds=${CODEX_AUTO_FIX_RESERVE_SECONDS}"
-          echo "A newer Gemini review for the same PR cancels older codex-fix runs before they can stale-block the queue."
+          echo "A newer Gemini review for the same PR waits for the active codex-fix run instead of canceling it mid-publish."
 
       - name: 调用 codex-auto-fix pr-auto-fix
         timeout-minutes: 45
@@ -258,6 +265,7 @@ jobs:
           CODEX_AGENT_TIMEOUT_SECONDS: ${{ env.CODEX_AGENT_TIMEOUT_SECONDS }}
           CODEX_AUTO_FIX_BUDGET_SECONDS: ${{ env.CODEX_AUTO_FIX_BUDGET_SECONDS }}
           CODEX_AUTO_FIX_RESERVE_SECONDS: ${{ env.CODEX_AUTO_FIX_RESERVE_SECONDS }}
+          CODEX_AUTO_FIX_VERIFY_COMMANDS: ${{ env.CODEX_AUTO_FIX_VERIFY_COMMANDS }}
         run: |
           set -euo pipefail
 

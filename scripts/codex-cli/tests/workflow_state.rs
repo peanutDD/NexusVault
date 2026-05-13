@@ -196,6 +196,24 @@ fn codex_auto_fix_has_coherent_runtime_budget() {
 }
 
 #[test]
+fn codex_auto_fix_runs_frontend_pre_push_validation() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        workflow.contains("CODEX_AUTO_FIX_VERIFY_COMMANDS:"),
+        "codex-fix must define pre-push verification so generated patches are checked before publish"
+    );
+    assert!(
+        workflow.contains("git status --short -- frontend/")
+            && workflow.contains("npm ci")
+            && workflow.contains("npm run lint")
+            && workflow.contains("npx tsc -b --noEmit"),
+        "frontend auto-fix changes must run install, lint, and typecheck before commit/push"
+    );
+}
+
+#[test]
 fn codex_auto_fix_supports_markdown_rollback_switch() {
     let workflow = fs::read_to_string(codex_auto_fix_workflow())
         .expect("codex auto-fix workflow should be readable");

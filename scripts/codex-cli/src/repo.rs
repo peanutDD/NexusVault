@@ -432,6 +432,7 @@ pub fn commit_and_push_in(
         .iter()
         .map(|file| validate_git_pathspec_file(file))
         .collect::<Result<Vec<_>, _>>()?;
+    run_auto_fix_verify_commands(repo_root)?;
     checked_output(
         StdCommand::new("git")
             .args(["-C", repo_root])
@@ -472,6 +473,33 @@ pub fn commit_and_push_in(
     }
 
     Ok(())
+}
+
+fn run_auto_fix_verify_commands(repo_root: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let Ok(commands) = std::env::var("CODEX_AUTO_FIX_VERIFY_COMMANDS") else {
+        return Ok(());
+    };
+    let commands = commands.trim();
+    if commands.is_empty() {
+        return Ok(());
+    }
+
+    eprintln!("🧪 [AutoFix] 正在执行提交前验证: CODEX_AUTO_FIX_VERIFY_COMMANDS");
+    let output = StdCommand::new("sh")
+        .arg("-c")
+        .arg(commands)
+        .current_dir(repo_root)
+        .output()?;
+    if output.status.success() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "CODEX_AUTO_FIX_VERIFY_COMMANDS 验证失败，已阻止自动修复提交/推送。\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    )
+    .into())
 }
 
 fn validate_git_pathspec_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -1319,6 +1347,67 @@ BODY
 
         assert_eq!(attempt_count, "3");
         assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "ok");
+    }
+
+    #[test]
+    fn commit_and_push_runs_configured_verify_commands_before_commit() {
+        let repo = create_patch_test_repo("pre-push-verify");
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["config", "user.email", "test@example.com"])
+            .output()
+            .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["config", "user.name", "Test User"])
+            .output()
+            .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["add", "src/lib.rs"])
+            .output()
+            .unwrap();
+        StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["commit", "-m", "initial"])
+            .output()
+            .unwrap();
+        fs::write(
+            repo.join("src/lib.rs"),
+            "pub fn value() -> i32 {\n    2\n}\n",
+        )
+        .unwrap();
+
+        unsafe {
+            std::env::set_var("CODEX_AUTO_FIX_VERIFY_COMMANDS", "exit 12");
+        }
+        let result = commit_and_push_in(repo.to_str().unwrap(), &["src/lib.rs".to_string()], false);
+        unsafe {
+            std::env::remove_var("CODEX_AUTO_FIX_VERIFY_COMMANDS");
+        }
+
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("CODEX_AUTO_FIX_VERIFY_COMMANDS")
+        );
+        let head = checked_output(StdCommand::new("git").arg("-C").arg(&repo).args([
+            "log",
+            "--oneline",
+            "-1",
+        ]))
+        .unwrap();
+        assert!(
+            String::from_utf8_lossy(&head.stdout).contains("initial"),
+            "failed verification must prevent the auto-fix commit"
+        );
+        let _ = fs::remove_dir_all(&repo);
     }
 
     #[test]
