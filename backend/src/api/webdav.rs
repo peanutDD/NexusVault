@@ -15,7 +15,7 @@ use quick_xml::{
     reader::Reader,
     writer::Writer,
 };
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 use tempfile::NamedTempFile;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio_util::io::ReaderStream;
@@ -27,14 +27,16 @@ use crate::{
         file::RenameFileRequest,
         folder::{CreateFolderRequest, MoveFolderRequest, RenameFolderRequest},
     },
-    repositories::FoldersRepo,
+    repositories::{traits::FilesRepository, FoldersRepo, SqlxFilesRepo},
     services::{
         api_token::{ApiTokenClaims, ApiTokenService},
-        file::CreateFileFromPathInput,
+        file::{CreateFileFromPathInput, EmbeddingTaskInput, FileService},
         folder::FolderService,
         storage::StorageReadStream,
     },
-    utils::{effective_file_mime_type, is_macos_appledouble_filename},
+    utils::{
+        effective_file_mime_type, is_macos_appledouble_filename, validation::sanitize_filename,
+    },
     AppState,
 };
 
@@ -305,14 +307,30 @@ async fn propfind(
         }
         Err(status) => return status.into_response(),
     };
+    let lock_discoveries =
+        if requested.props.contains(&DavProp::LockDiscovery) && !requested.propname {
+            match active_lock_discoveries(state, principal.user_id).await {
+                Ok(lock_discoveries) => lock_discoveries,
+                Err(status) => return status.into_response(),
+            }
+        } else {
+            HashMap::new()
+        };
     let mut xml = multistatus_start();
-    xml.push_str(&collection_response(segments, None, &requested, None));
+    xml.push_str(&collection_response(
+        segments,
+        None,
+        &requested,
+        None,
+        &lock_discoveries,
+    ));
     if depth != "0" {
         let mut count = 1usize;
         let recursive = depth.eq_ignore_ascii_case("infinity");
         let mut walk = PropfindWalk {
             requested: &requested,
             recursive,
+            lock_discoveries: &lock_discoveries,
             xml: &mut xml,
             count: &mut count,
         };
@@ -337,6 +355,7 @@ const MAX_PROPFIND_INFINITY_ITEMS: usize = 5_000;
 struct PropfindWalk<'a> {
     requested: &'a PropfindRequest,
     recursive: bool,
+    lock_discoveries: &'a LockDiscoveryByPath,
     xml: &'a mut String,
     count: &'a mut usize,
 }
@@ -372,6 +391,7 @@ async fn append_propfind_children(
                 Some(&folder.name),
                 walk.requested,
                 Some(folder.updated_at),
+                walk.lock_discoveries,
             ));
             if walk.recursive {
                 let mut child_segments = current_segments.clone();
@@ -384,8 +404,12 @@ async fn append_propfind_children(
             if *walk.count > MAX_PROPFIND_INFINITY_ITEMS {
                 return Err(StatusCode::PAYLOAD_TOO_LARGE);
             }
-            walk.xml
-                .push_str(&file_response(&current_segments, &file, walk.requested));
+            walk.xml.push_str(&file_response(
+                &current_segments,
+                &file,
+                walk.requested,
+                walk.lock_discoveries,
+            ));
         }
     }
 
@@ -405,11 +429,21 @@ async fn propfind_file(
     let Some(file) = find_file(state, principal.user_id, folder_id, &filename).await else {
         return StatusCode::NOT_FOUND.into_response();
     };
+    let lock_discoveries =
+        if requested.props.contains(&DavProp::LockDiscovery) && !requested.propname {
+            match active_lock_discoveries(state, principal.user_id).await {
+                Ok(lock_discoveries) => lock_discoveries,
+                Err(status) => return status.into_response(),
+            }
+        } else {
+            HashMap::new()
+        };
     let mut xml = multistatus_start();
     xml.push_str(&file_response(
         &segments[..segments.len() - 1],
         &file,
         requested,
+        &lock_discoveries,
     ));
     xml.push_str(&xml_end("D:multistatus"));
     (
@@ -649,11 +683,22 @@ fn xml_element(name: &str, body: &str) -> String {
     xml
 }
 
+type LockDiscoveryByPath = HashMap<String, String>;
+
+fn lock_path_for_child(segments: &[String], child: Option<&str>) -> String {
+    let mut path_segments = segments.to_vec();
+    if let Some(child) = child {
+        path_segments.push(child.to_string());
+    }
+    lock_key(&path_segments)
+}
+
 fn collection_response(
     segments: &[String],
     child: Option<&str>,
     requested: &PropfindRequest,
     updated_at: Option<chrono::DateTime<chrono::Utc>>,
+    lock_discoveries: &LockDiscoveryByPath,
 ) -> String {
     let displayname = child
         .map(str::to_string)
@@ -689,7 +734,16 @@ fn collection_response(
         }
     }
     if requested.props.contains(&DavProp::LockDiscovery) {
-        props.push_str(&xml_empty("D:lockdiscovery"));
+        if requested.propname {
+            props.push_str(&xml_empty("D:lockdiscovery"));
+        } else {
+            let path = lock_path_for_child(segments, child);
+            if let Some(lock_discovery) = lock_discoveries.get(&path) {
+                props.push_str(lock_discovery);
+            } else {
+                props.push_str(&xml_empty("D:lockdiscovery"));
+            }
+        }
     }
     let unsupported = unsupported_propstat(&requested.unsupported);
     response_xml(&dav_href(segments, child, true), &props, &unsupported)
@@ -699,6 +753,7 @@ fn file_response(
     segments: &[String],
     file: &crate::models::file::File,
     requested: &PropfindRequest,
+    lock_discoveries: &LockDiscoveryByPath,
 ) -> String {
     let mut props = String::new();
     if requested.props.contains(&DavProp::DisplayName) {
@@ -760,7 +815,16 @@ fn file_response(
         }
     }
     if requested.props.contains(&DavProp::LockDiscovery) {
-        props.push_str(&xml_empty("D:lockdiscovery"));
+        if requested.propname {
+            props.push_str(&xml_empty("D:lockdiscovery"));
+        } else {
+            let path = lock_path_for_child(segments, Some(&file.original_filename));
+            if let Some(lock_discovery) = lock_discoveries.get(&path) {
+                props.push_str(lock_discovery);
+            } else {
+                props.push_str(&xml_empty("D:lockdiscovery"));
+            }
+        }
     }
     let unsupported = unsupported_propstat(&requested.unsupported);
     response_xml(
@@ -1345,39 +1409,67 @@ async fn copy_file_to_folder(
     folder_id: Option<Uuid>,
     filename: String,
 ) -> Result<(), ()> {
-    let temp = NamedTempFile::new().map_err(|_| ())?;
-    let mut output = tokio::fs::File::create(temp.path()).await.map_err(|_| ())?;
-    let copied = match state
-        .file_service
-        .open_file_stream(file)
-        .await
-        .map_err(|_| ())?
-    {
-        StorageReadStream::Local(mut input) => tokio::io::copy(&mut input, &mut output)
-            .await
-            .map_err(|_| ())?,
-        StorageReadStream::S3(stream) => {
-            let mut input = stream.into_async_read();
-            tokio::io::copy(&mut input, &mut output)
-                .await
-                .map_err(|_| ())?
-        }
-    };
-    output.flush().await.map_err(|_| ())?;
-    let input = CreateFileFromPathInput {
-        user_id,
-        original_filename: filename,
-        mime_type: file.mime_type.clone(),
-        file_size: copied,
-        source_path: temp.path(),
-        content_sha256: file.content_sha256.as_deref(),
-        folder_id,
-    };
+    let file_size = file.file_size.max(0) as u64;
     state
         .file_service
-        .create_file_from_path(input)
+        .ensure_can_store_detailed(user_id, &file.mime_type, file_size)
         .await
         .map_err(|_| ())?;
+
+    let file_id = Uuid::new_v4();
+    let original_filename = filename;
+    let sanitized_filename = sanitize_filename(&original_filename).map_err(|_| ())?;
+    let storage_filename = format!("{file_id}_{sanitized_filename}");
+    let file_path = state
+        .storage
+        .copy_file_to_user(&file.file_path, user_id, file_id, &storage_filename)
+        .await
+        .map_err(|_| ())?;
+
+    let repo = SqlxFilesRepo::new_with_replica(state.pool.clone(), state.read_pool.clone());
+    let inserted = repo
+        .insert(
+            file_id,
+            user_id,
+            &storage_filename,
+            &original_filename,
+            &file_path,
+            file_size,
+            &file.mime_type,
+            &state.config.storage.backend,
+            file.content_sha256.as_deref(),
+            folder_id,
+        )
+        .await;
+
+    let file_record = match inserted {
+        Ok(file_record) => file_record,
+        Err(_) => {
+            let _ = state.storage.delete_file(&file_path).await;
+            return Err(());
+        }
+    };
+
+    if let Some(embedding_service) = &state.embedding_service {
+        let task = EmbeddingTaskInput {
+            embedding_service: embedding_service.clone(),
+            storage: state.storage.clone(),
+            file: file_record,
+            mime_type: file.mime_type.clone(),
+            original_filename,
+            file_id,
+            user_id,
+            pool: state.pool.clone(),
+        };
+        tokio::spawn(async move {
+            FileService::generate_embedding_with_content(task).await;
+        });
+    }
+
+    state
+        .file_service
+        .enqueue_fulltext_index_task_best_effort(file_id, user_id)
+        .await;
     Ok(())
 }
 
@@ -1467,8 +1559,12 @@ async fn lock_path(
     principal: &WebDavPrincipal,
     segments: &[String],
     headers: &HeaderMap,
-    _body: Body,
+    body: Body,
 ) -> Response {
+    let owner = match request_lock_owner(body).await {
+        Ok(owner) => owner,
+        Err(status) => return status.into_response(),
+    };
     let path = lock_key(segments);
     if lock_conflicts(state, principal.user_id, segments, headers).await {
         return locked_response();
@@ -1483,19 +1579,20 @@ async fn lock_path(
     let expires_at = chrono::Utc::now() + chrono::Duration::seconds(timeout_secs);
     let refresh_tokens = request_lock_tokens(headers);
     for request_token in &refresh_tokens {
-        let refreshed = sqlx::query_scalar::<_, String>(
+        let refreshed = sqlx::query_as::<_, (String, Option<String>)>(
             r#"
             UPDATE webdav_locks
-            SET depth = $1, expires_at = $2, updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = $3
-              AND api_token_id = $4
-              AND path = $5
-              AND token = $6
+            SET depth = $1, owner = COALESCE($2::text, owner), expires_at = $3, updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $4
+              AND api_token_id = $5
+              AND path = $6
+              AND token = $7
               AND expires_at > NOW()
-            RETURNING token
+            RETURNING token, owner
             "#,
         )
         .bind(&depth)
+        .bind(owner.as_deref())
         .bind(expires_at)
         .bind(principal.user_id)
         .bind(principal.api_token_id)
@@ -1504,8 +1601,8 @@ async fn lock_path(
         .fetch_optional(&state.pool)
         .await;
         match refreshed {
-            Ok(Some(token)) => {
-                return lock_response(&depth, timeout_secs, &token);
+            Ok(Some((token, owner))) => {
+                return lock_response(&depth, timeout_secs, &token, owner.as_deref());
             }
             Ok(None) => {}
             Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -1515,13 +1612,14 @@ async fn lock_path(
         return locked_response();
     }
     if sqlx::query(
-        "INSERT INTO webdav_locks (user_id, api_token_id, path, token, depth, expires_at) VALUES ($1, $2, $3, $4, $5, $6)",
+        "INSERT INTO webdav_locks (user_id, api_token_id, path, token, depth, owner, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(principal.user_id)
     .bind(principal.api_token_id)
     .bind(&path)
     .bind(&token)
     .bind(&depth)
+    .bind(owner.as_deref())
     .bind(expires_at)
     .execute(&state.pool)
     .await
@@ -1529,15 +1627,127 @@ async fn lock_path(
     {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-    lock_response(&depth, timeout_secs, &token)
+    lock_response(&depth, timeout_secs, &token, owner.as_deref())
 }
 
-fn lock_response(depth: &str, timeout_secs: i64, token: &str) -> Response {
-    let body = format!(
-        r#"<?xml version="1.0" encoding="utf-8"?><D:prop xmlns:D="DAV:"><D:lockdiscovery><D:activelock><D:locktype><D:write/></D:locktype><D:lockscope><D:exclusive/></D:lockscope><D:depth>{}</D:depth><D:timeout>Second-{}</D:timeout><D:locktoken><D:href>{}</D:href></D:locktoken></D:activelock></D:lockdiscovery></D:prop>"#,
-        escape_xml(depth),
+async fn request_lock_owner(body: Body) -> Result<Option<String>, StatusCode> {
+    let bytes = to_bytes(body, 64 * 1024)
+        .await
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    if bytes.is_empty() {
+        return Ok(None);
+    }
+    let xml = std::str::from_utf8(&bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+    parse_lock_owner(xml).map_err(|_| StatusCode::BAD_REQUEST)
+}
+
+fn parse_lock_owner(xml: &str) -> Result<Option<String>, quick_xml::Error> {
+    let mut reader = Reader::from_str(xml);
+    reader.config_mut().trim_text(true);
+    let mut writer = Writer::new(Vec::new());
+    let mut depth = 0usize;
+    let mut owner_depth = None;
+
+    loop {
+        match reader.read_event()? {
+            Event::Start(event) => {
+                let is_owner = xml_local_name(event.local_name().as_ref()) == "owner";
+                if owner_depth.is_some() {
+                    writer.write_event(Event::Start(event.into_owned()))?;
+                } else if is_owner {
+                    owner_depth = Some(depth);
+                }
+                depth += 1;
+            }
+            Event::Empty(event) => {
+                let is_owner = xml_local_name(event.local_name().as_ref()) == "owner";
+                if owner_depth.is_some() {
+                    writer.write_event(Event::Empty(event.into_owned()))?;
+                } else if is_owner {
+                    return Ok(Some(String::new()));
+                }
+            }
+            Event::Text(event) => {
+                if owner_depth.is_some() {
+                    writer.write_event(Event::Text(event.into_owned()))?;
+                }
+            }
+            Event::CData(event) => {
+                if owner_depth.is_some() {
+                    writer.write_event(Event::CData(event.into_owned()))?;
+                }
+            }
+            Event::End(event) => {
+                depth = depth.saturating_sub(1);
+                if owner_depth == Some(depth) {
+                    return Ok(Some(String::from_utf8(writer.into_inner()).unwrap_or_default()));
+                }
+                if owner_depth.is_some() {
+                    writer.write_event(Event::End(event.into_owned()))?;
+                }
+            }
+            Event::Eof => return Ok(None),
+            _ => {}
+        }
+    }
+}
+
+async fn active_lock_discoveries(
+    state: &AppState,
+    user_id: Uuid,
+) -> Result<LockDiscoveryByPath, StatusCode> {
+    let rows: Vec<(String, String, String, Option<String>, i64)> = sqlx::query_as(
+        r#"
+        SELECT path,
+               token,
+               depth,
+               owner,
+               GREATEST(1, CEIL(EXTRACT(EPOCH FROM (expires_at - NOW()))))::BIGINT AS timeout_secs
+        FROM webdav_locks
+        WHERE user_id = $1
+          AND expires_at > NOW()
+        "#,
+    )
+    .bind(user_id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(rows
+        .into_iter()
+        .map(|(path, token, depth, owner, timeout_secs)| {
+            (
+                path,
+                active_lock_xml(&depth, timeout_secs, &token, owner.as_deref()),
+            )
+        })
+        .collect())
+}
+
+fn active_lock_xml(depth: &str, timeout_secs: i64, token: &str, owner: Option<&str>) -> String {
+    let mut active_lock = format!(
+        r#"<D:activelock><D:locktype><D:write/></D:locktype><D:lockscope><D:exclusive/></D:lockscope><D:depth>{}</D:depth>"#,
+        escape_xml(depth)
+    );
+    if let Some(owner) = owner {
+        if owner.is_empty() {
+            active_lock.push_str(&xml_empty("D:owner"));
+        } else {
+            active_lock.push_str(&xml_element("D:owner", owner));
+        }
+    }
+    active_lock.push_str(&format!(
+        r#"<D:timeout>Second-{}</D:timeout><D:locktoken><D:href>{}</D:href></D:locktoken></D:activelock>"#,
         timeout_secs,
         escape_xml(token)
+    ));
+    xml_element("D:lockdiscovery", &active_lock)
+}
+
+fn lock_response(depth: &str, timeout_secs: i64, token: &str, owner: Option<&str>) -> Response {
+    let body = format!(
+        r#"<?xml version="1.0" encoding="utf-8"?><D:prop xmlns:D="DAV:">{}</D:prop>"#,
+        active_lock_xml(depth, timeout_secs, token, owner)
     );
     let mut response = (
         StatusCode::OK,

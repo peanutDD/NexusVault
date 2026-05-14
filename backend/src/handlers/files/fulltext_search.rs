@@ -2,6 +2,7 @@ use axum::extract::{Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use serde_json::json;
+use tokio::sync::OnceCell;
 use uuid::Uuid;
 
 use crate::{
@@ -24,6 +25,16 @@ fn default_limit() -> usize {
     20
 }
 
+static SEARCH_INDEX: OnceCell<SearchIndexService> = OnceCell::const_new();
+
+async fn shared_search_index(state: &AppState) -> Result<&'static SearchIndexService, AppError> {
+    SEARCH_INDEX
+        .get_or_try_init(|| async {
+            SearchIndexService::open_or_create(&state.config.search.fulltext_index_path)
+        })
+        .await
+}
+
 pub async fn fulltext_search_handler(
     State(state): State<AppState>,
     AuthenticatedUser(user_id): AuthenticatedUser,
@@ -42,7 +53,7 @@ pub async fn fulltext_search_handler(
         return Err(AppError::File("全文搜索功能未启用".to_string()));
     }
 
-    let index = SearchIndexService::open_or_create(&state.config.search.fulltext_index_path)?;
+    let index = shared_search_index(&state).await?;
     let folder_prefix = params.folder_id.map(|id| format!("/{id}/"));
     let mut hits = index.search(
         user_id,
@@ -60,6 +71,7 @@ pub async fn fulltext_search_handler(
             user_id,
             query,
             params.limit,
+            params.folder_id,
             params.mime_type.as_deref(),
         )
         .await?;
@@ -78,9 +90,10 @@ async fn fallback_search(
     user_id: Uuid,
     query: &str,
     limit: usize,
+    folder_id: Option<Uuid>,
     mime_type: Option<&str>,
 ) -> Result<Vec<SearchHit>, AppError> {
-    let files = state.file_service.list_by_folder(user_id, None).await?;
+    let files = state.file_service.list_by_folder(user_id, folder_id).await?;
     let needle = query.to_lowercase();
     let mut hits = Vec::new();
     for file in files.into_iter() {

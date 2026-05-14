@@ -1,4 +1,7 @@
-use std::path::Path;
+use std::{
+    path::Path,
+    sync::{Mutex, MutexGuard},
+};
 
 use serde::Serialize;
 use tantivy::{
@@ -50,6 +53,7 @@ struct SearchFields {
 pub struct SearchIndexService {
     index: Index,
     reader: IndexReader,
+    writer: Mutex<IndexWriter>,
     fields: SearchFields,
 }
 
@@ -58,9 +62,11 @@ impl SearchIndexService {
         let (schema, fields) = build_schema();
         let index = Index::create_in_ram(schema);
         let reader = index.reader().map_err(to_app_error)?;
+        let writer = index.writer(50_000_000).map_err(to_app_error)?;
         Ok(Self {
             index,
             reader,
+            writer: Mutex::new(writer),
             fields,
         })
     }
@@ -73,9 +79,11 @@ impl SearchIndexService {
             Index::create_in_dir(path.as_ref(), schema.clone()).map_err(to_app_error)
         })?;
         let reader = index.reader().map_err(to_app_error)?;
+        let writer = index.writer(50_000_000).map_err(to_app_error)?;
         Ok(Self {
             index,
             reader,
+            writer: Mutex::new(writer),
             fields,
         })
     }
@@ -195,8 +203,10 @@ impl SearchIndexService {
         Ok(hits)
     }
 
-    fn writer(&self) -> Result<IndexWriter, AppError> {
-        self.index.writer(50_000_000).map_err(to_app_error)
+    fn writer(&self) -> Result<MutexGuard<'_, IndexWriter>, AppError> {
+        self.writer
+            .lock()
+            .map_err(|e| AppError::File(format!("search index writer lock poisoned: {e}")))
     }
 }
 
@@ -234,11 +244,13 @@ fn text_field(doc: &TantivyDocument, field: Field) -> Option<String> {
 fn snippet<const N: usize>(query: &str, parts: [&str; N]) -> String {
     let query_lower = query.to_lowercase();
     for part in parts {
-        let lower = part.to_lowercase();
-        if let Some(idx) = lower.find(&query_lower) {
-            let start = idx.saturating_sub(48);
-            let end = (idx + query.len() + 96).min(part.len());
-            return part[start..end].to_string();
+        if let Some(match_start) = case_insensitive_char_match_start(part, &query_lower) {
+            let start = match_start.saturating_sub(48);
+            return part
+                .chars()
+                .skip(start)
+                .take(match_start - start + query.chars().count() + 96)
+                .collect();
         }
     }
     parts
@@ -248,6 +260,17 @@ fn snippet<const N: usize>(query: &str, parts: [&str; N]) -> String {
         .chars()
         .take(160)
         .collect()
+}
+
+fn case_insensitive_char_match_start(part: &str, query_lower: &str) -> Option<usize> {
+    part.char_indices()
+        .enumerate()
+        .find_map(|(char_index, (byte_index, _))| {
+            part[byte_index..]
+                .to_lowercase()
+                .starts_with(query_lower)
+                .then_some(char_index)
+        })
 }
 
 fn match_source(query: &str, filename: &str, ocr: &str, category: &str) -> String {
