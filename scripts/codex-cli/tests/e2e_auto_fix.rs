@@ -366,6 +366,74 @@ fn auto_fix_local_warns_but_pushes_when_security_audit_fails() {
 }
 
 #[test]
+fn auto_fix_local_reports_push_blocked_when_pre_push_validation_fails() {
+    let workspace = TestWorkspace::new("pre-push-validation-block");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+    let remote = workspace.create_bare_remote();
+    workspace.git(
+        &repo,
+        &["remote", "add", "origin", remote.to_str().unwrap()],
+    );
+    workspace.git(&repo, &["push", "-u", "origin", "HEAD"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("sr_success");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"))
+        .args([
+            "auto-fix-local",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--review-file",
+            review.to_str().unwrap(),
+            "--disable-changelog",
+            "--max-rounds",
+            "2",
+            "--yes",
+        ])
+        .env("CODEX_AGENT_COMMAND", &fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30")
+        .env("CODEX_AUTO_FIX_VERIFY_COMMANDS", "exit 12")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], false);
+    assert_eq!(json["push_blocked"], true);
+    assert_eq!(json["final_status"], "needs-human");
+    assert!(
+        json["pending_explanations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|item| item
+                .as_str()
+                .unwrap()
+                .contains("CODEX_AUTO_FIX_VERIFY_COMMANDS 验证失败"))
+    );
+    assert!(
+        workspace
+            .git_stdout(&repo, &["log", "--oneline", "-1"])
+            .contains("initial"),
+        "failed validation must not create an auto-fix commit"
+    );
+}
+
+#[test]
 fn auto_fix_local_keeps_partial_fix_when_security_check_times_out() {
     let workspace = TestWorkspace::new("security-timeout");
     let repo = workspace.create_repo();

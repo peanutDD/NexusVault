@@ -667,7 +667,15 @@ impl Skill for FeedbackSkill {
             };
             let score_info = quality_score_label(ctx);
 
-            repo::commit_and_push_in(&ctx.repo_root, &ctx.fixed_files, true)?;
+            if let Err(error) = repo::commit_and_push_in(&ctx.repo_root, &ctx.fixed_files, true) {
+                let explanation = format!("自动修复提交前验证或推送失败：{}", error);
+                ctx.push_blocked = true;
+                if !ctx.pending_explanations.contains(&explanation) {
+                    ctx.pending_explanations.push(explanation.clone());
+                }
+                eprintln!("⚠️ [AutoFix] {}", explanation);
+                return Ok(());
+            }
 
             let gh_msg = format!(
                 "🤖 **Codex 自动修复完成**\n\n{}\n{}\n{}\n\n✅ 已修复文件：\n{}{}{}",
