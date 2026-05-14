@@ -23,10 +23,19 @@ env:
   CODEX_AUTO_FIX_VERIFY_COMMANDS: |
     set -euo pipefail
     if git status --short -- frontend/ | grep -q .; then
-      cd frontend
-      npm ci --ignore-scripts
-      npm run lint
-      npx --no-install tsc -b --noEmit
+      (
+        cd frontend
+        npm ci --ignore-scripts
+        npm run lint
+        npx --no-install tsc -b --noEmit
+      )
+    fi
+    if git status --short -- backend/ | grep -q .; then
+      (
+        cd backend
+        cargo fmt --all -- --check
+        cargo clippy --all-targets --all-features -- -D warnings
+      )
     fi
 
 concurrency:

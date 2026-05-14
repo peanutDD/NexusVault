@@ -215,6 +215,20 @@ fn codex_auto_fix_runs_frontend_pre_push_validation() {
 }
 
 #[test]
+fn codex_auto_fix_runs_backend_pre_push_format_validation() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        workflow.contains("git status --short -- backend/")
+            && workflow.contains("cd backend")
+            && workflow.contains("cargo fmt --all -- --check")
+            && workflow.contains("cargo clippy --all-targets --all-features -- -D warnings"),
+        "backend auto-fix changes must run cargo fmt and clippy before commit/push because GitHub API publish does not trigger CI"
+    );
+}
+
+#[test]
 fn codex_auto_fix_supports_markdown_rollback_switch() {
     let workflow = fs::read_to_string(codex_auto_fix_workflow())
         .expect("codex auto-fix workflow should be readable");

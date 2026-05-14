@@ -1667,20 +1667,18 @@ fn parse_lock_owner(xml: &str) -> Result<Option<String>, quick_xml::Error> {
                     return Ok(Some(String::new()));
                 }
             }
-            Event::Text(event) => {
-                if owner_depth.is_some() {
-                    writer.write_event(Event::Text(event.into_owned()))?;
-                }
+            Event::Text(event) if owner_depth.is_some() => {
+                writer.write_event(Event::Text(event.into_owned()))?;
             }
-            Event::CData(event) => {
-                if owner_depth.is_some() {
-                    writer.write_event(Event::CData(event.into_owned()))?;
-                }
+            Event::CData(event) if owner_depth.is_some() => {
+                writer.write_event(Event::CData(event.into_owned()))?;
             }
             Event::End(event) => {
                 depth = depth.saturating_sub(1);
                 if owner_depth == Some(depth) {
-                    return Ok(Some(String::from_utf8(writer.into_inner()).unwrap_or_default()));
+                    return Ok(Some(
+                        String::from_utf8(writer.into_inner()).unwrap_or_default(),
+                    ));
                 }
                 if owner_depth.is_some() {
                     writer.write_event(Event::End(event.into_owned()))?;

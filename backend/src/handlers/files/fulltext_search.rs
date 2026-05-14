@@ -93,7 +93,10 @@ async fn fallback_search(
     folder_id: Option<Uuid>,
     mime_type: Option<&str>,
 ) -> Result<Vec<SearchHit>, AppError> {
-    let files = state.file_service.list_by_folder(user_id, folder_id).await?;
+    let files = state
+        .file_service
+        .list_by_folder(user_id, folder_id)
+        .await?;
     let needle = query.to_lowercase();
     let mut hits = Vec::new();
     for file in files.into_iter() {
