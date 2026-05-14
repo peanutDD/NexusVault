@@ -210,6 +210,20 @@
     --selection-check-icon-hover: rgba(var(--rgb-white), 1);
     --selection-check-surface: rgba(var(--rgb-white), 0.03);
     --selection-check-surface-hover: rgba(var(--rgb-white), 0.08);
+    --selection-check-unselected-surface: rgba(var(--rgb-slate-950), 0.58);
+    --selection-check-unselected-surface-hover: rgba(var(--rgb-slate-950), 0.72);
+    --selection-check-unselected-border: rgba(var(--rgb-white), 0.74);
+    --selection-check-unselected-border-hover: rgba(var(--rgb-white), 0.95);
+    --selection-check-unselected-ring: rgba(var(--rgb-white), 0.96);
+    --selection-check-unselected-ring-hover: rgba(var(--rgb-white), 1);
+    --selection-check-unselected-shadow:
+        0 0 0 0.03125rem rgba(var(--rgb-black), 0.55),
+        0 0 clamp(0.35rem, 0.9vw, 0.55rem) rgba(var(--rgb-white), 0.24),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.18);
+    --selection-check-unselected-shadow-hover:
+        0 0 0 0.03125rem rgba(var(--rgb-black), 0.65),
+        0 0 clamp(0.45rem, 1vw, 0.7rem) rgba(var(--rgb-white), 0.34),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.24);
     --selection-check-crystal-border: rgba(var(--rgb-white), 0.92);
     --selection-check-crystal-border-hover: rgba(var(--rgb-white), 1);
     --selection-check-crystal-inset-top: rgba(var(--rgb-white), 0.72);
@@ -921,6 +935,8 @@
     --filters-pill-text: rgba(var(--rgb-white), 0.9);
     --filters-value-bg: rgba(var(--rgb-white), 0.11);
     --filters-value-border: rgba(var(--rgb-white), 0.1);
+    --filters-dropdown-surface-bg-top: rgba(var(--rgb-slate-950), 0.92);
+    --filters-dropdown-surface-bg-bottom: rgba(var(--rgb-black), 0.88);
     --filters-dropdown-item-text: rgba(var(--rgb-white), 0.8);
     --filters-dropdown-item-text-hover: rgba(var(--rgb-white), 0.95);
     --filters-dropdown-item-selected-text: rgba(var(--rgb-white), 0.98);
@@ -930,6 +946,7 @@
     --filters-dropdown-check: rgba(var(--rgb-malachite-500), 0.75);
 
     --filters-dropdown-z: 45;
+    --filters-dropdown-toolbar-z: 49;
     --filters-dropdown-max-h: min(50vh, 16rem);
     --filters-dropdown-font-size: var(--font-size-ui-3xs);
 
@@ -1803,6 +1820,9 @@
     --filters-dropdown-item-text-hover-1: var(--filters-dropdown-item-text-hover);
     --filters-dropdown-max-h-1: var(--filters-dropdown-max-h);
     --filters-dropdown-scrollbar-thumb-1: var(--filters-dropdown-scrollbar-thumb);
+    --filters-dropdown-surface-bg-bottom-1: var(--filters-dropdown-surface-bg-bottom);
+    --filters-dropdown-surface-bg-top-1: var(--filters-dropdown-surface-bg-top);
+    --filters-dropdown-toolbar-z-1: var(--filters-dropdown-toolbar-z);
     --filters-dropdown-z-1: var(--filters-dropdown-z);
     --filters-icon-1: var(--filters-icon);
     --filters-pill-text-1: var(--filters-pill-text);
@@ -2684,6 +2704,20 @@
     --selection-check-icon-hover: rgb(187, 220, 229);
     --selection-check-surface: rgb(var(--rgb-white));
     --selection-check-surface-hover: rgb(var(--rgb-white));
+    --selection-check-unselected-surface: rgba(var(--rgb-white), 0.94);
+    --selection-check-unselected-surface-hover: rgba(var(--rgb-white), 1);
+    --selection-check-unselected-border: rgba(var(--rgb-slate-950), 0.42);
+    --selection-check-unselected-border-hover: rgba(var(--rgb-slate-950), 0.62);
+    --selection-check-unselected-ring: rgba(var(--rgb-slate-950), 0.7);
+    --selection-check-unselected-ring-hover: rgba(var(--rgb-slate-950), 0.86);
+    --selection-check-unselected-shadow:
+        0 0 0 0.03125rem rgba(var(--rgb-white), 0.9),
+        0 clamp(0.08rem, 0.22vw, 0.12rem) clamp(0.3rem, 0.8vw, 0.45rem) rgba(var(--rgb-slate-950), 0.22),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.86);
+    --selection-check-unselected-shadow-hover:
+        0 0 0 0.03125rem rgba(var(--rgb-white), 1),
+        0 clamp(0.1rem, 0.26vw, 0.16rem) clamp(0.38rem, 0.9vw, 0.56rem) rgba(var(--rgb-slate-950), 0.3),
+        inset 0 1px 0 rgba(var(--rgb-white), 0.94);
     --selection-check-crystal-border: rgb(187, 220, 229);
     --selection-check-crystal-border-hover: rgb(187, 220, 229);
     --selection-check-crystal-inset-top: rgba(187, 220, 229, 0.56);
@@ -2732,6 +2766,8 @@
     --filters-pill-text: rgba(var(--rgb-slate-950), 0.9);
     --filters-value-bg: rgba(var(--rgb-black), 0.04);
     --filters-value-border: rgba(var(--rgb-black), 0.06);
+    --filters-dropdown-surface-bg-top: rgba(var(--rgb-white), 0.96);
+    --filters-dropdown-surface-bg-bottom: rgba(var(--rgb-white), 0.92);
     --filters-dropdown-item-text: rgba(var(--rgb-slate-950), 0.8);
     --filters-dropdown-item-text-hover: rgba(var(--rgb-slate-950), 0.92);
     --filters-dropdown-item-selected-text: rgba(var(--rgb-slate-950), 0.96);

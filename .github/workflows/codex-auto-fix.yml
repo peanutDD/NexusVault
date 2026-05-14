@@ -39,7 +39,7 @@ env:
     fi
 
 concurrency:
-  group: codex-auto-fix-${{ github.ref }}-${{ github.actor }}
+  group: codex-auto-fix-pr-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -287,6 +287,13 @@ jobs:
 
           if [[ -z "${CODEX_AGENT_COMMAND:-}" ]]; then
             echo "::error::CODEX_AGENT_COMMAND is not configured. Set repository secret or variable CODEX_AGENT_COMMAND to the real local Codex executor, not codex-auto-fix."
+            exit 1
+          fi
+
+          DOCTOR_JSON="$(cargo run --manifest-path scripts/codex-cli/Cargo.toml --bin codex-auto-fix -- doctor --json)"
+          echo "$DOCTOR_JSON" | jq -r '.checks[] | "[\(.status)] \(.name): \(.message)"'
+          if echo "$DOCTOR_JSON" | jq -e '.checks[] | select(.name == "agent.command" and .status == "warning")' >/dev/null; then
+            echo "::error::CODEX_AGENT_COMMAND is not safe for auto-fix. It is missing or recursively points to codex-auto-fix; set it to the real Codex CLI executor."
             exit 1
           fi
 

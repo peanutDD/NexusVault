@@ -92,8 +92,14 @@ fn codex_auto_fix_concurrency_serializes_without_canceling_active_runs() {
         "workflow-level concurrency is required to serialize same-PR review runs before they contend for the self-hosted runner"
     );
     assert!(
-        top_level.contains("github.ref") && top_level.contains("github.actor"),
-        "workflow-level concurrency must use fields available during workflow initialization"
+        top_level.contains("codex-auto-fix-pr-")
+            && top_level.contains("github.event.issue.number")
+            && top_level.contains("github.event.pull_request.number"),
+        "workflow-level concurrency must use the PR number, not github.ref/actor, so unrelated PRs do not stale-block each other"
+    );
+    assert!(
+        !top_level.contains("github.ref }}-${{ github.actor"),
+        "github.ref/actor concurrency can serialize unrelated issue_comment review runs on the default branch"
     );
     assert!(
         top_level.contains("  cancel-in-progress: false"),
@@ -126,6 +132,28 @@ fn codex_auto_fix_serial_runner_has_timeouts() {
         workflow.contains("name: Auto-fix queue guard diagnostics")
             && workflow.contains("codex_queue_group=codex-auto-fix-${PR_NUMBER}"),
         "codex-fix should print queue guard diagnostics so stale-run waits are explainable"
+    );
+}
+
+#[test]
+fn codex_auto_fix_runs_doctor_before_long_auto_fix_step() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    let doctor_index = workflow
+        .find("doctor --json")
+        .expect("workflow should run codex-auto-fix doctor before pr-auto-fix");
+    let auto_fix_index = workflow
+        .find("pr-auto-fix \\")
+        .expect("workflow should run pr-auto-fix");
+
+    assert!(
+        doctor_index < auto_fix_index,
+        "doctor should fail fast before the expensive auto-fix command starts"
+    );
+    assert!(
+        workflow.contains("select(.name == \"agent.command\" and .status == \"warning\")"),
+        "workflow should stop when CODEX_AGENT_COMMAND is missing or recursively points to codex-auto-fix"
     );
 }
 

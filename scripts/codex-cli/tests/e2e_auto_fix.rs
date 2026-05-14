@@ -44,6 +44,65 @@ fn auto_fix_local_applies_patch_with_local_codex_command() {
 }
 
 #[test]
+fn auto_fix_local_accepts_inline_review_text() {
+    let workspace = TestWorkspace::new("inline-review-text");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(&repo, "AGENTS.md", "只修复 Review 文本指出的代码问题。\n");
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let fake_agent = workspace.fake_agent("success");
+    let output =
+        run_auto_fix_with_review_text(&repo, "## Review\n\nMedium: fix value.", &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["has_pending"], false);
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
+fn pr_auto_fix_rejects_ambiguous_review_text_aliases() {
+    let workspace = TestWorkspace::new("ambiguous-review-text");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(&repo, "AGENTS.md", "只修复 Review 文本指出的问题。\n");
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+    let fake_agent = workspace.fake_agent("success");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"))
+        .args([
+            "pr-auto-fix",
+            "--pr-number",
+            "24",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--review-text",
+            "new input",
+            "--gemini-review",
+            "old input",
+            "--no-pr-comments",
+            "--disable-changelog",
+        ])
+        .env("CODEX_AGENT_COMMAND", fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30")
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    assert!(
+        stderr(&output).contains("不能同时提供 --review-text 和 --gemini-review"),
+        "stderr={}",
+        stderr(&output)
+    );
+}
+
+#[test]
 fn auto_fix_local_prefers_search_replace_blocks() {
     let workspace = TestWorkspace::new("sr-success");
     let repo = workspace.create_repo();
@@ -941,6 +1000,32 @@ fn run_auto_fix_with_agent_timeout(
         ])
         .env("CODEX_AGENT_COMMAND", fake_agent)
         .env("CODEX_AGENT_TIMEOUT_SECONDS", agent_timeout_seconds);
+    if yes {
+        command.arg("--yes");
+    }
+    command.output().unwrap()
+}
+
+fn run_auto_fix_with_review_text(
+    repo: &Path,
+    review_text: &str,
+    fake_agent: &Path,
+    yes: bool,
+) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    command
+        .args([
+            "auto-fix-local",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--review-text",
+            review_text,
+            "--disable-changelog",
+            "--max-rounds",
+            "2",
+        ])
+        .env("CODEX_AGENT_COMMAND", fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30");
     if yes {
         command.arg("--yes");
     }
