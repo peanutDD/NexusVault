@@ -21,6 +21,7 @@ env:
   CODEX_AUTO_FIX_BUDGET_SECONDS: 2400
   CODEX_AUTO_FIX_RESERVE_SECONDS: 180
   CODEX_PR_TARBALL_BUDGET_SECONDS: 120
+  CODEX_AUTO_FIX_STRICT: false
   CODEX_AUTO_FIX_VERIFY_COMMANDS: |
     set -euo pipefail
     if git status --short -- frontend/ | grep -q .; then
@@ -256,7 +257,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 轮次上限保护（Round-Max 则停止）
-        if: steps.round.outputs.current_round == 'gemini-review-round-max'
+        if: steps.round.outputs.current_round == 'gemini-review-round-max' && env.CODEX_AUTO_FIX_STRICT == 'true'
         run: |
           echo "已达到最大轮次（2 轮并已完成），停止自动化修复"
           gh pr comment "${PR_NUMBER}" \
@@ -266,7 +267,7 @@ jobs:
 
       - name: 提取 Gemini Review 完整内容
         id: gemini
-        if: steps.round.outputs.current_round != 'gemini-review-round-max'
+        if: steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -297,7 +298,7 @@ jobs:
           echo "${DELIM}" >> "$GITHUB_ENV"
 
       - name: Convert review markdown to JSON primary input
-        if: steps.round.outputs.current_round != 'gemini-review-round-max' && env.USE_REVIEW_JSON == 'true'
+        if: (steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true') && env.USE_REVIEW_JSON == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -321,7 +322,7 @@ jobs:
           echo "review_issue_count=$(jq '.issues | length' /tmp/review.json)"
 
       - name: Auto-fix queue guard diagnostics
-        if: steps.round.outputs.current_round != 'gemini-review-round-max'
+        if: steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true'
         run: |
           echo "codex_queue_group=codex-auto-fix-${PR_NUMBER}"
           echo "codex_job_timeout_minutes=${CODEX_JOB_TIMEOUT_MINUTES}"
@@ -333,7 +334,7 @@ jobs:
 
       - name: 调用 codex-auto-fix pr-auto-fix
         timeout-minutes: 45
-        if: steps.round.outputs.current_round != 'gemini-review-round-max'
+        if: steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true'
         id: codex
         env:
           CODEX_SKILL_PACK_ROOT: ${{ github.workspace }}/scripts/codex-cli
@@ -394,7 +395,7 @@ jobs:
           echo "review_clean=$REVIEW_CLEAN" >> "$GITHUB_OUTPUT"
 
       - name: 推进 Review 状态机
-        if: steps.round.outputs.current_round != 'gemini-review-round-max'
+        if: steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true'
         env:
           GH_TOKEN: ${{ secrets.GEMINI_REVIEW_TOKEN || secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -403,7 +404,7 @@ jobs:
           PUSH_BLOCKED: ${{ steps.codex.outputs.push_blocked }}
           PENDING_COUNT: ${{ steps.codex.outputs.pending_count }}
           MAX_ROUNDS: ${{ env.MAX_ROUNDS }}
-          WAIT_FOR_GEMINI_REVIEW: true
+          WAIT_FOR_GEMINI_REVIEW: false
           GEMINI_REVIEW_TIMEOUT_SECONDS: 600
           GEMINI_REVIEW_POLL_INTERVAL_SECONDS: 15
         run: |

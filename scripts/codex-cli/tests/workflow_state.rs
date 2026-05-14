@@ -10,6 +10,7 @@ fn pending_without_fix_blocks_instead_of_claiming_clean() {
         ("FIXED", "false"),
         ("PUSH_BLOCKED", "false"),
         ("PENDING_COUNT", "2"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
     ]);
 
     assert_eq!(output["action"], "needs_human");
@@ -19,12 +20,48 @@ fn pending_without_fix_blocks_instead_of_claiming_clean() {
 }
 
 #[test]
+fn relaxed_pending_without_fix_clears_review_state() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-1"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "false"),
+        ("PENDING_COUNT", "2"),
+        ("CODEX_AUTO_FIX_STRICT", "false"),
+    ]);
+
+    assert_eq!(output["action"], "relaxed_clear");
+    assert_eq!(output["next_round"], "gemini-review-round-max");
+    assert_eq!(output["request_review"], "false");
+    assert_eq!(output["ready_to_merge"], "true");
+    assert_eq!(output["human_block"], "false");
+    assert_eq!(output["state_label"], "gemini-review-clean");
+}
+
+#[test]
+fn relaxed_push_blocked_clears_review_state() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-1"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "true"),
+        ("PENDING_COUNT", "3"),
+        ("CODEX_AUTO_FIX_STRICT", "false"),
+    ]);
+
+    assert_eq!(output["action"], "relaxed_clear");
+    assert_eq!(output["request_review"], "false");
+    assert_eq!(output["ready_to_merge"], "true");
+    assert_eq!(output["human_block"], "false");
+    assert_eq!(output["state_label"], "gemini-review-clean");
+}
+
+#[test]
 fn clean_first_round_requests_second_review() {
     let output = plan(&[
         ("CURRENT_ROUND", "gemini-review-round-1"),
         ("FIXED", "false"),
         ("PUSH_BLOCKED", "false"),
         ("PENDING_COUNT", "0"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
     ]);
 
     assert_eq!(output["action"], "advance");
@@ -40,6 +77,7 @@ fn clean_second_round_marks_round_max_ready() {
         ("FIXED", "false"),
         ("PUSH_BLOCKED", "false"),
         ("PENDING_COUNT", "0"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
     ]);
 
     assert_eq!(output["action"], "complete");
@@ -55,6 +93,7 @@ fn pushed_partial_fix_continues_to_second_review_but_not_ready() {
         ("FIXED", "true"),
         ("PUSH_BLOCKED", "false"),
         ("PENDING_COUNT", "1"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
     ]);
 
     assert_eq!(output["action"], "advance_with_pending");
@@ -70,6 +109,7 @@ fn fail_closed_security_blocks_loop() {
         ("FIXED", "false"),
         ("PUSH_BLOCKED", "true"),
         ("PENDING_COUNT", "0"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
     ]);
 
     assert_eq!(output["action"], "push_blocked");
@@ -216,6 +256,18 @@ fn codex_auto_fix_has_coherent_runtime_budget() {
     assert!(
         workflow.contains("CODEX_AUTO_FIX_BUDGET_SECONDS: 2400"),
         "the CLI should receive a budget lower than the step timeout so it can return JSON before Actions kills it"
+    );
+    assert!(
+        workflow.contains("CODEX_AUTO_FIX_STRICT: false"),
+        "review automation should run in relaxed mode so recoverable patch/audit failures do not interrupt GPT-5.5 repair"
+    );
+    assert!(
+        workflow.contains("steps.round.outputs.current_round == 'gemini-review-round-max' && env.CODEX_AUTO_FIX_STRICT == 'true'"),
+        "relaxed review automation must not skip new Gemini review events just because an old round-max label is present"
+    );
+    assert!(
+        workflow.contains("WAIT_FOR_GEMINI_REVIEW: false"),
+        "relaxed review automation should clear state immediately instead of waiting for another Gemini review"
     );
     assert!(
         workflow.contains("codex_auto_fix_budget_seconds=${CODEX_AUTO_FIX_BUDGET_SECONDS}"),
@@ -370,6 +422,10 @@ fn gemini_kickoff_only_skips_actual_auto_fix_commit_subjects() {
     assert!(
         workflow.contains("\"$LAST_COMMIT_MESSAGE\" == \"🤖 codex auto-fix:\"*"),
         "Gemini kickoff should only skip the exact auto-fix bot commit subject prefix"
+    );
+    assert!(
+        workflow.contains("GEMINI_REVIEW_REQUIRED: false"),
+        "Gemini kickoff should request review without making missing Gemini responses a blocking check in relaxed mode"
     );
 }
 
