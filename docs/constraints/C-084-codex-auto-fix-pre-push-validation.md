@@ -6,7 +6,8 @@ Required guard:
 
 - `CODEX_AUTO_FIX_VERIFY_COMMANDS` runs inside `codex-auto-fix` before `git add`, `git commit`, or `git push`.
 - A non-zero verification exit blocks the auto-fix commit and leaves the PR for human inspection.
-- Frontend changes must run dependency install, lint, and TypeScript checks before publish so generated imports cannot introduce undeclared packages.
+- Frontend changes must run fail-fast dependency install, lint, and TypeScript checks before publish so generated imports cannot introduce undeclared packages.
+- Self-hosted runner frontend verification must use `npm ci --ignore-scripts` and `npx --no-install tsc` so native optional build steps such as `canvas` cannot hide TypeScript validation behind local Node/toolchain drift.
 
 Regression test:
 

@@ -21,11 +21,12 @@ env:
   CODEX_AUTO_FIX_BUDGET_SECONDS: 2400
   CODEX_AUTO_FIX_RESERVE_SECONDS: 180
   CODEX_AUTO_FIX_VERIFY_COMMANDS: |
+    set -euo pipefail
     if git status --short -- frontend/ | grep -q .; then
       cd frontend
-      npm ci
+      npm ci --ignore-scripts
       npm run lint
-      npx tsc -b --noEmit
+      npx --no-install tsc -b --noEmit
     fi
 
 concurrency:

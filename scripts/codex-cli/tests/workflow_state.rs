@@ -206,10 +206,11 @@ fn codex_auto_fix_runs_frontend_pre_push_validation() {
     );
     assert!(
         workflow.contains("git status --short -- frontend/")
-            && workflow.contains("npm ci")
+            && workflow.contains("set -euo pipefail")
+            && workflow.contains("npm ci --ignore-scripts")
             && workflow.contains("npm run lint")
-            && workflow.contains("npx tsc -b --noEmit"),
-        "frontend auto-fix changes must run install, lint, and typecheck before commit/push"
+            && workflow.contains("npx --no-install tsc -b --noEmit"),
+        "frontend auto-fix changes must run fail-fast install, lint, and typecheck before commit/push without compiling native install scripts"
     );
 }
 
