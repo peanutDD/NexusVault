@@ -20,6 +20,7 @@ env:
   CODEX_AGENT_TIMEOUT_SECONDS: 360
   CODEX_AUTO_FIX_BUDGET_SECONDS: 2400
   CODEX_AUTO_FIX_RESERVE_SECONDS: 180
+  CODEX_PR_TARBALL_BUDGET_SECONDS: 120
   CODEX_AUTO_FIX_VERIFY_COMMANDS: |
     set -euo pipefail
     if git status --short -- frontend/ | grep -q .; then
@@ -72,6 +73,15 @@ jobs:
           HEAD_REF="$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json headRefName -q '.headRefName')"
           HEAD_SHA="$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json headRefOid -q '.headRefOid')"
           echo "PR head: ${HEAD_REF}@${HEAD_SHA}"
+          bootstrap_started_at="$(date +%s)"
+
+          log_bootstrap() {
+            local status="$1"
+            local now
+            now="$(date +%s)"
+            shift
+            echo "bootstrap_status=${status} elapsed=$((now - bootstrap_started_at))s $*"
+          }
 
           archive_is_valid() {
             tar -tzf "$1" >/dev/null 2>&1
@@ -80,24 +90,25 @@ jobs:
           download_pr_head_archive() {
             local archive="$1"
             local tmp_archive="${archive}.tmp"
-            local api_path="repos/${GITHUB_REPOSITORY}/tarball/${HEAD_SHA}"
-            local api_url="https://api.github.com/${api_path}"
+            local api_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${HEAD_SHA}"
+            local tarball_budget="${CODEX_PR_TARBALL_BUDGET_SECONDS:-120}"
+            local tarball_deadline=$(( $(date +%s) + tarball_budget ))
+            local attempt=1
 
             rm -f "${archive}" "${tmp_archive}"
-            for attempt in 1 2 3 4 5; do
-              if gh api -H "Accept: application/vnd.github+json" "${api_path}" > "${tmp_archive}" \
-                && archive_is_valid "${tmp_archive}"; then
-                mv "${tmp_archive}" "${archive}"
-                return 0
+            while [[ "$(date +%s)" -lt "${tarball_deadline}" ]]; do
+              local remaining=$((tarball_deadline - $(date +%s)))
+              if [[ "${remaining}" -lt 15 ]]; then
+                break
               fi
 
-              rm -f "${tmp_archive}"
+              log_bootstrap downloading "attempt=${attempt} remaining=${remaining}s path=curl-http1.1"
               if curl --fail --location --silent --show-error \
                 --http1.1 \
-                --retry 3 \
+                --retry 1 \
                 --retry-all-errors \
-                --connect-timeout 20 \
-                --max-time 180 \
+                --connect-timeout 10 \
+                --max-time 45 \
                 -H "Authorization: Bearer ${GH_TOKEN}" \
                 -H "Accept: application/vnd.github+json" \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -108,19 +119,54 @@ jobs:
                 return 0
               fi
 
+              local bytes=0
+              if [[ -f "${tmp_archive}" ]]; then
+                bytes="$(wc -c < "${tmp_archive}" | tr -d ' ')"
+              fi
               rm -f "${tmp_archive}"
-              echo "::warning::PR tarball download failed for ${HEAD_SHA}, attempt ${attempt}/5"
-              sleep $((attempt * 10))
+              echo "::warning::PR tarball download failed for ${HEAD_SHA}, attempt ${attempt}, bytes=${bytes}, remaining=${remaining}s"
+              sleep 5
+              attempt=$((attempt + 1))
             done
+
+            echo "bootstrap_status=blocked reason=tarball_budget_exhausted"
+            log_bootstrap blocked "tarball budget exhausted after ${tarball_budget}s"
 
             return 1
           }
 
           workspace="${GITHUB_WORKSPACE}"
           seed="${CODEX_LOCAL_REPO_SEED}"
+          mirror="${CODEX_LOCAL_BARE_MIRROR:-}"
           mkdir -p "${workspace}"
 
+          is_bare_mirror() {
+            [[ -n "$1" ]] && [[ -d "$1" ]] && git -C "$1" rev-parse --is-bare-repository >/dev/null 2>&1
+          }
+
+          sync_local_bare_mirror() {
+            if ! is_bare_mirror "${mirror}"; then
+              log_bootstrap local "bare mirror unavailable at ${mirror}; using seed/tarball fallback"
+              return 0
+            fi
+
+            log_bootstrap local "refreshing bare mirror ${mirror}"
+            git -C "${mirror}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+            git -C "${mirror}" \
+              -c http.lowSpeedLimit=1024 \
+              -c http.lowSpeedTime=30 \
+              fetch --prune origin \
+              "+refs/heads/*:refs/heads/*" \
+              "+refs/pull/*/head:refs/pull/*/head" || true
+          }
+
+          sync_local_bare_mirror
+
           if [[ -d "${workspace}/.git" ]]; then
+            git -C "${workspace}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+          elif is_bare_mirror "${mirror}"; then
+            log_bootstrap local "cloning bare mirror ${mirror}"
+            git clone --no-hardlinks "${mirror}" "${workspace}"
             git -C "${workspace}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
           elif [[ -d "${seed}/.git" ]]; then
             git clone --no-hardlinks "${seed}" "${workspace}"
@@ -135,7 +181,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          hydrate_from_local_sources() {
+            if is_bare_mirror "${mirror}"; then
+              log_bootstrap local "hydrating from bare mirror ${mirror}"
+              git fetch --no-tags "${mirror}" \
+                "+refs/heads/*:refs/remotes/local-mirror/*" \
+                "+refs/pull/*:refs/remotes/local-pr/*" || true
+            fi
+
+            if [[ -d "${seed}/.git" ]]; then
+              log_bootstrap local "hydrating from seed ${seed}"
+              git fetch --no-tags "${seed}" \
+                "+refs/heads/*:refs/remotes/local-seed/*" \
+                "+refs/pull/*:refs/remotes/local-seed-pr/*" || true
+            fi
+          }
+
           exact_head=false
+          hydrate_from_local_sources
           if git cat-file -e "${HEAD_SHA}^{commit}" 2>/dev/null; then
             git checkout -B "${HEAD_REF}" "${HEAD_SHA}"
             git reset --hard "${HEAD_SHA}"
@@ -160,6 +223,10 @@ jobs:
           fi
 
           if [[ "${exact_head}" != "true" ]]; then
+            echo "bootstrap_status=blocked reason=exact_head_unverified"
+            log_bootstrap blocked "Cannot verify exact PR head ${HEAD_SHA}; refusing to run auto-fix on a stale local seed."
+            gh pr comment "${PR_NUMBER}" \
+              --body "**Codex checkout/bootstrap blocked.** Cannot verify exact PR head \`${HEAD_SHA}\` from local mirror/seed or the bounded GitHub tarball fallback, so auto-fix stopped before review execution. Re-run after the local mirror catches up or GitHub tarball streaming recovers." || true
             echo "::error::Cannot verify exact PR head ${HEAD_SHA}; refusing to run auto-fix on a stale local seed."
             exit 1
           fi
@@ -167,6 +234,7 @@ jobs:
           echo "CODEX_PUBLISH_VIA_GH_API=true" >> "${GITHUB_ENV}"
           echo "Checked out PR branch ${HEAD_REF} with resilient local/API bootstrap."
         env:
+          CODEX_LOCAL_BARE_MIRROR: /Users/tyone/github/upload-download-util.git
           CODEX_LOCAL_REPO_SEED: /Users/tyone/github/upload-download-util
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -301,6 +301,22 @@ fn codex_auto_fix_bootstraps_pr_head_without_git_https_checkout() {
         "workflow should seed the workspace from a local repository before contacting GitHub"
     );
     assert!(
+        workflow.contains("CODEX_LOCAL_BARE_MIRROR"),
+        "workflow should prefer a maintained local bare mirror before falling back to network tarballs"
+    );
+    assert!(
+        workflow.contains("sync_local_bare_mirror"),
+        "workflow should maintain the local bare mirror instead of assuming another process refreshed it"
+    );
+    assert!(
+        workflow.contains("http.lowSpeedTime=30"),
+        "local mirror refresh should bound stalled Git transfers before falling back"
+    );
+    assert!(
+        workflow.contains("hydrate_from_local_sources"),
+        "workflow should try to hydrate missing PR head commits from local sources before GitHub tarballs"
+    );
+    assert!(
         workflow.contains("headRefOid") && workflow.contains("headRefName"),
         "workflow should resolve the exact PR head branch and SHA through the GitHub API"
     );
@@ -310,14 +326,27 @@ fn codex_auto_fix_bootstraps_pr_head_without_git_https_checkout() {
     );
     assert!(
         workflow.contains("download_pr_head_archive")
-            && workflow.contains("for attempt in 1 2 3 4 5"),
-        "workflow should retry transient PR tarball stream failures before failing closed"
+            && workflow.contains("CODEX_PR_TARBALL_BUDGET_SECONDS")
+            && workflow.contains("tarball_deadline"),
+        "workflow should retry transient PR tarball stream failures inside a hard total budget before failing closed"
     );
     assert!(
         workflow.contains("curl")
             && workflow.contains("--http1.1")
             && workflow.contains("--retry-all-errors"),
         "workflow should fall back to HTTP/1.1 curl retries when gh api streaming is cancelled"
+    );
+    assert!(
+        workflow.contains("--max-time 45"),
+        "each tarball network attempt should be bounded so bootstrap cannot burn the review budget"
+    );
+    assert!(
+        workflow.contains("bootstrap_status=blocked"),
+        "workflow should expose checkout/bootstrap blocked status instead of making failures look like review failures"
+    );
+    assert!(
+        workflow.contains("Codex checkout/bootstrap blocked"),
+        "workflow should post a clear PR comment when exact PR head bootstrap is blocked"
     );
     assert!(
         workflow.contains("Cannot verify exact PR head"),
