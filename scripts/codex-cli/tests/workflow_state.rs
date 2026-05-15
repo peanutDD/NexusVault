@@ -169,6 +169,10 @@ fn codex_auto_fix_serial_runner_has_timeouts() {
         "the local Codex child process should have a bounded timeout below the step timeout"
     );
     assert!(
+        workflow.contains("CODEX_AGENT_MODEL: gpt-5.5"),
+        "auto-fix should force the intended GPT-5.5 model instead of inheriting an interactive Codex profile"
+    );
+    assert!(
         workflow.contains("name: Auto-fix queue guard diagnostics")
             && workflow.contains("codex_queue_group=codex-auto-fix-${PR_NUMBER}"),
         "codex-fix should print queue guard diagnostics so stale-run waits are explainable"
@@ -260,6 +264,14 @@ fn codex_auto_fix_has_coherent_runtime_budget() {
     assert!(
         workflow.contains("CODEX_AUTO_FIX_STRICT: false"),
         "review automation should run in relaxed mode so recoverable patch/audit failures do not interrupt GPT-5.5 repair"
+    );
+    assert!(
+        workflow.contains("CODEX_AUTO_FIX_DIRECT_FULL_FILE: true"),
+        "relaxed review automation should write complete files directly instead of blocking on patch context mismatch"
+    );
+    assert!(
+        workflow.contains("CODEX_AGENT_MODEL: ${{ env.CODEX_AGENT_MODEL }}"),
+        "codex-fix should pass the model override into codex-cli"
     );
     assert!(
         workflow.contains("steps.round.outputs.current_round == 'gemini-review-round-max' && env.CODEX_AUTO_FIX_STRICT == 'true'"),

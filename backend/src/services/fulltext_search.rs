@@ -15,6 +15,10 @@ use uuid::Uuid;
 
 use crate::utils::AppError;
 
+mod snippet;
+
+use snippet::{match_source, snippet};
+
 #[derive(Debug, Clone)]
 pub struct SearchDocument {
     pub file_id: Uuid,
@@ -239,52 +243,6 @@ fn text_field(doc: &TantivyDocument, field: Field) -> Option<String> {
     doc.get_first(field)
         .and_then(|value| value.as_str())
         .map(ToOwned::to_owned)
-}
-
-fn snippet<const N: usize>(query: &str, parts: [&str; N]) -> String {
-    let query_lower = query.to_lowercase();
-    for part in parts {
-        if let Some(match_start) = case_insensitive_char_match_start(part, &query_lower) {
-            let start = match_start.saturating_sub(48);
-            return part
-                .chars()
-                .skip(start)
-                .take(match_start - start + query.chars().count() + 96)
-                .collect();
-        }
-    }
-    parts
-        .into_iter()
-        .find(|part| !part.trim().is_empty())
-        .unwrap_or("")
-        .chars()
-        .take(160)
-        .collect()
-}
-
-fn case_insensitive_char_match_start(part: &str, query_lower: &str) -> Option<usize> {
-    part.char_indices()
-        .enumerate()
-        .find_map(|(char_index, (byte_index, _))| {
-            part[byte_index..]
-                .to_lowercase()
-                .starts_with(query_lower)
-                .then_some(char_index)
-        })
-}
-
-fn match_source(query: &str, filename: &str, ocr: &str, category: &str) -> String {
-    let q = query.to_lowercase();
-    if filename.to_lowercase().contains(&q) {
-        "filename"
-    } else if ocr.to_lowercase().contains(&q) {
-        "ocr"
-    } else if category.to_lowercase().contains(&q) {
-        "category"
-    } else {
-        "content"
-    }
-    .to_string()
 }
 
 fn to_app_error(error: impl std::fmt::Display) -> AppError {

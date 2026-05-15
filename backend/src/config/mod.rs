@@ -91,6 +91,9 @@ impl Config {
             .set_default("search.fulltext_search_enabled", "true")?
             .set_default("search.fulltext_index_path", "search-index")?
             .set_default("search.ocr_enabled", "false")?
+            .set_default("search.ocr_tesseract_bin", "tesseract")?
+            .set_default("search.ocr_pdftoppm_bin", "pdftoppm")?
+            .set_default("search.ocr_pdf_max_pages", 5)?
             .set_default("cache.enabled", "true")?
             .set_default("cache.default_ttl_secs", "60")?
             .set_default("cache.list_ttl_secs", "20")?
@@ -181,6 +184,9 @@ impl Config {
             ("FULLTEXT_SEARCH_ENABLED", "search.fulltext_search_enabled"),
             ("SEARCH_INDEX_PATH", "search.fulltext_index_path"),
             ("OCR_ENABLED", "search.ocr_enabled"),
+            ("OCR_TESSERACT_BIN", "search.ocr_tesseract_bin"),
+            ("OCR_PDFTOPPM_BIN", "search.ocr_pdftoppm_bin"),
+            ("OCR_PDF_MAX_PAGES", "search.ocr_pdf_max_pages"),
             ("CACHE_ENABLED", "cache.enabled"),
             ("CACHE_DEFAULT_TTL_SECS", "cache.default_ttl_secs"),
             ("LIST_CACHE_TTL_SECS", "cache.list_ttl_secs"),
@@ -324,6 +330,9 @@ impl Config {
                     .to_string_lossy()
                     .to_string(),
                 ocr_enabled: false,
+                ocr_tesseract_bin: "tesseract".to_string(),
+                ocr_pdftoppm_bin: "pdftoppm".to_string(),
+                ocr_pdf_max_pages: 5,
             },
             cache: CacheConfig {
                 enabled: true,

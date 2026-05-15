@@ -2,12 +2,15 @@ use axum::extract::{Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use serde_json::json;
-use tokio::sync::OnceCell;
 use uuid::Uuid;
 
 use crate::{
     extractors::auth::AuthenticatedUser,
-    services::fulltext_search::{SearchDocument, SearchHit, SearchIndexService},
+    models::file::FileResponse,
+    services::{
+        fulltext_search::{SearchDocument, SearchHit},
+        ocr::OcrExtractor,
+    },
     utils::{json_response, AppError},
     AppState,
 };
@@ -23,16 +26,6 @@ pub struct FulltextSearchQuery {
 
 fn default_limit() -> usize {
     20
-}
-
-static SEARCH_INDEX: OnceCell<SearchIndexService> = OnceCell::const_new();
-
-async fn shared_search_index(state: &AppState) -> Result<&'static SearchIndexService, AppError> {
-    SEARCH_INDEX
-        .get_or_try_init(|| async {
-            SearchIndexService::open_or_create(&state.config.search.fulltext_index_path)
-        })
-        .await
 }
 
 pub async fn fulltext_search_handler(
@@ -53,9 +46,8 @@ pub async fn fulltext_search_handler(
         return Err(AppError::File("全文搜索功能未启用".to_string()));
     }
 
-    let index = shared_search_index(&state).await?;
     let folder_prefix = params.folder_id.map(|id| format!("/{id}/"));
-    let mut hits = index.search(
+    let mut hits = state.search_index.search(
         user_id,
         query,
         params.limit,
@@ -77,12 +69,54 @@ pub async fn fulltext_search_handler(
         .await?;
     }
 
+    let files = materialize_hits(&state, user_id, hits).await?;
+
     Ok(json_response(json!({
         "query": query,
-        "count": hits.len(),
+        "count": files.len(),
         "index_status": index_status,
-        "results": hits,
+        "files": files,
     })))
+}
+
+pub async fn ocr_status_handler(
+    State(state): State<AppState>,
+    AuthenticatedUser(_user_id): AuthenticatedUser,
+) -> Result<Response, AppError> {
+    Ok(json_response(json!({
+        "enabled": state.config.search.ocr_enabled,
+        "pdf_max_pages": state.config.search.ocr_pdf_max_pages,
+        "tesseract": {
+            "bin": state.config.search.ocr_tesseract_bin,
+            "available": OcrExtractor::command_available(&state.config.search.ocr_tesseract_bin),
+        },
+        "poppler": {
+            "bin": state.config.search.ocr_pdftoppm_bin,
+            "available": OcrExtractor::command_available(&state.config.search.ocr_pdftoppm_bin),
+        },
+    })))
+}
+
+async fn materialize_hits(
+    state: &AppState,
+    user_id: Uuid,
+    hits: Vec<SearchHit>,
+) -> Result<Vec<serde_json::Value>, AppError> {
+    let mut files = Vec::with_capacity(hits.len());
+    for hit in hits {
+        let file = match state.file_service.get_file(hit.file_id, user_id).await {
+            Ok(file) => FileResponse::from(file),
+            Err(AppError::NotFound) => continue,
+            Err(error) => return Err(error),
+        };
+        files.push(json!({
+            "file": file,
+            "score": hit.score,
+            "snippet": hit.snippet,
+            "match_source": hit.match_source,
+        }));
+    }
+    Ok(files)
 }
 
 async fn fallback_search(

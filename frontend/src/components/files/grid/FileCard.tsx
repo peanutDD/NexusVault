@@ -119,6 +119,14 @@ const FileCard = memo(
       file.mime_type,
       file.original_filename,
     );
+    const matchSourceLabel =
+      file.match_source === "ocr"
+        ? "OCR"
+        : file.match_source === "filename"
+          ? "Name"
+          : file.match_source === "category"
+            ? "Tag"
+            : "Text";
 
     const handleMouseEnter = () => {
       schedulePreload(file.id);
@@ -393,6 +401,18 @@ const FileCard = memo(
               >
                 {formattedDate}
               </p>
+              {file.search_snippet && (
+                <p
+                  className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.25vw,0.55rem)] text-[var(--file-card-text-muted)]"
+                  title={file.search_snippet}
+                  data-oid="fulltext-snippet"
+                >
+                  <span className="font-medium text-[var(--file-card-text)]">
+                    {matchSourceLabel}
+                  </span>{" "}
+                  {file.search_snippet}
+                </p>
+              )}
             </div>
 
             {/* 设置按钮（与文字平行） */}

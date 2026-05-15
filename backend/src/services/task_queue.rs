@@ -17,8 +17,7 @@ use uuid::Uuid;
 // 依赖：内部模块
 // =============================================================================
 use crate::models::file::File;
-use crate::services::file_content_extractor::FileContentExtractor;
-use crate::services::fulltext_search::{SearchDocument, SearchIndexService};
+use crate::services::fulltext_indexer::FulltextIndexer;
 use crate::utils::AppError;
 
 // =============================================================================
@@ -965,28 +964,9 @@ pub async fn run_fulltext_index_worker(state: &crate::AppState) -> Result<(), Ap
         .map_err(|e| AppError::File(format!("解析 search_index_file payload 失败: {}", e)))?;
     let started_at = Instant::now();
 
-    let result = async {
-        let file = state
-            .file_service
-            .get_file(payload.file_id, payload.user_id)
-            .await?;
-        let data = state.file_service.get_file_data(&file).await?;
-        let extracted =
-            FileContentExtractor::extract_text(&data, &file.mime_type, &file.original_filename)
-                .unwrap_or_default();
-        let index = SearchIndexService::open_or_create(&state.config.search.fulltext_index_path)?;
-        index.upsert_document(SearchDocument {
-            file_id: file.id,
-            user_id: file.user_id,
-            filename: file.original_filename,
-            path: format!("/{}", file.filename),
-            extracted_text: extracted,
-            ocr_text: String::new(),
-            category: file.category.unwrap_or_default(),
-            mime_type: file.mime_type,
-        })
-    }
-    .await;
+    let result = FulltextIndexer::new(state)
+        .index_file(payload.file_id, payload.user_id)
+        .await;
 
     match result {
         Ok(()) => {
@@ -1028,8 +1008,7 @@ pub async fn run_fulltext_remove_worker(state: &crate::AppState) -> Result<(), A
     tracing::Span::current().record("task_id", tracing::field::display(task.id));
     let payload: FulltextRemovePayload = serde_json::from_value(task.payload.clone())
         .map_err(|e| AppError::File(format!("解析 search_remove_file payload 失败: {}", e)))?;
-    let result = SearchIndexService::open_or_create(&state.config.search.fulltext_index_path)
-        .and_then(|index| index.remove_document(payload.file_id));
+    let result = state.search_index.remove_document(payload.file_id);
     match result {
         Ok(()) => state.task_queue.mark_succeeded(task.id).await?,
         Err(e) => {

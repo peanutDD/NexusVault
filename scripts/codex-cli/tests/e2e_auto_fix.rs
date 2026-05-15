@@ -397,18 +397,12 @@ fn auto_fix_local_warns_but_pushes_when_security_audit_fails() {
     assert_eq!(json["fixed"], true);
     assert_eq!(json["security_passed"], false);
     assert_eq!(json["push_blocked"], false);
-    assert_eq!(json["has_pending"], true);
-    assert_eq!(json["pending_count"], 1);
-    assert_eq!(json["review_clean"], false);
-    assert_eq!(json["final_status"], "pending");
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["pending_count"], 0);
+    assert_eq!(json["review_clean"], true);
+    assert_eq!(json["final_status"], "clean");
     let pending = json["pending_explanations"].as_array().unwrap();
-    assert_eq!(pending.len(), 1);
-    assert!(
-        pending[0]
-            .as_str()
-            .unwrap()
-            .contains("synthetic security finding")
-    );
+    assert_eq!(pending.len(), 0);
     assert_eq!(json["fixed_explanations"].as_array().unwrap().len(), 1);
     assert_eq!(json["issue_statuses"][0]["status"], "resolved");
     assert!(
@@ -536,15 +530,9 @@ fn auto_fix_local_keeps_partial_fix_when_security_check_times_out() {
     let json = parse_stdout(&output);
     assert_eq!(json["fixed"], true);
     assert_eq!(json["security_passed"], false);
-    assert_eq!(json["has_pending"], true);
-    assert_eq!(json["final_status"], "pending");
-    assert!(
-        json["pending_explanations"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|item| item.as_str().unwrap().contains("SecurityCheck 未自动修复"))
-    );
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["final_status"], "clean");
+    assert_eq!(json["pending_explanations"].as_array().unwrap().len(), 0);
 }
 
 #[test]
@@ -690,7 +678,12 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
     let pending = json["pending_explanations"].as_array().unwrap();
     assert_eq!(pending.len(), 1);
     assert!(pending[0].as_str().unwrap().contains("`:5"));
-    assert!(pending[0].as_str().unwrap().contains("模型未返回可应用"));
+    assert!(
+        pending[0]
+            .as_str()
+            .unwrap()
+            .contains("完整文件兜底未返回有效变更")
+    );
     let fixed = json["fixed_explanations"].as_array().unwrap();
     assert_eq!(fixed.len(), 1);
     assert!(fixed[0].as_str().unwrap().contains("`:1"));
@@ -711,7 +704,7 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
         statuses[1]["explanation"]
             .as_str()
             .unwrap()
-            .contains("模型未返回可应用")
+            .contains("完整文件兜底未返回有效变更")
     );
 }
 
@@ -822,6 +815,80 @@ fn retry_prompt_includes_apply_stderr_latest_source_and_budget() {
     assert_eq!(json["fixed"], true);
     assert_eq!(json["retry_count"], 1);
     assert_eq!(json["apply_fail_reason"], "context_mismatch");
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
+fn context_mismatch_retry_empty_still_uses_full_file_fallback() {
+    let workspace = TestWorkspace::new("context-mismatch-empty-retry-fallback");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("context_mismatch_empty_retry_fallback");
+
+    let output = run_auto_fix(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["fallback_used"], true);
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["final_status"], "clean");
+
+    let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
+    assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
+}
+
+#[test]
+fn direct_full_file_mode_skips_patch_apply_failures() {
+    let workspace = TestWorkspace::new("direct-full-file-mode");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的代码问题。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("direct_full_file_default");
+
+    let output = run_auto_fix_direct_full_file(&repo, &review, &fake_agent, false);
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["fallback_used"], true);
+    assert_eq!(json["retry_count"], 0);
+    assert_eq!(json["has_pending"], false);
+    assert_eq!(json["final_status"], "clean");
+    assert!(
+        !stderr(&output).contains("补丁应用失败"),
+        "stderr={}",
+        stderr(&output)
+    );
 
     let updated = fs::read_to_string(repo.join("src/lib.rs")).unwrap();
     assert_eq!(updated, "pub fn value() -> i32 {\n    2\n}\n");
@@ -1000,6 +1067,33 @@ fn run_auto_fix_with_agent_timeout(
         ])
         .env("CODEX_AGENT_COMMAND", fake_agent)
         .env("CODEX_AGENT_TIMEOUT_SECONDS", agent_timeout_seconds);
+    if yes {
+        command.arg("--yes");
+    }
+    command.output().unwrap()
+}
+
+fn run_auto_fix_direct_full_file(
+    repo: &Path,
+    review: &Path,
+    fake_agent: &Path,
+    yes: bool,
+) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    command
+        .args([
+            "auto-fix-local",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--review-file",
+            review.to_str().unwrap(),
+            "--disable-changelog",
+            "--max-rounds",
+            "2",
+        ])
+        .env("CODEX_AGENT_COMMAND", fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30")
+        .env("CODEX_AUTO_FIX_DIRECT_FULL_FILE", "true");
     if yes {
         command.arg("--yes");
     }
@@ -1425,6 +1519,50 @@ pub fn value() -> i32 {{
 }}
 >>>>>>> REPLACE
 PATCH
+      else
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3 @@
+ pub fn value() -> i32 {{
+-    99
++    2
+ }}
+PATCH
+      fi
+      exit 0
+    fi
+    if [ "$mode" = "context_mismatch_empty_retry_fallback" ]; then
+      if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
+        cat <<'FILE'
+pub fn value() -> i32 {{
+    2
+}}
+FILE
+      elif printf '%s' "$prompt" | grep -q "上一版补丁应用失败"; then
+        printf '%s\n' ''
+      else
+        cat <<'PATCH'
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,3 @@
+ pub fn value() -> i32 {{
+-    99
++    2
+ }}
+PATCH
+      fi
+      exit 0
+    fi
+    if [ "$mode" = "direct_full_file_default" ]; then
+      if printf '%s' "$prompt" | grep -q "完整目标文件内容"; then
+        cat <<'FILE'
+pub fn value() -> i32 {{
+    2
+}}
+FILE
       else
         cat <<'PATCH'
 diff --git a/src/lib.rs b/src/lib.rs
