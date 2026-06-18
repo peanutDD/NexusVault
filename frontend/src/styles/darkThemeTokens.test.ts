@@ -46,18 +46,15 @@ describe("dark theme Neuromorphic tokens", () => {
   it("defines Dark as the CodePen Neuromorphic primitive palette", () => {
     const tokens = readLastCssCustomProperties(DARK_NEUROMORPHIC_SELECTOR);
 
-    expect(readToken(tokens, "--neu-bg-primary")).toBe("#374151");
-    expect(readToken(tokens, "--neu-bg-secondary")).toBe("#1f2937");
-    expect(readToken(tokens, "--neu-shadow-dark")).toBe("#111827");
-    expect(readToken(tokens, "--neu-shadow-light")).toBe("#4b5563");
-    expect(readToken(tokens, "--neu-primary")).toBe("#9333ea");
-    expect(readToken(tokens, "--neu-primary-dark")).toBe("#7c3aed");
-    expect(readToken(tokens, "--surface-page-gradient")).toBe(
-      "linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary))",
-    );
-    expect(readToken(tokens, "--filelist-page-bg")).toBe(
-      "linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary))",
-    );
+    expect(readToken(tokens, "--neu-surface-bg")).toBe("#2d3748");
+    expect(readToken(tokens, "--neu-bg-primary")).toBe("var(--neu-surface-bg)");
+    expect(readToken(tokens, "--neu-bg-secondary")).toBe("var(--neu-surface-bg)");
+    expect(readToken(tokens, "--neu-shadow-dark")).toBe("#1a202c");
+    expect(readToken(tokens, "--neu-shadow-light")).toBe("#4a5568");
+    expect(readToken(tokens, "--neu-primary")).toBe("#6366f1");
+    expect(readToken(tokens, "--neu-primary-dark")).toBe("#4f46e5");
+    expect(readToken(tokens, "--surface-page-gradient")).toBe("var(--neu-surface-bg)");
+    expect(readToken(tokens, "--filelist-page-bg")).toBe("var(--neu-surface-bg)");
   });
 
   it("maps Dark app surfaces to raised and inset Neuromorphic primitives", () => {
@@ -124,18 +121,12 @@ describe("dark theme Neuromorphic tokens", () => {
     expect(readToken(tokens, "--filelist-fireworks-trail-fill")).toBe("rgba(17, 24, 39, 0.5)");
   });
 
-  it("uses purple Neuromorphic primary actions instead of the old green dark accent", () => {
+  it("uses pure Neuromorphic primary action fills instead of gradients", () => {
     const tokens = readLastCssCustomProperties(DARK_NEUROMORPHIC_SELECTOR);
 
-    expect(readToken(tokens, "--cta-primary-bg")).toBe(
-      "linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark))",
-    );
-    expect(readToken(tokens, "--settings-action-bg")).toBe(
-      "linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark))",
-    );
-    expect(readToken(tokens, "--dialog-primary-btn-bg")).toBe(
-      "linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark))",
-    );
+    expect(readToken(tokens, "--cta-primary-bg")).toBe("var(--neu-primary)");
+    expect(readToken(tokens, "--settings-action-bg")).toBe("var(--neu-primary)");
+    expect(readToken(tokens, "--dialog-primary-btn-bg")).toBe("var(--neu-primary)");
     expect(readToken(tokens, "--filelist-folder-icon")).toBe("var(--neu-accent-text)");
     expect(readToken(tokens, "--notice-info")).toBe("var(--neu-accent-text)");
   });

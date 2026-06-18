@@ -3420,20 +3420,21 @@
 
     color-scheme: light;
 
-    --neu-bg-primary: #e5e7eb;
-    --neu-bg-secondary: #d1d5db;
-    --neu-shadow-dark: #b8bcc2;
+    --neu-surface-bg: #e0e5ec;
+    --neu-bg-primary: var(--neu-surface-bg);
+    --neu-bg-secondary: var(--neu-surface-bg);
+    --neu-shadow-dark: #bec3c9;
     --neu-shadow-light: #ffffff;
     --neu-primary: #6366f1;
     --neu-primary-dark: #4f46e5;
     --neu-accent-text: var(--neu-primary);
     --neu-accent-text-strong: var(--neu-primary-dark);
-    --neu-raised-bg: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
-    --neu-inset-bg: linear-gradient(145deg, var(--neu-bg-secondary), var(--neu-bg-primary));
-    --neu-raised-shadow: 0.5rem 0.5rem 1rem var(--neu-shadow-dark), -0.5rem -0.5rem 1rem var(--neu-shadow-light);
-    --neu-raised-sm-shadow: 0.25rem 0.25rem 0.5rem var(--neu-shadow-dark), -0.25rem -0.25rem 0.5rem var(--neu-shadow-light);
-    --neu-inset-shadow: inset 0.25rem 0.25rem 0.5rem var(--neu-shadow-dark), inset -0.25rem -0.25rem 0.5rem var(--neu-shadow-light);
-    --neu-pressed-shadow: inset 0.125rem 0.125rem 0.25rem var(--neu-shadow-dark), inset -0.125rem -0.125rem 0.25rem var(--neu-shadow-light);
+    --neu-raised-bg: var(--neu-surface-bg);
+    --neu-inset-bg: var(--neu-surface-bg);
+    --neu-raised-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+    --neu-raised-sm-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
+    --neu-inset-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);
+    --neu-pressed-shadow: inset 2px 2px 4px var(--neu-shadow-dark), inset -2px -2px 4px var(--neu-shadow-light);
     --neu-surface-shadow: var(--neu-raised-shadow);
     --neu-card-shadow: var(--neu-raised-sm-shadow);
     --neu-control-shadow: var(--neu-raised-sm-shadow);
@@ -3456,9 +3457,9 @@
     --app-alert-title: rgba(var(--rgb-slate-900), 0.92);
     --app-alert-text: rgba(var(--rgb-slate-700), 0.86);
 
-    --surface-page-gradient: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
+    --surface-page-gradient: var(--neu-surface-bg);
     --surface-page-gradient-dark: var(--surface-page-gradient);
-    --filelist-page-bg: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
+    --filelist-page-bg: var(--neu-surface-bg);
     --filelist-fireworks-bg: #e5e7eb;
     --filelist-fireworks-opacity: 0.52;
     --filelist-fireworks-trail-fill: rgba(229, 231, 235, 0.48);
@@ -3487,8 +3488,8 @@
     --btn-danger-text: rgba(var(--rgb-red-500), 0.9);
     --btn-ghost-text: rgba(var(--rgb-slate-600), 0.78);
     --btn-ghost-text-hover: rgba(var(--rgb-slate-900), 0.94);
-    --cta-primary-bg: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
-    --cta-primary-bg-hover: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --cta-primary-bg: var(--neu-primary);
+    --cta-primary-bg-hover: var(--neu-primary-dark);
     --cta-primary-border: transparent;
     --cta-primary-shadow: var(--neu-control-shadow);
     --cta-primary-text: rgba(var(--rgb-white), 0.98);
@@ -3673,8 +3674,8 @@
     --auth-error-border: transparent;
     --auth-error-shadow: var(--neu-inset-shadow);
     --auth-error-text: rgba(var(--rgb-red-500), 0.9);
-    --auth-button-gradient: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
-    --auth-button-gradient-hover: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --auth-button-gradient: var(--neu-primary);
+    --auth-button-gradient-hover: var(--neu-primary-dark);
     --auth-button-shadow: var(--neu-control-shadow);
     --auth-button-shadow-hover: var(--neu-control-shadow);
     --auth-button-shadow-active: var(--neu-pressed-shadow);
@@ -3717,14 +3718,14 @@
     --modal-title-text: rgba(var(--rgb-slate-900), 0.92);
     --modal-close-hover-bg: rgba(var(--rgb-slate-900), 0.06);
     --modal-close-hover-bg-upload: rgba(var(--rgb-slate-900), 0.04);
-    --dialog-primary-btn-bg: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --dialog-primary-btn-bg: var(--neu-primary);
     --dialog-primary-btn-text: rgba(var(--rgb-white), 0.98);
     --dialog-primary-btn-shadow: var(--neu-control-shadow);
     --dialog-action-bg: var(--neu-raised-bg);
     --dialog-action-border: transparent;
     --dialog-action-text: rgba(var(--rgb-slate-900), 0.9);
     --dialog-action-hover-bg: var(--neu-raised-bg);
-    --dialog-batch-action-bg: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --dialog-batch-action-bg: var(--neu-primary);
     --dialog-batch-action-border: transparent;
     --dialog-batch-action-shadow: var(--neu-control-shadow);
     --dialog-panel-bg: var(--neu-inset-bg);
@@ -3825,8 +3826,8 @@
     --settings-secondary-shadow: var(--neu-control-shadow);
     --settings-secondary-shadow-hover: var(--neu-control-shadow);
     --settings-secondary-shadow-active: var(--neu-pressed-shadow);
-    --settings-action-bg: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
-    --settings-action-bg-hover: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --settings-action-bg: var(--neu-primary);
+    --settings-action-bg-hover: var(--neu-primary-dark);
     --settings-action-text: rgba(var(--rgb-white), 0.98);
     --settings-action-border: transparent;
     --settings-action-shadow: var(--neu-control-shadow);
@@ -4037,20 +4038,21 @@
 :root[data-theme="dark"], :root.dark {
     color-scheme: dark;
 
-    --neu-bg-primary: #374151;
-    --neu-bg-secondary: #1f2937;
-    --neu-shadow-dark: #111827;
-    --neu-shadow-light: #4b5563;
-    --neu-primary: #9333ea;
-    --neu-primary-dark: #7c3aed;
+    --neu-surface-bg: #2d3748;
+    --neu-bg-primary: var(--neu-surface-bg);
+    --neu-bg-secondary: var(--neu-surface-bg);
+    --neu-shadow-dark: #1a202c;
+    --neu-shadow-light: #4a5568;
+    --neu-primary: #6366f1;
+    --neu-primary-dark: #4f46e5;
     --neu-accent-text: #c084fc;
     --neu-accent-text-strong: #d8b4fe;
-    --neu-raised-bg: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
-    --neu-inset-bg: linear-gradient(145deg, var(--neu-bg-secondary), var(--neu-bg-primary));
-    --neu-raised-shadow: 0.5rem 0.5rem 1rem var(--neu-shadow-dark), -0.5rem -0.5rem 1rem var(--neu-shadow-light);
-    --neu-raised-sm-shadow: 0.25rem 0.25rem 0.5rem var(--neu-shadow-dark), -0.25rem -0.25rem 0.5rem var(--neu-shadow-light);
-    --neu-inset-shadow: inset 0.25rem 0.25rem 0.5rem var(--neu-shadow-dark), inset -0.25rem -0.25rem 0.5rem var(--neu-shadow-light);
-    --neu-pressed-shadow: inset 0.125rem 0.125rem 0.25rem var(--neu-shadow-dark), inset -0.125rem -0.125rem 0.25rem var(--neu-shadow-light);
+    --neu-raised-bg: var(--neu-surface-bg);
+    --neu-inset-bg: var(--neu-surface-bg);
+    --neu-raised-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+    --neu-raised-sm-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
+    --neu-inset-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);
+    --neu-pressed-shadow: inset 2px 2px 4px var(--neu-shadow-dark), inset -2px -2px 4px var(--neu-shadow-light);
     --neu-surface-shadow: var(--neu-raised-shadow);
     --neu-card-shadow: var(--neu-raised-sm-shadow);
     --neu-control-shadow: var(--neu-raised-sm-shadow);
@@ -4067,9 +4069,9 @@
     --spinner-accent-color: var(--neu-accent-text);
     --notice-info: var(--neu-accent-text);
 
-    --surface-page-gradient: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
+    --surface-page-gradient: var(--neu-surface-bg);
     --surface-page-gradient-dark: var(--surface-page-gradient);
-    --filelist-page-bg: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
+    --filelist-page-bg: var(--neu-surface-bg);
     --filelist-fireworks-bg: #111827;
     --filelist-fireworks-opacity: 0.72;
     --filelist-fireworks-trail-fill: rgba(17, 24, 39, 0.5);
@@ -4099,8 +4101,8 @@
     --btn-danger-text: rgba(var(--rgb-red-200), 0.9);
     --btn-ghost-text: rgba(var(--rgb-slate-300), 0.78);
     --btn-ghost-text-hover: rgba(var(--rgb-white), 0.94);
-    --cta-primary-bg: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
-    --cta-primary-bg-hover: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --cta-primary-bg: var(--neu-primary);
+    --cta-primary-bg-hover: var(--neu-primary-dark);
     --cta-primary-border: transparent;
     --cta-primary-shadow: var(--neu-control-shadow);
     --cta-primary-text: rgba(var(--rgb-white), 0.98);
@@ -4264,8 +4266,8 @@
     --auth-error-border: transparent;
     --auth-error-shadow: var(--neu-inset-shadow);
     --auth-error-text: rgba(var(--rgb-red-200), 0.9);
-    --auth-button-gradient: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
-    --auth-button-gradient-hover: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --auth-button-gradient: var(--neu-primary);
+    --auth-button-gradient-hover: var(--neu-primary-dark);
     --auth-button-shadow: var(--neu-control-shadow);
     --auth-button-shadow-hover: var(--neu-control-shadow);
     --auth-button-shadow-active: var(--neu-pressed-shadow);
@@ -4285,14 +4287,14 @@
     --auth-footer-link-text: var(--neu-accent-text);
     --auth-footer-link-text-hover: var(--neu-accent-text-strong);
 
-    --dialog-primary-btn-bg: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --dialog-primary-btn-bg: var(--neu-primary);
     --dialog-primary-btn-text: rgba(var(--rgb-white), 0.98);
     --dialog-primary-btn-shadow: var(--neu-control-shadow);
     --dialog-action-bg: var(--neu-raised-bg);
     --dialog-action-border: transparent;
     --dialog-action-text: rgba(var(--rgb-white), 0.9);
     --dialog-action-hover-bg: var(--neu-raised-bg);
-    --dialog-batch-action-bg: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --dialog-batch-action-bg: var(--neu-primary);
     --dialog-batch-action-border: transparent;
     --dialog-batch-action-shadow: var(--neu-control-shadow);
     --dialog-panel-bg: var(--neu-inset-bg);
@@ -4363,8 +4365,8 @@
     --settings-secondary-shadow: var(--neu-control-shadow);
     --settings-secondary-shadow-hover: var(--neu-control-shadow);
     --settings-secondary-shadow-active: var(--neu-pressed-shadow);
-    --settings-action-bg: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
-    --settings-action-bg-hover: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    --settings-action-bg: var(--neu-primary);
+    --settings-action-bg-hover: var(--neu-primary-dark);
     --settings-action-text: rgba(var(--rgb-white), 0.98);
     --settings-action-border: transparent;
     --settings-action-shadow: var(--neu-control-shadow);

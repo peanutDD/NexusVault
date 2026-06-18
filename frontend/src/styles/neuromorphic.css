@@ -1,0 +1,42 @@
+@layer components {
+  .neu-flat {
+    border-color: transparent;
+    background: var(--neu-surface-bg);
+    background-image: none;
+    box-shadow: none;
+  }
+
+  .neu-raised {
+    border-color: transparent;
+    background: var(--neu-raised-bg);
+    background-image: none;
+    box-shadow: var(--neu-raised-shadow);
+  }
+
+  .neu-raised-sm {
+    border-color: transparent;
+    background: var(--neu-raised-bg);
+    background-image: none;
+    box-shadow: var(--neu-raised-sm-shadow);
+  }
+
+  .neu-inset {
+    border-color: transparent;
+    background: var(--neu-inset-bg);
+    background-image: none;
+    box-shadow: var(--neu-inset-shadow);
+  }
+
+  .neu-pressed {
+    border-color: transparent;
+    background: var(--neu-inset-bg);
+    background-image: none;
+    box-shadow: var(--neu-pressed-shadow);
+  }
+
+  .neu-semantic-raised {
+    border-color: transparent;
+    background-image: none;
+    box-shadow: var(--neu-control-shadow);
+  }
+}

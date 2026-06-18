@@ -69,9 +69,10 @@ describe("light theme tokens", () => {
 
     expect(css).not.toContain('[data-theme="legacy-light"], .legacy-light');
     expect(css).not.toContain('[data-theme="light"], .light, [data-theme="neuromorphic"], .neuromorphic');
-    expect(readToken(tokens, "--neu-bg-primary")).toBe("#e5e7eb");
-    expect(readToken(tokens, "--neu-bg-secondary")).toBe("#d1d5db");
-    expect(readToken(tokens, "--neu-shadow-dark")).toBe("#b8bcc2");
+    expect(readToken(tokens, "--neu-surface-bg")).toBe("#e0e5ec");
+    expect(readToken(tokens, "--neu-bg-primary")).toBe("var(--neu-surface-bg)");
+    expect(readToken(tokens, "--neu-bg-secondary")).toBe("var(--neu-surface-bg)");
+    expect(readToken(tokens, "--neu-shadow-dark")).toBe("#bec3c9");
     expect(readToken(tokens, "--neu-shadow-light")).toBe("#ffffff");
     expect(readToken(tokens, "--neu-primary")).toBe("#6366f1");
     expect(readToken(tokens, "--neu-primary-dark")).toBe("#4f46e5");
@@ -82,9 +83,7 @@ describe("light theme tokens", () => {
   it("maps light mode page, nav, cards, forms, and previews to Neuromorphic raised/inset surfaces", () => {
     const tokens = readCssCustomProperties(LIGHT_NEU_SELECTOR);
 
-    expect(readToken(tokens, "--surface-page-gradient")).toBe(
-      "linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary))",
-    );
+    expect(readToken(tokens, "--surface-page-gradient")).toBe("var(--neu-surface-bg)");
     expect(readToken(tokens, "--nav-panel-bg")).toBe("var(--neu-inset-bg)");
     expect(readToken(tokens, "--filelist-toolbar-bg")).toBe("var(--neu-raised-bg)");
     expect(readToken(tokens, "--filelist-card-bg")).toBe("var(--neu-raised-bg)");
@@ -129,9 +128,7 @@ describe("light theme tokens", () => {
     expect(readToken(tokens, "--auth-input-bg")).toBe("var(--neu-inset-bg)");
     expect(readToken(tokens, "--auth-input-border")).toBe("transparent");
     expect(readToken(tokens, "--auth-input-shadow")).toBe("var(--neu-inset-shadow)");
-    expect(readToken(tokens, "--auth-button-gradient")).toBe(
-      "linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark))",
-    );
+    expect(readToken(tokens, "--auth-button-gradient")).toBe("var(--neu-primary)");
     expect(readToken(tokens, "--auth-button-shadow-active")).toBe("var(--neu-pressed-shadow)");
     expect(readToken(tokens, "--auth-oauth-button-bg")).toBe("var(--neu-raised-bg)");
     expect(readToken(tokens, "--auth-oauth-disabled-bg")).toBe("var(--neu-inset-bg)");
@@ -161,18 +158,12 @@ describe("light theme tokens", () => {
     expect(readToken(tokens, "--auth-shape-wave-gradient-solar-end")).toBe("rgb(var(--rgb-rose-400))");
   });
 
-  it("uses CodePen purple primary actions and opts light into the AJgeEd fireworks background", () => {
+  it("uses pure primary action fills and opts light into the AJgeEd fireworks background", () => {
     const tokens = readCssCustomProperties(LIGHT_NEU_SELECTOR);
 
-    expect(readToken(tokens, "--cta-primary-bg")).toBe(
-      "linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark))",
-    );
-    expect(readToken(tokens, "--settings-action-bg")).toBe(
-      "linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark))",
-    );
-    expect(readToken(tokens, "--dialog-primary-btn-bg")).toBe(
-      "linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark))",
-    );
+    expect(readToken(tokens, "--cta-primary-bg")).toBe("var(--neu-primary)");
+    expect(readToken(tokens, "--settings-action-bg")).toBe("var(--neu-primary)");
+    expect(readToken(tokens, "--dialog-primary-btn-bg")).toBe("var(--neu-primary)");
     expect(tokens.has("--filelist-shape-wave-bg")).toBe(false);
     expect(readToken(tokens, "--filelist-fireworks-bg")).toBe("#e5e7eb");
     expect(readToken(tokens, "--filelist-fireworks-opacity")).toBe("0.52");
