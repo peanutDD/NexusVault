@@ -1,0 +1,46 @@
+{
+  "id": "2026-06-18-project-wide-codepen-neuromorphic",
+  "status": "awaiting_execution_mode_approval",
+  "objective": "Apply one pure CodePen-style Neuromorphic surface system to every frontend route and shared component in light and dark themes without changing behavior.",
+  "design": "docs/superpowers/specs/2026-06-18-project-wide-codepen-neuromorphic-design.md",
+  "detailed_plan": "docs/superpowers/plans/2026-06-18-project-wide-codepen-neuromorphic.md",
+  "assumptions": [
+    "User-provided CodePen screenshots are the visual authority when remote automation is unavailable.",
+    "Business behavior and accessibility semantics remain unchanged.",
+    "Semantic colors use pure fills and the global shadow direction.",
+    "Existing authenticated local state can support rendered QA."
+  ],
+  "risks": [
+    "The current worktree contains unrelated uncommitted changes.",
+    "Global token changes have project-wide visual blast radius.",
+    "Legacy page-specific surface systems can hide residue.",
+    "Mobile clipping and light-theme contrast can regress.",
+    "The complete migration requires multiple reviewable commits."
+  ],
+  "dependencies": [
+    "isolated codex/project-wide-codepen-neuromorphic worktree",
+    "Chrome reference and local-app access",
+    "frontend and backend development servers",
+    "Vitest, ESLint, TypeScript, token, fluid-sizing, Vite, and ffmpeg tooling"
+  ],
+  "batches": [
+    { "id": 1, "name": "baseline_and_isolation", "status": "pending" },
+    { "id": 2, "name": "global_primitives", "status": "pending" },
+    { "id": 3, "name": "shared_shell_controls_dialogs_auth", "status": "pending" },
+    { "id": 4, "name": "files_collection_surfaces", "status": "pending" },
+    { "id": 5, "name": "uploads_dialogs_preview", "status": "pending" },
+    { "id": 6, "name": "business_pages", "status": "pending" },
+    { "id": 7, "name": "residue_guards_and_ci", "status": "pending" },
+    { "id": 8, "name": "rendered_qa_evidence_and_pr", "status": "pending" }
+  ],
+  "completion_gates": {
+    "routes": 10,
+    "themes": ["light", "dark"],
+    "viewports": ["1440x1000", "390x844"],
+    "coverage_minimum_percent": 90,
+    "quality_score_minimum": 95,
+    "ordinary_surface_border": "transparent_or_zero",
+    "ordinary_surface_background_image": "none",
+    "new_console_errors_or_warnings": 0
+  }
+}
