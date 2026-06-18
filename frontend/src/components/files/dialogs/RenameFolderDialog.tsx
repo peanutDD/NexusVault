@@ -100,7 +100,7 @@ export default function RenameFolderDialog({
         data-oid="y9u739u"
       >
         <p
-          className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="eu52bs9"
         >
           当前名称
@@ -116,7 +116,7 @@ export default function RenameFolderDialog({
       </div>
       <div data-oid="xc_-ycb">
         <p
-          className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="ug_.i2y"
         >
           新名称

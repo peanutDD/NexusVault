@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { formatBytes } from "../utils/format";
 import PageLayout from "../components/layout/PageLayout";
@@ -12,20 +12,14 @@ import OcrStatusSection from "../components/settings/OcrStatusSection";
 import { Settings2, ArrowLeft } from "lucide-react";
 import { useStorageUsage } from "../hooks/useStorageUsage";
 import { useApiTokens } from "../hooks/useApiTokens";
-
-function hasPreviousAppHistoryEntry(locationKey: string) {
-  if (typeof window !== "undefined") {
-    const historyIndex = window.history.state?.idx;
-    if (typeof historyIndex === "number") {
-      return historyIndex > 0;
-    }
-  }
-  return locationKey !== "default";
-}
+import {
+  settingsPrimaryButtonClass,
+  settingsSecondaryButtonClass,
+} from "../components/settings/settingsUi";
+import { resolveSettingsReturnTarget } from "../utils/settingsReturnTarget";
 
 export default function Settings() {
   const navigate = useNavigate();
-  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   
@@ -38,30 +32,26 @@ export default function Settings() {
   }, [clearAuth, navigate]);
 
   const handleBack = useCallback(() => {
-    if (hasPreviousAppHistoryEntry(location.key)) {
-      navigate(-1);
-    } else {
-      navigate("/files", { replace: true });
-    }
-  }, [location.key, navigate]);
+    navigate(resolveSettingsReturnTarget(), { replace: true });
+  }, [navigate]);
 
   return (
     <PageLayout
       title="SETTINGS"
       username={user?.username}
       onLogout={handleLogout}
-      showSettings={false}
       data-oid="nr697ev"
     >
       {/* Match NavBar width so the logo aligns with page content */}
       <div
-        className="mx-auto max-w-[80rem] text-[length:var(--settings-text-md)]"
+        className="mx-auto w-full max-w-[var(--app-shell-max-width)] min-w-0 text-[length:var(--settings-text-md)]"
+        data-testid="settings-page-shell"
         data-oid="ke2.spo"
       >
         {/* Page header (match Home neon/glass style) */}
         <div
           data-testid="settings-hero-panel"
-          className="relative isolate mb-[clamp(1.25rem,2.7vw,1.5rem)] overflow-hidden rounded-[clamp(0.8rem,2vw,1rem)] border border-[var(--settings-surface-border)] bg-[var(--settings-surface-bg)] p-[clamp(1rem,2.25vw,1.25rem)] shadow-[var(--settings-surface-shadow)] backdrop-blur-md transition-[border-color,box-shadow] duration-300 sm:p-[clamp(1.25rem,2.7vw,1.5rem)]"
+          className="settings-neu-raised-card relative isolate mb-[clamp(1.25rem,2.7vw,1.5rem)] overflow-hidden rounded-[clamp(1.25rem,3vw,1.5rem)] border border-[var(--settings-surface-border)] [background:var(--settings-surface-bg)] p-[clamp(1rem,2.25vw,1.25rem)] shadow-[var(--settings-surface-shadow)] transition-[border-color,box-shadow] duration-300 sm:p-[clamp(1.25rem,2.7vw,1.5rem)]"
           data-oid="8u-ne0x"
         >
           <div
@@ -79,14 +69,15 @@ export default function Settings() {
           />
 
           <div
-            className="relative z-10 flex flex-col gap-[clamp(0.78rem,1.8vw,1rem)] sm:flex-row sm:items-center sm:justify-between"
+            className="relative z-10 flex flex-col gap-[clamp(0.78rem,1.8vw,1rem)] lg:flex-row lg:items-center lg:justify-between"
+            data-testid="settings-hero-layout"
             data-oid="5hj.--8"
           >
             <div className="min-w-0" data-oid="tc3yanx">
               <button
                 type="button"
                 onClick={handleBack}
-                className="font-brand mb-[clamp(0.78rem,1.8vw,1rem)] inline-flex items-center rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-chip-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-[border-color,background-color,transform] duration-200 hover:-translate-y-px hover:bg-[var(--settings-chip-bg-hover)] hover:border-[var(--settings-chip-border-hover)] active:translate-y-0"
+                className={settingsSecondaryButtonClass("mb-[clamp(0.78rem,1.8vw,1rem)] inline-flex items-center px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-chip-text)]")}
                 data-oid="li-ft82"
               >
                 <ArrowLeft
@@ -101,7 +92,7 @@ export default function Settings() {
                   type="button"
                   aria-label="Go to files home"
                   onClick={() => navigate("/files")}
-                  className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-chip-icon)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0.75rem_1.75rem_rgba(16,185,129,0.08)] transition-[border-color,background-color,transform] duration-200 hover:-translate-y-px hover:border-[var(--settings-chip-border-hover)] hover:bg-[var(--settings-chip-bg-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)] active:translate-y-0"
+                  className={settingsSecondaryButtonClass("p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-chip-icon)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]")}
                   data-oid="06je80s"
                 >
                   <Settings2
@@ -126,11 +117,12 @@ export default function Settings() {
             </div>
 
             <div
-              className="grid grid-cols-2 gap-[clamp(0.585rem,1.35vw,0.75rem)] sm:grid-cols-3"
+              className="grid w-full grid-cols-[repeat(auto-fit,minmax(var(--settings-hero-summary-tile-min),1fr))] gap-[clamp(0.585rem,1.35vw,0.75rem)] lg:w-[var(--settings-hero-summary-inline-size)]"
+              data-testid="settings-hero-summary-grid"
               data-oid="duty7hg"
             >
               <div
-                className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                className="settings-neu-stat-tile rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-kpi-border)] [background:var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)] shadow-[var(--settings-kpi-shadow)]"
                 data-oid="u.f.93l"
               >
                 <p
@@ -147,7 +139,7 @@ export default function Settings() {
                 </p>
               </div>
               <div
-                className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                className="settings-neu-stat-tile rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-kpi-border)] [background:var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)] shadow-[var(--settings-kpi-shadow)]"
                 data-oid="oj887ag"
               >
                 <p
@@ -164,7 +156,7 @@ export default function Settings() {
                 </p>
               </div>
               <div
-                className="hidden rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-kpi-border)] bg-[var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:block"
+                className="settings-neu-stat-tile hidden rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-kpi-border)] [background:var(--settings-kpi-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)] shadow-[var(--settings-kpi-shadow)] sm:block"
                 data-oid="66o_98f"
               >
                 <p
@@ -195,13 +187,13 @@ export default function Settings() {
           >
             <div
               data-testid="settings-account-column"
-              className="min-w-0 h-full [&>section]:h-full [&>section]:flex [&>section]:flex-col [&>section>div:last-child]:flex [&>section>div:last-child]:flex-1 [&>section>div:last-child>form]:flex [&>section>div:last-child>form]:flex-1 [&>section>div:last-child>form]:flex-col"
+              className="min-w-0 h-full [&>section]:h-full [&>section]:flex [&>section]:flex-col [&>section>div:last-child]:flex [&>section>div:last-child]:flex-1 [&>section>div:last-child]:flex-col [&>section>div:last-child>form]:flex [&>section>div:last-child>form]:flex-1 [&>section>div:last-child>form]:flex-col"
             >
               <UserInfoSection data-oid="1jpbmmd" />
             </div>
             <div
               data-testid="settings-security-column"
-              className="min-w-0 h-full [&>section]:h-full [&>section]:flex [&>section]:flex-col [&>section>div:last-child]:flex [&>section>div:last-child]:flex-1 [&>section>div:last-child>form]:flex [&>section>div:last-child>form]:flex-1 [&>section>div:last-child>form]:flex-col"
+              className="min-w-0 h-full [&>section]:h-full [&>section]:flex [&>section]:flex-col [&>section>div:last-child]:flex [&>section>div:last-child]:flex-1 [&>section>div:last-child]:flex-col [&>section>div:last-child>form]:flex [&>section>div:last-child>form]:flex-1 [&>section>div:last-child>form]:flex-col"
             >
               <PasswordChangeSection data-oid="0py-1mt" />
             </div>
@@ -212,6 +204,26 @@ export default function Settings() {
             className="min-w-0 xl:[&>section]:p-[clamp(1.35rem,2.8vw,1.75rem)]"
           >
             <WebDavAccessSection />
+            <div className="mt-[clamp(0.78rem,1.8vw,1rem)] flex flex-col gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border border-[var(--settings-kpi-border)] [background:var(--settings-kpi-bg)] p-[clamp(0.78rem,1.8vw,1rem)] shadow-[var(--settings-kpi-shadow)] lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <p className="font-semibold text-[var(--settings-title)]">Share Center</p>
+                <p className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-subtitle)]">
+                  Manage share links and upload-only File Requests.
+                </p>
+              </div>
+              <div
+                data-testid="settings-share-center-actions"
+                className="flex w-full md:justify-end lg:w-auto"
+              >
+                <button
+                  type="button"
+                  onClick={() => navigate("/shares")}
+                  className={settingsPrimaryButtonClass("w-full md:w-auto")}
+                >
+                  Manage Shares
+                </button>
+              </div>
+            </div>
           </div>
 
           <div

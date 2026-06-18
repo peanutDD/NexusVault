@@ -142,9 +142,14 @@ function isRequestCancelled(error: AxiosError): boolean {
   if (axios.isCancel(error)) return true;
   // AbortController 取消
   if (error.code === 'ERR_CANCELED') return true;
-  // ECONNABORTED 通常是超时或取消
-  if (error.code === 'ECONNABORTED') return true;
   return false;
+}
+
+function isRequestTimedOut(error: AxiosError): boolean {
+  return (
+    error.code === 'ECONNABORTED' ||
+    (typeof error.message === 'string' && error.message.toLowerCase().includes('timeout'))
+  );
 }
 
 /**
@@ -153,6 +158,8 @@ function isRequestCancelled(error: AxiosError): boolean {
 function isRetryableError(error: AxiosError): boolean {
   // 取消的请求不重试
   if (isRequestCancelled(error)) return false;
+  // 超时不重试，避免文件列表/搜索在慢后端下卡更久
+  if (isRequestTimedOut(error)) return false;
 
   // 网络错误可重试
   if (error.code === 'ERR_NETWORK') return true;

@@ -31,6 +31,18 @@
         --nav-surface-blur: 0px !important;
     }
 
+    .platform-macos:is(.neuromorphic-style, .neuromorphic-style, .dark.neuromorphic-style) {
+        --filelist-page-bg: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary)) !important;
+        --surface-page-gradient: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary)) !important;
+        --surface-page-gradient-dark: var(--surface-page-gradient) !important;
+        --macos-titlebar-bg: var(--neu-raised-bg) !important;
+        --nav-surface-bg: var(--neu-raised-bg) !important;
+        --nav-surface-blur: 0px !important;
+        --nav-top-glow: transparent !important;
+        --nav-bottom-line: transparent !important;
+        --nav-side-ambience: transparent !important;
+    }
+
     .platform-macos.dark {
         --filelist-page-bg: rgba(var(--rgb-slate-950), 0.6) !important;
         --surface-page-gradient: linear-gradient(
@@ -43,8 +55,15 @@
         --nav-surface-bg: var(--macos-titlebar-bg) !important;
     }
 
-    .platform-macos.dark.purple {
-        --macos-titlebar-bg: rgb(42, 20, 95) !important;
-        --nav-surface-bg: var(--macos-titlebar-bg) !important;
+    .platform-macos.dark.neuromorphic-style {
+        --filelist-page-bg: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary)) !important;
+        --surface-page-gradient: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary)) !important;
+        --surface-page-gradient-dark: var(--surface-page-gradient) !important;
+        --macos-titlebar-bg: var(--neu-raised-bg) !important;
+        --nav-surface-bg: var(--neu-raised-bg) !important;
+        --nav-surface-blur: 0px !important;
+        --nav-top-glow: transparent !important;
+        --nav-bottom-line: transparent !important;
+        --nav-side-ambience: transparent !important;
     }
 }

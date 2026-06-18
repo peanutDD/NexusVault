@@ -151,6 +151,9 @@ function shouldSkipDedup(config: InternalAxiosRequestConfig): boolean {
   const method = (config.method ?? 'get').toLowerCase();
   // 只对 GET 请求进行去重
   if (method !== 'get') return true;
+  // Trash is mutation-adjacent: after restore/permanent delete the same list URL
+  // must hit the server so restored cards cannot linger and be clicked again.
+  if ((config.url ?? '').split('?')[0] === '/api/files/trash') return true;
   // FormData/Blob 请求不去重
   const data = config.data;
   if (data instanceof FormData || data instanceof Blob) return true;

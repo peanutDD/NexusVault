@@ -83,12 +83,12 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
               <button
                 type="button"
                 onClick={() => navigateToFolder(null)}
-                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                className="glass-btn toolbarActionBtn allFilesBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[clamp(0.68rem,1.4vw,0.75rem)] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="All Files"
                 data-oid="k350jq9"
               >
                 <i
-                  className="bi bi-folder2-open shrink-0 text-[0.75rem]"
+                  className="bi bi-folder2-open shrink-0 text-[clamp(0.68rem,1.4vw,0.75rem)]"
                   aria-hidden
                   data-oid="ido6hk6"
                 />
@@ -98,12 +98,12 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCreateFolder(true)}
-                className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[clamp(0.68rem,1.4vw,0.75rem)] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                 aria-label="New Folder"
                 data-oid=":iv9u9g"
               >
                 <i
-                  className="bi bi-folder-plus shrink-0 text-[0.75rem]"
+                  className="bi bi-folder-plus shrink-0 text-[clamp(0.68rem,1.4vw,0.75rem)]"
                   aria-hidden
                   data-oid="dbviwyd"
                 />
@@ -114,12 +114,12 @@ const FileListHeader: React.FC<FileListHeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenUpload}
-                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[0.75rem] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
+                  className="glass-btn toolbarActionBtn uploadBtnHighlight font-brand flex items-center gap-[clamp(0.3rem,0.8vw,0.375rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.3rem,0.8vw,0.375rem)] font-normal tracking-widest text-[clamp(0.68rem,1.4vw,0.75rem)] leading-none text-[var(--filelist-btn-text)] hover:brightness-110 transition-all whitespace-nowrap shrink-0"
                   aria-label="Upload File"
                   data-oid="zanhkec"
                 >
                   <i
-                    className="bi bi-cloud-upload shrink-0 text-[0.75rem]"
+                    className="bi bi-cloud-upload shrink-0 text-[clamp(0.68rem,1.4vw,0.75rem)]"
                     aria-hidden
                     data-oid="fajfb:-"
                   />

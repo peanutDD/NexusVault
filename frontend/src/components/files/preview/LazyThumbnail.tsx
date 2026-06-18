@@ -357,10 +357,16 @@ export default function LazyThumbnail({
     createInitialState,
   ]);
 
-  const getSrcSet = () => {
+  const getSrcSet = (imageUrl: string) => {
     if (!thumbnailUrl) return undefined;
-    if (thumbnailUrl.startsWith("blob:")) return undefined; // Blob URL 不支持 srcset
-    const url = new URL(thumbnailUrl);
+    if (imageUrl !== thumbnailUrl) return undefined;
+    if (imageUrl.startsWith("blob:")) return undefined;
+    const baseUrl =
+      typeof window !== "undefined" ? window.location.origin : "http://localhost";
+    const url = new URL(
+      imageUrl,
+      baseUrl,
+    );
     // 生成不同尺寸的缩略图 URL
     // w=200: 小屏幕/移动端
     // w=400: 默认尺寸 (FileGrid 默认列宽)
@@ -402,7 +408,7 @@ export default function LazyThumbnail({
           )}
           <img
             src={effectiveState.imageUrl}
-            srcSet={getSrcSet()}
+            srcSet={getSrcSet(effectiveState.imageUrl)}
             sizes="(max-width: 40rem) 6.25rem, (max-width: 64rem) 12.5rem, 25rem"
             width={400}
             height={400}

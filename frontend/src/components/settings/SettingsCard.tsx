@@ -26,10 +26,10 @@ export default function SettingsCard({
       className={cn(
         // Reserve space for the fixed NavBar when using anchor links.
         "scroll-mt-[clamp(6.75rem,12.6vw,7rem)]",
-        "group/settings-card relative isolate overflow-hidden rounded-[clamp(0.8rem,2vw,1rem)]",
-        "border border-[var(--settings-surface-border)] bg-[var(--settings-surface-bg)]",
+        "settings-neu-raised-card group/settings-card relative isolate overflow-hidden rounded-[clamp(1.25rem,3vw,1.5rem)]",
+        "border border-[var(--settings-surface-border)] [background:var(--settings-surface-bg)]",
         "shadow-[var(--settings-surface-shadow)]",
-        "backdrop-blur-md transition-[border-color,box-shadow,transform] duration-300",
+        "transition-[border-color,box-shadow,transform] duration-300",
         "hover:border-[var(--settings-panel-border-hover)] hover:shadow-[var(--settings-surface-shadow)]",
         "text-[length:var(--settings-text-md)]",
         "p-[clamp(1rem,2.25vw,1.25rem)] sm:p-[clamp(1.25rem,2.7vw,1.5rem)]",
@@ -38,7 +38,6 @@ export default function SettingsCard({
       data-testid="settings-card-shell"
       data-oid="au1p9wx"
     >
-      {/* Ambient glow + top hairline (match the Home / Nav style). */}
       <div
         className="pointer-events-none absolute inset-0 bg-[image:var(--settings-surface-glow)]"
         data-oid="ryeionw"
@@ -59,7 +58,7 @@ export default function SettingsCard({
       >
         {icon && (
           <div
-            className="mt-[clamp(0.0975rem,0.3vw,0.125rem)] shrink-0 rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-chip-border)] bg-[var(--settings-chip-bg)] p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-chip-icon)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0.75rem_1.75rem_rgba(16,185,129,0.08)] transition-[border-color,background-color,box-shadow] duration-300 group-hover/settings-card:border-[var(--settings-chip-border-hover)] group-hover/settings-card:bg-[var(--settings-chip-bg-hover)]"
+            className="mt-[clamp(0.0975rem,0.3vw,0.125rem)] shrink-0 rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-chip-border)] [background:var(--settings-chip-bg)] p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-chip-icon)] shadow-[var(--settings-secondary-shadow)] transition-[border-color,background,box-shadow] duration-300 group-hover/settings-card:border-[var(--settings-chip-border-hover)] group-hover/settings-card:[background:var(--settings-chip-bg-hover)]"
             data-oid="9ktkh.m"
           >
             {icon}

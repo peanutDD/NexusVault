@@ -3,14 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <meta
       name="description"
       content="Upload, preview, and share files securely with fast search, streaming previews, and efficient downloads."
     />
-    <title>File Upload Download Server</title>
+    <title>NexusVault</title>
   </head>
   <body>
+    <script id="theme-preload">
+      (() => {
+        const themes = new Set(["light", "dark"]);
+        const readTheme = (value) => (themes.has(value) ? value : null);
+        const writeTheme = (stored, theme) => {
+          try {
+            localStorage.setItem(
+              "theme-storage",
+              JSON.stringify({
+                ...stored,
+                state: {
+                  ...(stored?.state || {}),
+                  theme,
+                  effectiveTheme: theme,
+                },
+              }),
+            );
+          } catch {}
+        };
+        const readStoredTheme = (stored) => {
+          const state = stored?.state;
+          if (state?.effectiveTheme === "neuromorphic" || state?.theme === "neuromorphic") {
+            writeTheme(stored, "dark");
+            return "dark";
+          }
+          return readTheme(state?.effectiveTheme) || readTheme(state?.theme);
+        };
+        const root = document.documentElement;
+        let theme = "dark";
+
+        try {
+          const stored = JSON.parse(localStorage.getItem("theme-storage") || "{}");
+          theme = readStoredTheme(stored) || theme;
+        } catch {
+          theme = "dark";
+        }
+
+        root.classList.remove("light", "dark", "purple", "terminal", "portfolio", "neuromorphic", "neuromorphic-style");
+        root.setAttribute("data-theme", theme);
+
+        if (theme === "light") {
+          root.classList.add("light", "neuromorphic-style");
+          return;
+        }
+
+        root.classList.add("dark", "neuromorphic-style");
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

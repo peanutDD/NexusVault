@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import api from "../services/api";
 import { getErrorMessage } from "../utils/error";
 import ErrorMessage from "../components/common/feedback/ErrorMessage";
+import Spinner from "../components/common/feedback/Spinner";
 import { apiPath } from "../config/env";
 
 export default function Share() {
@@ -95,10 +96,9 @@ export default function Share() {
         data-oid="xhwx_:2"
       >
         <div className="text-center" data-oid=".t0l-fv">
-          <span
-            className="w-[clamp(2.75rem,5.4vw,3rem)] h-[clamp(2.75rem,5.4vw,3rem)] border-4 border-[rgba(var(--rgb-white),0.18)] border-t-[rgba(var(--rgb-malachite-500),0.7)] rounded-full animate-spin block mx-auto mb-[clamp(0.78rem,1.8vw,1rem)]"
-            aria-hidden
-            data-oid="ajp3jzd"
+          <Spinner
+            size="lg"
+            className="mx-auto mb-[clamp(0.78rem,1.8vw,1rem)]"
           />
 
           <p className="text-[var(--color-text-secondary)]" data-oid="10-_ks1">
@@ -115,7 +115,7 @@ export default function Share() {
       data-oid="pdc.az7"
     >
       <div
-        className="bg-[var(--modal-surface-bg)] border border-[var(--modal-surface-border)] rounded-[clamp(0.4rem,1vw,0.5rem)] max-w-[clamp(22rem,92vw,28rem)] w-full p-[clamp(0.78rem,1.8vw,1rem)] sm:p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-[var(--shadow-glass-md)]"
+        className="sharePageCard [background:var(--neu-raised-bg)] border border-transparent rounded-[clamp(0.625rem,1.3vw,0.75rem)] max-w-[clamp(22rem,92vw,28rem)] w-full p-[clamp(0.78rem,1.8vw,1rem)] sm:p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-[var(--neu-raised-shadow)]"
         data-oid="nucst_i"
       >
         <h1
@@ -156,7 +156,7 @@ export default function Share() {
                 value={password}
                 onChange={handlePasswordChange}
                 required
-                className="w-full px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] bg-[var(--control-input-bg)] border border-[var(--control-input-border)] rounded-[clamp(0.4rem,1vw,0.5rem)] text-[var(--control-input-text)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)]"
+                className="w-full px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] [background:var(--control-input-bg)] border border-[var(--control-input-border)] rounded-[clamp(0.5rem,1.1vw,0.625rem)] text-[var(--control-input-text)] shadow-[var(--neu-inset-shadow)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)]"
                 placeholder="分享密码"
                 data-oid=".8oahc6"
               />
@@ -164,7 +164,7 @@ export default function Share() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-[clamp(0.4rem,1vw,0.5rem)] hover:bg-[var(--btn-primary-bg-hover)] disabled:opacity-50"
+              className="sharePrimaryButton w-full px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] [background:var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-[clamp(0.5rem,1.1vw,0.625rem)] shadow-[var(--neu-control-shadow)] transition-[background,box-shadow,transform] hover:[background:var(--btn-primary-bg-hover)] active:shadow-[var(--neu-pressed-shadow)] disabled:opacity-50"
               data-oid="z:pz6.h"
             >
               {loading ? "验证中…" : "访问文件"}
@@ -173,7 +173,7 @@ export default function Share() {
         ) : fileInfo ? (
           <div className="space-y-[clamp(0.78rem,1.8vw,1rem)]" data-oid="d71ad_4">
             <div
-              className="bg-[rgba(var(--rgb-white),0.06)] border border-[var(--color-border-soft)] rounded-[clamp(0.4rem,1vw,0.5rem)] p-[clamp(0.78rem,1.8vw,1rem)]"
+              className="shareFileInfoPanel [background:var(--neu-inset-bg)] border border-[var(--modal-surface-border)] rounded-[clamp(0.5rem,1.1vw,0.625rem)] p-[clamp(0.78rem,1.8vw,1rem)] shadow-[var(--neu-inset-shadow)]"
               data-oid="jl-jv4k"
             >
               <h2
@@ -193,7 +193,7 @@ export default function Share() {
 
             <button
               onClick={handleDownload}
-              className="w-full px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-[clamp(0.4rem,1vw,0.5rem)] hover:bg-[var(--btn-primary-bg-hover)]"
+              className="sharePrimaryButton w-full px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] [background:var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-[clamp(0.5rem,1.1vw,0.625rem)] shadow-[var(--neu-control-shadow)] transition-[background,box-shadow,transform] hover:[background:var(--btn-primary-bg-hover)] active:shadow-[var(--neu-pressed-shadow)]"
               data-oid="gfutdnh"
             >
               下载文件
@@ -201,7 +201,7 @@ export default function Share() {
 
             <Link
               to="/login"
-              className="w-full px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] bg-[var(--btn-secondary-bg)] text-[var(--btn-secondary-text)] border border-[var(--btn-secondary-border)] rounded-[clamp(0.4rem,1vw,0.5rem)] hover:bg-[var(--btn-secondary-bg-hover)]"
+              className="shareSecondaryButton inline-flex w-full items-center justify-center px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] [background:var(--btn-secondary-bg)] text-[var(--btn-secondary-text)] border border-[var(--btn-secondary-border)] rounded-[clamp(0.5rem,1.1vw,0.625rem)] shadow-[var(--neu-control-shadow)] transition-[background,box-shadow,transform] hover:[background:var(--btn-secondary-bg-hover)] active:shadow-[var(--neu-pressed-shadow)]"
               data-oid=".2axd23"
             >
               返回登录

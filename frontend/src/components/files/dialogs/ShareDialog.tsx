@@ -4,6 +4,7 @@ import {
   type CreateShareRequest,
 } from "../../../services/shares";
 import { getErrorMessage } from "../../../utils/error";
+import { useClipboard } from "../../../hooks/useClipboard";
 import ErrorMessage from "../../common/feedback/ErrorMessage";
 import Modal from "../../common/dialog/Modal";
 
@@ -20,8 +21,10 @@ export default function ShareDialog({
   onClose,
   onShareCreated,
 }: ShareDialogProps) {
+  const { copy } = useClipboard();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<CreateShareRequest>({
     file_id: fileId,
@@ -34,6 +37,7 @@ export default function ShareDialog({
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setCopyMessage(null);
 
     try {
       const data: CreateShareRequest = {
@@ -53,10 +57,19 @@ export default function ShareDialog({
     }
   };
 
-  const handleCopyUrl = () => {
-    if (shareUrl) {
-      navigator.clipboard.writeText(shareUrl);
-      alert("链接已复制到剪贴板");
+  const handleCopyUrl = async () => {
+    if (!shareUrl) return;
+
+    try {
+      const copied = await copy(shareUrl);
+      if (!copied) {
+        setError("复制链接失败");
+        return;
+      }
+      setError(null);
+      setCopyMessage("链接已复制到剪贴板");
+    } catch (err) {
+      setError(getErrorMessage(err, "复制链接失败"));
     }
   };
 
@@ -67,16 +80,22 @@ export default function ShareDialog({
       onClose={onClose}
       maxWidth="sm"
       variant="glass"
+      panelClassName="fileActionDialogShell singleShareDialogShell"
       data-oid="ha-3jeg"
     >
       {/* 文件名（单独一行，带截断与完整 tooltip，避免撑坏容器） */}
-      <div className="mb-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="-vbx0o8">
-        <div className="text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-label-text)] mb-[clamp(0.195rem,0.45vw,0.25rem)]" data-oid="9.7-w6o">
+      <div
+        className="singleShareDialogPanel mb-[clamp(0.585rem,1.35vw,0.75rem)]"
+        data-testid="single-share-file-panel"
+        data-oid="-vbx0o8"
+      >
+        <div className="singleShareDialogLabel text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-label-text)] mb-[clamp(0.195rem,0.45vw,0.25rem)]" data-oid="9.7-w6o">
           文件
         </div>
         <div
-          className="max-w-full truncate rounded-[clamp(0.3rem,0.8vw,0.375rem)] bg-[var(--dialog-panel-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-panel-text)]"
+          className="singleShareDialogInset max-w-full truncate rounded-[clamp(0.3rem,0.8vw,0.375rem)] bg-[var(--dialog-panel-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-panel-text)]"
           title={filename}
+          data-testid="single-share-file-value"
           data-oid="_j-dtrm"
         >
           {filename}
@@ -89,6 +108,15 @@ export default function ShareDialog({
           onClose={() => setError(null)}
           type="error"
           data-oid="kye358_"
+        />
+      )}
+
+      {copyMessage && (
+        <ErrorMessage
+          message={copyMessage}
+          onClose={() => setCopyMessage(null)}
+          type="info"
+          data-oid="share-copy-message"
         />
       )}
 
@@ -110,28 +138,39 @@ export default function ShareDialog({
                 aria-label="分享链接"
                 value={shareUrl}
                 readOnly
-                className="flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)]"
+                className="singleShareDialogField flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)]"
                 data-oid="qtp2-_b"
               />
 
               <button
                 type="button"
                 onClick={handleCopyUrl}
-                className="rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
+                className="singleShareDialogAction rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
                 data-oid="olsz3-y"
               >
                 复制
               </button>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
-            data-oid="1vd3adg"
+          <div
+            data-testid="single-share-created-actions"
+            className="grid grid-cols-2 gap-[clamp(0.585rem,1.35vw,0.75rem)]"
           >
-            关闭
-          </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="singleShareDialogAction inline-flex min-w-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-center text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
+              data-oid="1vd3adg"
+            >
+              关闭
+            </button>
+            <a
+              href="/shares"
+              className="singleShareDialogAction inline-flex min-w-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-center text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
+            >
+              Manage shares
+            </a>
+          </div>
         </div>
       ) : (
         <form
@@ -153,7 +192,7 @@ export default function ShareDialog({
                 setFormData({ ...formData, password: e.target.value })
               }
               placeholder="留空则不设置密码"
-              className="w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
+              className="singleShareDialogField w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
               data-oid="b7c46:8"
             />
           </div>
@@ -178,7 +217,7 @@ export default function ShareDialog({
                 })
               }
               placeholder="留空则永不过期"
-              className="w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
+              className="singleShareDialogField w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
               data-oid="_bbummf"
             />
           </div>
@@ -203,7 +242,7 @@ export default function ShareDialog({
                 })
               }
               placeholder="留空则不限制"
-              className="w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
+              className="singleShareDialogField w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-field-border)] bg-[var(--dialog-field-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-field-text)] placeholder-[var(--dialog-field-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--dialog-field-focus-ring)]"
               data-oid=":hrr6:v"
             />
           </div>
@@ -212,7 +251,7 @@ export default function ShareDialog({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
+              className="singleShareDialogAction flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
               data-oid="swjf94z"
             >
               取消
@@ -220,7 +259,7 @@ export default function ShareDialog({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[image:var(--dialog-primary-btn-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-primary-btn-text)] shadow-[var(--dialog-primary-btn-shadow)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              className="singleShareDialogPrimary flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[image:var(--dialog-primary-btn-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-primary-btn-text)] shadow-[var(--dialog-primary-btn-shadow)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
               data-oid="swe2txq"
             >
               {loading ? "创建中..." : "创建分享"}

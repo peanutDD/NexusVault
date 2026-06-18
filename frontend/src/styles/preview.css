@@ -1,288 +1,890 @@
 /* ==========================================================================
-   preview.css — 预览页面赛博朋克风格
+   preview.css — preview surfaces and syntax theming
    ========================================================================== */
 
 @layer components {
-    /* 预览页面网格纹理 */
-    .preview-grid-pattern {
-        opacity: 0.08;
-        background-image:
-            linear-gradient(
-                rgba(var(--preview-grid, 255, 255, 255), 0.14) 0.0625rem,
-                transparent 0.0625rem
-            ),
-            linear-gradient(
-                90deg,
-                rgba(var(--preview-grid, 255, 255, 255), 0.14) 0.0625rem,
-                transparent 0.0625rem
-            );
-        background-size: 3.125rem 3.125rem;
+  /* 预览页面网格纹理 */
+  .preview-grid-pattern {
+    opacity: 0.08;
+    background-image:
+      linear-gradient(
+        rgba(var(--preview-grid, 255, 255, 255), 0.14) 0.0625rem,
+        transparent 0.0625rem
+      ),
+      linear-gradient(
+        90deg,
+        rgba(var(--preview-grid, 255, 255, 255), 0.14) 0.0625rem,
+        transparent 0.0625rem
+      );
+    background-size: 3.125rem 3.125rem;
+  }
+
+  .preview-root {
+    --preview-green: var(--preview-green-rgb);
+    --preview-purple: var(--preview-purple-rgb);
+    --preview-magenta: var(--preview-magenta-rgb);
+    --preview-ink: var(--preview-ink-rgb);
+    --preview-grid: var(--preview-grid-rgb);
+    --preview-scanline-step: clamp(0.25rem, 0.6vw, 0.3125rem);
+    --preview-scanline-step-tight: clamp(0.2rem, 0.5vw, 0.25rem);
+    --preview-glow-sm: clamp(1.125rem, 2vw, 1.375rem);
+    --preview-glow-md: clamp(1.375rem, 2.4vw, 1.625rem);
+    --preview-glow-lg: clamp(1.5rem, 3vw, 1.75rem);
+    --preview-glow-xl: clamp(1.75rem, 3.4vw, 2.125rem);
+  }
+
+  .previewStageShell {
+    --preview-stage-vertical-gap: clamp(1.12rem, 1.68dvh, 1.36rem);
+    --preview-stage-fluid-height: min(
+      82dvh,
+      55rem,
+      calc(100% - var(--preview-stage-vertical-gap))
+    );
+  }
+
+  .previewStageDisplay,
+  .previewStageDocumentDisplay {
+    height: var(--preview-stage-fluid-height);
+    max-height: var(--preview-stage-fluid-height);
+  }
+
+  .preview-static-bg {
+    background-image:
+      radial-gradient(
+        120% 80% at 15% 10%,
+        rgba(var(--preview-green), 0.2) 0%,
+        rgba(var(--preview-green), 0.08) 28%,
+        transparent 65%
+      ),
+      radial-gradient(
+        95% 70% at 85% 12%,
+        rgba(var(--preview-purple), 0.22) 0%,
+        rgba(var(--preview-purple), 0.08) 32%,
+        transparent 70%
+      ),
+      radial-gradient(
+        130% 90% at 50% 95%,
+        rgba(var(--preview-magenta), 0.16) 0%,
+        rgba(var(--preview-magenta), 0.06) 40%,
+        transparent 75%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(var(--preview-ink), 0.96) 0%,
+        rgba(var(--preview-ink), 0.9) 42%,
+        rgba(var(--preview-ink), 0.94) 100%
+      );
+  }
+
+  .preview-static-grid {
+    background-image:
+      linear-gradient(
+        rgba(var(--preview-grid), 0.16) 0.0625rem,
+        transparent 0.0625rem
+      ),
+      linear-gradient(
+        90deg,
+        rgba(var(--preview-grid), 0.16) 0.0625rem,
+        transparent 0.0625rem
+      );
+    background-size: 2.5rem 2.5rem;
+  }
+
+  .preview-static-vignette {
+    background: radial-gradient(
+      ellipse at center,
+      transparent 36%,
+      rgba(var(--preview-ink), 0.2) 68%,
+      rgba(var(--preview-ink), 0.42) 100%
+    );
+  }
+
+  .preview-static-scanlines {
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(var(--preview-grid), 0.1) 0px,
+      rgba(var(--preview-grid), 0.1) 1px,
+      transparent 1px,
+      transparent var(--preview-scanline-step)
+    );
+  }
+
+  .preview-static-hud {
+    background-image:
+      linear-gradient(
+        112deg,
+        transparent 0%,
+        transparent 34%,
+        rgba(var(--preview-green), 0.11) 35%,
+        rgba(var(--preview-green), 0.11) 36%,
+        transparent 37%
+      ),
+      linear-gradient(
+        68deg,
+        transparent 0%,
+        transparent 62%,
+        rgba(var(--preview-purple), 0.12) 63%,
+        rgba(var(--preview-purple), 0.12) 64%,
+        transparent 65%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(var(--preview-magenta), 0.09),
+        transparent 30%,
+        transparent 70%,
+        rgba(var(--preview-green), 0.08)
+      );
+  }
+
+  .preview-static-bg-glow {
+    background-image:
+      radial-gradient(
+        125% 85% at 12% 8%,
+        rgba(var(--preview-green), 0.36) 0%,
+        rgba(var(--preview-green), 0.14) 26%,
+        transparent 64%
+      ),
+      radial-gradient(
+        100% 72% at 86% 10%,
+        rgba(var(--preview-purple), 0.38) 0%,
+        rgba(var(--preview-purple), 0.16) 30%,
+        transparent 70%
+      ),
+      radial-gradient(
+        120% 90% at 50% 92%,
+        rgba(var(--preview-magenta), 0.3) 0%,
+        rgba(var(--preview-magenta), 0.12) 42%,
+        transparent 76%
+      ),
+      linear-gradient(
+        128deg,
+        rgba(var(--preview-ink), 0.96) 0%,
+        rgba(var(--preview-ink), 0.84) 45%,
+        rgba(var(--preview-ink), 0.94) 100%
+      );
+    filter: saturate(1.18) contrast(1.05);
+  }
+
+  .preview-static-grid-glow {
+    background-image:
+      linear-gradient(
+        rgba(var(--preview-grid), 0.24) 0.0625rem,
+        transparent 0.0625rem
+      ),
+      linear-gradient(
+        90deg,
+        rgba(var(--preview-grid), 0.24) 0.0625rem,
+        transparent 0.0625rem
+      );
+    background-size: 2rem 2rem;
+  }
+
+  .preview-static-vignette-glow {
+    background: radial-gradient(
+      ellipse at center,
+      transparent 34%,
+      rgba(var(--preview-ink), 0.18) 66%,
+      rgba(var(--preview-ink), 0.48) 100%
+    );
+  }
+
+  .preview-static-scanlines-glow {
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(var(--preview-grid), 0.16) 0px,
+      rgba(var(--preview-grid), 0.16) 1px,
+      transparent 1px,
+      transparent var(--preview-scanline-step-tight)
+    );
+  }
+
+  .preview-static-hud-glow {
+    background-image:
+      linear-gradient(
+        112deg,
+        transparent 0%,
+        transparent 28%,
+        rgba(var(--preview-green), 0.2) 29%,
+        rgba(var(--preview-green), 0.2) 30%,
+        transparent 31%
+      ),
+      linear-gradient(
+        68deg,
+        transparent 0%,
+        transparent 58%,
+        rgba(var(--preview-purple), 0.2) 59%,
+        rgba(var(--preview-purple), 0.2) 60%,
+        transparent 61%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(var(--preview-magenta), 0.16),
+        transparent 26%,
+        transparent 72%,
+        rgba(var(--preview-green), 0.14)
+      );
+  }
+
+  .preview-rainbow-pedestal {
+    filter: var(
+      --preview-pedestal-filter,
+      drop-shadow(0 0 var(--preview-glow-sm) rgba(var(--preview-purple), 0.3))
+    );
+  }
+
+  .previewTextMetaCapsule {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--preview-label-text-solid) 20%, transparent),
+        color-mix(in srgb, var(--preview-counter-bg) 92%, transparent) 42%,
+        rgba(var(--preview-purple), 0.18)
+      ),
+      var(--preview-counter-bg) !important;
+    box-shadow:
+      inset 0 1px 0
+        color-mix(in srgb, var(--preview-label-text-solid) 38%, transparent),
+      inset 0 -0.0625rem 0 rgba(var(--preview-purple), 0.24),
+      0 0 clamp(0.35rem, 0.8vw, 0.5rem)
+        color-mix(in srgb, var(--preview-label-text-solid) 22%, transparent),
+      var(--preview-counter-shadow) !important;
+  }
+
+  .previewTextMetaCapsule::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(
+      180deg,
+      rgba(var(--preview-grid), 0.22),
+      transparent 52%,
+      rgba(var(--preview-purple), 0.22)
+    );
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  .previewTextMetaCapsule::after {
+    content: "";
+    position: absolute;
+    inset-inline: 18%;
+    bottom: -45%;
+    z-index: -1;
+    height: 70%;
+    border-radius: inherit;
+    background: var(--preview-label-text);
+    filter: blur(clamp(0.18rem, 0.45vw, 0.28rem));
+    opacity: 0.38;
+    pointer-events: none;
+  }
+
+  .previewTextMetaCapsule > span {
+    position: relative;
+    z-index: 1;
+  }
+
+  .previewPedestalSpine,
+  .previewPedestalFoot {
+    transform-style: preserve-3d;
+  }
+
+  .previewPedestalSpine {
+    border: 0.0625rem solid var(--preview-neck-front-border);
+    background: var(--preview-neck-front-bg);
+    box-shadow: var(--preview-neck-front-shadow);
+    transform: rotateX(9deg) translateZ(clamp(0.16rem, 0.5vw, 0.35rem));
+  }
+
+  .previewPedestalSpineDepth {
+    border: 0.0625rem solid var(--preview-shell-border);
+    border-top: 0;
+    background: var(--preview-neck-bottom-bg);
+    transform: rotateX(-62deg);
+  }
+
+  .previewPedestalSpineHighlight {
+    border: 0.0625rem solid var(--preview-neck-inner-border);
+    background: var(--preview-neck-inner-bg);
+  }
+
+  .previewPedestalFoot {
+    border: 0.0625rem solid var(--preview-base-border);
+    background: var(--preview-base-bg);
+    box-shadow: var(--preview-base-shadow);
+    transform: rotateX(7deg) translateZ(clamp(0.08rem, 0.32vw, 0.22rem));
+  }
+
+  .previewPedestalFootDepth {
+    border: 0.0625rem solid var(--preview-shell-border);
+    border-top: 0;
+    background: var(--preview-neck-bottom-bg);
+    transform: rotateX(-54deg);
+  }
+
+  .previewPedestalFootInner {
+    border: 0.0625rem solid var(--preview-base-inner-border);
+    background: var(--preview-base-inner-bg);
+  }
+
+  .previewPedestalFootSlot {
+    background: var(--preview-base-top-glow);
+    box-shadow: 0 0 var(--preview-glow-sm) var(--preview-base-top-glow);
+  }
+
+  .previewPedestalShadow {
+    background: var(--preview-base-ambient);
+  }
+
+  .preview-neon-frame {
+    border: 1px solid rgba(var(--preview-green), 0.45);
+    box-shadow: 0 0 var(--preview-glow-lg) rgba(var(--preview-green), 0.45);
+  }
+
+  .preview-neon-frame.alt {
+    border-color: rgba(var(--preview-purple), 0.45);
+    box-shadow: 0 0 var(--preview-glow-lg) rgba(var(--preview-purple), 0.45);
+  }
+
+  .preview-neon-frame.soft {
+    border-color: rgba(var(--preview-green), 0.28);
+    box-shadow: 0 0 var(--preview-glow-sm) rgba(var(--preview-green), 0.35);
+  }
+
+  .preview-neon-ring {
+    border: 1px solid rgba(var(--preview-magenta), 0.35);
+    box-shadow: 0 0 var(--preview-glow-xl) rgba(var(--preview-magenta), 0.45);
+  }
+
+  .preview-progress-fill {
+    background: linear-gradient(
+      90deg,
+      rgba(var(--preview-green), 0.9),
+      rgba(var(--preview-magenta), 0.85),
+      rgba(var(--preview-purple), 0.9)
+    );
+  }
+
+  .previewFileInfoContent {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(0.28rem, 0.7vw, 0.46rem);
+    min-width: 0;
+    text-align: center;
+  }
+
+  .previewFileInfoNameBlock {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    max-width: min(100%, 36rem);
+  }
+
+  .previewFileInfoTitle {
+    min-width: 0;
+    max-width: 100%;
+    line-height: 1.08;
+  }
+
+  .previewFileInfoMeta {
+    display: inline-flex;
+    flex: 0 1 auto;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(0.22rem, 0.58vw, 0.34rem);
+  }
+
+  .previewFileInfoMetaRail {
+    justify-self: center;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .previewFileInfoMetaItem,
+  .previewFileInfoMetaSeparator {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .previewFileInfoMetaSeparator {
+    opacity: 0.62;
+  }
+
+  .previewTextPanel,
+  .previewTextScroll,
+  .previewTextPre,
+  .previewMarkdownMedia,
+  .previewMarkdownTableShell,
+  .previewMarkdownPre,
+  .previewMarkdownCodeBlock,
+  .previewMarkdownCodeScroll {
+    min-width: 0;
+    max-inline-size: 100%;
+  }
+
+  .previewTextPanel {
+    block-size: 100%;
+    max-block-size: 100%;
+  }
+
+  .previewTextScroll {
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .previewMarkdownMedia {
+    inline-size: auto;
+    block-size: auto;
+    max-inline-size: 100%;
+  }
+
+  .previewMarkdownTableShell,
+  .previewMarkdownPre,
+  .previewMarkdownCodeScroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .previewFloatingToolbar {
+    --preview-floating-toolbar-inline-size: clamp(2.5rem, 6vw, 3rem);
+    --preview-toolbar-button-size: clamp(2rem, 5vw, 2.5rem);
+    --preview-toolbar-icon-size: clamp(1rem, 2.5vw, 1.25rem);
+    --preview-toolbar-symbol-font-size: clamp(0.85rem, 2vw, 1.125rem);
+    --preview-toolbar-reset-font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  }
+
+  @media (max-width: 640px), (hover: none) and (pointer: coarse) {
+    .previewDialog {
+      top: 0 !important;
+      height: 100dvh;
+      min-height: 100dvh;
     }
 
-    .preview-cyberpunk-root {
-        --preview-green: var(--preview-green-rgb);
-        --preview-purple: var(--preview-purple-rgb);
-        --preview-magenta: var(--preview-magenta-rgb);
-        --preview-ink: var(--preview-ink-rgb);
-        --preview-grid: var(--preview-grid-rgb);
-        --preview-scanline-step: clamp(0.25rem, 0.6vw, 0.3125rem);
-        --preview-scanline-step-tight: clamp(0.2rem, 0.5vw, 0.25rem);
-        --preview-glow-sm: clamp(1.125rem, 2vw, 1.375rem);
-        --preview-glow-md: clamp(1.375rem, 2.4vw, 1.625rem);
-        --preview-glow-lg: clamp(1.5rem, 3vw, 1.75rem);
-        --preview-glow-xl: clamp(1.75rem, 3.4vw, 2.125rem);
+    .previewStageControlPlane {
+      --preview-mobile-chrome-lane-block: clamp(2.55rem, 10dvw, 3.3rem);
+      --preview-mobile-chrome-inset: clamp(0.42rem, 2.2vw, 0.62rem);
+      --preview-mobile-chrome-safe-gap: clamp(0.42rem, 2.4vw, 0.8rem);
+      --preview-mobile-stage-row: minmax(0, 1fr);
+      --preview-mobile-toolbar-button-size: clamp(1.58rem, 7.4dvw, 2rem);
+      --preview-mobile-toolbar-icon-size: clamp(0.82rem, 3.8dvw, 1.05rem);
+      --preview-mobile-toolbar-symbol-font-size: clamp(0.78rem, 3.4dvw, 0.98rem);
+      --preview-mobile-toolbar-reset-font-size: clamp(0.46rem, 2.15dvw, 0.58rem);
+      --preview-mobile-top-chrome-reserve: calc(
+        var(--preview-mobile-chrome-lane-block) +
+          var(--preview-mobile-chrome-inset) +
+          var(--preview-mobile-chrome-safe-gap)
+      );
+      --preview-mobile-bottom-chrome-reserve: calc(
+        var(--preview-mobile-chrome-lane-block) +
+          var(--preview-mobile-chrome-inset) +
+          var(--preview-mobile-chrome-safe-gap)
+      );
+      align-items: stretch;
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: var(--preview-mobile-top-chrome-reserve) var(--preview-mobile-stage-row) var(--preview-mobile-bottom-chrome-reserve);
+      overflow: hidden;
+      padding-block-start: 0 !important;
+      padding-block-end: 0 !important;
     }
 
-    .preview-static-bg {
-        background-image:
-            radial-gradient(
-                120% 80% at 15% 10%,
-                rgba(var(--preview-green), 0.2) 0%,
-                rgba(var(--preview-green), 0.08) 28%,
-                transparent 65%
-            ),
-            radial-gradient(
-                95% 70% at 85% 12%,
-                rgba(var(--preview-purple), 0.22) 0%,
-                rgba(var(--preview-purple), 0.08) 32%,
-                transparent 70%
-            ),
-            radial-gradient(
-                130% 90% at 50% 95%,
-                rgba(var(--preview-magenta), 0.16) 0%,
-                rgba(var(--preview-magenta), 0.06) 40%,
-                transparent 75%
-            ),
-            linear-gradient(
-                135deg,
-                rgba(var(--preview-ink), 0.96) 0%,
-                rgba(var(--preview-ink), 0.9) 42%,
-                rgba(var(--preview-ink), 0.94) 100%
-            );
+    .previewStageShell {
+      --preview-stage-vertical-gap: clamp(0.75rem, 2dvh, 1rem);
+      --preview-stage-fluid-height: min(
+        100%,
+        68dvh,
+        46rem,
+        calc(100% - var(--preview-stage-vertical-gap))
+      );
+      align-self: stretch;
+      block-size: 100%;
+      grid-column: 1;
+      grid-row: 2;
+      justify-self: stretch;
+      max-block-size: 100%;
+      padding-inline: clamp(0.45rem, 3vw, 0.75rem) !important;
+      padding-block: clamp(0.35rem, 1vh, 0.6rem) !important;
     }
 
-    .preview-static-grid {
-        background-image:
-            linear-gradient(
-                rgba(var(--preview-grid), 0.16) 0.0625rem,
-                transparent 0.0625rem
-            ),
-            linear-gradient(
-                90deg,
-                rgba(var(--preview-grid), 0.16) 0.0625rem,
-                transparent 0.0625rem
-            );
-        background-size: 2.5rem 2.5rem;
+    .previewStageDisplay {
+      height: min(100%, var(--preview-stage-fluid-height)) !important;
+      max-height: min(100%, var(--preview-stage-fluid-height)) !important;
+      top: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
     }
 
-    .preview-static-vignette {
-        background:
-            radial-gradient(
-                ellipse at center,
-                transparent 36%,
-                rgba(var(--preview-ink), 0.2) 68%,
-                rgba(var(--preview-ink), 0.42) 100%
-            );
+    .previewStageDocumentShell {
+      --preview-stage-fluid-height: min(
+        100%,
+        70dvh,
+        46rem,
+        calc(100% - var(--preview-stage-vertical-gap))
+      );
+      justify-content: flex-start;
     }
 
-    .preview-static-scanlines {
-        background: repeating-linear-gradient(
-            180deg,
-            rgba(var(--preview-grid), 0.1) 0px,
-            rgba(var(--preview-grid), 0.1) 1px,
-            transparent 1px,
-            transparent var(--preview-scanline-step)
-        );
+    .previewStageDocumentDisplay {
+      height: min(100%, var(--preview-stage-fluid-height)) !important;
+      max-height: min(100%, var(--preview-stage-fluid-height)) !important;
     }
 
-    .preview-static-hud {
-        background-image:
-            linear-gradient(
-                112deg,
-                transparent 0%,
-                transparent 34%,
-                rgba(var(--preview-green), 0.11) 35%,
-                rgba(var(--preview-green), 0.11) 36%,
-                transparent 37%
-            ),
-            linear-gradient(
-                68deg,
-                transparent 0%,
-                transparent 62%,
-                rgba(var(--preview-purple), 0.12) 63%,
-                rgba(var(--preview-purple), 0.12) 64%,
-                transparent 65%
-            ),
-            linear-gradient(
-                180deg,
-                rgba(var(--preview-magenta), 0.09),
-                transparent 30%,
-                transparent 70%,
-                rgba(var(--preview-green), 0.08)
-            );
+    .previewTextPanel {
+      inline-size: 100%;
+      block-size: 100%;
+      max-block-size: 100%;
+      max-inline-size: 100% !important;
     }
 
-    .preview-static-bg-glow {
-        background-image:
-            radial-gradient(
-                125% 85% at 12% 8%,
-                rgba(var(--preview-green), 0.36) 0%,
-                rgba(var(--preview-green), 0.14) 26%,
-                transparent 64%
-            ),
-            radial-gradient(
-                100% 72% at 86% 10%,
-                rgba(var(--preview-purple), 0.38) 0%,
-                rgba(var(--preview-purple), 0.16) 30%,
-                transparent 70%
-            ),
-            radial-gradient(
-                120% 90% at 50% 92%,
-                rgba(var(--preview-magenta), 0.3) 0%,
-                rgba(var(--preview-magenta), 0.12) 42%,
-                transparent 76%
-            ),
-            linear-gradient(
-                128deg,
-                rgba(var(--preview-ink), 0.96) 0%,
-                rgba(var(--preview-ink), 0.84) 45%,
-                rgba(var(--preview-ink), 0.94) 100%
-            );
-        filter: saturate(1.18) contrast(1.05);
+    .previewTextScroll {
+      padding: clamp(0.58rem, 3vw, 0.82rem) !important;
     }
 
-    .preview-static-grid-glow {
-        background-image:
-            linear-gradient(
-                rgba(var(--preview-grid), 0.24) 0.0625rem,
-                transparent 0.0625rem
-            ),
-            linear-gradient(
-                90deg,
-                rgba(var(--preview-grid), 0.24) 0.0625rem,
-                transparent 0.0625rem
-            );
-        background-size: 2rem 2rem;
+    .previewMarkdownMedia {
+      max-block-size: min(48dvh, 22rem);
     }
 
-    .preview-static-vignette-glow {
-        background:
-            radial-gradient(
-                ellipse at center,
-                transparent 34%,
-                rgba(var(--preview-ink), 0.18) 66%,
-                rgba(var(--preview-ink), 0.48) 100%
-            );
+    .previewToolbarUpper {
+      right: auto !important;
+      left: 50% !important;
+      top: auto !important;
+      bottom: var(--preview-mobile-chrome-inset) !important;
+      transform: translateX(-50%) !important;
     }
 
-    .preview-static-scanlines-glow {
-        background: repeating-linear-gradient(
-            180deg,
-            rgba(var(--preview-grid), 0.16) 0px,
-            rgba(var(--preview-grid), 0.16) 1px,
-            transparent 1px,
-            transparent var(--preview-scanline-step-tight)
-        );
+    .previewToolbarLower {
+      top: var(--preview-mobile-chrome-inset) !important;
+      right: var(--preview-mobile-chrome-inset) !important;
+      bottom: auto !important;
     }
 
-    .preview-static-hud-glow {
-        background-image:
-            linear-gradient(
-                112deg,
-                transparent 0%,
-                transparent 28%,
-                rgba(var(--preview-green), 0.2) 29%,
-                rgba(var(--preview-green), 0.2) 30%,
-                transparent 31%
-            ),
-            linear-gradient(
-                68deg,
-                transparent 0%,
-                transparent 58%,
-                rgba(var(--preview-purple), 0.2) 59%,
-                rgba(var(--preview-purple), 0.2) 60%,
-                transparent 61%
-            ),
-            linear-gradient(
-                180deg,
-                rgba(var(--preview-magenta), 0.16),
-                transparent 26%,
-                transparent 72%,
-                rgba(var(--preview-green), 0.14)
-            );
+    .previewMobileChromeLane {
+      max-inline-size: calc(100% - (var(--preview-mobile-chrome-inset) * 2));
     }
 
-    .preview-rainbow-pedestal {
-        --preview-shell-border: rgba(129, 140, 248, 0.62);
-        --preview-neck-front-border: rgba(244, 114, 182, 0.72);
-        --preview-neck-front-bg: linear-gradient(
-            160deg,
-            rgba(129, 140, 248, 0.52),
-            rgba(34, 211, 238, 0.42),
-            rgba(244, 114, 182, 0.54)
-        );
-        --preview-neck-front-shadow:
-            0 clamp(0.5rem, 1vw, 0.625rem) var(--preview-glow-lg)
-                rgba(129, 140, 248, 0.32),
-            0 0 var(--preview-glow-sm) rgba(244, 114, 182, 0.24);
-        --preview-neck-inner-border: rgba(255, 255, 255, 0.66);
-        --preview-neck-inner-bg: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.62),
-            rgba(34, 211, 238, 0.18),
-            rgba(244, 114, 182, 0.14)
-        );
-        --preview-neck-bottom-bg: rgba(79, 70, 229, 0.42);
-        --preview-base-border: rgba(34, 211, 238, 0.68);
-        --preview-base-bg: linear-gradient(
-            90deg,
-            rgba(129, 140, 248, 0.5),
-            rgba(34, 211, 238, 0.46),
-            rgba(244, 114, 182, 0.52)
-        );
-        --preview-base-shadow:
-            0 clamp(0.625rem, 1.2vw, 0.75rem) var(--preview-glow-md)
-                rgba(34, 211, 238, 0.28),
-            0 0 var(--preview-glow-md) rgba(244, 114, 182, 0.24);
-        --preview-base-inner-border: rgba(255, 255, 255, 0.7);
-        --preview-base-inner-bg: linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0.52),
-            rgba(34, 211, 238, 0.12),
-            rgba(244, 114, 182, 0.14)
-        );
-        --preview-base-top-glow: rgba(244, 114, 182, 0.4);
-        --preview-base-ambient: rgba(34, 211, 238, 0.36);
-        filter: drop-shadow(0 0 var(--preview-glow-sm) rgba(34, 211, 238, 0.3))
-            drop-shadow(0 0 var(--preview-glow-sm) rgba(244, 114, 182, 0.24));
+    .previewFloatingToolbar {
+      --preview-floating-toolbar-inline-size: auto;
+      --preview-toolbar-button-size: var(--preview-mobile-toolbar-button-size);
+      --preview-toolbar-icon-size: var(--preview-mobile-toolbar-icon-size);
+      --preview-toolbar-symbol-font-size: var(
+        --preview-mobile-toolbar-symbol-font-size
+      );
+      --preview-toolbar-reset-font-size: var(
+        --preview-mobile-toolbar-reset-font-size
+      );
+      width: var(--preview-floating-toolbar-inline-size) !important;
+      max-width: 100%;
+      flex-direction: row !important;
+      padding: clamp(0.26rem, 1.4vw, 0.42rem) !important;
     }
 
-    .preview-neon-frame {
-        border: 1px solid rgba(var(--preview-green), 0.45);
-        box-shadow: 0 0 var(--preview-glow-lg) rgba(var(--preview-green), 0.45);
+    .previewFloatingToolbar > div {
+      flex-direction: row !important;
     }
 
-    .preview-neon-frame.alt {
-        border-color: rgba(var(--preview-purple), 0.45);
-        box-shadow: 0 0 var(--preview-glow-lg) rgba(var(--preview-purple), 0.45);
+    .previewNavButton {
+      width: clamp(1.85rem, 8.5vw, 2.25rem) !important;
+      height: clamp(1.85rem, 8.5vw, 2.25rem) !important;
     }
 
-    .preview-neon-frame.soft {
-        border-color: rgba(var(--preview-green), 0.28);
-        box-shadow: 0 0 var(--preview-glow-sm) rgba(var(--preview-green), 0.35);
+    .previewFileInfoCard {
+      width: 100%;
+      max-width: min(100%, clamp(26rem, 82vw, 34rem));
+      padding: clamp(0.5rem, 2.8vw, 0.68rem) !important;
     }
 
-    .preview-neon-ring {
-        border: 1px solid rgba(var(--preview-magenta), 0.35);
-        box-shadow: 0 0 var(--preview-glow-xl) rgba(var(--preview-magenta), 0.45);
+    .previewFileInfoContent {
+      display: flex;
+      flex-direction: column;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: clamp(0.28rem, 1.9vw, 0.42rem);
+      text-align: center;
     }
 
-    .preview-progress-fill {
-        background: linear-gradient(
-            90deg,
-            rgba(var(--preview-green), 0.9),
-            rgba(var(--preview-magenta), 0.85),
-            rgba(var(--preview-purple), 0.9)
-        );
+    .previewFileInfoNameBlock {
+      width: 100%;
+      max-width: 100%;
+      justify-self: center;
     }
+
+    .previewFileInfoMetaRail {
+      width: fit-content;
+      max-width: 100%;
+      justify-self: center;
+    }
+
+    .previewFileInfoMeta {
+      justify-content: center;
+    }
+  }
+
+  .neuromorphic-style .previewFileInfoCard,
+  .neuromorphic-style .previewFileInfoCard {
+    --preview-file-info-title: color-mix(
+      in srgb,
+      var(--color-text-primary) 88%,
+      white 12%
+    );
+    --preview-file-info-size: color-mix(
+      in srgb,
+      var(--neu-primary) 88%,
+      white 12%
+    );
+    --preview-file-info-type: color-mix(
+      in srgb,
+      var(--color-text-secondary) 78%,
+      var(--neu-primary) 22%
+    );
+    --preview-file-info-date: color-mix(
+      in srgb,
+      var(--color-text-secondary) 84%,
+      white 16%
+    );
+    border: 0 !important;
+    background: var(--neu-raised-bg) !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .neuromorphic-style .previewFileInfoContent,
+  .neuromorphic-style .previewFileInfoContent {
+    min-height: clamp(3.15rem, 5.2vw, 3.85rem);
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .neuromorphic-style .previewFileInfoNameBlock,
+  .neuromorphic-style .previewFileInfoNameBlock {
+    min-height: auto;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding-inline: clamp(0.25rem, 0.8vw, 0.5rem);
+    text-shadow: none;
+  }
+
+  .neuromorphic-style .previewFileInfoTitle,
+  .neuromorphic-style .previewFileInfoTitle {
+    color: var(--preview-file-info-title);
+    font-size: clamp(1rem, 1.65vw, 1.18rem);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-shadow: none;
+  }
+
+  .neuromorphic-style .previewFileInfoMeta,
+  .neuromorphic-style .previewFileInfoMeta {
+    color: var(--color-text-secondary);
+    font-size: clamp(0.68rem, 1vw, 0.78rem);
+  }
+
+  .neuromorphic-style .previewFileInfoMetaRail,
+  .neuromorphic-style .previewFileInfoMetaRail {
+    justify-self: center;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .neuromorphic-style .previewFileInfoMetaCapsule,
+  .neuromorphic-style .previewFileInfoMetaCapsule {
+    min-height: clamp(1.34rem, 2vw, 1.55rem);
+    border-radius: 999rem;
+    background: var(--neu-inset-bg);
+    box-shadow: var(--neu-inset-shadow);
+    color: var(--color-text-secondary);
+    padding-inline: clamp(0.72rem, 1.35vw, 0.95rem);
+    padding-block: clamp(0.12rem, 0.35vw, 0.18rem);
+    white-space: nowrap;
+    text-shadow: none;
+  }
+
+  .neuromorphic-style .previewFileInfoSize,
+  .neuromorphic-style .previewFileInfoSize {
+    color: var(--preview-file-info-size);
+  }
+
+  .neuromorphic-style .previewFileInfoType,
+  .neuromorphic-style .previewFileInfoType {
+    color: var(--preview-file-info-type);
+  }
+
+  .neuromorphic-style .previewFileInfoDate,
+  .neuromorphic-style .previewFileInfoDate {
+    color: var(--preview-file-info-date);
+  }
+
+  .neuromorphic-style .previewFloatingToolbar,
+  .neuromorphic-style .previewFloatingToolbar,
+  .neuromorphic-style .previewNavButton,
+  .neuromorphic-style .previewNavButton {
+    border: 0 !important;
+    background: var(--neu-raised-bg) !important;
+    box-shadow: var(--neu-control-shadow) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .neuromorphic-style .previewFloatingBtn,
+  .neuromorphic-style .previewFloatingBtn {
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent;
+  }
+
+  .neuromorphic-style .previewFloatingBtn:hover,
+  .neuromorphic-style .previewFloatingBtn:hover,
+  .neuromorphic-style .previewFloatingBtn:active,
+  .neuromorphic-style .previewFloatingBtn:active {
+    background: var(--neu-inset-bg);
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  @media (max-width: 640px), (hover: none) and (pointer: coarse) {
+    .neuromorphic-style .previewFileInfoCard,
+    .neuromorphic-style .previewFileInfoCard {
+      border-radius: clamp(0.58rem, 2.6vw, 0.72rem);
+      box-shadow: var(--neu-raised-sm-shadow) !important;
+    }
+
+    .neuromorphic-style .previewFileInfoContent,
+    .neuromorphic-style .previewFileInfoContent {
+      min-height: auto;
+      flex-direction: column;
+    }
+
+    .neuromorphic-style .previewFileInfoNameBlock,
+    .neuromorphic-style .previewFileInfoNameBlock {
+      min-height: auto;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      padding-inline: 0;
+    }
+
+    .neuromorphic-style .previewFileInfoTitle,
+    .neuromorphic-style .previewFileInfoTitle {
+      font-size: clamp(0.84rem, 3.8vw, 0.98rem);
+      line-height: 1.15;
+    }
+
+    .neuromorphic-style .previewFileInfoMeta,
+    .neuromorphic-style .previewFileInfoMeta {
+      gap: clamp(0.24rem, 1.8vw, 0.36rem);
+      font-size: clamp(0.62rem, 3.05vw, 0.72rem);
+      line-height: 1;
+    }
+
+    .neuromorphic-style .previewFileInfoMetaRail,
+    .neuromorphic-style .previewFileInfoMetaRail {
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .neuromorphic-style .previewFileInfoMetaCapsule,
+    .neuromorphic-style .previewFileInfoMetaCapsule {
+      min-height: clamp(1.05rem, 5vw, 1.25rem);
+      border-radius: 999rem;
+      padding-inline: clamp(0.5rem, 3vw, 0.75rem);
+      padding-block: clamp(0.12rem, 0.85vw, 0.16rem);
+    }
+  }
+
+  .neuromorphic-style .preview-static-bg,
+  .neuromorphic-style .preview-static-bg {
+    background: var(--surface-page-gradient);
+    filter: none;
+  }
+
+  .neuromorphic-style .preview-static-grid,
+  .neuromorphic-style .preview-static-vignette,
+  .neuromorphic-style .preview-static-scanlines,
+  .neuromorphic-style .preview-static-hud,
+  .neuromorphic-style .preview-static-grid,
+  .neuromorphic-style .preview-static-vignette,
+  .neuromorphic-style .preview-static-scanlines,
+  .neuromorphic-style .preview-static-hud {
+    background: none;
+    opacity: 0 !important;
+  }
+
+  .neuromorphic-style .preview-root .hljs,
+  .neuromorphic-style .preview-root .hljs,
+  [data-theme="light"] .preview-root .hljs,
+  .light .preview-root .hljs {
+    color: var(--preview-markdown-code-text) !important;
+    background: transparent !important;
+  }
+
+  [data-theme="light"] .preview-root .hljs-keyword,
+  [data-theme="light"] .preview-root .hljs-selector-tag,
+  [data-theme="light"] .preview-root .hljs-built_in,
+  [data-theme="light"] .preview-root .hljs-name,
+  .light .preview-root .hljs-keyword,
+  .light .preview-root .hljs-selector-tag,
+  .light .preview-root .hljs-built_in,
+  .light .preview-root .hljs-name {
+    color: var(--preview-markdown-syntax-keyword) !important;
+  }
+
+  [data-theme="light"] .preview-root .hljs-string,
+  [data-theme="light"] .preview-root .hljs-regexp,
+  .light .preview-root .hljs-string,
+  .light .preview-root .hljs-regexp {
+    color: var(--preview-markdown-syntax-string) !important;
+  }
+
+  [data-theme="light"] .preview-root .hljs-title,
+  [data-theme="light"] .preview-root .hljs-section,
+  .light .preview-root .hljs-title,
+  .light .preview-root .hljs-section {
+    color: var(--preview-markdown-syntax-title) !important;
+  }
+
+  [data-theme="light"] .preview-root .hljs-attr,
+  [data-theme="light"] .preview-root .hljs-attribute,
+  [data-theme="light"] .preview-root .hljs-property,
+  .light .preview-root .hljs-attr,
+  .light .preview-root .hljs-attribute,
+  .light .preview-root .hljs-property {
+    color: var(--preview-markdown-syntax-attr) !important;
+  }
+
+  [data-theme="light"] .preview-root .hljs-comment,
+  [data-theme="light"] .preview-root .hljs-quote,
+  .light .preview-root .hljs-comment,
+  .light .preview-root .hljs-quote {
+    color: var(--preview-markdown-syntax-comment) !important;
+  }
+
+  [data-theme="light"] .preview-root .hljs-number,
+  [data-theme="light"] .preview-root .hljs-literal,
+  .light .preview-root .hljs-number,
+  .light .preview-root .hljs-literal {
+    color: var(--preview-markdown-syntax-literal) !important;
+  }
+
+  [data-theme="light"] .preview-root .hljs-punctuation,
+  [data-theme="light"] .preview-root .hljs-operator,
+  .light .preview-root .hljs-punctuation,
+  .light .preview-root .hljs-operator {
+    color: var(--preview-markdown-syntax-punctuation) !important;
+  }
 }

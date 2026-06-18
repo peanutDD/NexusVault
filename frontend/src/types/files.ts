@@ -18,6 +18,28 @@ export interface FileMetadata {
   search_snippet?: string;
   match_source?: 'filename' | 'content' | 'ocr' | 'category';
   search_score?: number;
+  tags?: FileTag[];
+  is_favorite?: boolean;
+  is_pinned?: boolean;
+  last_opened_at?: string | null;
+}
+
+export interface FileTag {
+  id: string;
+  name: string;
+  color: string;
+  created_at?: string;
+}
+
+export interface FulltextSearchMetadata {
+  index_status: 'ready' | 'fallback';
+  count: number;
+  ocr: {
+    enabled: boolean;
+    pdf_max_pages: number;
+    tesseract_available: boolean;
+    poppler_available: boolean;
+  };
 }
 
 /**
@@ -31,6 +53,7 @@ export interface FileListResponse {
   limit?: number;
   // 游标分页字段（当使用 cursor 参数时）
   next_cursor?: string | null;
+  search?: FulltextSearchMetadata;
 }
 
 export interface TrashListResponse {
@@ -55,9 +78,39 @@ export interface FileListQuery {
   date_to?: string;
   size_min?: number;
   size_max?: number;
+  tag_id?: string;
+  collection?: 'favorites' | 'pinned' | 'recent' | 'untagged' | 'large' | 'duplicates' | 'images' | 'pdfs' | 'videos' | string;
   // 排序参数
   sort_by?: 'created_at' | 'filename' | 'file_size' | 'type';
   sort_order?: 'asc' | 'desc';
+}
+
+export interface FileCollectionCounts {
+  collections: Partial<Record<'favorites' | 'pinned' | 'recent' | 'untagged' | 'large' | 'duplicates' | 'images' | 'pdfs' | 'videos', number>>;
+  tags: Record<string, number>;
+}
+
+export type FileCollectionCountsQuery = Pick<FileListQuery, 'folder_id' | 'search' | 'mime_type'>;
+
+export interface FileVersion {
+  id: string;
+  file_id: string;
+  version_number: number;
+  filename: string;
+  original_filename: string;
+  file_size: number;
+  mime_type: string;
+  label?: string | null;
+  created_at: string;
+  can_diff: boolean;
+  can_preview: boolean;
+}
+
+export interface FileVersionsResponse {
+  current: Pick<FileMetadata, 'id' | 'filename' | 'original_filename' | 'file_size' | 'mime_type'> & {
+    updated_at: string;
+  };
+  versions: FileVersion[];
 }
 
 /**

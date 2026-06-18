@@ -3,6 +3,7 @@ interface FileListRowProps {
   allFilesSelected: boolean;
   selectedCount: number;
   totalText: string;
+  selectionScopeLabel?: string;
   onToggleSelectAll: () => void;
 }
 
@@ -11,47 +12,55 @@ export default function FileListRow({
   allFilesSelected,
   selectedCount,
   totalText,
+  selectionScopeLabel = "All Files",
   onToggleSelectAll,
 }: FileListRowProps) {
   return (
-    <div className="all-files-row flex items-center justify-between gap-[clamp(0.75rem,2vw,1rem)]">
-      <div className="flex shrink-0 items-center gap-[clamp(0.6rem,1.4vw,0.75rem)]">
+    <div
+      className="all-files-row fileListSelectionStatsRow flex items-center justify-between gap-[clamp(0.75rem,2vw,1rem)]"
+      data-testid="filelist-selection-stats-row"
+    >
+      <div className="fileListSelectionStatsLeft flex shrink-0 items-center gap-[clamp(0.6rem,1.4vw,0.75rem)]">
         {isRevalidating ? (
           <span
-            className="text-[0.65rem] text-[var(--filelist-revalidating-text)]"
+            className="text-[length:var(--font-size-ui-4xs)] text-[var(--filelist-revalidating-text)]"
             aria-live="polite"
           >
             更新中…
           </span>
         ) : null}
-        <label className="font-brand flex cursor-pointer items-center gap-[clamp(0.4rem,1vw,0.5rem)] whitespace-nowrap text-[0.625rem] font-normal leading-none tracking-widest text-[var(--filelist-selection-label)]">
+        <label
+          className="fileListSelectionStatChip fileListAllFilesStat font-brand flex cursor-pointer items-center gap-[clamp(0.4rem,1vw,0.5rem)] whitespace-nowrap text-[length:var(--font-size-ui-5xs)] font-normal leading-none tracking-widest text-[var(--filelist-selection-label)]"
+          data-testid="filelist-all-files-stat"
+        >
           <input
             type="checkbox"
             checked={allFilesSelected}
             onChange={onToggleSelectAll}
-            aria-label="All Files"
+            aria-label={selectionScopeLabel}
             className="sr-only"
           />
           <span
             aria-hidden
-            className={`inline-flex h-[clamp(0.875rem,2vw,1rem)] min-h-[clamp(0.875rem,2vw,1rem)] w-[clamp(0.875rem,2vw,1rem)] min-w-[clamp(0.875rem,2vw,1rem)] shrink-0 items-center justify-center overflow-hidden rounded-[clamp(0.2rem,0.6vw,0.25rem)] border transition-all duration-200 ${
+            className={`filelist-check-control fileListAllFilesCheckbox inline-flex shrink-0 items-center justify-center overflow-hidden border-0 text-transparent transition-none ${
               allFilesSelected
-                ? "border-[var(--filelist-check-border-checked)] bg-[var(--filelist-check-bg-checked)] text-[var(--filelist-check-text-checked)]"
-                : "border-[var(--filelist-check-border)] bg-[var(--filelist-check-bg)] text-transparent hover:border-[var(--filelist-check-border-hover)] hover:bg-[var(--filelist-check-bg-hover)]"
+                ? "filelist-check-control-checked fileListAllFilesCheckboxSelected"
+                : "filelist-check-control-unchecked fileListAllFilesCheckboxUnchecked"
             }`}
-          >
-            <i
-              className={`bi bi-check-lg block text-[0.55rem] font-bold leading-none ${allFilesSelected ? "" : "invisible"}`}
-              aria-hidden
-            />
-          </span>
-          <span className="select-none">All Files</span>
+          />
+          <span className="select-none">{selectionScopeLabel}</span>
         </label>
-        <span className="font-brand text-[0.625rem] font-normal leading-none tracking-widest text-[var(--filelist-selection-count)]">
+        <span
+          className="fileListSelectionStatChip fileListSelectedCountStat font-brand text-[length:var(--font-size-ui-5xs)] font-normal leading-none tracking-widest text-[var(--filelist-selection-count)]"
+          data-testid="filelist-selected-count-stat"
+        >
           {selectedCount} selected
         </span>
       </div>
-      <span className="font-brand min-w-0 truncate text-[0.625rem] font-normal leading-none tracking-widest text-[var(--filelist-total-text)]">
+      <span
+        className="fileListSelectionStatChip fileListTotalStat font-brand min-w-0 truncate text-[length:var(--font-size-ui-5xs)] font-normal leading-none tracking-widest text-[var(--filelist-total-text)]"
+        data-testid="filelist-total-stat"
+      >
         {totalText}
       </span>
     </div>

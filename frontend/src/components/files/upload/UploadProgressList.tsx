@@ -44,17 +44,24 @@ export default function UploadProgressList({
     <>
       {/* 总文件数 / 大文件数：分开显示、分开提醒 */}
       {uploadFiles.length > 0 && (
-        <div className="font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] space-y-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="yznpezc">
+        <div
+          className="uploadStatsPanel font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] space-y-[clamp(0.39rem,0.9vw,0.5rem)]"
+          data-testid="upload-stats-panel"
+          data-oid="yznpezc"
+        >
           <div
-            className="flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-stat-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
+            className="uploadStatRow flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-stat-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
+            data-testid="upload-total-stat-row"
             data-oid="g0ntg:8"
           >
-            <span data-oid=":i:btah">文件数量</span>
+            <span className="uploadStatLabel" data-oid=":i:btah">
+              文件数量
+            </span>
             <span
               className={
                 totalAtLimit
-                  ? "text-[var(--upload-warning-text)]"
-                  : "text-[var(--upload-stat-value)]"
+                  ? "uploadStatValue text-[var(--upload-warning-text)]"
+                  : "uploadStatValue text-[var(--upload-stat-value)]"
               }
               data-oid="-4lmeu7"
             >
@@ -62,15 +69,18 @@ export default function UploadProgressList({
             </span>
           </div>
           <div
-            className="flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-stat-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
+            className="uploadStatRow flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--upload-stat-bg)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
+            data-testid="upload-large-stat-row"
             data-oid="woge7mu"
           >
-            <span data-oid="cg18l.s">大文件（≥100MB）</span>
+            <span className="uploadStatLabel" data-oid="cg18l.s">
+              大文件（≥100MB）
+            </span>
             <span
               className={
                 largeAtLimit
-                  ? "text-[var(--upload-warning-text)]"
-                  : "text-[var(--upload-stat-value)]"
+                  ? "uploadStatValue text-[var(--upload-warning-text)]"
+                  : "uploadStatValue text-[var(--upload-stat-value)]"
               }
               data-oid="wmr3zro"
             >

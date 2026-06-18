@@ -81,6 +81,15 @@ describe("FolderCard drag move", () => {
     expect(draggableThumb).toBeNull();
   });
 
+  it("anchors the checkbox close to the folder thumbnail outer edge", () => {
+    renderFolder(sourceFolder);
+
+    expect(screen.getByRole("button", { name: "选择" })).toHaveClass(
+      "left-[clamp(0.06rem,0.16vw,0.1rem)]",
+      "top-[clamp(0.06rem,0.16vw,0.1rem)]",
+    );
+  });
+
   it("keeps native folder drag on desktop pointer devices", () => {
     mockPointerMedia(true);
     renderFolder(sourceFolder);
@@ -209,6 +218,72 @@ describe("FolderCard drag move", () => {
 
     expect(onMobileFolderDragStart).not.toHaveBeenCalled();
     expect(onMobileFolderDrop).not.toHaveBeenCalled();
+  });
+
+  it("opens a folder on mobile double tap without starting drag", () => {
+    const onOpen = vi.fn();
+    const onMobileFolderDragStart = vi.fn();
+
+    render(
+      <FolderCard
+        folder={sourceFolder}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onOpen={onOpen}
+        onRename={vi.fn()}
+        onDelete={vi.fn()}
+        isMenuOpen={false}
+        onToggleMenu={vi.fn()}
+        onCloseMenu={vi.fn()}
+        onMobileFolderDragStart={onMobileFolderDragStart}
+      />,
+    );
+
+    const sourceCard = screen.getByTitle(sourceFolder.name).closest("[data-folder-id]");
+
+    fireEvent.pointerDown(sourceCard as Element, {
+      pointerId: 6,
+      pointerType: "touch",
+      clientX: 16,
+      clientY: 16,
+      isPrimary: true,
+    });
+    act(() => {
+      vi.advanceTimersByTime(80);
+    });
+    fireEvent.pointerUp(sourceCard as Element, {
+      pointerId: 6,
+      pointerType: "touch",
+      clientX: 16,
+      clientY: 16,
+      isPrimary: true,
+    });
+
+    expect(onOpen).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(160);
+    });
+    fireEvent.pointerDown(sourceCard as Element, {
+      pointerId: 7,
+      pointerType: "touch",
+      clientX: 18,
+      clientY: 17,
+      isPrimary: true,
+    });
+    act(() => {
+      vi.advanceTimersByTime(80);
+    });
+    fireEvent.pointerUp(sourceCard as Element, {
+      pointerId: 7,
+      pointerType: "touch",
+      clientX: 18,
+      clientY: 17,
+      isPrimary: true,
+    });
+
+    expect(onOpen).toHaveBeenCalledWith(sourceFolder.id);
+    expect(onMobileFolderDragStart).not.toHaveBeenCalled();
   });
 
   it("drops mobile folders onto the root folder sentinel", () => {

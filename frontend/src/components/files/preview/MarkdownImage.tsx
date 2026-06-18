@@ -30,8 +30,8 @@ export default function MarkdownImage({
       height={600}
       loading="lazy"
       className={cn(
-        "my-[clamp(0.585rem,1.35vw,0.75rem)] mx-auto block max-w-full max-h-[60vh] rounded-[clamp(0.3rem,0.8vw,0.375rem)] border object-contain",
-        "border-[var(--preview-markdown-img-border)] bg-[var(--preview-markdown-img-bg)]",
+        "previewMarkdownMedia my-[clamp(0.585rem,1.35vw,0.75rem)] mx-auto block max-w-full max-h-[60vh] rounded-[clamp(0.3rem,0.8vw,0.375rem)] border object-contain backdrop-blur-xl",
+        "border-[var(--preview-markdown-img-border)] [background:var(--preview-markdown-img-bg)] shadow-[inset_0_1px_0_var(--preview-markdown-container-border)]",
         typeof className === "string" ? className : undefined,
       )}
       {...rest}

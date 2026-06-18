@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { fileService } from '../../services/files';
+import { FILE_COLLECTION_COUNTS_QUERY_KEY } from '../../services/fileListService';
 import { folderService } from '../../services/folders';
 import { useFileMutations } from './useFileMutations';
 import { getErrorMessage } from '../../utils/error';
@@ -194,6 +195,7 @@ export function useFileActions({
   const refreshListsAfterMove = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['files'] }),
+      queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
     ]);
     await Promise.all([refetchFiles(), refetchFolders()]);

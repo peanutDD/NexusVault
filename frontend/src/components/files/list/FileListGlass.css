@@ -1,4 +1,5 @@
 .fileListGlassScope {
+  /* Legacy glass class names are compatibility hooks; tokens map them to dark/light Neuromorphic surfaces. */
   /* 基于全局 Design Tokens 的文件列表语义映射 */
   --glass-bg-a: var(--filelist-glass-bg-strong);
   --glass-bg-b: var(--filelist-glass-bg-soft);
@@ -163,6 +164,39 @@
   margin-right: -33.333%;
 }
 
+.neuromorphic-style .fileListGlassScope .glass-panel.glass-panel-toolbar.fileListToolbarScale75,
+.neuromorphic-style .fileListGlassScope .glass-panel.glass-panel-toolbar.fileListToolbarScale75 {
+  background: var(--neu-inset-bg);
+  border-color: transparent;
+  box-shadow: var(--neu-inset-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root.dark.neuromorphic-style .fileListGlassScope .glass-panel.glass-panel-toolbar,
+:root[data-theme="dark"].neuromorphic-style .fileListGlassScope .glass-panel.glass-panel-toolbar {
+  border-color: transparent !important;
+  background: var(--neu-raised-bg) !important;
+  box-shadow: var(--neu-raised-shadow) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.neuromorphic-style .fileListGlassScope .toolbarActionBtn,
+.neuromorphic-style .fileListGlassScope .toolbarActionBtn {
+  background: var(--neu-raised-bg);
+  border-color: transparent;
+  box-shadow: var(--neu-raised-sm-shadow);
+}
+
+.neuromorphic-style .fileListGlassScope .toolbarActionBtn:hover,
+.neuromorphic-style .fileListGlassScope .toolbarActionBtn:hover {
+  background: var(--neu-raised-bg);
+  border-color: transparent;
+  box-shadow: var(--neu-raised-sm-shadow);
+  transform: translateY(-0.125rem);
+}
+
 .fileListGlassScope .glass-panel.glass-panel-toolbar.trashConsoleToolbar {
   position: sticky;
   z-index: var(--trash-console-z-index, 60);
@@ -170,8 +204,11 @@
 }
 
 .fileListGlassScope .trashConsoleToolbar .trashConsoleActions {
+  overflow: visible;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  padding-inline: clamp(0.22rem, 0.7vw, 0.32rem);
+  margin-inline: calc(clamp(0.22rem, 0.7vw, 0.32rem) * -1);
 }
 
 .fileListGlassScope .trashConsoleToolbar .trashConsoleActions::-webkit-scrollbar {
@@ -181,9 +218,16 @@
 .fileListGlassScope .trashConsoleToolbar .glass-btn.toolbarActionBtn.trashConsoleButton {
   height: clamp(1.78rem, 2.1vw, 2.08rem);
   min-height: clamp(1.78rem, 2.1vw, 2.08rem);
-  box-shadow:
-    0 clamp(0.35rem, 0.8vw, 0.5rem) clamp(1rem, 1.9vw, 1.35rem) rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  border-color: rgba(var(--rgb-white), 0.18);
+  box-shadow: inset 0 1px 0 rgba(var(--rgb-white), 0.18);
+}
+
+.fileListGlassScope .trashConsoleToolbar .glass-btn.toolbarActionBtn.trashConsoleButton:hover {
+  border-color: rgba(var(--rgb-white), 0.28);
+}
+
+.fileListGlassScope .trashConsoleToolbar .glass-btn.toolbarActionBtn.trashConsoleButton:disabled {
+  box-shadow: inset 0 1px 0 rgba(var(--rgb-white), 0.1);
 }
 
 .fileListGlassScope .trashConsoleToolbar .trashConsoleSummaryRow {
@@ -200,6 +244,58 @@
     inset 0 1px 0 rgba(var(--rgb-white), 0.1),
     0 clamp(0.3rem, 0.8vw, 0.5rem) clamp(0.9rem, 1.6vw, 1.15rem) rgba(0, 0, 0, 0.16);
   padding: clamp(0.2rem, 0.55vw, 0.34rem) clamp(0.35rem, 0.85vw, 0.6rem);
+}
+
+.neuromorphic-style .fileListGlassScope .trashConsoleToolbar,
+.neuromorphic-style .fileListGlassScope .trashConsoleToolbar {
+  border-color: transparent;
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-raised-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.neuromorphic-style .fileListGlassScope .trashConsoleSummaryRow,
+.neuromorphic-style .fileListGlassScope .trashConsoleSummaryRow {
+  border: 0;
+  border-radius: clamp(0.82rem, 1.6vw, 1.05rem);
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+  padding: clamp(0.32rem, 0.8vw, 0.44rem) clamp(0.42rem, 1vw, 0.62rem);
+}
+
+.neuromorphic-style .fileListGlassScope .trashConsoleTitle,
+.neuromorphic-style .fileListGlassScope .trashConsoleTitle {
+  color: var(--color-text-primary);
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+.neuromorphic-style .fileListGlassScope .trashConsoleSummaryChip,
+.neuromorphic-style .fileListGlassScope .trashConsoleSummaryChip {
+  min-height: clamp(1.36rem, 2vw, 1.62rem);
+  align-items: center;
+  border: 0;
+  border-radius: clamp(0.62rem, 1.2vw, 0.82rem);
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-raised-sm-shadow);
+  color: var(--color-text-secondary);
+  padding-inline: clamp(0.42rem, 1vw, 0.6rem);
+  padding-block: clamp(0.14rem, 0.4vw, 0.22rem);
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+.neuromorphic-style .fileListGlassScope .trashConsoleCountChip,
+.neuromorphic-style .fileListGlassScope .trashConsoleSelectedChip,
+.neuromorphic-style .fileListGlassScope .trashConsoleCountChip,
+.neuromorphic-style .fileListGlassScope .trashConsoleSelectedChip {
+  color: var(--neu-primary);
+}
+
+.neuromorphic-style .fileListGlassScope .trashConsoleSummaryChip svg,
+.neuromorphic-style .fileListGlassScope .trashConsoleSummaryChip svg {
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 640px) {
@@ -268,31 +364,150 @@
   height: clamp(0.58rem, 1.45vw, 0.78rem);
 }
 
-/* ALL FILES、批量栏：无圆角，容器高度与 padding 统一 */
+/* ALL FILES、批量栏：沿用搜索工具栏的玻璃外壳 */
+.fileListGlassScope .glass-panel.glass-panel-toolbar.fileListSelectionShell {
+  position: relative;
+  isolation: isolate;
+  min-height: var(--bar-min-h);
+  padding-inline: var(--bar-px);
+  padding-block: var(--bar-py);
+  border-radius: var(--bar-radius);
+  border-color: var(--glass-border);
+  overflow: visible;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(var(--rgb-white), 0.12), transparent 55%),
+    linear-gradient(135deg, var(--toolbar-bg-a), var(--toolbar-bg-b));
+  box-shadow: none;
+}
+
+.fileListGlassScope .fileListSelectionFusionGroup.glass-panel.glass-panel-toolbar.fileListSelectionShell {
+  padding-inline: var(--bar-px);
+  padding-block: var(--bar-py);
+}
+
+.fileListGlassScope .fileListSelectionUnifiedSurface {
+  gap: clamp(0.52rem, 1.2vw, 0.7rem);
+}
+
+.fileListGlassScope .fileListSelectionUnifiedSurface .fileListSelectionSegment {
+  min-height: var(--bar-min-h);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.fileListGlassScope .batch-actions-bar .batchActionButtonsRow {
+  overflow: visible;
+  background: transparent;
+  padding-inline: clamp(0.22rem, 0.7vw, 0.32rem);
+  margin-inline: calc(clamp(0.22rem, 0.7vw, 0.32rem) * -1);
+}
+
+.fileListGlassScope .fileListSelectionShell .all-files-row,
+.fileListGlassScope .fileListSelectionShell.batch-actions-row {
+  min-height: calc(var(--bar-min-h) - (var(--bar-py) * 2));
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSelectionShell,
+.neuromorphic-style .fileListGlassScope .fileListSelectionShell {
+  border-color: transparent;
+  background: var(--neu-raised-bg);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSelectionShell::before,
+.neuromorphic-style .fileListGlassScope .fileListSelectionShell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
+  opacity: 1;
+}
+
+:root.dark.neuromorphic-style .fileListGlassScope .fileListSelectionShell,
+:root[data-theme="dark"].neuromorphic-style .fileListGlassScope .fileListSelectionShell {
+  position: relative;
+  overflow: visible;
+  border-color: transparent !important;
+  background: var(--neu-raised-bg) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root.dark.neuromorphic-style .fileListGlassScope .fileListSelectionShell {
+  box-shadow: none !important;
+}
+
+:root.dark.neuromorphic-style .fileListGlassScope .fileListSelectionShell::before,
+:root[data-theme="dark"].neuromorphic-style .fileListGlassScope .fileListSelectionShell::before {
+  display: none;
+}
+
+:root.dark.neuromorphic-style .fileListGlassScope .fileListSelectionShell > *,
+:root[data-theme="dark"].neuromorphic-style .fileListGlassScope .fileListSelectionShell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSelectionStatsRow,
+.neuromorphic-style .fileListGlassScope .fileListSelectionStatsRow {
+  align-items: center;
+  gap: clamp(0.42rem, 1vw, 0.62rem);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSelectionStatsLeft,
+.neuromorphic-style .fileListGlassScope .fileListSelectionStatsLeft {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSelectionStatChip,
+.neuromorphic-style .fileListGlassScope .fileListSelectionStatChip {
+  display: inline-flex;
+  min-height: clamp(1.44rem, 2.4vw, 1.8rem);
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: clamp(0.58rem, 1.2vw, 0.78rem);
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+  color: var(--color-text-secondary);
+  padding-inline: clamp(0.45rem, 1.1vw, 0.68rem);
+  padding-block: clamp(0.12rem, 0.35vw, 0.18rem);
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListAllFilesStat,
+.neuromorphic-style .fileListGlassScope .fileListAllFilesStat {
+  color: var(--color-text-primary);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSelectedCountStat,
+.neuromorphic-style .fileListGlassScope .fileListSelectedCountStat {
+  color: var(--neu-primary);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListTotalStat,
+.neuromorphic-style .fileListGlassScope .fileListTotalStat {
+  max-width: min(42vw, 22rem);
+  justify-content: center;
+}
+
+/* Legacy soft panels retain their compact treatment outside the selection toolbar. */
 .fileListGlassScope .sticky .glass-panel-soft {
   border-radius: 0;
   min-height: var(--bar-min-h);
   padding-inline: var(--bar-px);
   padding-block: var(--bar-py);
-}
-
-/* 整合模式：单块玻璃拟态包裹两行，无独立特效，无分割线 */
-.fileListGlassScope .glass-panel-soft.bars-integrated {
-  border-radius: 0;
-  min-height: unset;
-  padding-inline: var(--bar-px);
-  padding-block: 0;
-}
-.fileListGlassScope .glass-panel-soft.bars-integrated .all-files-row {
-  min-height: var(--bar-min-h);
-  padding-inline: 0;
-  padding-block: var(--bar-py);
-}
-.fileListGlassScope .glass-panel-soft.bars-integrated .batch-actions-row {
-  min-height: var(--bar-min-h);
-  padding-inline: 0;
-  padding-top: 0;
-  padding-bottom: var(--bar-py);
 }
 
 .fileListGlassScope .glass-panel-soft {
@@ -309,6 +524,99 @@
     0 0 var(--filelist-panel-glow-sm) var(--bar-glow);
   -webkit-backdrop-filter: blur(calc(var(--glass-blur) - var(--filelist-soft-blur-reduction))) saturate(var(--glass-sat));
   backdrop-filter: blur(calc(var(--glass-blur) - var(--filelist-soft-blur-reduction))) saturate(var(--glass-sat));
+}
+
+[data-theme="light"] .fileListGlassScope .emptyStateSurface,
+.neuromorphic-style .fileListGlassScope .emptyStateSurface {
+  min-height: clamp(13rem, 40dvh, 24rem);
+  border: 0;
+  border-radius: clamp(1.25rem, 2.8vw, 1.55rem);
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-surface-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  margin-bottom: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(3.2rem, 7vw, 4.5rem) clamp(1.25rem, 3vw, 1.75rem);
+}
+
+[data-theme="light"] .fileListGlassScope .emptyStateSurface::before,
+[data-theme="light"] .fileListGlassScope .emptyStateSurface::after,
+.neuromorphic-style .fileListGlassScope .emptyStateSurface::before,
+.neuromorphic-style .fileListGlassScope .emptyStateSurface::after {
+  content: none;
+}
+
+[data-theme="light"] .fileListGlassScope .emptyStateIconShell,
+.neuromorphic-style .fileListGlassScope .emptyStateIconShell {
+  width: clamp(4.75rem, 9vw, 5.75rem);
+  height: clamp(4.75rem, 9vw, 5.75rem);
+  margin-bottom: clamp(1.1rem, 2.4vw, 1.5rem);
+  border: 0;
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+  color: var(--neu-accent-text);
+  opacity: 1;
+}
+
+[data-theme="light"] .fileListGlassScope .emptyStateIconShell svg,
+.neuromorphic-style .fileListGlassScope .emptyStateIconShell svg {
+  width: clamp(2.25rem, 4.2vw, 2.7rem);
+  height: clamp(2.25rem, 4.2vw, 2.7rem);
+  color: var(--neu-accent-text);
+  opacity: 0.92;
+  filter: none;
+}
+
+[data-theme="light"] .fileListGlassScope .emptyStateTitle,
+.neuromorphic-style .fileListGlassScope .emptyStateTitle {
+  color: var(--color-text-primary);
+  font-size: clamp(1.12rem, 2.2vw, 1.35rem);
+  font-weight: 650;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+[data-theme="light"] .fileListGlassScope .emptyStateDescription,
+.neuromorphic-style .fileListGlassScope .emptyStateDescription {
+  max-width: min(28rem, 90%);
+  margin-top: clamp(0.38rem, 0.9vw, 0.55rem);
+  color: var(--color-text-secondary);
+  font-size: clamp(0.82rem, 1.45vw, 0.98rem);
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+[data-theme="light"] .fileListGlassScope .trashEmptyState,
+.neuromorphic-style .fileListGlassScope .trashEmptyState {
+  min-height: clamp(13rem, 40dvh, 24rem);
+  border-radius: clamp(1.3rem, 2.9vw, 1.75rem);
+  background: var(--trash-panel-bg);
+  box-shadow: var(--trash-panel-shadow);
+}
+
+[data-theme="light"] .fileListGlassScope .trashEmptyState .emptyStateIconShell,
+.neuromorphic-style .fileListGlassScope .trashEmptyState .emptyStateIconShell {
+  width: clamp(4.8rem, 9vw, 5.9rem);
+  height: clamp(4.8rem, 9vw, 5.9rem);
+  background: var(--trash-tech-panel-strong);
+  box-shadow: var(--neu-inset-shadow);
+  color: var(--trash-accent);
+}
+
+[data-theme="light"] .fileListGlassScope .trashEmptyState .emptyStateIconShell svg,
+.neuromorphic-style .fileListGlassScope .trashEmptyState .emptyStateIconShell svg {
+  color: var(--trash-accent);
+  opacity: 0.9;
+}
+
+[data-theme="light"] .fileListGlassScope .trashEmptyState .emptyStateTitle,
+.neuromorphic-style .fileListGlassScope .trashEmptyState .emptyStateTitle {
+  color: var(--color-text-primary);
+}
+
+[data-theme="light"] .fileListGlassScope .trashEmptyState .emptyStateDescription,
+.neuromorphic-style .fileListGlassScope .trashEmptyState .emptyStateDescription {
+  color: var(--color-text-secondary);
 }
 
 /* 卡片（用于：文件/文件夹卡片） */
@@ -329,6 +637,252 @@
   z-index: 1;
   border-color: var(--filelist-card-border-hover);
   box-shadow: none;
+}
+
+.fileListGlassScope .glass-card.fileCardMenuOpen {
+  overflow: visible;
+  z-index: 80;
+}
+
+.fileListGlassScope .fileCardActionMenu {
+  background: var(--file-card-menu-bg);
+}
+
+.fileListGlassScope .fileCardActionMenuFolder {
+  background: var(--filelist-menu-bg);
+}
+
+.neuromorphic-style .fileListGlassScope .glass-card,
+.neuromorphic-style .fileListGlassScope .glass-card {
+  background: var(--filelist-card-bg);
+  box-shadow: var(--filelist-card-shadow);
+}
+
+.neuromorphic-style .fileListGlassScope .glass-card:hover,
+.neuromorphic-style .fileListGlassScope .glass-card:hover {
+  box-shadow: var(--filelist-card-shadow-hover);
+}
+
+.neuromorphic-style .fileListGlassScope .fileCardActionMenu,
+.neuromorphic-style .fileListGlassScope .fileCardActionMenu {
+  min-width: clamp(7.15rem, 9vw, 8.25rem);
+  padding: clamp(0.32rem, 0.8vw, 0.42rem);
+  border-color: transparent;
+  border-radius: clamp(0.72rem, 1.3vw, 0.9rem);
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-raised-shadow);
+}
+
+.neuromorphic-style .fileListGlassScope .fileCardActionMenuItem,
+.neuromorphic-style .fileListGlassScope .fileCardActionMenuItem {
+  min-height: clamp(1.65rem, 2.4vw, 1.95rem);
+  gap: clamp(0.36rem, 0.8vw, 0.48rem);
+  padding: clamp(0.24rem, 0.65vw, 0.34rem) clamp(0.42rem, 1vw, 0.58rem);
+  border-radius: clamp(0.52rem, 1vw, 0.68rem);
+  background: transparent;
+  box-shadow: none;
+  color: var(--file-card-menu-text);
+  font-size: clamp(0.58rem, 1.05vw, 0.68rem);
+  text-shadow: none;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.neuromorphic-style .fileListGlassScope .fileCardActionMenuItem:hover,
+.neuromorphic-style .fileListGlassScope .fileCardActionMenuItem:hover {
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+  transform: translateY(0.03125rem);
+}
+
+.neuromorphic-style .fileListGlassScope .fileCardActionMenuIcon,
+.neuromorphic-style .fileListGlassScope .fileCardActionMenuIcon {
+  width: clamp(0.78rem, 1.25vw, 0.9rem);
+  height: clamp(0.78rem, 1.25vw, 0.9rem);
+  transform: none;
+  color: var(--file-card-menu-text);
+  opacity: 0.92;
+}
+
+.neuromorphic-style .fileListGlassScope .fileCardActionMenuDivider,
+.neuromorphic-style .fileListGlassScope .fileCardActionMenuDivider {
+  margin-block: clamp(0.25rem, 0.7vw, 0.34rem);
+  border-color: rgba(var(--rgb-white), 0.08);
+}
+
+.neuromorphic-style .fileListGlassScope .filelist-check-control,
+.neuromorphic-style .fileListGlassScope .filelist-check-control {
+  width: clamp(1.1rem, 1.7vw, 1.2rem);
+  min-width: clamp(1.1rem, 1.7vw, 1.2rem);
+  height: clamp(1.1rem, 1.7vw, 1.2rem);
+  min-height: clamp(1.1rem, 1.7vw, 1.2rem);
+  border-radius: clamp(0.45rem, 0.9vw, 0.5rem);
+  background: var(--filelist-check-bg);
+  box-shadow: var(--filelist-check-shadow);
+}
+
+.neuromorphic-style .fileListGlassScope .filelist-check-control:hover,
+.neuromorphic-style .fileListGlassScope .filelist-check-control:hover {
+  background: var(--filelist-check-bg-hover);
+  box-shadow: var(--filelist-check-shadow-hover);
+}
+
+.neuromorphic-style .fileListGlassScope .filelist-check-control-checked,
+.neuromorphic-style .fileListGlassScope .filelist-check-control-mixed,
+.neuromorphic-style .fileListGlassScope .filelist-check-control-checked,
+.neuromorphic-style .fileListGlassScope .filelist-check-control-mixed {
+  background: var(--filelist-check-bg-checked);
+  box-shadow: var(--filelist-check-shadow-checked);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckbox,
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckbox {
+  width: clamp(1.2rem, 2.8vw, 1.5rem);
+  min-width: clamp(1.2rem, 2.8vw, 1.5rem);
+  height: clamp(1.2rem, 2.8vw, 1.5rem);
+  min-height: clamp(1.2rem, 2.8vw, 1.5rem);
+  border: 0;
+  border-radius: clamp(0.4rem, 0.95vw, 0.55rem);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--neu-inset-bg) 88%, var(--neu-shadow-light)),
+      color-mix(in srgb, var(--neu-inset-bg) 78%, var(--neu-shadow-dark))
+    );
+  box-shadow:
+    inset 0.28em 0.28em 0.68em color-mix(in srgb, var(--neu-shadow-dark) 88%, transparent),
+    inset -0.28em -0.28em 0.68em color-mix(in srgb, var(--neu-shadow-light) 56%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+  color: transparent;
+  transition: none;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckbox:hover,
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckbox:hover {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--neu-inset-bg) 84%, var(--neu-shadow-light)),
+      color-mix(in srgb, var(--neu-inset-bg) 74%, var(--neu-shadow-dark))
+    );
+  box-shadow:
+    inset 0.3em 0.3em 0.72em color-mix(in srgb, var(--neu-shadow-dark) 90%, transparent),
+    inset -0.3em -0.3em 0.72em color-mix(in srgb, var(--neu-shadow-light) 58%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckbox {
+  width: clamp(0.95rem, 1.5vw, 1.08rem);
+  min-width: clamp(0.95rem, 1.5vw, 1.08rem);
+  height: clamp(0.95rem, 1.5vw, 1.08rem);
+  min-height: clamp(0.95rem, 1.5vw, 1.08rem);
+  border-radius: clamp(0.32rem, 0.7vw, 0.42rem);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxUnchecked,
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckboxUnchecked {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--selection-check-unselected-surface) 76%, var(--neu-shadow-dark)),
+      color-mix(in srgb, var(--selection-check-unselected-surface) 88%, var(--neu-shadow-light))
+    );
+  box-shadow:
+    inset 0.28em 0.28em 0.68em color-mix(in srgb, var(--neu-shadow-dark) 88%, transparent),
+    inset -0.28em -0.28em 0.68em color-mix(in srgb, var(--neu-shadow-light) 56%, transparent),
+    inset 0 0 0 0.08em var(--selection-check-unselected-border),
+    0 0 0 0.05em color-mix(in srgb, var(--selection-check-unselected-border) 38%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxUnchecked:hover,
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckboxUnchecked:hover {
+  box-shadow:
+    inset 0.3em 0.3em 0.72em color-mix(in srgb, var(--neu-shadow-dark) 90%, transparent),
+    inset -0.3em -0.3em 0.72em color-mix(in srgb, var(--neu-shadow-light) 58%, transparent),
+    inset 0 0 0 0.08em var(--selection-check-unselected-border-hover),
+    0 0 0 0.05em color-mix(in srgb, var(--selection-check-unselected-border-hover) 46%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckboxUnchecked {
+  box-shadow:
+    inset 0.28em 0.28em 0.68em color-mix(in srgb, var(--neu-shadow-dark) 88%, transparent),
+    inset -0.28em -0.28em 0.68em color-mix(in srgb, var(--neu-shadow-light) 56%, transparent),
+    inset 0 0 0 0.08em color-mix(in srgb, var(--neu-primary) 62%, var(--selection-check-unselected-border)),
+    0 0 0 0.05em color-mix(in srgb, var(--neu-primary) 58%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckboxUnchecked:hover {
+  box-shadow:
+    inset 0.3em 0.3em 0.72em color-mix(in srgb, var(--neu-shadow-dark) 90%, transparent),
+    inset -0.3em -0.3em 0.72em color-mix(in srgb, var(--neu-shadow-light) 58%, transparent),
+    inset 0 0 0 0.08em color-mix(in srgb, var(--neu-primary) 78%, var(--selection-check-unselected-border-hover)),
+    0 0 0 0.05em color-mix(in srgb, var(--neu-primary) 68%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxUnchecked {
+  box-shadow:
+    inset 0.28em 0.28em 0.68em color-mix(in srgb, var(--neu-shadow-dark) 88%, transparent),
+    inset -0.28em -0.28em 0.68em color-mix(in srgb, var(--neu-shadow-light) 56%, transparent),
+    0 0 0 0.08em color-mix(in srgb, var(--neu-primary) 72%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxUnchecked:hover {
+  box-shadow:
+    inset 0.3em 0.3em 0.72em color-mix(in srgb, var(--neu-shadow-dark) 90%, transparent),
+    inset -0.3em -0.3em 0.72em color-mix(in srgb, var(--neu-shadow-light) 58%, transparent),
+    0 0 0 0.08em color-mix(in srgb, var(--neu-primary) 82%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxChecked,
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxSelected,
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckboxSelected,
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxChecked:hover,
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxSelected:hover,
+.neuromorphic-style .fileListGlassScope .fileListAllFilesCheckboxSelected:hover {
+  background:
+    linear-gradient(
+      145deg,
+      var(--neu-primary),
+      var(--neu-primary-dark)
+    );
+  box-shadow:
+    inset 0.2em 0.2em 0.46em rgba(var(--rgb-black), 0.22),
+    inset -0.2em -0.2em 0.46em rgba(var(--rgb-white), 0.12),
+    0 0.08em 0 rgba(var(--rgb-white), 0.05);
+  color: transparent;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxSelected,
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxChecked,
+.neuromorphic-style .fileListGlassScope .fileListGroupSelectCheckboxMixed {
+  box-shadow:
+    inset 0.2em 0.2em 0.46em rgba(var(--rgb-black), 0.22),
+    inset -0.2em -0.2em 0.46em rgba(var(--rgb-white), 0.12),
+    0 0 0 0.08em color-mix(in srgb, var(--neu-primary) 78%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.05);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListPinnedGroupIconBadge {
+  background: var(--neu-inset-bg);
+  border: 0.08em solid color-mix(in srgb, var(--neu-primary) 72%, transparent);
+  box-shadow: none;
+  color: var(--neu-primary);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListPinnedGroupIcon {
+  display: block;
+  color: var(--neu-primary);
+  stroke: currentColor;
+  stroke-width: 2.2;
+  filter: none;
 }
 
 @keyframes techBorderGlow {
@@ -365,6 +919,324 @@
   background: var(--filelist-chip-bg-hover);
   border-color: var(--filelist-chip-border-hover);
   color: var(--glass-text);
+}
+
+.fileListGlassScope .fileListCollectionChip {
+  border: 1px solid var(--filelist-chip-border);
+  background: var(--filelist-chip-bg);
+  box-shadow: var(--neu-raised-sm-shadow, var(--filelist-shadow-panel-soft));
+  text-shadow: none;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.fileListGlassScope .fileListCollectionChipHint {
+  font-size: 0.78em;
+  color: var(--color-text-tertiary);
+}
+
+.fileListGlassScope .fileListCollectionChipCount {
+  display: inline-flex;
+  min-width: 1.45em;
+  height: 1.45em;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding-inline: 0.42em;
+  background: rgba(var(--rgb-black), 0.18);
+  color: var(--color-text-primary);
+  font-size: 0.76em;
+  font-weight: 750;
+  line-height: 1;
+  box-shadow:
+    inset 0 1px 2px rgba(var(--rgb-black), 0.22),
+    inset 0 calc(0.0625rem * -1) 0 rgba(var(--rgb-white), 0.05);
+}
+
+.fileListGlassScope .fileListSearchStatusSurface {
+  margin-bottom: var(--bar-gap);
+  padding: clamp(0.78rem, 1.8vw, 1rem);
+  border-radius: clamp(1rem, 2vw, 1.2rem);
+  border: 1px solid color-mix(in srgb, var(--glass-border) 88%, transparent);
+  background:
+    radial-gradient(120% 110% at 0% 0%, rgba(var(--rgb-white), 0.08), transparent 58%),
+    linear-gradient(180deg, rgba(var(--rgb-white), 0.04), rgba(var(--rgb-black), 0.12));
+  box-shadow: var(--glass-shadow-soft);
+  color: var(--glass-text);
+}
+
+.fileListGlassScope .fileListSearchStatusShell {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(14rem, 28vw, 18rem)), 1fr));
+  gap: clamp(0.55rem, 1.3vw, 0.78rem);
+  align-items: stretch;
+}
+
+.fileListGlassScope .fileListSearchStatusWell,
+.fileListGlassScope .fileListSearchStatusRail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(0.35rem, 0.85vw, 0.48rem);
+  padding: clamp(0.72rem, 1.6vw, 0.92rem);
+  border-radius: clamp(0.82rem, 1.5vw, 1rem);
+  border: 1px solid rgba(var(--rgb-white), 0.08);
+  background: linear-gradient(180deg, rgba(var(--rgb-white), 0.04), rgba(var(--rgb-black), 0.12));
+  box-shadow:
+    inset 0 clamp(0.0625rem, 0.12vw, 0.08rem) 0 rgba(var(--rgb-white), 0.05),
+    inset 0 calc(clamp(0.5rem, 1vw, 0.75rem) * -1) clamp(0.9rem, 1.8vw, 1.2rem) rgba(var(--rgb-black), 0.16);
+}
+
+.fileListGlassScope .fileListSearchStatusTitle {
+  font-size: var(--glass-text-sm);
+  font-weight: 700;
+  color: var(--glass-text);
+}
+
+.fileListGlassScope .fileListSearchStatusDescription {
+  font-size: var(--glass-text-xs);
+  line-height: 1.5;
+  color: var(--glass-text-muted);
+}
+
+.fileListGlassScope .fileListSearchStatusCaption {
+  font-size: clamp(0.62rem, 1vw, 0.72rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--glass-text-muted);
+}
+
+.fileListGlassScope .fileListSearchStatusChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.32rem, 0.72vw, 0.4rem);
+}
+
+.fileListGlassScope .fileListSearchStatusChip {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.3rem, 0.65vw, 0.38rem) clamp(0.56rem, 1.15vw, 0.72rem);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--glass-border) 82%, transparent);
+  background: rgba(var(--rgb-white), 0.04);
+  box-shadow: inset 0 1px 0 rgba(var(--rgb-white), 0.05);
+  color: var(--glass-text-muted);
+  font-size: var(--glass-text-xs);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusSurface,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusSurface {
+  border-color: transparent;
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusWell,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusRail,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusWell,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusRail {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--neu-inset-bg) 94%, var(--neu-shadow-dark));
+  box-shadow:
+    inset 0.26em 0.26em 0.68em color-mix(in srgb, var(--neu-shadow-dark) 88%, transparent),
+    inset -0.26em -0.26em 0.68em color-mix(in srgb, var(--neu-shadow-light) 56%, transparent);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusChip,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusChip {
+  border-color: transparent;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--neu-inset-bg) 92%, var(--neu-shadow-light)),
+      color-mix(in srgb, var(--neu-inset-bg) 84%, var(--neu-shadow-dark))
+    );
+  box-shadow:
+    inset 0.18em 0.18em 0.36em color-mix(in srgb, var(--neu-shadow-dark) 84%, transparent),
+    inset -0.18em -0.18em 0.36em color-mix(in srgb, var(--neu-shadow-light) 48%, transparent);
+  color: var(--color-text-secondary);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusTitle,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusTitle {
+  color: var(--color-text-primary);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusDescription,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusCaption,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusDescription,
+.neuromorphic-style .fileListGlassScope .fileListSearchStatusCaption {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 640px), (hover: none) and (pointer: coarse) {
+  .fileListGlassScope .fileListSearchStatusSurface {
+    padding: clamp(0.58rem, 3vw, 0.78rem);
+    border-radius: clamp(0.78rem, 4vw, 1rem);
+  }
+
+  .fileListGlassScope .fileListSearchStatusShell {
+    grid-template-columns: 1fr;
+    gap: clamp(0.48rem, 2.4vw, 0.62rem);
+  }
+
+  .fileListGlassScope .fileListSearchStatusWell,
+  .fileListGlassScope .fileListSearchStatusRail {
+    gap: clamp(0.28rem, 1.7vw, 0.38rem);
+    padding: clamp(0.58rem, 2.8vw, 0.72rem);
+    border-radius: clamp(0.68rem, 3vw, 0.84rem);
+  }
+
+  .fileListGlassScope .fileListSearchStatusTitle {
+    font-size: var(--font-size-ui-xs);
+    line-height: 1.15;
+  }
+
+  .fileListGlassScope .fileListSearchStatusDescription {
+    font-size: var(--font-size-ui-3xs);
+    line-height: 1.35;
+  }
+
+  .fileListGlassScope .fileListSearchStatusCaption {
+    font-size: var(--font-size-ui-5xs);
+    line-height: 1;
+    letter-spacing: 0.06em;
+  }
+
+  .fileListGlassScope .fileListSearchStatusChips {
+    gap: clamp(0.24rem, 1.4vw, 0.32rem);
+  }
+
+  .fileListGlassScope .fileListSearchStatusChip {
+    font-size: var(--font-size-ui-4xs);
+    padding: clamp(0.22rem, 1.3vw, 0.3rem) clamp(0.42rem, 2.1vw, 0.56rem);
+    line-height: 1;
+  }
+}
+
+.fileListGlassScope .fileListCollectionShelf {
+  min-height: clamp(4.6rem, 5.4vw, 6.25rem);
+  padding: clamp(0.88rem, 1.45vw, 1.2rem) clamp(1rem, 2.2vw, 1.6rem);
+  border-radius: clamp(1.15rem, 2vw, 1.5rem);
+  border: 1px solid transparent;
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+}
+
+.fileListGlassScope .fileListCollectionChipRail {
+  position: relative;
+  z-index: 1;
+  min-height: clamp(1.83rem, 3.9vw, 2.22rem);
+  border: 0;
+  background: var(--neu-inset-bg);
+  box-shadow: none;
+}
+
+.fileListGlassScope .fileListCollectionChipActive {
+  border-color: transparent;
+  background: var(--btn-primary-bg);
+  box-shadow: var(--neu-inset-shadow, var(--filelist-shadow-panel-soft));
+}
+
+.neuromorphic-style .fileListGlassScope .fileListCollectionChip,
+.neuromorphic-style .fileListGlassScope .fileListCollectionChip {
+  border-color: transparent;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--neu-inset-bg) 92%, var(--neu-shadow-light)),
+      color-mix(in srgb, var(--neu-inset-bg) 86%, var(--neu-shadow-dark))
+    );
+  box-shadow:
+    inset 0.24em 0.24em 0.56em color-mix(in srgb, var(--neu-shadow-dark) 86%, transparent),
+    inset -0.24em -0.24em 0.56em color-mix(in srgb, var(--neu-shadow-light) 58%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.03);
+  color: var(--color-text-secondary);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: none;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListCollectionChip:hover,
+.neuromorphic-style .fileListGlassScope .fileListCollectionChip:hover {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--neu-inset-bg) 88%, var(--neu-shadow-light)),
+      color-mix(in srgb, var(--neu-inset-bg) 82%, var(--neu-shadow-dark))
+    );
+  box-shadow:
+    inset 0.24em 0.24em 0.64em color-mix(in srgb, var(--neu-shadow-dark) 88%, transparent),
+    inset -0.24em -0.24em 0.64em color-mix(in srgb, var(--neu-shadow-light) 62%, transparent),
+    0 0.08em 0 rgba(var(--rgb-white), 0.04);
+  color: var(--neu-primary);
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  .fileListGlassScope .fileListCollectionShelf {
+    min-height: clamp(3.55rem, 16vw, 4.6rem);
+    padding: clamp(0.62rem, 3vw, 0.86rem) clamp(0.72rem, 4.8vw, 1rem);
+    gap: clamp(0.42rem, 1.8vw, 0.56rem);
+  }
+}
+
+.neuromorphic-style .fileListGlassScope .fileListCollectionChip:active,
+.neuromorphic-style .fileListGlassScope .fileListCollectionChipActive,
+.neuromorphic-style .fileListGlassScope .fileListCollectionChipActive:hover {
+  background:
+    linear-gradient(
+      145deg,
+      var(--neu-primary),
+      var(--neu-primary-dark)
+    );
+  box-shadow:
+    inset 0.24em 0.24em 0.56em rgba(var(--rgb-black), 0.28),
+    inset -0.24em -0.24em 0.56em rgba(var(--rgb-white), 0.12),
+    0 0.08em 0 rgba(var(--rgb-white), 0.05);
+  color: var(--btn-primary-text);
+  transition: none;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListCollectionChipCount,
+.neuromorphic-style .fileListGlassScope .fileListCollectionChipCount {
+  background: color-mix(in srgb, var(--neu-inset-bg) 74%, var(--neu-shadow-dark));
+  box-shadow:
+    inset 0.18em 0.18em 0.36em color-mix(in srgb, var(--neu-shadow-dark) 86%, transparent),
+    inset -0.18em -0.18em 0.36em color-mix(in srgb, var(--neu-shadow-light) 48%, transparent);
+  color: inherit;
+}
+
+.neuromorphic-style .fileListGlassScope .fileListCollectionChipActive .fileListCollectionChipCount,
+.neuromorphic-style .fileListGlassScope .fileListCollectionChipActive .fileListCollectionChipCount {
+  background: color-mix(in srgb, var(--neu-primary-dark) 46%, var(--neu-inset-bg));
+  box-shadow:
+    inset 0.18em 0.18em 0.36em rgba(var(--rgb-black), 0.24),
+    inset -0.18em -0.18em 0.36em rgba(var(--rgb-white), 0.1);
+  color: var(--btn-primary-text);
+}
+
+.neuromorphic-style .fileListGlassScope .fileListCollectionTagDot,
+.neuromorphic-style .fileListGlassScope .fileListCollectionTagDot {
+  box-shadow:
+    0.16em 0.16em 0.32em color-mix(in srgb, var(--neu-shadow-dark) 76%, transparent),
+    -0.16em -0.16em 0.32em color-mix(in srgb, var(--neu-shadow-light) 54%, transparent),
+    inset 0.08em 0.08em 0.08em rgba(var(--rgb-white), 0.24);
+  outline: 0.08em solid rgba(var(--rgb-white), 0.18);
+  outline-offset: 0.08em;
 }
 
 /* 图标按钮 */
@@ -509,30 +1381,17 @@
 }
 
 .fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber {
-  border-color: rgba(var(--rgb-emerald-300), 0.45);
-  color: rgba(var(--rgb-white), 0.95);
-  background: linear-gradient(
-    90deg,
-    rgba(var(--rgb-malachite-500), 0.7),
-    rgba(var(--rgb-emerald-500), 0.5),
-    rgba(var(--rgb-emerald-400), 0.4)
-  );
-  box-shadow:
-    0 0 0 1px rgba(var(--rgb-emerald-500), 0.11),
-    0 clamp(8px, 1.2vw, 14px) clamp(24px, 3.2vw, 40px) rgba(var(--rgb-malachite-500), 0.12);
+  border-color: var(--filelist-load-more-border);
+  color: var(--filelist-load-more-text);
+  background: var(--filelist-load-more-bg);
+  box-shadow: var(--neu-raised-sm-shadow);
 }
 
 .fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber:hover {
-  border-color: rgba(var(--rgb-emerald-300), 0.45);
-  background: linear-gradient(
-    90deg,
-    rgba(var(--rgb-malachite-500), 0.7),
-    rgba(var(--rgb-emerald-500), 0.5),
-    rgba(var(--rgb-emerald-400), 0.4)
-  );
-  box-shadow:
-    0 0 0 1px rgba(var(--rgb-emerald-500), 0.11),
-    0 clamp(8px, 1.2vw, 14px) clamp(24px, 3.2vw, 40px) rgba(var(--rgb-malachite-500), 0.12);
+  border-color: var(--filelist-load-more-border-hover);
+  color: var(--filelist-load-more-text-hover);
+  background: var(--filelist-load-more-bg-hover);
+  box-shadow: var(--neu-raised-sm-shadow);
 }
 
 /* 上传按钮高亮样式：柔和的紫色调 + 保持玻璃质感 */
@@ -585,6 +1444,113 @@
   transform: translateY(-0.0625rem);
 }
 
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.allFilesBtnHighlight,
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.allFilesBtnHighlight,
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.uploadBtnHighlight,
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.uploadBtnHighlight {
+  background: var(--neu-raised-bg);
+  border-color: transparent;
+  box-shadow: var(--neu-raised-sm-shadow);
+  color: var(--filelist-btn-text);
+  text-shadow: none;
+}
+
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.allFilesBtnHighlight:hover,
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.allFilesBtnHighlight:hover,
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.uploadBtnHighlight:hover,
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.uploadBtnHighlight:hover {
+  background: var(--neu-raised-bg);
+  border-color: transparent;
+  box-shadow: var(--neu-raised-sm-shadow);
+  transform: translateY(-0.125rem);
+}
+
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber {
+  background: var(--filelist-load-more-bg);
+  border-color: var(--filelist-load-more-border);
+  box-shadow: var(--neu-raised-sm-shadow);
+  color: var(--filelist-load-more-text);
+  text-shadow: none;
+}
+
+.neuromorphic-style .fileListGlassScope .glass-btn.toolbarActionBtn.loadMoreCyber:hover {
+  background: var(--filelist-load-more-bg-hover);
+  border-color: var(--filelist-load-more-border-hover);
+  color: var(--filelist-load-more-text-hover);
+  box-shadow: var(--neu-raised-sm-shadow);
+  transform: translateY(-0.125rem);
+}
+
+.neuromorphic-style .fileListGlassScope .paginationNeuButton,
+.neuromorphic-style .fileListGlassScope .paginationNeuButton {
+  background: var(--neu-raised-bg);
+  border-color: transparent;
+  box-shadow: var(--neu-raised-sm-shadow);
+  color: var(--filelist-btn-text);
+}
+
+.neuromorphic-style .fileListGlassScope .paginationNeuButton:hover,
+.neuromorphic-style .fileListGlassScope .paginationNeuButton:hover {
+  background: var(--neu-raised-bg);
+  border-color: transparent;
+  box-shadow: var(--neu-raised-sm-shadow);
+  transform: translateY(-0.125rem);
+}
+
+.neuromorphic-style .fileListGlassScope .paginationNeuButtonActive,
+.neuromorphic-style .fileListGlassScope .paginationNeuButtonActive {
+  background: var(--neu-inset-bg);
+  border-color: transparent;
+  box-shadow: var(--neu-pressed-shadow);
+  color: var(--neu-accent-text);
+}
+
+.neuromorphic-style .fileListGlassScope .batch-actions-bar .batchActionBtn,
+.neuromorphic-style .fileListGlassScope .batch-actions-bar .batchActionBtn {
+  border-color: transparent;
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-raised-sm-shadow);
+  color: var(--filelist-btn-text);
+  text-shadow: none;
+}
+
+.neuromorphic-style .fileListGlassScope .batch-actions-bar .batchActionBtn:hover:not(:disabled),
+.neuromorphic-style .fileListGlassScope .batch-actions-bar .batchActionBtn:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-raised-sm-shadow);
+  transform: translateY(-0.125rem);
+}
+
+.neuromorphic-style .fileListGlassScope .batch-actions-bar .batchActionBtn:active:not(:disabled),
+.neuromorphic-style .fileListGlassScope .batch-actions-bar .batchActionBtn:active:not(:disabled) {
+  box-shadow: var(--neu-pressed-shadow);
+  transform: translateY(0.0625rem);
+}
+
+.neuromorphic-style .fileListGlassScope .trashCardNeuButton,
+.neuromorphic-style .fileListGlassScope .trashCardNeuButton {
+  border-color: transparent;
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-raised-sm-shadow);
+  color: var(--trash-action-text);
+  text-shadow: none;
+}
+
+.neuromorphic-style .fileListGlassScope .trashCardNeuButton:hover:not(:disabled),
+.neuromorphic-style .fileListGlassScope .trashCardNeuButton:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-raised-sm-shadow);
+  transform: translateY(-0.0625rem);
+}
+
+.neuromorphic-style .fileListGlassScope .trashCardNeuButton:active:not(:disabled),
+.neuromorphic-style .fileListGlassScope .trashCardNeuButton:active:not(:disabled) {
+  box-shadow: var(--neu-pressed-shadow);
+  transform: translateY(0.0625rem);
+}
+
 /* 卡片勾选框：外圈水晶效果 */
 .fileListGlassScope .selection-checkbox-hover-reveal {
   visibility: visible;
@@ -601,7 +1567,7 @@
 }
 
 .fileListGlassScope .card-checkbox-outer-crystal {
-  border: 0.046875rem solid var(--selection-check-crystal-border);
+  border: 0;
   box-shadow: none;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
   -webkit-backdrop-filter: blur(clamp(0.25rem, 0.6vw, 0.375rem));
@@ -609,27 +1575,41 @@
 }
 
 .fileListGlassScope .card-checkbox-unselected {
-  border: 0.0625rem solid var(--selection-check-unselected-border);
+  border: 0;
   box-shadow: var(--selection-check-unselected-shadow);
   -webkit-backdrop-filter: blur(clamp(0.18rem, 0.45vw, 0.28rem));
   backdrop-filter: blur(clamp(0.18rem, 0.45vw, 0.28rem));
 }
 
-.fileListGlassScope .card-checkbox-unselected-ring {
-  border-width: 0.125rem;
-}
-
 .fileListGlassScope .group:hover .card-checkbox-unselected {
-  border-color: var(--selection-check-unselected-border-hover);
   box-shadow: var(--selection-check-unselected-shadow-hover);
 }
 
 .fileListGlassScope .group:hover .card-checkbox-outer-crystal {
-  border-color: var(--selection-check-crystal-border-hover);
+  box-shadow: none;
 }
 
 .fileListGlassScope .card-checkbox-selected {
   animation: none;
+}
+
+.neuromorphic-style .fileListGlassScope .card-checkbox-codepen-box,
+.neuromorphic-style .fileListGlassScope .card-checkbox-codepen-box {
+  border-radius: clamp(0.45rem, 0.9vw, 0.5rem);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.neuromorphic-style .fileListGlassScope .card-checkbox-outer-crystal.card-checkbox-codepen-box,
+.neuromorphic-style .fileListGlassScope .card-checkbox-outer-crystal.card-checkbox-codepen-box {
+  background: var(--selection-check-surface);
+  box-shadow: none;
+}
+
+.neuromorphic-style .fileListGlassScope .card-checkbox-unselected.card-checkbox-codepen-box,
+.neuromorphic-style .fileListGlassScope .card-checkbox-unselected.card-checkbox-codepen-box {
+  background: var(--selection-check-unselected-surface);
+  box-shadow: var(--selection-check-unselected-shadow);
 }
 
 /* 性能关键：卡片/缩略图/按钮上的“颗粒纹理”会显著增加重绘成本，禁用它们 */

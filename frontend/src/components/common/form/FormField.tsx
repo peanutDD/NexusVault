@@ -1,7 +1,7 @@
 import { type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
 
 const inputBase =
-  "w-full rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--control-input-bg)] px-[clamp(0.625rem,1.5vw,0.75rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[var(--control-input-text)] placeholder:text-[var(--control-input-placeholder)] border border-[var(--control-input-border)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)] disabled:opacity-50";
+  "w-full rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--control-input-bg)] px-[clamp(0.625rem,1.5vw,0.75rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[var(--control-input-text)] placeholder:text-[var(--control-input-placeholder)] border border-[var(--control-input-border)] shadow-[var(--neu-inset-shadow)] focus:outline-none focus:ring-2 focus:ring-[var(--control-input-ring)] disabled:opacity-50";
 
 interface FormFieldProps {
   label: string;

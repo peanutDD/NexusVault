@@ -1,4 +1,6 @@
 import { render } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FileMetadata } from "../../../types/files";
 import type { Folder } from "../../../types/folders";
@@ -6,8 +8,17 @@ import VirtualizedFileGrid from "./VirtualizedFileGrid";
 import VirtualizedMixedGrid from "./VirtualizedMixedGrid";
 
 vi.mock("./FileCard", () => ({
-  default: ({ file }: { file: FileMetadata }) => (
-    <article data-testid={`file-${file.id}`} />
+  default: ({
+    file,
+    thumbnailPriority,
+  }: {
+    file: FileMetadata;
+    thumbnailPriority?: "high" | "low";
+  }) => (
+    <article
+      data-testid={`file-${file.id}`}
+      data-thumbnail-priority={thumbnailPriority ?? ""}
+    />
   ),
 }));
 
@@ -81,6 +92,10 @@ describe("virtualized grid hover spacing", () => {
       "pt-[clamp(0.2rem,0.7vw,0.25rem)]",
       "mb-[clamp(0.4rem,1vw,0.5rem)]",
     );
+    expect(container.querySelector('[data-testid="file-file-1"]')).toHaveAttribute(
+      "data-thumbnail-priority",
+      "high",
+    );
   });
 
   it("keeps hover headroom inside mixed plain-sort rows", () => {
@@ -115,5 +130,18 @@ describe("virtualized grid hover spacing", () => {
       "pt-[clamp(0.2rem,0.7vw,0.25rem)]",
       "mb-[clamp(0.4rem,1vw,0.5rem)]",
     );
+    expect(container.querySelector('[data-testid="file-file-1"]')).toHaveAttribute(
+      "data-thumbnail-priority",
+      "high",
+    );
+  });
+
+  it("does not paint-contain virtual rows so card materials do not form horizontal bands", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/styles/misc.css"), "utf8");
+    const rule = css.match(/\.virtualized-row\s*\{[^}]*\}/)?.[0] ?? "";
+
+    expect(rule).not.toContain("content-visibility: auto");
+    expect(rule).toContain("overflow: visible");
+    expect(rule).toContain("background: transparent");
   });
 });

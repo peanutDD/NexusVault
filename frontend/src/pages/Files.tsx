@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/authStore";
 import PageLayout from "../components/layout/PageLayout";
 import FileList from "../components/files/list/FileList";
+import FileListBackgroundLayer from "../components/files/list/FileListBackgroundLayer";
+import { FILE_COLLECTION_COUNTS_QUERY_KEY } from "../services/fileListService";
 import { clearFileListCache } from "../utils/fileListCache";
 
 // 懒加载重型对话框组件
@@ -27,6 +29,7 @@ export default function Files() {
   const handleUploadComplete = useCallback(() => {
     clearFileListCache();
     queryClient.invalidateQueries({ queryKey: ["files"] });
+    queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY });
     setRefreshKey((k) => k + 1);
   }, [queryClient]);
 
@@ -35,6 +38,8 @@ export default function Files() {
       username={user?.username}
       onLogout={handleLogout}
       useSolidBackground
+      backgroundLayer={<FileListBackgroundLayer />}
+      hideFooter={uploadDialogOpen}
       data-oid="_.p3.bw"
     >
       {/* 上传对话框 - 懒加载 */}

@@ -110,6 +110,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
   const [loading, setLoading] = useState(false);
   const activeControllerRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -221,8 +222,22 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
     [handleUpload],
   );
 
+  const handleUrlPanelPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const target = e.target;
+      if (target instanceof Element && target.closest("button")) return;
+      urlInputRef.current?.focus({ preventScroll: true });
+    },
+    [],
+  );
+
   return (
-    <div className="uploadUrlPanel mb-[clamp(0.78rem,1.8vw,1rem)]" data-oid="_b1-ohy">
+    <div
+      className="uploadUrlPanel mb-[clamp(0.78rem,1.8vw,1rem)]"
+      onPointerDown={handleUrlPanelPointerDown}
+      data-testid="upload-url-panel"
+      data-oid="_b1-ohy"
+    >
       <p
         className="font-brand mb-[clamp(0.39rem,0.9vw,0.5rem)] flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--upload-text-muted)]"
         data-oid="mcl5tfe"
@@ -230,11 +245,16 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
         <SatelliteDish className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)] text-[var(--upload-accent)]" aria-hidden="true" />
         Or upload from URL
       </p>
-      <div className="flex gap-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="h__ldbv">
+      <div
+        className="uploadUrlControls flex gap-[clamp(0.39rem,0.9vw,0.5rem)]"
+        data-testid="upload-url-controls"
+        data-oid="h__ldbv"
+      >
         <label htmlFor="upload-url-input" className="sr-only">
           File URL
         </label>
         <input
+          ref={urlInputRef}
           id="upload-url-input"
           type="url"
           name="uploadUrl"
@@ -244,7 +264,7 @@ export default function UrlUploadForm({ onFileAdd }: UrlUploadFormProps) {
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder="Add file URL"
           className={cn(
-            "uploadDialogCyberInput font-brand flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] border bg-transparent px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
+            "uploadDialogCyberInput uploadUrlInput font-brand min-w-0 flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] border bg-transparent px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--upload-input-text)] placeholder-[var(--upload-input-placeholder)] transition-colors focus:outline-none",
             urlInput.trim()
               ? "uploadDialogCyberInputActive border-[var(--upload-accent)]"
               : "border-[var(--upload-input-border)] focus:border-[var(--upload-accent)]",

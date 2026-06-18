@@ -10,7 +10,7 @@ interface FileListBatchActionsProps {
   onBatchDelete: () => void;
   /** 批量下载 ZIP 进行中（后端打包 + 传输完成前保存框不会弹出） */
   batchDownloading?: boolean;
-  /** 整合模式：不包玻璃拟态容器，由父级统一包裹 */
+  /** Legacy inline mode for callers that provide their own visual shell. */
   bare?: boolean;
 }
 
@@ -27,55 +27,21 @@ const FileListBatchActions = memo(function FileListBatchActions({
   const totalCount = selectedFileCount + selectedFolderCount;
   if (totalCount === 0) return null;
 
-  // 构建选择描述文本
-  const getSelectionText = () => {
-    const parts: string[] = [];
-    if (selectedFileCount > 0) {
-      parts.push(
-        `${selectedFileCount} file${selectedFileCount === 1 ? "" : "s"}`,
-      );
-    }
-    if (selectedFolderCount > 0) {
-      parts.push(
-        `${selectedFolderCount} folder${selectedFolderCount === 1 ? "" : "s"}`,
-      );
-    }
-    return parts.join(", ");
-  };
-
-  /* 与 ALL FILES 栏一致：text-[0.625rem] leading-none */
+  /* 与 ALL FILES 栏一致：tiny fluid label scale */
   const rowClass =
-    "font-brand font-normal tracking-widest text-[0.625rem] leading-none";
+    "font-brand font-normal tracking-widest text-[length:var(--font-size-ui-5xs)] leading-none";
   const btnClass =
-    "glass-btn inline-flex items-center justify-center sm:justify-start gap-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.2rem,0.7vw,0.25rem)] hover:border-[var(--filelist-batch-action-border-hover)] " +
+    "glass-btn batchActionBtn inline-flex items-center justify-center sm:justify-start gap-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.4rem,1vw,0.5rem)] py-[clamp(0.2rem,0.7vw,0.25rem)] hover:border-[var(--filelist-batch-action-border-hover)] " +
     rowClass;
 
   const wrapperClass = bare
-    ? "batch-actions-row flex items-center justify-between gap-[clamp(0.75rem,2vw,1rem)] animate-fade-in transition-all duration-200"
-    : "batch-actions-bar glass-panel-soft flex items-center justify-between gap-[clamp(0.75rem,2vw,1rem)] animate-fade-in transition-all duration-200";
+    ? "batch-actions-bar batch-actions-row fileListSelectionSegment flex items-center justify-end gap-[clamp(0.75rem,2vw,1rem)] animate-fade-in transition-all duration-200"
+    : "batch-actions-bar batch-actions-row glass-panel glass-panel-toolbar fileListSelectionShell flex items-center justify-end gap-[clamp(0.75rem,2vw,1rem)] animate-fade-in transition-all duration-200";
 
   return (
     <div className={wrapperClass} data-oid="4faqf4j">
       <div
-        className="flex min-w-0 items-center gap-[clamp(0.4rem,1vw,0.5rem)] whitespace-nowrap text-[0.625rem]"
-        data-oid="zvxz73n"
-      >
-        <span
-          className="inline-block h-[clamp(0.875rem,2vw,1rem)] w-[clamp(0.875rem,2vw,1rem)] shrink-0 rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
-          aria-hidden
-          data-oid="4y63_0t"
-        />
-
-        <span
-          className="font-brand min-w-0 shrink truncate font-normal tracking-widest leading-none text-[var(--filelist-batch-selection-text)] text-[clamp(0.5rem,1.2vw,0.625rem)]"
-          data-oid="z8d:i3l"
-        >
-          Already selected {getSelectionText()}
-        </span>
-      </div>
-
-      <div
-        className="flex min-w-0 items-center justify-end gap-[clamp(0.3rem,0.8vw,0.375rem)] overflow-x-auto whitespace-nowrap text-[0.625rem]"
+        className="batchActionButtonsRow flex min-w-0 items-center justify-end gap-[clamp(0.3rem,0.8vw,0.375rem)] overflow-visible whitespace-nowrap text-[length:var(--font-size-ui-5xs)]"
         data-oid=":7zr0ik"
       >
         <button

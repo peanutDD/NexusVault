@@ -1,5 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { User } from "../../types/auth";
@@ -8,14 +10,25 @@ import Settings from "../../pages/Settings";
 import ThemeSection from "./ThemeSection";
 import UserInfoSection from "./UserInfoSection";
 import ApiTokenSection from "./ApiTokenSection";
-import { settingsInputClass } from "./settingsUi";
+import PageLayout from "../layout/PageLayout";
+import {
+  settingsInputClass,
+  settingsLabelClass,
+  settingsPanelClass,
+  settingsPrimaryButtonClass,
+  settingsSecondaryButtonClass,
+} from "./settingsUi";
 import { useThemeStore } from "../../store/themeStore";
 import { useAuthStore } from "../../store/authStore";
 import { authService } from "../../services/auth";
 import {
   useApiTokens,
   useCreateApiToken,
+  useCreateWebDavWizardToken,
   useDeleteApiToken,
+  useUpdateApiToken,
+  useWebDavActivity,
+  useWebDavDiagnostics,
 } from "../../hooks/useApiTokens";
 import { useStorageUsage } from "../../hooks/useStorageUsage";
 import { useOcrStatus } from "../../hooks/useOcrStatus";
@@ -40,7 +53,11 @@ vi.mock("../../services/auth", () => ({
 vi.mock("../../hooks/useApiTokens", () => ({
   useApiTokens: vi.fn(),
   useCreateApiToken: vi.fn(),
+  useCreateWebDavWizardToken: vi.fn(),
   useDeleteApiToken: vi.fn(),
+  useUpdateApiToken: vi.fn(),
+  useWebDavActivity: vi.fn(),
+  useWebDavDiagnostics: vi.fn(),
 }));
 
 vi.mock("../../hooks/useStorageUsage", () => ({
@@ -58,7 +75,9 @@ vi.mock("../../hooks/useClipboard", () => ({
 const mockSetTheme = vi.fn();
 const mockUpdateUser = vi.fn();
 const mockCreateMutate = vi.fn();
+const mockCreateWebDavMutate = vi.fn();
 const mockDeleteMutate = vi.fn();
+const mockUpdateTokenMutate = vi.fn();
 
 const currentUser: User = {
   id: "user-1",
@@ -66,6 +85,41 @@ const currentUser: User = {
   email: "alice@example.com",
   created_at: "2026-05-04T00:00:00Z",
 };
+
+const settingsRuntimeSourceFiles = [
+  "../../pages/Settings.tsx",
+  "./SettingsCard.tsx",
+  "./settingsUi.ts",
+  "./UserInfoSection.tsx",
+  "./PasswordChangeSection.tsx",
+  "./ApiTokenSection.tsx",
+  "./WebDavAccessSection.tsx",
+  "./OcrStatusSection.tsx",
+  "./StorageUsageSection.tsx",
+  "./ThemeSection.tsx",
+] as const;
+
+function stripFluidClampSegments(line: string) {
+  return line.replace(/clamp\([^)]*\)/g, "clamp()");
+}
+
+function findSettingsFixedSizingOffenders() {
+  const fixedSizingRe =
+    /(?:\b(?:min|max|minmax|calc)\([^`'"\n]*\d+(?:\.\d+)?rem\b|\b(?:w|h|min-w|min-h|max-w|max-h|grid-cols)-\[[^\]\n]*\d+(?:\.\d+)?rem\b|\b(?:fontSize|width|height):\s*`\$\{[^`]+\}px`)/;
+
+  return settingsRuntimeSourceFiles.flatMap((sourceFile) => {
+    const absolutePath = resolve(__dirname, sourceFile);
+    return readFileSync(absolutePath, "utf8")
+      .split("\n")
+      .flatMap((line, index) => {
+        if (line.includes("fluid-sizing-allow:")) return [];
+        const normalizedLine = stripFluidClampSegments(line);
+        return fixedSizingRe.test(normalizedLine)
+          ? [`${sourceFile}:${index + 1}: ${line.trim()}`]
+          : [];
+      });
+  });
+}
 
 function asApiTokensQuery(data: ApiToken[], isLoading = false) {
   return { data, isLoading } as unknown as ReturnType<typeof useApiTokens>;
@@ -83,6 +137,20 @@ function asDeleteTokenMutation() {
     isPending: false,
     mutate: mockDeleteMutate,
   } as unknown as ReturnType<typeof useDeleteApiToken>;
+}
+
+function asUpdateTokenMutation() {
+  return {
+    isPending: false,
+    mutate: mockUpdateTokenMutate,
+  } as unknown as ReturnType<typeof useUpdateApiToken>;
+}
+
+function asCreateWebDavTokenMutation() {
+  return {
+    isPending: false,
+    mutate: mockCreateWebDavMutate,
+  } as unknown as ReturnType<typeof useCreateWebDavWizardToken>;
 }
 
 function mockAuthStore() {
@@ -110,6 +178,7 @@ function LocationProbe() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.sessionStorage.clear();
   vi.mocked(useThemeStore).mockReturnValue({
     theme: "dark",
     effectiveTheme: "dark",
@@ -129,7 +198,17 @@ beforeEach(() => {
   });
   vi.mocked(useApiTokens).mockReturnValue(asApiTokensQuery([]));
   vi.mocked(useCreateApiToken).mockReturnValue(asCreateTokenMutation());
+  vi.mocked(useCreateWebDavWizardToken).mockReturnValue(asCreateWebDavTokenMutation());
   vi.mocked(useDeleteApiToken).mockReturnValue(asDeleteTokenMutation());
+  vi.mocked(useUpdateApiToken).mockReturnValue(asUpdateTokenMutation());
+  vi.mocked(useWebDavActivity).mockReturnValue({
+    data: [],
+    isLoading: false,
+  } as unknown as ReturnType<typeof useWebDavActivity>);
+  vi.mocked(useWebDavDiagnostics).mockReturnValue({
+    data: [],
+    isLoading: false,
+  } as unknown as ReturnType<typeof useWebDavDiagnostics>);
   vi.mocked(useStorageUsage).mockReturnValue({
     data: { total_size: 2048, file_count: 3 },
   } as unknown as ReturnType<typeof useStorageUsage>);
@@ -153,28 +232,53 @@ describe("Settings page regressions", () => {
     expect(mockSetTheme).toHaveBeenCalledWith("light");
   });
 
-  it("offers Terminal as the fourth theme option", async () => {
+  it("uses dedicated theme option tokens instead of primary action tokens for the selected theme", () => {
+    vi.mocked(useThemeStore).mockReturnValue({
+      theme: "light",
+      effectiveTheme: "light",
+      setTheme: mockSetTheme,
+      toggleTheme: vi.fn(),
+    });
+
     render(<ThemeSection />);
 
-    expect(screen.getByRole("button", { name: /Terminal/i })).toHaveTextContent(
-      /neon terminal/i,
+    const lightOption = screen.getByRole("button", { name: /Light/i });
+    expect(lightOption).toHaveAttribute("aria-pressed", "true");
+    expect(lightOption).toHaveClass(
+      "[background:var(--settings-theme-option-active-bg)]",
     );
-
-    await userEvent.click(screen.getByRole("button", { name: /Terminal/i }));
-
-    expect(mockSetTheme).toHaveBeenCalledWith("terminal");
+    expect(lightOption).toHaveClass(
+      "hover:[background:var(--settings-theme-option-active-bg-hover)]",
+    );
+    expect(lightOption).toHaveClass(
+      "text-[var(--settings-theme-option-active-text)]",
+    );
+    expect(lightOption).not.toHaveClass("[background:var(--settings-action-bg)]");
+    expect(lightOption).not.toHaveClass("text-[var(--settings-action-text)]");
   });
 
-  it("offers Portfolio as the fifth theme option", async () => {
+  it("does not offer Terminal as a theme option", async () => {
     render(<ThemeSection />);
 
-    expect(screen.getByRole("button", { name: /Portfolio/i })).toHaveTextContent(
-      /neon developer portfolio/i,
-    );
+    expect(screen.queryByRole("button", { name: /Terminal/i })).not.toBeInTheDocument();
+  });
 
-    await userEvent.click(screen.getByRole("button", { name: /Portfolio/i }));
+  it("does not offer Purple as a theme option", async () => {
+    render(<ThemeSection />);
 
-    expect(mockSetTheme).toHaveBeenCalledWith("portfolio");
+    expect(screen.queryByRole("button", { name: /Purple/i })).not.toBeInTheDocument();
+  });
+
+  it("does not offer Portfolio as a theme option", async () => {
+    render(<ThemeSection />);
+
+    expect(screen.queryByRole("button", { name: /Portfolio/i })).not.toBeInTheDocument();
+  });
+
+  it("does not offer Neuromorphic as a separate theme option", async () => {
+    render(<ThemeSection />);
+
+    expect(screen.queryByRole("button", { name: /Neuromorphic/i })).not.toBeInTheDocument();
   });
 
   it("reveals email verification only when the profile email changes", async () => {
@@ -223,6 +327,15 @@ describe("Settings page regressions", () => {
     expect(screen.getByTestId("webdav-readonly-option")).toHaveClass(
       "has-[:checked]:bg-[var(--settings-secondary-bg)]",
     );
+    const enabledIndicator = screen
+      .getByTestId("webdav-enabled-option")
+      .querySelector(".settings-color-checkbox-indicator");
+
+    expect(enabledIndicator).toHaveClass(
+      "peer-checked:[background:var(--settings-action-bg)]",
+      "peer-checked:text-transparent",
+    );
+    expect(enabledIndicator?.querySelector("svg")).toBeNull();
 
     await userEvent.click(screen.getByLabelText(/WebDAV read-only/i));
     await userEvent.type(screen.getByLabelText(/Token name/i), "Read token");
@@ -265,18 +378,215 @@ describe("Settings page regressions", () => {
     expect(mockDeleteMutate).not.toHaveBeenCalled();
   });
 
+  it("edits WebDAV token metadata without exposing the token secret", async () => {
+    const token: ApiToken = {
+      id: "tok-1",
+      name: "Old Finder",
+      created_at: "2026-05-04T00:00:00Z",
+      last_used_at: null,
+      expires_at: null,
+      webdav_enabled: true,
+      webdav_read_only: false,
+      webdav_root_folder_id: null,
+    };
+    vi.mocked(useApiTokens).mockReturnValue(asApiTokensQuery([token]));
+
+    render(<ApiTokenSection />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Edit Old Finder/i }));
+    await userEvent.clear(screen.getByLabelText(/Edit token name/i));
+    await userEvent.type(screen.getByLabelText(/Edit token name/i), "iPhone Files");
+    await userEvent.click(screen.getByLabelText(/Edit WebDAV read-only/i));
+    await userEvent.click(screen.getByRole("button", { name: /Save token changes/i }));
+
+    expect(mockUpdateTokenMutate).toHaveBeenCalledWith(
+      {
+        tokenId: "tok-1",
+        data: {
+          name: "iPhone Files",
+          webdav_enabled: true,
+          webdav_read_only: true,
+          webdav_root_folder_id: null,
+        },
+      },
+      expect.objectContaining({
+        onError: expect.any(Function),
+        onSuccess: expect.any(Function),
+      }),
+    );
+    expect(screen.queryByText("secret-webdav-token")).not.toBeInTheDocument();
+  });
+
+  it("collapses existing tokens after five items inside a scrollable frame", async () => {
+    const tokens: ApiToken[] = Array.from({ length: 7 }, (_, index) => ({
+      id: `tok-${index + 1}`,
+      name: `Token ${index + 1}`,
+      created_at: "2026-05-04T00:00:00Z",
+      last_used_at: null,
+      expires_at: null,
+      webdav_enabled: true,
+      webdav_read_only: false,
+      webdav_root_folder_id: null,
+    }));
+    vi.mocked(useApiTokens).mockReturnValue(asApiTokensQuery(tokens));
+
+    render(<ApiTokenSection />);
+
+    const frame = screen.getByTestId("existing-token-list-frame");
+    const collapsedRow = screen.getByTestId("existing-token-collapse-row");
+    const collapsedSummary = screen.getByTestId("existing-token-collapse-summary");
+    const collapsedToggle = screen.getByRole("button", { name: /Show all 7 tokens/i });
+
+    expect(collapsedRow).toHaveClass("flex-row", "items-center", "justify-between");
+    expect(collapsedRow).not.toHaveClass("flex-col");
+    expect(collapsedSummary).toHaveClass("min-w-0", "truncate");
+    expect(collapsedToggle).toHaveClass(
+      "existingTokenNeuButton",
+      "shrink-0",
+      "whitespace-nowrap",
+    );
+    expect(collapsedToggle).toHaveClass("settings-neu-raised-button");
+    expect(collapsedToggle).toHaveClass("shadow-[var(--settings-secondary-shadow)]");
+    expect(frame).toHaveClass("max-h-[clamp(22rem,55dvh,34rem)]", "overflow-y-auto");
+    expect(frame).toHaveClass("existingTokenInsetFrame", "settings-neu-inset-panel");
+    expect(frame).toHaveClass("shadow-[var(--neu-inset-shadow)]");
+    expect(screen.getByText("Token 1")).toBeInTheDocument();
+    expect(screen.getByText("Token 5")).toBeInTheDocument();
+    expect(screen.queryByText("Token 6")).not.toBeInTheDocument();
+    expect(screen.getByText(/Showing 5 of 7 tokens/i)).toBeInTheDocument();
+
+    await userEvent.click(collapsedToggle);
+
+    expect(screen.getByText("Token 7")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Show less/i })).toBeInTheDocument();
+  });
+
+  it("keeps existing API token rows mobile-safe before switching to desktop metadata columns", () => {
+    const token: ApiToken = {
+      id: "tok-1",
+      name: "Mobile sync token with a long descriptive name",
+      created_at: "2026-05-04T00:00:00Z",
+      last_used_at: null,
+      expires_at: null,
+      webdav_enabled: true,
+      webdav_read_only: false,
+      webdav_root_folder_id: "11111111-1111-4111-8111-111111111111",
+    };
+    vi.mocked(useApiTokens).mockReturnValue(asApiTokensQuery([token]));
+
+    render(<ApiTokenSection />);
+
+    expect(screen.getByTestId("existing-token-row-tok-1")).toHaveClass(
+      "existingTokenInsetRow",
+      "settings-neu-inset-panel",
+      "overflow-hidden",
+      "shadow-[var(--neu-inset-shadow)]",
+    );
+    expect(screen.getByTestId("existing-token-main-row-tok-1")).toHaveClass(
+      "flex-col",
+      "items-stretch",
+      "sm:flex-row",
+      "sm:items-start",
+    );
+    expect(screen.getByTestId("existing-token-meta-grid-tok-1")).toHaveClass(
+      "grid-cols-1",
+      "sm:grid-cols-2",
+    );
+    expect(screen.getByRole("button", { name: /Delete Mobile sync token/i })).toHaveClass(
+      "existingTokenFlatAction",
+      "existingTokenFlatAction--delete",
+      "w-full",
+      "px-[clamp(0.58rem,1.35vw,0.74rem)]",
+      "py-[clamp(0.3rem,0.78vw,0.4rem)]",
+      "text-[length:var(--settings-text-xs)]",
+      "sm:w-auto",
+    );
+    expect(screen.getByRole("button", { name: /Delete Mobile sync token/i })).not.toHaveClass(
+      "existingTokenNeuAction--danger",
+      "shadow-[var(--settings-secondary-shadow)]",
+      "shadow-[var(--neu-control-shadow)]",
+      "border",
+    );
+    expect(screen.getByRole("button", { name: /Edit Mobile sync token/i })).toHaveClass(
+      "existingTokenFlatAction",
+      "existingTokenFlatAction--edit",
+      "w-full",
+      "px-[clamp(0.58rem,1.35vw,0.74rem)]",
+      "py-[clamp(0.3rem,0.78vw,0.4rem)]",
+      "text-[length:var(--settings-text-xs)]",
+      "sm:w-auto",
+    );
+    expect(screen.getByRole("button", { name: /Edit Mobile sync token/i })).not.toHaveClass(
+      "settings-neu-raised-button",
+      "shadow-[var(--settings-secondary-shadow)]",
+      "border",
+    );
+    const source = readFileSync(
+      resolve(__dirname, "../../styles/base.css"),
+      "utf8",
+    );
+    const tokenRowRule =
+      source.match(/\.existingTokenInsetRow\s*\{[^}]*\}/)?.[0] ?? "";
+
+    expect(tokenRowRule).toContain(
+      "background: var(--neu-inset-bg) !important;",
+    );
+    expect(tokenRowRule).toContain(
+      "box-shadow: var(--neu-inset-shadow) !important;",
+    );
+    expect(tokenRowRule).not.toContain("flat-reference-green-surface-bg");
+    expect(source).toContain("--existing-token-action-edit-bg: #22C55E;");
+    expect(source).toContain("--existing-token-action-delete-bg: #EF4444;");
+    expect(source).toContain(".existingTokenFlatAction {");
+    expect(source).toContain(".existingTokenFlatAction--edit {");
+    expect(source).toContain(".existingTokenFlatAction--delete {");
+    expect(source).toContain("box-shadow: none !important;");
+    expect(source).not.toContain(".existingTokenNeuAction--danger");
+  });
+
   it("uses semantic settings tokens for error input states", () => {
     expect(settingsInputClass(true)).toContain("settings-form-error");
     expect(settingsInputClass(false)).toContain("settings-form-input-border");
+    expect(settingsInputClass(false)).toContain("[background:var(--settings-form-input-bg)]");
   });
 
-  it("returns to the previous route instead of hardcoding files home", async () => {
+  it("maps Settings form controls to the CodePen neuromorphic inset and raised primitives", () => {
+    expect(settingsInputClass(false)).toContain("settings-neu-inset-control");
+    expect(settingsInputClass(false)).toContain("shadow-[var(--settings-form-input-shadow)]");
+    expect(settingsInputClass(false)).toContain(
+      "focus:shadow-[var(--settings-form-input-shadow-focus)]",
+    );
+
+    expect(settingsPanelClass()).toContain("settings-neu-inset-panel");
+    expect(settingsPanelClass()).toContain("[background:var(--neu-inset-bg)]");
+    expect(settingsPanelClass()).toContain("shadow-[var(--neu-inset-shadow)]");
+    expect(settingsPanelClass()).toContain("border-transparent");
+
+    expect(settingsSecondaryButtonClass()).toContain("settings-neu-raised-button");
+    expect(settingsSecondaryButtonClass()).toContain("[background:var(--settings-secondary-bg)]");
+    expect(settingsSecondaryButtonClass()).toContain("shadow-[var(--settings-secondary-shadow)]");
+
+    expect(settingsPrimaryButtonClass()).toContain("settings-neu-primary-button");
+    expect(settingsPrimaryButtonClass()).toContain("[background:var(--settings-action-bg)]");
+    expect(settingsPrimaryButtonClass()).toContain("shadow-[var(--settings-action-shadow)]");
+    expect(settingsPrimaryButtonClass()).toContain(
+      "active:shadow-[var(--settings-action-shadow-active)]",
+    );
+    expect(settingsPrimaryButtonClass()).toContain("inline-flex");
+    expect(settingsPrimaryButtonClass()).toContain("min-w-0");
+    expect(settingsPrimaryButtonClass()).toContain("whitespace-nowrap");
+  });
+
+  it("returns to the remembered files folder instead of browser history", async () => {
+    window.sessionStorage.setItem("settings-return-to", "/files?folder=folder-1");
+
     render(
       <MemoryRouter
-        initialEntries={["/files?folder=folder-1", "/settings"]}
+        initialEntries={["/shares", "/settings"]}
         initialIndex={1}
       >
         <Routes>
+          <Route path="/shares" element={<LocationProbe />} />
           <Route path="/files" element={<LocationProbe />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
@@ -288,6 +598,25 @@ describe("Settings page regressions", () => {
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/files?folder=folder-1",
     );
+  });
+
+  it("does not send Settings back to the Share Center when no files folder is remembered", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={["/shares", "/settings"]}
+        initialIndex={1}
+      >
+        <Routes>
+          <Route path="/shares" element={<LocationProbe />} />
+          <Route path="/files" element={<LocationProbe />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Back/i }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent("/files");
   });
 
   it("falls back to files home when there is no previous app route", async () => {
@@ -320,6 +649,31 @@ describe("Settings page regressions", () => {
     expect(screen.queryByRole("link", { name: /Jump to Appearance/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Jump to Security/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Jump to Tokens/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the top nav Settings button visible after navigating into the Settings page", async () => {
+    render(
+      <MemoryRouter initialEntries={["/files"]}>
+        <Routes>
+          <Route
+            path="/files"
+            element={
+              <PageLayout title="FILES" username={currentUser.username} onLogout={vi.fn()}>
+                <div>Files home</div>
+              </PageLayout>
+            }
+          />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Settings Center" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
   });
 
   it("does not render the Appearance section on the Settings page", () => {
@@ -371,6 +725,7 @@ describe("Settings page regressions", () => {
 
     expect(screen.getByTestId("settings-hero-panel")).toHaveClass(
       "isolate",
+      "settings-neu-raised-card",
       "transition-[border-color,box-shadow]",
     );
 
@@ -378,11 +733,36 @@ describe("Settings page regressions", () => {
     expect(settingsCards).toHaveLength(6);
     expect(settingsCards[0]).toHaveClass(
       "group/settings-card",
+      "settings-neu-raised-card",
       "transition-[border-color,box-shadow,transform]",
     );
     expect(screen.getByTestId("settings-card-grid")).toHaveTextContent(
       /Account[\s\S]*Security[\s\S]*WebDAV Access[\s\S]*API Tokens[\s\S]*OCR Status[\s\S]*Storage/,
     );
+  });
+
+  it("uses background shorthand for gradient-capable Settings surfaces and primary actions", () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("settings-hero-panel")).toHaveClass(
+      "[background:var(--settings-surface-bg)]",
+    );
+    expect(screen.getAllByTestId("settings-card-shell")[0]).toHaveClass(
+      "[background:var(--settings-surface-bg)]",
+    );
+
+    const primaryButtonClass = settingsPrimaryButtonClass();
+    expect(primaryButtonClass).toContain("[background:var(--settings-action-bg)]");
+    expect(primaryButtonClass).toContain(
+      "hover:[background:var(--settings-action-bg-hover)]",
+    );
+    expect(primaryButtonClass).not.toContain("bg-[var(--settings-action-bg)]");
   });
 
   it("uses focused Settings layout groups instead of forcing every pair equal height", () => {
@@ -442,6 +822,117 @@ describe("Settings page regressions", () => {
     );
     expect(screen.getByTestId("settings-storage-column")).toHaveClass(
       "[&>section]:h-full",
+    );
+  });
+
+  it("keeps account feedback stacked above the form instead of sharing a row", async () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("No changes made");
+    });
+    expect(screen.getByTestId("settings-account-column")).toHaveClass(
+      "[&>section>div:last-child]:flex-col",
+    );
+  });
+
+  it("keeps Settings actions and summary tiles on fluid widths instead of fixed minimums", () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("settings-page-shell")).toHaveClass(
+      "w-full",
+      "max-w-[var(--app-shell-max-width)]",
+      "min-w-0",
+    );
+    expect(screen.getByTestId("settings-hero-layout")).toHaveClass("lg:flex-row");
+    expect(screen.getByTestId("settings-hero-summary-grid")).toHaveClass(
+      "grid-cols-[repeat(auto-fit,minmax(var(--settings-hero-summary-tile-min),1fr))]",
+      "w-full",
+      "lg:w-[var(--settings-hero-summary-inline-size)]",
+    );
+
+    const getCodeButton = screen.getByRole("button", { name: /Get code/i });
+    expect(getCodeButton).toHaveClass("w-full", "sm:w-auto");
+    expect(getCodeButton).not.toHaveClass("sm:min-w-[6.5rem]");
+
+    const saveButton = screen.getByRole("button", { name: /Save/i });
+    const changePasswordButton = screen.getByRole("button", {
+      name: /Change password/i,
+    });
+    const createTokenButton = screen.getByRole("button", { name: /Create token/i });
+
+    expect(saveButton).toHaveClass("w-full", "md:w-auto");
+    expect(saveButton).not.toHaveClass("sm:min-w-[8rem]");
+    expect(changePasswordButton).toHaveClass("w-full", "md:w-auto");
+    expect(changePasswordButton).not.toHaveClass("sm:min-w-[10rem]");
+    expect(createTokenButton).toHaveClass("w-full", "md:w-auto");
+    expect(createTokenButton).not.toHaveClass("sm:min-w-[10rem]");
+
+    const shareButton = screen.getByRole("button", { name: /Manage Shares/i });
+    const shareActions = screen.getByTestId("settings-share-center-actions");
+    expect(shareActions).toHaveClass("flex", "w-full", "md:justify-end", "lg:w-auto");
+    expect(shareButton.className).toBe(createTokenButton.className);
+    expect(shareButton).toHaveClass("w-full", "md:w-auto");
+    expect(shareButton).toHaveClass(
+      "settings-neu-primary-button",
+      "[background:var(--settings-action-bg)]",
+      "shadow-[var(--settings-action-shadow)]",
+    );
+    expect(shareButton).not.toHaveClass(
+      "settings-neu-raised-button",
+      "[background:var(--settings-secondary-bg)]",
+      "shadow-[var(--settings-secondary-shadow)]",
+      "h-[3rem]",
+      "w-[12rem]",
+      "min-w-[12rem]",
+      "lg:min-w-[12rem]",
+    );
+    expect(shareButton.querySelector("svg")).toBeNull();
+  });
+
+  it("keeps Settings runtime sizing fluid instead of component-local fixed rem or px values", () => {
+    expect(findSettingsFixedSizingOffenders()).toEqual([]);
+  });
+
+  it("keeps the Registered title outside a value box aligned with confirm password", () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const registeredField = screen.getByTestId("settings-registered-field");
+    const registeredTitle = screen.getByText("Registered");
+    const registeredValueBox = screen.getByTestId("settings-registered-value");
+
+    expect(registeredField.firstElementChild).toBe(registeredTitle);
+    expect(registeredField).toHaveClass(
+      "xl:mt-[calc(clamp(0.195rem,0.45vw,0.25rem)+0.8lh)]",
+    );
+    expect(registeredTitle).toHaveClass(...settingsLabelClass().split(" "));
+    expect(registeredValueBox).not.toHaveTextContent("Registered");
+    expect(registeredValueBox).toHaveTextContent("5/4/2026");
+    expect(registeredValueBox).toHaveClass(
+      "settings-neu-inset-panel",
+      "px-[clamp(0.78rem,1.8vw,1rem)]",
+      "py-[clamp(0.4875rem,1.125vw,0.625rem)]",
+      "text-[length:var(--settings-text-md)]",
     );
   });
 

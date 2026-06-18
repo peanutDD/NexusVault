@@ -1,249 +1,42 @@
-import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import type { FileMetadata } from '../../types/files';
-import type { Folder } from '../../types/folders';
+import { FILE_COLLECTION_COUNTS_QUERY_KEY } from '../../services/fileListService';
 import { MIME_FILTER_FOLDERS } from '../../constants';
+import { getErrorMessage } from '../../utils/error';
 import { useFileFilters } from '../../hooks/files/useFileFilters';
 import { useFileSelection } from '../../hooks/files/useFileSelection';
 import { FILE_TYPE_LABELS } from './fileTypeLabels';
-import { groupFilesInWorker } from '../../utils/workerPool';
 import { useFiles } from '../../hooks/files/useFiles';
 import { useFolderContents } from '../../hooks/folders/useFolders';
 import { useFileUI } from '../../hooks/files/useFileUI';
 import { useFileActions } from '../../hooks/files/useFileActions';
+import {
+  clearSmartFilterParams,
+  toggleCollectionParam,
+  toggleTagParam,
+} from './fileListFilterParams';
+import { useFileListScope } from './useFileListScope';
+import {
+  useFileGroupingWithIcons,
+  useTimeGrouping,
+  useTimeGroupingMixed,
+} from './useFileListGrouping';
+import { useFileListNavigation } from './useFileListNavigation';
+import { useFileListOptimisticDelete } from './useFileListOptimisticDelete';
 
 // 重新导出 FILE_TYPE_LABELS 以保持向后兼容
 export { FILE_TYPE_LABELS };
 
-const GROUP_FILES_WORKER_THRESHOLD = 50;
-
-function getTypeKey(mime: string): string {
-  if (mime.toLowerCase().startsWith('image/gif')) return 'gif';
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('video/')) return 'video';
-  if (mime.startsWith('audio/')) return 'audio';
-  if (mime === 'application/pdf') return 'application/pdf';
-  if (mime.startsWith('text/')) return 'text';
-  if (mime === 'application/zip' || mime === 'application/x-zip-compressed') return 'application/zip';
-  if (mime.startsWith('application/')) return 'application';
-  return 'other';
-}
-
-function getTimeGroupInfo(dateStr: string): { key: string; label: string; sortKey: number } {
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const key = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const label = `${monthNames[month - 1]} ${day}, ${year}`;
-  const sortKey = year * 10000 + month * 100 + day;
-  return { key, label, sortKey };
-}
-
-function useFileGroupingWithIcons(
-  files: FileMetadata[],
-  isGroupByType: boolean,
-  shouldBuildIndex: boolean
-) {
-  const typeOrderForWorker = useMemo(
-    () => Object.fromEntries(Object.entries(FILE_TYPE_LABELS).map(([k, v]) => [k, v.order])),
-    []
-  );
-
-  const [workerGrouped, setWorkerGrouped] = useState<
-    Array<{ key: string; order: number; files: FileMetadata[] }> | null
-  >(null);
-
-  const requestIdRef = useRef(0);
-
-  useEffect(() => {
-    if (files.length <= GROUP_FILES_WORKER_THRESHOLD || !isGroupByType) {
-      requestIdRef.current += 1;
-      return;
-    }
-
-    const currentRequestId = ++requestIdRef.current;
-
-    groupFilesInWorker(files as Parameters<typeof groupFilesInWorker>[0], typeOrderForWorker)
-      .then((result) => {
-        if (requestIdRef.current === currentRequestId) {
-          setWorkerGrouped(result as Array<{ key: string; order: number; files: FileMetadata[] }>);
-
-        }
-      })
-      .catch(() => {
-        if (requestIdRef.current === currentRequestId) {
-          setWorkerGrouped(null);
-        }
-      });
-
-    return () => {
-      requestIdRef.current = currentRequestId + 1;
-    };
-  }, [files, isGroupByType, typeOrderForWorker]);
-
-  const memoGrouped = useMemo(() => {
-    if (!isGroupByType) return null;
-
-    const groups = new Map<string, FileMetadata[]>();
-    files.forEach((file) => {
-      const key = getTypeKey(file.mime_type);
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(file);
-    });
-
-    return Array.from(groups.entries())
-      .map(([key, groupFiles]) => ({
-        key,
-        ...(FILE_TYPE_LABELS[key] ?? FILE_TYPE_LABELS.other),
-        files: groupFiles,
-      }))
-      .sort((a, b) => a.order - b.order);
-  }, [files, isGroupByType]);
-
-  const groupedFiles = useMemo(() => {
-    if (!isGroupByType) return null;
-    if (files.length > GROUP_FILES_WORKER_THRESHOLD && workerGrouped) {
-      return workerGrouped.map(({ key, files: groupFiles }) => ({
-        key,
-        ...(FILE_TYPE_LABELS[key] ?? FILE_TYPE_LABELS.other),
-        files: groupFiles,
-      }));
-    }
-    return memoGrouped;
-  }, [isGroupByType, files.length, workerGrouped, memoGrouped]);
-
-  const displayFiles = useMemo(() => {
-    if (!isGroupByType || !groupedFiles) return files;
-    return groupedFiles.flatMap((group) => group.files);
-  }, [files, isGroupByType, groupedFiles]);
-
-  const emptyIndex = useMemo(() => new Map<string, number>(), []);
-  const displayFileIndexById = useMemo(() => {
-    if (!shouldBuildIndex) return emptyIndex;
-    const m = new Map<string, number>();
-    for (let i = 0; i < displayFiles.length; i += 1) {
-      m.set(displayFiles[i]!.id, i);
-    }
-    return m;
-  }, [displayFiles, shouldBuildIndex, emptyIndex]);
-
-  return {
-    groupedFiles,
-    displayFiles,
-    displayFileIndexById,
-  };
-}
-
-function useTimeGrouping(files: FileMetadata[], isGroupByTime: boolean) {
-  const timeGroupedFiles = useMemo(() => {
-    if (!isGroupByTime) return null;
-
-    const groups = new Map<string, { label: string; sortKey: number; files: FileMetadata[] }>();
-
-    for (const file of files) {
-      const createdAt = file.created_at;
-      const { key, label, sortKey } = getTimeGroupInfo(createdAt);
-      const existing = groups.get(key);
-      if (existing) {
-        existing.files.push(file);
-      } else {
-        groups.set(key, { label, sortKey, files: [file] });
-      }
-    }
-
-    return Array.from(groups.entries())
-      .map(([key, { label, sortKey, files: groupFiles }]) => ({
-        key,
-        label,
-        sortKey,
-        files: groupFiles,
-      }))
-      .sort((a, b) => b.sortKey - a.sortKey);
-  }, [files, isGroupByTime]);
-
-  const displayFilesForTime = useMemo(() => {
-    if (!isGroupByTime || !timeGroupedFiles) return files;
-    return timeGroupedFiles.flatMap((group) => group.files);
-  }, [files, isGroupByTime, timeGroupedFiles]);
-
-  return {
-    timeGroupedFiles,
-    displayFilesForTime,
-  };
-}
-
-function useTimeGroupingMixed(
-  files: FileMetadata[],
-  folders: Folder[],
-  isGroupByTime: boolean
-) {
-  const timeGroupedItems = useMemo(() => {
-    if (!isGroupByTime) return null;
-    const groups = new Map<
-      string,
-      { label: string; sortKey: number; files: FileMetadata[]; folders: Folder[] }
-    >();
-
-    for (const folder of folders) {
-      const { key, label, sortKey } = getTimeGroupInfo(folder.created_at);
-      const existing = groups.get(key);
-      if (existing) {
-        existing.folders.push(folder);
-      } else {
-        groups.set(key, { label, sortKey, files: [], folders: [folder] });
-      }
-    }
-
-    for (const file of files) {
-      const { key, label, sortKey } = getTimeGroupInfo(file.created_at);
-      const existing = groups.get(key);
-      if (existing) {
-        existing.files.push(file);
-      } else {
-        groups.set(key, { label, sortKey, files: [file], folders: [] });
-      }
-    }
-
-    const compareName = (a: string, b: string) =>
-      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-    const getTime = (v: string) => {
-      const t = Date.parse(v);
-      return Number.isFinite(t) ? t : 0;
-    };
-
-    return Array.from(groups.entries())
-      .map(([key, { label, sortKey, files: gFiles, folders: gFolders }]) => {
-        const items = [
-          ...gFolders.map((folder) => ({ type: 'folder' as const, folder })),
-          ...gFiles.map((file) => ({ type: 'file' as const, file })),
-        ].sort((a, b) => {
-          const at = a.type === 'folder' ? getTime(a.folder.created_at) : getTime(a.file.created_at);
-          const bt = b.type === 'folder' ? getTime(b.folder.created_at) : getTime(b.file.created_at);
-          const r = bt - at;
-          if (r !== 0) return r;
-          const an = a.type === 'folder' ? a.folder.name : a.file.original_filename;
-          const bn = b.type === 'folder' ? b.folder.name : b.file.original_filename;
-          return compareName(an, bn);
-        });
-        return { key, label, sortKey, files: gFiles, folders: gFolders, items };
-      })
-      .sort((a, b) => b.sortKey - a.sortKey);
-  }, [files, folders, isGroupByTime]);
-
-  return { timeGroupedItems };
-}
-
 export function useFileList() {
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const currentFolderId = searchParams.get('folder') || null;
+  const {
+    setSearchParams,
+    currentFolderId,
+    activeCollection,
+    activeTagId,
+  } = useFileListScope();
 
-  // 使用抽取的过滤器 Hook
   const {
     search,
     mimeType,
@@ -258,7 +51,6 @@ export function useFileList() {
     handleSortChange,
   } = useFileFilters();
 
-  // 使用 TanStack Query 获取文件
   const {
     data: filesData,
     fetchNextPage: loadMore,
@@ -266,11 +58,15 @@ export function useFileList() {
     isFetchingNextPage: loadingMore,
     isLoading: loadingFiles,
     isFetching: isFetchingFiles,
+    isError: hasFilesError,
+    error: filesError,
     refetch: refetchFiles,
   } = useFiles({
     search: debouncedSearch || undefined,
     mime_type: mimeType || undefined,
     folder_id: currentFolderId,
+    collection: activeCollection as Parameters<typeof useFiles>[0]['collection'],
+    tag_id: activeTagId || undefined,
     sort_by: sortField,
     sort_order: sortOrder,
   });
@@ -287,6 +83,7 @@ export function useFileList() {
     }
     return deduped;
   }, [filesData]);
+  const searchMetadata = filesData?.pages[0]?.search ?? null;
   const totalItems = filesData?.pages[0]?.total ?? 0;
 
   const sortedFiles = useMemo(() => {
@@ -340,17 +137,17 @@ export function useFileList() {
     return list;
   }, [files, sortBy]);
 
-  // 使用 TanStack Query 获取文件夹内容
   const {
     data: folderContents,
     isLoading: loadingFolders,
+    isError: hasFoldersError,
+    error: foldersError,
     refetch: refetchFolders,
   } = useFolderContents(currentFolderId);
 
   const folders = useMemo(() => folderContents?.folders ?? [], [folderContents]);
   const folderPath = useMemo(() => folderContents?.path ?? [], [folderContents]);
 
-  // 使用抽取的选择状态 Hook
   const {
     selectedFiles,
     selectedFolders,
@@ -363,7 +160,6 @@ export function useFileList() {
     setSelectedFolders,
   } = useFileSelection(files, folders);
 
-  // UI State Hook
   const {
     previewFile,
     setPreviewFile,
@@ -388,15 +184,36 @@ export function useFileList() {
     clearError,
   } = useFileUI();
 
+  const queryErrorMessage = useMemo(() => {
+    if (hasFilesError) {
+      return getErrorMessage(
+        filesError,
+        debouncedSearch?.trim() ? '搜索文件失败' : '加载文件列表失败',
+      );
+    }
+    if (hasFoldersError) {
+      return getErrorMessage(foldersError, '加载文件夹内容失败');
+    }
+    return null;
+  }, [
+    debouncedSearch,
+    filesError,
+    foldersError,
+    hasFilesError,
+    hasFoldersError,
+  ]);
+  const queryErrorKey = queryErrorMessage
+    ? `${hasFilesError ? 'files' : 'folders'}:${queryErrorMessage}`
+    : null;
+  const hasBlockingQueryError = queryErrorKey !== null;
+
   const lastSelectionScopeRef = useRef<{ sortBy: string; mimeType: string } | null>(null);
 
-  // 使用带 icon 的分组 Hook
   const {
     groupedFiles,
     displayFiles,
-  } = useFileGroupingWithIcons(sortedFiles, isGroupByType, previewFile !== null);
+  } = useFileGroupingWithIcons(sortedFiles, isGroupByType, activeCollection);
 
-  // 使用时间分组 Hook
   const {
     timeGroupedFiles,
     displayFilesForTime,
@@ -416,7 +233,6 @@ export function useFileList() {
     return m;
   }, [finalDisplayFiles, previewFile]);
 
-  // Actions Hook
   const {
     deleteLoading,
     batchDownloading,
@@ -446,139 +262,8 @@ export function useFileList() {
     refetchFolders,
   });
 
-  // ── 即时 DOM 隐藏：确认删除时立刻把卡片从页面移除 ─────────────────────────────
-  // 不依赖 React Query 缓存更新时机，用本地 state 直接驱动 filter，解决
-  // \"第二次删除 DOM 不立刻更新\"的 bug。
-  const [pendingDeleteFileIds, setPendingDeleteFileIds] = useState<Set<string>>(new Set());
-  const [pendingDeleteFolderIds, setPendingDeleteFolderIds] = useState<Set<string>>(new Set());
-
-  // 若删除后文件重新出现在 files 里（代表删除失败/被回滚），从 pending 中移除，让卡片还原
-  useEffect(() => {
-    if (pendingDeleteFileIds.size === 0) return;
-    const currentIds = new Set(files.map((f) => f.id));
-    const reappeared = [...pendingDeleteFileIds].filter((id) => currentIds.has(id));
-    if (reappeared.length === 0) return;
-
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      setPendingDeleteFileIds((prev) => {
-        const n = new Set(prev);
-        reappeared.forEach((id) => n.delete(id));
-        return n;
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [files, pendingDeleteFileIds]);
-
-  // 包装 executeDelete：先把 ID 加入 pending（立刻触发 re-render 隐藏卡片），再执行删除
-  const executeDeleteWithHide = useCallback(async () => {
-    const snap = deleteConfirm;
-    if (snap?.type === 'file' && snap.id) {
-      setPendingDeleteFileIds((prev) => new Set([...prev, snap.id!]));
-    } else if (snap?.type === 'folder' && snap.id) {
-      setPendingDeleteFolderIds((prev) => new Set([...prev, snap.id!]));
-    } else if (snap?.type === 'batch') {
-      if (selectedFileIds.length > 0)
-        setPendingDeleteFileIds((prev) => new Set([...prev, ...selectedFileIds]));
-      if (selectedFolderIds.length > 0)
-        setPendingDeleteFolderIds((prev) => new Set([...prev, ...selectedFolderIds]));
-    }
-    await wrappedExecuteDelete();
-  }, [deleteConfirm, wrappedExecuteDelete, selectedFileIds, selectedFolderIds]);
-
-  // 应用 pending 过滤，给渲染层用的输出变量
-  const outFiles = useMemo(
-    () =>
-      pendingDeleteFileIds.size > 0
-        ? files.filter((f) => !pendingDeleteFileIds.has(f.id))
-        : files,
-    [files, pendingDeleteFileIds],
-  );
-
-  const getScrollStorageKey = useCallback(
-    (folderId: string | null) => {
-      const folderKey = folderId ?? 'root';
-      const q = (debouncedSearch ?? '').trim();
-      const mimeKey = mimeType || 'all';
-      return `fileListScroll:${folderKey}:${sortBy}:${mimeKey}:${q}`;
-    },
-    [debouncedSearch, mimeType, sortBy]
-  );
-
-  const navType = useNavigationType();
-  const location = useLocation();
-  const lastScrollAppliedLocationKeyRef = useRef<string | null>(null);
-
-  const navigateToFolder = useCallback((folderId: string | null) => {
-    try {
-      const key = getScrollStorageKey(currentFolderId);
-      sessionStorage.setItem(key, String(window.scrollY || 0));
-    } catch {
-      /* ignore */
-    }
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (folderId) {
-          next.set('folder', folderId);
-        } else {
-          next.delete('folder');
-        }
-        return next;
-      },
-      { replace: false }
-    );
-    setSelectedFiles(new Set());
-    setSelectedFolders(new Set());
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      });
-    });
-  }, [
-    setSearchParams,
-    setSelectedFiles,
-    setSelectedFolders,
-    currentFolderId,
-    getScrollStorageKey,
-  ]);
-
-  useEffect(() => {
-    if (loadingFiles || loadingFolders) return;
-    const key = getScrollStorageKey(currentFolderId);
-    if (lastScrollAppliedLocationKeyRef.current === location.key) return;
-    lastScrollAppliedLocationKeyRef.current = location.key;
-
-    if (navType !== 'POP') {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-        });
-      });
-      return;
-    }
-
-    let raw: string | null = null;
-    try {
-      raw = sessionStorage.getItem(key);
-    } catch {
-      raw = null;
-    }
-    if (!raw) return;
-    const y = Number.parseInt(raw, 10);
-    if (!Number.isFinite(y) || y < 0) return;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: y, left: 0, behavior: 'auto' });
-      });
-    });
-  }, [currentFolderId, getScrollStorageKey, loadingFiles, loadingFolders, navType, location.key]);
-
   const displayFolders = useMemo(() => {
+    if (activeCollection || activeTagId) return [];
     if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
     const q = debouncedSearch?.trim().toLowerCase();
     const filtered = q ? folders.filter((f) => f.name.toLowerCase().includes(q)) : folders;
@@ -608,44 +293,7 @@ export function useFileList() {
     }
     list.sort((a, b) => compareName(a.name, b.name));
     return list;
-  }, [mimeType, folders, debouncedSearch, sortBy]);
-
-  // outFolders 必须在 displayFolders 赋值之后计算，否则 displayFolders 还是初始空数组
-  const outFolders = useMemo(
-    () =>
-      pendingDeleteFolderIds.size > 0
-        ? displayFolders.filter((f) => !pendingDeleteFolderIds.has(f.id))
-        : displayFolders,
-    [displayFolders, pendingDeleteFolderIds],
-  );
-
-  // outFoldersRef 用于 pendingDeleteFolderIds 回滚检测的 useEffect
-  const outFoldersRef = useRef<Folder[]>(displayFolders);
-
-  useEffect(() => {
-    outFoldersRef.current = displayFolders;
-  }, [displayFolders]);
-
-  useEffect(() => {
-    if (pendingDeleteFolderIds.size === 0) return;
-    const currentIds = new Set(outFoldersRef.current.map((f) => f.id));
-    const reappeared = [...pendingDeleteFolderIds].filter((id) => currentIds.has(id));
-    if (reappeared.length === 0) return;
-
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      setPendingDeleteFolderIds((prev) => {
-        const n = new Set(prev);
-        reappeared.forEach((id) => n.delete(id));
-        return n;
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pendingDeleteFolderIds]);
+  }, [activeCollection, activeTagId, mimeType, folders, debouncedSearch, sortBy]);
 
   const { timeGroupedItems } = useTimeGroupingMixed(sortedFiles, displayFolders, isGroupByTime);
 
@@ -679,6 +327,27 @@ export function useFileList() {
     }
   }, [sortBy, mimeType, clearSelection]);
 
+  const { navigateToFolder } = useFileListNavigation({
+    currentFolderId,
+    debouncedSearch,
+    mimeType,
+    sortBy,
+    loadingFiles,
+    loadingFolders,
+    setSearchParams,
+    setSelectedFiles,
+    setSelectedFolders,
+  });
+
+  const optimisticDelete = useFileListOptimisticDelete({
+    files,
+    displayFolders,
+    deleteConfirm,
+    selectedFileIds,
+    selectedFolderIds,
+    executeDelete: wrappedExecuteDelete,
+  });
+
   const handleShowBatchMove = useCallback(() => {
     if (selectedFiles.size === 0 && selectedFolders.size === 0) return;
     setShowBatchMove(true);
@@ -693,6 +362,7 @@ export function useFileList() {
   const refreshListsAfterMove = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['files'] }),
+      queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] }),
     ]);
     await Promise.all([refetchFiles(), refetchFolders()]);
@@ -702,20 +372,59 @@ export function useFileList() {
     refetchFolders();
   }, [refetchFolders]);
 
+  const handleCollectionChange = useCallback(
+    (collection: string) => {
+      setSearchParams(
+        (prev) => toggleCollectionParam(prev, collection),
+        { replace: false },
+      );
+      setSelectedFiles(new Set());
+      setSelectedFolders(new Set());
+    },
+    [setSearchParams, setSelectedFiles, setSelectedFolders],
+  );
+
+  const handleTagChange = useCallback(
+    (tagId: string) => {
+      setSearchParams(
+        (prev) => toggleTagParam(prev, tagId),
+        { replace: false },
+      );
+      setSelectedFiles(new Set());
+      setSelectedFolders(new Set());
+    },
+    [setSearchParams, setSelectedFiles, setSelectedFolders],
+  );
+
+  const handleResetFilters = useCallback(
+    () => {
+      setSearchParams(
+        (prev) => clearSmartFilterParams(prev),
+        { replace: false },
+      );
+      setSelectedFiles(new Set());
+      setSelectedFolders(new Set());
+    },
+    [setSearchParams, setSelectedFiles, setSelectedFolders],
+  );
+
   return {
-    files: outFiles,
+    files: optimisticDelete.files,
     folderPath,
     search,
+    searchMetadata,
     mimeType,
     sortBy,
+    activeCollection,
+    activeTagId,
     selectedFiles,
     selectedFolders,
     selectedFileIds,
     selectedFolderIds,
     currentFolderId,
-    error,
-    clearError,
-    isLoading: loadingFiles || loadingFolders,
+    error: error ?? queryErrorMessage,
+    clearError: error ? clearError : undefined,
+    isLoading: (loadingFiles || loadingFolders) && !hasBlockingQueryError,
     isRevalidating: isFetchingFiles,
     totalItems,
     isGroupByType,
@@ -723,7 +432,7 @@ export function useFileList() {
     groupedFiles,
     timeGroupedFiles,
     timeGroupedItems,
-    displayFolders: outFolders,
+    displayFolders: optimisticDelete.folders,
     displayFiles: finalDisplayFiles,
     displayFileIndexById: finalDisplayFileIndexById,
     totalPages: Math.ceil(totalItems / 50),
@@ -735,20 +444,23 @@ export function useFileList() {
     handleSearchChange,
     handleMimeTypeChange,
     handleSortChange,
+    handleCollectionChange,
+    handleResetFilters,
+    handleTagChange,
     toggleSelectAll,
     handleSelectFile: (fileId: string, selected: boolean) => {
-        setSelectedFiles(prev => {
-            const next = new Set(prev);
-            if (selected) next.add(fileId); else next.delete(fileId);
-            return next;
-        });
+      setSelectedFiles((prev) => {
+        const next = new Set(prev);
+        if (selected) next.add(fileId); else next.delete(fileId);
+        return next;
+      });
     },
     handleSelectFolder: (folderId: string, selected: boolean) => {
-        setSelectedFolders(prev => {
-            const next = new Set(prev);
-            if (selected) next.add(folderId); else next.delete(folderId);
-            return next;
-        });
+      setSelectedFolders((prev) => {
+        const next = new Set(prev);
+        if (selected) next.add(folderId); else next.delete(folderId);
+        return next;
+      });
     },
     handleRenameFolder: setRenamingFolder,
     handleRenameFile: setRenamingFile,
@@ -787,7 +499,7 @@ export function useFileList() {
     setRenamingFile,
     deleteConfirm,
     deleteLoading,
-    executeDelete: executeDeleteWithHide,
+    executeDelete: optimisticDelete.executeDelete,
     setDeleteConfirm,
     batchDownloading,
   };

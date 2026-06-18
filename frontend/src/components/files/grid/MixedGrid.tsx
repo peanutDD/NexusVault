@@ -5,6 +5,8 @@ import type { Folder } from "../../../types/folders";
 import FileCard from "./FileCard";
 import FolderCard from "./FolderCard";
 
+const MIXED_GRID_EAGER_THUMBNAIL_LIMIT = 24;
+
 export type MixedGridItem =
   | { type: "file"; file: FileMetadata }
   | { type: "folder"; folder: Folder };
@@ -22,6 +24,11 @@ interface MixedGridProps {
   onRenameFolder: (folder: Folder) => void;
   onRenameFile: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
+  onShowActivity?: (file: FileMetadata) => void;
+  onShowVersions?: (file: FileMetadata) => void;
+  onManageTags?: (file: FileMetadata) => void;
+  onToggleFavorite?: (file: FileMetadata) => void;
+  onTogglePinned?: (file: FileMetadata) => void;
   onFileDragStart: (fileId: string, e: DragEvent) => void;
   onDropOnFolder: (
     folderId: string,
@@ -48,6 +55,11 @@ export default function MixedGrid({
   onRenameFolder,
   onRenameFile,
   onDelete,
+  onShowActivity,
+  onShowVersions,
+  onManageTags,
+  onToggleFavorite,
+  onTogglePinned,
   onFileDragStart,
   onDropOnFolder,
   openFileMenuId,
@@ -84,7 +96,7 @@ export default function MixedGrid({
       className="grid grid-cols-3 gap-x-[clamp(0.4rem,1vw,0.5rem)] gap-y-[clamp(0.6rem,1.4vw,0.75rem)] sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
       data-oid="kt4n62z"
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         if (item.type === "folder") {
           const folder = item.folder;
           return (
@@ -118,11 +130,19 @@ export default function MixedGrid({
             onDownload={onDownloadFile}
             onRename={onRenameFile}
             onDelete={handleDeleteFile}
+            onShowActivity={onShowActivity}
+            onShowVersions={onShowVersions}
+            onManageTags={onManageTags}
+            onToggleFavorite={onToggleFavorite}
+            onTogglePinned={onTogglePinned}
             onDragStart={onFileDragStart}
             onMobileFileDrop={handleMobileFileDrop}
             isMenuOpen={openFileMenuId === file.id}
             onToggleMenu={onToggleFileMenu}
             onCloseMenu={onCloseMenu}
+            thumbnailPriority={
+              index < MIXED_GRID_EAGER_THUMBNAIL_LIMIT ? "high" : "low"
+            }
             data-oid="no510gx"
           />
         );

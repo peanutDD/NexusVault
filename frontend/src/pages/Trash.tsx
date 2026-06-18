@@ -18,6 +18,7 @@ import { EmptyState } from "../components/common/EmptyState";
 import ErrorMessage from "../components/common/feedback/ErrorMessage";
 import Spinner from "../components/common/feedback/Spinner";
 import { fileService } from "../services/files";
+import { FILE_COLLECTION_COUNTS_QUERY_KEY } from "../services/fileListService";
 import { useAuthStore } from "../store/authStore";
 import { formatBytes, formatFileSizeCompact } from "../utils/format";
 import { getErrorMessage } from "../utils/error";
@@ -130,6 +131,7 @@ export default function Trash() {
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [restoredIds, setRestoredIds] = useState<string[]>([]);
   const retentionNow = useTrashRetentionClock();
 
   const { data, isLoading, isFetching } = useQuery({
@@ -137,7 +139,11 @@ export default function Trash() {
     queryFn: () => fileService.listTrash(),
   });
 
-  const files = data?.files ?? EMPTY_FILES;
+  const restoredIdSet = useMemo(() => new Set(restoredIds), [restoredIds]);
+  const files = useMemo(
+    () => (data?.files ?? EMPTY_FILES).filter((file) => !restoredIdSet.has(file.id)),
+    [data?.files, restoredIdSet],
+  );
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selectedFiles = useMemo(
     () => files.filter((file) => selectedIdSet.has(file.id)),
@@ -158,12 +164,23 @@ export default function Trash() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["trash"] }),
       queryClient.invalidateQueries({ queryKey: ["files"] }),
+      queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY }),
     ]);
   }, [queryClient]);
 
   const restoreMutation = useMutation({
     mutationFn: (fileId: string) => fileService.restoreFile(fileId),
-    onSuccess: () => {
+    onSuccess: (_file, fileId) => {
+      setRestoredIds((current) => (current.includes(fileId) ? current : [...current, fileId]));
+      setSelectedIds((current) => current.filter((id) => id !== fileId));
+      queryClient.setQueryData<{ files: FileMetadata[] }>(["trash"], (current) =>
+        current
+          ? {
+              ...current,
+              files: current.files.filter((file) => file.id !== fileId),
+            }
+          : current,
+      );
       void invalidateFileViews();
     },
     onError: (err) => setError(getErrorMessage(err, "还原失败")),
@@ -264,7 +281,6 @@ export default function Trash() {
       username={user?.username}
       onLogout={handleLogout}
       useSolidBackground
-      backgroundClassName="bg-[color:var(--filelist-page-bg)]"
       data-oid="trash-page"
     >
       <div className="fileListGlassScope space-y-[clamp(0.6rem,1.4vw,0.75rem)] sm:space-y-[clamp(0.75rem,2vw,1rem)]" data-testid="trash-shell">
@@ -280,23 +296,35 @@ export default function Trash() {
               data-testid="trash-console-summary-row"
               className="trashConsoleSummaryRow inline-flex w-full max-w-full min-w-0 self-stretch flex-wrap items-center gap-x-[clamp(0.4rem,1vw,0.5rem)] gap-y-[clamp(0.2rem,0.7vw,0.25rem)] sm:gap-x-[clamp(0.6rem,1.4vw,0.75rem)]"
             >
-              <h1 className="font-brand text-[clamp(0.82rem,1.25vw,1.05rem)] font-normal tracking-widest text-[var(--filelist-btn-text)]">
+              <h1
+                data-testid="trash-console-title"
+                className="trashConsoleTitle font-brand text-[clamp(0.82rem,1.25vw,1.05rem)] font-normal tracking-widest text-[var(--filelist-btn-text)]"
+              >
                 Vault Console
               </h1>
-              <span className="glass-chip border border-[var(--filelist-toolbar-btn-border)] bg-[var(--filelist-toolbar-btn-bg)] px-[clamp(0.3rem,0.8vw,0.375rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[var(--filelist-btn-text)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[0.68rem]">
+              <span
+                data-testid="trash-console-count-chip"
+                className="trashConsoleSummaryChip trashConsoleCountChip glass-chip border border-[var(--filelist-toolbar-btn-border)] bg-[var(--filelist-toolbar-btn-bg)] px-[clamp(0.3rem,0.8vw,0.375rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[length:var(--font-size-ui-6xs)] font-semibold uppercase tracking-[0.12em] text-[var(--filelist-btn-text)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[length:var(--font-size-ui-3xs)]"
+              >
                 {files.length} files
               </span>
-              <span className="inline-flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] text-[0.62rem] text-[var(--filelist-text-muted)] sm:text-[0.72rem]">
+              <span
+                data-testid="trash-console-size-chip"
+                className="trashConsoleSummaryChip trashConsoleSizeChip inline-flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] text-[length:var(--font-size-ui-6xs)] text-[var(--filelist-text-muted)] sm:text-[length:var(--font-size-ui-3xs)]"
+              >
                 <ShieldCheck className="h-[clamp(0.65rem,1.5vw,0.75rem)] w-[clamp(0.65rem,1.5vw,0.75rem)] text-[var(--filelist-btn-text)] sm:h-[clamp(0.75rem,1.8vw,0.875rem)] sm:w-[clamp(0.75rem,1.8vw,0.875rem)]" aria-hidden />
                 {formatBytes(totalSize)}
               </span>
-              <span className="inline-flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] text-[0.62rem] text-[var(--filelist-text-muted)] sm:text-[0.72rem]">
+              <span
+                data-testid="trash-console-retention-chip"
+                className="trashConsoleSummaryChip trashConsoleRetentionChip inline-flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] text-[length:var(--font-size-ui-6xs)] text-[var(--filelist-text-muted)] sm:text-[length:var(--font-size-ui-3xs)]"
+              >
                 <Clock3 className="h-[clamp(0.65rem,1.5vw,0.75rem)] w-[clamp(0.65rem,1.5vw,0.75rem)] text-[var(--filelist-btn-text)] sm:h-[clamp(0.75rem,1.8vw,0.875rem)] sm:w-[clamp(0.75rem,1.8vw,0.875rem)]" aria-hidden />
                 {TRASH_RETENTION_DAYS}d cleanup
                 {isFetching && !isLoading ? " · refreshing" : ""}
               </span>
               {selectedCount > 0 && (
-                <span className="glass-chip border border-[var(--filelist-toolbar-btn-border)] bg-[var(--filelist-toolbar-btn-bg)] px-[clamp(0.3rem,0.8vw,0.375rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[var(--filelist-btn-text)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[0.68rem]">
+                <span className="trashConsoleSummaryChip trashConsoleSelectedChip glass-chip border border-[var(--filelist-toolbar-btn-border)] bg-[var(--filelist-toolbar-btn-bg)] px-[clamp(0.3rem,0.8vw,0.375rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[length:var(--font-size-ui-6xs)] font-semibold uppercase tracking-[0.12em] text-[var(--filelist-btn-text)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[length:var(--font-size-ui-3xs)]">
                   {selectedCount} selected
                 </span>
               )}
@@ -304,7 +332,7 @@ export default function Trash() {
 
             <div
               data-testid="trash-console-actions"
-              className={`trashConsoleActions ${selectedCount > 0 ? "trashConsoleActionsSelected" : ""} flex w-full min-w-0 flex-col items-stretch gap-[clamp(0.5rem,1.25vw,0.75rem)] sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center sm:justify-end sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:overflow-x-auto`}
+              className={`trashConsoleActions ${selectedCount > 0 ? "trashConsoleActionsSelected" : ""} flex w-full min-w-0 flex-col items-stretch gap-[clamp(0.5rem,1.25vw,0.75rem)] sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center sm:justify-end sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:overflow-visible`}
             >
               <div
                 data-testid="trash-batch-actions-row"
@@ -316,7 +344,7 @@ export default function Trash() {
                   aria-label={allVisibleSelected ? "取消全选" : "全选"}
                   aria-pressed={allVisibleSelected}
                   onClick={toggleAllSelected}
-                  className="glass-btn toolbarActionBtn trashConsoleButton trashSelectAllButton allFilesBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[0.6rem] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[0.68rem]"
+                  className="glass-btn toolbarActionBtn trashConsoleButton trashSelectAllButton allFilesBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[length:var(--font-size-ui-3xs)]"
                 >
                   <CheckSquare className="h-[clamp(0.65rem,1.5vw,0.75rem)] w-[clamp(0.65rem,1.5vw,0.75rem)] sm:h-[clamp(0.75rem,1.8vw,0.875rem)] sm:w-[clamp(0.75rem,1.8vw,0.875rem)]" aria-hidden />
                   <span>{allVisibleSelected ? "取消全选" : "全选"}</span>
@@ -325,7 +353,7 @@ export default function Trash() {
                   type="button"
                   onClick={() => batchRestoreMutation.mutate(visibleSelectedIds)}
                   disabled={selectedCount === 0 || batchRestoreMutation.isPending}
-                  className="glass-btn toolbarActionBtn trashConsoleButton trashBatchRestoreButton allFilesBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[0.6rem] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[0.68rem]"
+                  className="glass-btn toolbarActionBtn trashConsoleButton trashBatchRestoreButton allFilesBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[length:var(--font-size-ui-3xs)]"
                   aria-label="批量还原"
                 >
                   <ArchiveRestore className="h-[clamp(0.65rem,1.5vw,0.75rem)] w-[clamp(0.65rem,1.5vw,0.75rem)] sm:h-[clamp(0.75rem,1.8vw,0.875rem)] sm:w-[clamp(0.75rem,1.8vw,0.875rem)]" aria-hidden />
@@ -335,7 +363,7 @@ export default function Trash() {
                   type="button"
                   onClick={() => setConfirm({ type: "batch-permanent" })}
                   disabled={selectedCount === 0 || batchPermanentMutation.isPending}
-                  className="glass-btn toolbarActionBtn trashConsoleButton trashBatchPermanentButton uploadBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[0.6rem] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[0.68rem]"
+                  className="glass-btn toolbarActionBtn trashConsoleButton trashBatchPermanentButton uploadBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[length:var(--font-size-ui-3xs)]"
                   aria-label="批量彻底删除"
                 >
                   <XCircle className="h-[clamp(0.65rem,1.5vw,0.75rem)] w-[clamp(0.65rem,1.5vw,0.75rem)] sm:h-[clamp(0.75rem,1.8vw,0.875rem)] sm:w-[clamp(0.75rem,1.8vw,0.875rem)]" aria-hidden />
@@ -349,7 +377,7 @@ export default function Trash() {
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="glass-btn toolbarActionBtn trashConsoleButton trashBackButton allFilesBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[0.6rem] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[0.68rem]"
+                  className="glass-btn toolbarActionBtn trashConsoleButton trashBackButton allFilesBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[length:var(--font-size-ui-3xs)]"
                   aria-label="返回上一级"
                 >
                   <ArrowLeft className="h-[clamp(0.65rem,1.5vw,0.75rem)] w-[clamp(0.65rem,1.5vw,0.75rem)] sm:h-[clamp(0.75rem,1.8vw,0.875rem)] sm:w-[clamp(0.75rem,1.8vw,0.875rem)]" aria-hidden />
@@ -360,7 +388,7 @@ export default function Trash() {
                   disabled={files.length === 0}
                   onClick={() => setConfirm({ type: "empty" })}
                   aria-label="清空回收站"
-                  className="glass-btn toolbarActionBtn trashConsoleButton trashEmptyButton uploadBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[0.6rem] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[0.68rem]"
+                  className="glass-btn toolbarActionBtn trashConsoleButton trashEmptyButton uploadBtnHighlight font-brand inline-flex w-auto max-w-max shrink-0 items-center justify-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.3rem,0.8vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] font-normal leading-none tracking-widest text-[var(--filelist-btn-text)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:gap-[clamp(0.3rem,0.8vw,0.375rem)] sm:px-[clamp(0.4rem,1vw,0.5rem)] sm:text-[length:var(--font-size-ui-3xs)]"
                 >
                   <Trash2 className="h-[clamp(0.65rem,1.5vw,0.75rem)] w-[clamp(0.65rem,1.5vw,0.75rem)] sm:h-[clamp(0.75rem,1.8vw,0.875rem)] sm:w-[clamp(0.75rem,1.8vw,0.875rem)]" aria-hidden />
                   <span>清空回收站</span>
@@ -385,6 +413,7 @@ export default function Trash() {
           </div>
         ) : files.length === 0 ? (
           <EmptyState
+            className="trashEmptyState"
             title="回收站为空"
             description={`删除的文件会在这里保留 ${TRASH_RETENTION_DAYS} 天`}
             icon={<Trash2 className="h-[clamp(2rem,4.5vw,2.25rem)] w-[clamp(2rem,4.5vw,2.25rem)] text-[var(--color-text-muted)]" aria-hidden />}
@@ -422,7 +451,7 @@ export default function Trash() {
                           isSelected={isSelected}
                           onClick={() => toggleSelected(file.id)}
                           size="responsive"
-                          positionClassName="absolute left-[clamp(0.15rem,0.35vw,0.25rem)] top-[clamp(0.15rem,0.35vw,0.25rem)]"
+                          positionClassName="absolute left-[clamp(0.06rem,0.16vw,0.1rem)] top-[clamp(0.06rem,0.16vw,0.1rem)]"
                         />
 
                         <TrashThumbnail file={file} />
@@ -470,7 +499,7 @@ export default function Trash() {
                             }}
                             disabled={restoreMutation.isPending}
                             data-testid={`trash-card-restore-${file.id}`}
-                            className="glass-btn trashCardActionButton allFilesBtnHighlight inline-flex min-w-0 flex-1 items-center justify-center p-0 text-[var(--filelist-btn-text)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="glass-btn trashCardActionButton trashCardNeuButton allFilesBtnHighlight inline-flex min-w-0 flex-1 items-center justify-center p-0 text-[var(--filelist-btn-text)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                             aria-label={`还原 ${file.original_filename}`}
                             title="Restore"
                           >
@@ -483,7 +512,7 @@ export default function Trash() {
                               setConfirm({ type: "permanent", file });
                             }}
                             disabled={permanentMutation.isPending}
-                            className="glass-btn trashCardActionButton uploadBtnHighlight inline-flex min-w-0 flex-1 items-center justify-center p-0 text-[var(--filelist-btn-text)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="glass-btn trashCardActionButton trashCardNeuButton uploadBtnHighlight inline-flex min-w-0 flex-1 items-center justify-center p-0 text-[var(--filelist-btn-text)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                             aria-label={`彻底删除 ${file.original_filename}`}
                             title="Purge"
                           >

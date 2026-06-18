@@ -3,10 +3,30 @@
    ========================================================================== */
 
 @layer components {
+    .nav-surface-shell {
+        background: var(--nav-surface-bg);
+        border-bottom: 1px solid var(--nav-surface-border, transparent);
+        box-shadow: var(--nav-surface-shadow, none);
+    }
+
     /* 导航栏专用：更明显的 vw 驱动流体字号（rem + vw） */
     .nav-title-fluid {
         font-size: var(--nav-title-font-size);
         line-height: 1.05;
+    }
+
+    .nav-brand-title {
+        font-family: var(--font-brand-display);
+        font-weight: 700;
+        letter-spacing: 0;
+        background: var(--nav-brand-title-bg);
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        -webkit-text-stroke: var(--nav-brand-title-stroke);
+        text-shadow: var(--nav-brand-title-shadow);
+        font-feature-settings: "ss01" 1, "kern" 1;
+        text-rendering: geometricPrecision;
     }
 
     .nav-ui-fluid {
@@ -17,12 +37,19 @@
     .nav-panel {
         padding: var(--nav-panel-padding);
         gap: var(--nav-panel-gap);
+        border-radius: 0;
+        border-color: transparent !important;
+        box-shadow: none !important;
     }
 
     .nav-chip {
         height: var(--nav-control-h);
         padding-inline: var(--nav-chip-px);
         gap: var(--nav-control-gap);
+        border-radius: var(--nav-btn-radius);
+        background: var(--nav-chip-bg);
+        color: var(--nav-chip-text);
+        box-shadow: var(--nav-chip-shadow), var(--nav-chip-inner-glow);
         white-space: nowrap;
     }
 
@@ -30,31 +57,147 @@
         height: var(--nav-control-h);
         padding-inline: var(--nav-control-px);
         gap: var(--nav-control-gap);
+        border-radius: var(--nav-btn-radius);
+        background: var(--nav-btn-bg);
+        color: var(--nav-btn-text);
+        box-shadow: var(--nav-btn-shadow), var(--nav-btn-inner-glow);
         white-space: nowrap;
+    }
+
+    :root[data-theme="dark"]:not(.neuromorphic-style) .nav-btn,
+    :root.dark:not(.neuromorphic-style) .nav-btn,
+    :root[data-theme="dark"]:not(.neuromorphic-style) .nav-chip,
+    :root.dark:not(.neuromorphic-style) .nav-chip {
+        border-radius: 0;
+    }
+
+    .nav-btn:hover {
+        background: var(--nav-btn-bg-hover);
+        border-color: var(--nav-btn-border-hover);
+        box-shadow: var(--nav-btn-shadow-hover), var(--nav-btn-inner-glow-hover);
+        transform: translateY(calc(var(--nav-hover-lift) * -1));
     }
 
     .light .nav-panel .nav-btn {
         background: var(--nav-btn-bg);
         border-color: var(--nav-btn-border);
         color: var(--nav-btn-text);
-        box-shadow: var(--nav-btn-shadow);
+        box-shadow: var(--nav-btn-shadow), var(--nav-btn-inner-glow);
     }
 
     .light .nav-panel .nav-btn:hover {
         background: var(--nav-btn-bg-hover);
         border-color: var(--nav-btn-border-hover);
+        box-shadow: var(--nav-btn-shadow-hover), var(--nav-btn-inner-glow-hover);
     }
 
-    .light .nav-panel .nav-icon {
-        color: rgba(var(--rgb-cyan-400), 0.94);
+    .nav-theme-toggle:hover {
+        transform: translateY(0);
     }
 
-    .light .nav-panel button[aria-label='Logout'] {
-        border-color: rgba(var(--rgb-red-500), 0.34);
+    .nav-theme-tooltip {
+        position: relative;
+        overflow: visible;
     }
 
-    .light .nav-panel button[aria-label='Logout'] .nav-icon {
-        color: rgba(var(--rgb-rose-400), 0.92);
+    .nav-theme-tooltip::before,
+    .nav-theme-tooltip::after {
+        position: absolute;
+        left: 50%;
+        z-index: 60;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0ms linear, transform var(--transition-fast, 150ms) ease;
+        transition-delay: 0s;
+    }
+
+    .nav-theme-tooltip::before {
+        content: attr(data-tooltip);
+        top: calc(100% + var(--nav-tooltip-offset));
+        transform: translate(-50%, calc(var(--nav-tooltip-shift) * -1));
+        width: max-content;
+        max-width: var(--nav-tooltip-max-width);
+        padding: var(--nav-tooltip-padding-block) var(--nav-tooltip-padding-inline);
+        border-radius: var(--nav-btn-radius);
+        background: var(--neu-raised-bg);
+        color: var(--color-text-primary);
+        box-shadow: var(--neu-control-shadow);
+        font-size: var(--nav-tooltip-font-size);
+        font-weight: 700;
+        letter-spacing: 0;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .nav-theme-tooltip::after {
+        content: "";
+        top: calc(100% + calc(var(--nav-tooltip-offset) * 0.5));
+        transform: translate(-50%, calc(var(--nav-tooltip-shift) * -1));
+        border: var(--nav-tooltip-arrow-size) solid transparent;
+        border-bottom-color: var(--neu-bg-primary);
+        filter: drop-shadow(1px 1px 1px var(--neu-shadow-dark));
+    }
+
+    .nav-theme-tooltip:hover::before,
+    .nav-theme-tooltip:focus-visible::before,
+    .nav-theme-tooltip:hover::after,
+    .nav-theme-tooltip:focus-visible::after {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(-50%, 0);
+        transition-delay: 0s;
+    }
+
+    .neuromorphic-style .nav-panel,
+    .neuromorphic-style .nav-panel {
+        background: var(--nav-panel-bg);
+        border-radius: var(--nav-panel-radius, var(--nav-btn-radius));
+        border-color: var(--nav-panel-border) !important;
+        box-shadow: var(--nav-panel-shadow) !important;
+    }
+
+    .neuromorphic-style .nav-btn,
+    .neuromorphic-style .nav-btn,
+    .neuromorphic-style .nav-chip,
+    .neuromorphic-style .nav-chip {
+        transition:
+            background var(--transition-fast, 150ms),
+            color var(--transition-fast, 150ms),
+            box-shadow var(--transition-fast, 150ms),
+            transform var(--transition-fast, 150ms);
+    }
+
+    .neuromorphic-style .nav-btn:hover,
+    .neuromorphic-style .nav-btn:hover {
+        background: var(--nav-btn-bg-hover);
+        box-shadow: var(--nav-btn-shadow-hover), var(--nav-btn-inner-glow-hover);
+        transform: translateY(calc(var(--nav-hover-lift) * -1));
+    }
+
+    .neuromorphic-style .nav-btn:active,
+    .neuromorphic-style .nav-btn:active {
+        background: var(--neu-inset-bg);
+        box-shadow: var(--neu-pressed-shadow) !important;
+        transform: translateY(var(--nav-press-shift)) !important;
+    }
+
+    .neuromorphic-style .nav-theme-toggle,
+    .neuromorphic-style .nav-theme-toggle {
+        background: var(--nav-tab-active-bg) !important;
+        border-radius: var(--nav-panel-radius, var(--nav-btn-radius));
+        color: var(--nav-tab-active-text) !important;
+        box-shadow: var(--nav-tab-active-shadow) !important;
+    }
+
+    .neuromorphic-style .nav-theme-toggle .nav-icon,
+    .neuromorphic-style .nav-theme-toggle .nav-icon {
+        color: var(--nav-tab-active-text) !important;
+    }
+
+    .neuromorphic-style .nav-theme-toggle:active,
+    .neuromorphic-style .nav-theme-toggle:active {
+        transform: translateY(var(--nav-press-shift));
     }
 
     .nav-iconbtn {
@@ -71,5 +214,22 @@
     .nav-dot {
         width: var(--nav-dot-size);
         height: var(--nav-dot-size);
+    }
+
+    @media (max-width: 640px) {
+        .nav-panel,
+        .neuromorphic-style .nav-panel,
+        .neuromorphic-style .nav-panel {
+            border-radius: 0 !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+
+        :root[data-theme="dark"]:not(.neuromorphic-style) .nav-btn,
+        :root.dark:not(.neuromorphic-style) .nav-btn,
+        :root[data-theme="dark"]:not(.neuromorphic-style) .nav-chip,
+        :root.dark:not(.neuromorphic-style) .nav-chip {
+            border-radius: 0 !important;
+        }
     }
 }

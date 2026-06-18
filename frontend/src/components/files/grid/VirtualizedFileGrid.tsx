@@ -27,6 +27,11 @@ interface VirtualizedFileGridProps {
   onDownload: (file: FileMetadata) => void;
   onRename: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
+  onShowActivity?: (file: FileMetadata) => void;
+  onShowVersions?: (file: FileMetadata) => void;
+  onManageTags?: (file: FileMetadata) => void;
+  onToggleFavorite?: (file: FileMetadata) => void;
+  onTogglePinned?: (file: FileMetadata) => void;
   onDragStart: (fileId: string, e: React.DragEvent) => void;
   onMobileFileDrop?: (targetFolderId: string, sourceFileId: string) => void;
   openFileMenuId: string | null;
@@ -53,6 +58,11 @@ export default function VirtualizedFileGrid({
   onDownload,
   onRename,
   onDelete,
+  onShowActivity,
+  onShowVersions,
+  onManageTags,
+  onToggleFavorite,
+  onTogglePinned,
   onDragStart,
   onMobileFileDrop,
   openFileMenuId,
@@ -258,11 +268,17 @@ export default function VirtualizedFileGrid({
                       onDownload={onDownload}
                       onRename={onRename}
                       onDelete={handleDeleteFile}
+                      onShowActivity={onShowActivity}
+                      onShowVersions={onShowVersions}
+                      onManageTags={onManageTags}
+                      onToggleFavorite={onToggleFavorite}
+                      onTogglePinned={onTogglePinned}
                       onDragStart={onDragStart}
                       onMobileFileDrop={onMobileFileDrop}
                       isMenuOpen={openFileMenuId === file.id}
                       onToggleMenu={onToggleMenu}
                       onCloseMenu={onCloseMenu}
+                      thumbnailPriority="high"
                       data-oid="yl4xq88"
                     />
                   ))}

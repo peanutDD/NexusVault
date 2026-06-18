@@ -29,7 +29,7 @@ const FolderBreadcrumb = memo(function FolderBreadcrumb({
 
   return (
     <nav
-      className="font-brand flex items-center justify-start gap-[clamp(0.195rem,0.45vw,0.25rem)] overflow-x-auto whitespace-nowrap font-normal tracking-widest text-[0.625rem] leading-none text-[var(--filelist-breadcrumb-text)]"
+      className="font-brand flex items-center justify-start gap-[clamp(0.195rem,0.45vw,0.25rem)] overflow-x-auto whitespace-nowrap font-normal tracking-widest text-[length:var(--font-size-ui-5xs)] leading-none text-[var(--filelist-breadcrumb-text)]"
       aria-label="面包屑导航"
       data-oid="im_2rc0"
     >

@@ -26,7 +26,7 @@ export default function UploadDialog({
 
   return (
     <div
-      className="uploadDialogCyberBackdrop fixed inset-0 z-50 flex items-center justify-center bg-[var(--upload-backdrop)] p-[clamp(0.78rem,1.8vw,1rem)]"
+      className="uploadDialogCyberBackdrop fixed inset-x-0 bottom-0 top-[calc(clamp(4.75rem,7.6vw,6.25rem)+env(safe-area-inset-top))] z-[60] flex items-center justify-center bg-[var(--upload-backdrop)] p-[clamp(0.78rem,1.8vw,1rem)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="upload-dialog-title"
@@ -165,7 +165,7 @@ function UploadDialogFooter({
           type="button"
           onClick={onCancel}
           disabled={isUploading}
-          className="uploadDialogCyberSecondaryBtn uploadDialogCancelBtn font-brand flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--btn-secondary-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--btn-secondary-text)] transition-colors hover:bg-[var(--btn-secondary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="uploadDialogCyberSecondaryBtn uploadDialogCancelBtn font-brand flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] [background:var(--btn-secondary-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--btn-secondary-text)] transition-[background,box-shadow] hover:[background:var(--btn-secondary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           data-oid="tq87jek"
         >
           Cancel
@@ -174,7 +174,7 @@ function UploadDialogFooter({
           type="button"
           onClick={onAttach}
           disabled={!hasFiles || (isUploading && !hasPending)}
-          className="uploadDialogCyberPrimaryBtn uploadDialogAttachBtn font-brand flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--btn-primary-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="uploadDialogCyberPrimaryBtn uploadDialogAttachBtn font-brand flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] [background:var(--btn-primary-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-widest text-[var(--btn-primary-text)] transition-[background,box-shadow] hover:[background:var(--btn-primary-bg-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           data-oid="-49nfvp"
         >
           {hasPending ? "Start Upload" : isUploading ? "Uploading..." : "Attach files"}

@@ -48,7 +48,7 @@ export function apiBaseForMessage(): string {
   return API_BASE_URL || LOCAL_DEV_API_ORIGIN;
 }
 
-export const APP_NAME = 'File Upload Download Server';
+export const APP_NAME = 'NexusVault';
 
 export function apiPath(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;

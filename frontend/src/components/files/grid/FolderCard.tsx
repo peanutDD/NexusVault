@@ -28,6 +28,8 @@ interface FolderCardProps {
 
 const MOBILE_FOLDER_DRAG_LONG_PRESS_MS = 450;
 const MOBILE_FOLDER_DRAG_CANCEL_DISTANCE_PX = 10;
+const MOBILE_FOLDER_DOUBLE_TAP_MS = 320;
+const MOBILE_FOLDER_DOUBLE_TAP_DISTANCE_PX = 24;
 
 function isInteractivePointerTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
@@ -65,6 +67,10 @@ const FolderCard = memo(function FolderCard({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileDragActiveRef = useRef(false);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(
+    null,
+  );
+  const lastMobileOpenTimeRef = useRef<number | null>(null);
 
   const clearLongPressTimer = useCallback(() => {
     if (longPressTimerRef.current !== null) {
@@ -81,6 +87,13 @@ const FolderCard = memo(function FolderCard({
   };
 
   const handleDoubleClick = () => {
+    const lastMobileOpenTime = lastMobileOpenTimeRef.current;
+    if (
+      lastMobileOpenTime !== null &&
+      Date.now() - lastMobileOpenTime <= MOBILE_FOLDER_DOUBLE_TAP_MS
+    ) {
+      return;
+    }
     onOpen(folder.id);
   };
 
@@ -137,10 +150,39 @@ const FolderCard = memo(function FolderCard({
   const finishMobileFolderDrag = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       const wasDragging = mobileDragActiveRef.current;
+      const pointerStart = pointerStartRef.current;
       clearLongPressTimer();
       pointerStartRef.current = null;
 
-      if (!wasDragging) return;
+      if (!wasDragging) {
+        if (e.pointerType !== "mouse" && pointerStart) {
+          const travelDistance = Math.hypot(
+            e.clientX - pointerStart.x,
+            e.clientY - pointerStart.y,
+          );
+          if (travelDistance <= MOBILE_FOLDER_DRAG_CANCEL_DISTANCE_PX) {
+            const now = Date.now();
+            const lastTap = lastTapRef.current;
+            const doubleTapDistance = lastTap
+              ? Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y)
+              : Number.POSITIVE_INFINITY;
+            if (
+              lastTap &&
+              now - lastTap.time <= MOBILE_FOLDER_DOUBLE_TAP_MS &&
+              doubleTapDistance <= MOBILE_FOLDER_DOUBLE_TAP_DISTANCE_PX
+            ) {
+              lastTapRef.current = null;
+              e.preventDefault();
+              e.stopPropagation();
+              lastMobileOpenTimeRef.current = now;
+              onOpen(folder.id);
+              return;
+            }
+            lastTapRef.current = { time: now, x: e.clientX, y: e.clientY };
+          }
+        }
+        return;
+      }
 
       e.preventDefault();
       e.stopPropagation();
@@ -164,6 +206,7 @@ const FolderCard = memo(function FolderCard({
       folder.id,
       onMobileFolderDragEnd,
       onMobileFolderDrop,
+      onOpen,
     ],
   );
 
@@ -197,20 +240,22 @@ const FolderCard = memo(function FolderCard({
         distance > MOBILE_FOLDER_DRAG_CANCEL_DISTANCE_PX
       ) {
         clearLongPressTimer();
+        lastTapRef.current = null;
         pointerStartRef.current = null;
         return;
       }
 
-    if (mobileDragActiveRef.current) {
-      e.preventDefault();
-      updateDragAutoScroll(e.clientY);
-    }
+      if (mobileDragActiveRef.current) {
+        e.preventDefault();
+        updateDragAutoScroll(e.clientY);
+      }
     },
     [clearLongPressTimer],
   );
 
   const handlePointerCancel = useCallback(() => {
     clearLongPressTimer();
+    lastTapRef.current = null;
     pointerStartRef.current = null;
     if (mobileDragActiveRef.current) {
       mobileDragActiveRef.current = false;
@@ -230,6 +275,7 @@ const FolderCard = memo(function FolderCard({
         "glass-card group relative cursor-pointer rounded-[clamp(0.3rem,0.8vw,0.375rem)] transition-colors",
         isSelected && "border-[var(--cta-primary-border)]",
         isDragOver && "border-[var(--color-border-strong)]",
+        isMenuOpen && "fileCardMenuOpen",
         isMobileDragging &&
           "border-[var(--color-border-strong)] opacity-80 pointer-events-none",
       )}
@@ -263,7 +309,7 @@ const FolderCard = memo(function FolderCard({
             isSelected={isSelected}
             onClick={handleSelect}
             size="responsive"
-            positionClassName="absolute left-[clamp(0.15rem,0.35vw,0.25rem)] top-[clamp(0.15rem,0.35vw,0.25rem)]"
+            positionClassName="absolute left-[clamp(0.06rem,0.16vw,0.1rem)] top-[clamp(0.06rem,0.16vw,0.1rem)]"
             data-oid="4exa0wc"
           />
 
@@ -275,7 +321,7 @@ const FolderCard = memo(function FolderCard({
         </div>
 
         {/* 文件夹名称 + 设置按钮 */}
-        <div className="relative flex w-full items-start" data-oid="ebqewy5">
+        <div className="relative flex w-full items-center" data-oid="ebqewy5">
           <p
             className="min-w-0 w-full truncate whitespace-nowrap leading-[1.3] px-[clamp(1rem,2.4vw,1.5rem)] text-center text-[clamp(0.38rem,1.3vw,0.58rem)] font-medium text-[var(--file-card-text)]"
             title={folder.name}
@@ -288,7 +334,7 @@ const FolderCard = memo(function FolderCard({
           <button
             type="button"
             onClick={handleToggleMenu}
-            className="absolute right-0 top-0 z-10 inline-flex translate-x-[0.375rem] items-center justify-center rounded-[clamp(0.3rem,0.8vw,0.375rem)] leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
+            className="absolute right-0 top-1/2 z-10 inline-flex translate-x-[0.375rem] -translate-y-1/2 items-center justify-center rounded-[clamp(0.3rem,0.8vw,0.375rem)] leading-none text-[var(--file-card-text-muted)] hover:bg-[var(--filelist-menu-trigger-hover-bg)] hover:text-[var(--file-card-text)]"
             aria-label="更多操作"
             data-oid="v.ta39e"
           >
@@ -309,13 +355,13 @@ const FolderCard = memo(function FolderCard({
               />
 
               <div
-                className="absolute bottom-full right-0 z-50 mb-[clamp(0.2rem,0.7vw,0.25rem)] w-max origin-bottom-right scale-[0.7] rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--filelist-menu-border)] bg-[var(--filelist-menu-bg)] py-[clamp(0.2rem,0.7vw,0.25rem)] pl-[clamp(0.4rem,1vw,0.5rem)] pr-[clamp(0.75rem,2vw,1rem)] shadow-xl sm:scale-90 md:scale-100"
+                className="fileCardActionMenu fileCardActionMenuFolder absolute bottom-full right-0 z-50 mb-[clamp(0.2rem,0.7vw,0.25rem)] w-max origin-bottom-right rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--filelist-menu-border)] py-[clamp(0.2rem,0.7vw,0.25rem)] pl-[clamp(0.4rem,1vw,0.5rem)] pr-[clamp(0.75rem,2vw,1rem)] shadow-xl"
                 data-folder-menu="true"
                 data-oid="9xqi6te"
               >
                   <button
                     type="button"
-                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
+                    className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
@@ -324,7 +370,7 @@ const FolderCard = memo(function FolderCard({
                     data-oid="ishdm9z"
                   >
                     <FolderOpen
-                      className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]"
+                      className="fileCardActionMenuIcon shrink-0 text-[var(--filelist-menu-icon)]"
                       data-oid="1_cslmy"
                     />
 
@@ -334,7 +380,7 @@ const FolderCard = memo(function FolderCard({
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
+                    className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
@@ -343,7 +389,7 @@ const FolderCard = memo(function FolderCard({
                     data-oid="otal830"
                   >
                     <PencilLine
-                      className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]"
+                      className="fileCardActionMenuIcon shrink-0 text-[var(--filelist-menu-icon)]"
                       data-oid="is04_-l"
                     />
 
@@ -352,13 +398,13 @@ const FolderCard = memo(function FolderCard({
                     </span>
                   </button>
                   <div
-                    className="my-[clamp(0.0975rem,0.3vw,0.125rem)] border-t border-[var(--filelist-menu-divider)]"
+                    className="fileCardActionMenuDivider my-[clamp(0.0975rem,0.3vw,0.125rem)] border-t border-[var(--filelist-menu-divider)]"
                     data-oid="ux:37vq"
                   />
 
                   <button
                     type="button"
-                    className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
+                    className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--filelist-menu-text)] transition-colors hover:bg-[var(--filelist-menu-item-hover-bg)]"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseMenu();
@@ -367,7 +413,7 @@ const FolderCard = memo(function FolderCard({
                     data-oid="j2_pyh."
                   >
                     <Trash2
-                      className="scale-50 shrink-0 text-[var(--filelist-menu-icon)]"
+                      className="fileCardActionMenuIcon shrink-0 text-[var(--filelist-menu-icon)]"
                       data-oid="b5w8:n8"
                     />
 

@@ -85,7 +85,7 @@ export default function CreateFolderDialog({
         data-oid="4i1br7m"
       >
         <p
-          className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="r2ncz81"
         >
           文件夹名称

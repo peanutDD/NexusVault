@@ -26,15 +26,15 @@ export function PreviewErrorState({
   onClose: () => void;
 }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.8rem,2vw,1rem)] bg-[var(--preview-surface-soft)] px-[clamp(1.75rem,3.6vw,2rem)] py-[clamp(2.25rem,4.5vw,2.5rem)] text-center">
-      <div className="flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-full bg-[var(--preview-error-icon-bg)]">
+    <div className="previewErrorSurface flex h-full w-full flex-col items-center justify-center gap-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.8rem,2vw,1rem)] [background:var(--preview-surface-soft)] px-[clamp(1.75rem,3.6vw,2rem)] py-[clamp(2.25rem,4.5vw,2.5rem)] text-center shadow-[var(--neu-inset-shadow)]">
+      <div className="flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-full [background:var(--preview-error-icon-bg)] shadow-[var(--neu-control-shadow)]">
         <ErrorIcon />
       </div>
       <p className="text-[clamp(1rem,2.4vw,1.125rem)] text-[var(--preview-text-primary)]">{error}</p>
       <button
         type="button"
         onClick={onClose}
-        className="mt-[clamp(0.39rem,0.9vw,0.5rem)] rounded-full bg-[var(--preview-action-bg)] px-[clamp(1.25rem,2.7vw,1.5rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-text-primary)] transition-colors hover:bg-[var(--preview-action-bg-hover)]"
+        className="previewErrorAction mt-[clamp(0.39rem,0.9vw,0.5rem)] rounded-full [background:var(--preview-action-bg)] px-[clamp(1.25rem,2.7vw,1.5rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-text-primary)] shadow-[var(--neu-control-shadow)] transition-[background,box-shadow] hover:[background:var(--preview-action-bg-hover)] active:shadow-[var(--neu-pressed-shadow)]"
       >
         关闭
       </button>
@@ -51,10 +51,10 @@ export function UnsupportedPreviewState({
 }) {
   return (
     <div className="flex h-full w-full items-center justify-center pointer-events-none">
-      <article className="pointer-events-auto group relative rounded-[clamp(0.3rem,0.8vw,0.375rem)] transition-colors bg-[var(--preview-unsupported-bg)] backdrop-blur-md hover:bg-[var(--preview-unsupported-hover-bg)] max-w-[min(92vw,22rem)] scale-[2]">
+      <article className="previewUnsupportedCard pointer-events-auto group relative w-full max-w-[var(--app-preview-unsupported-max-width)] rounded-[clamp(0.3rem,0.8vw,0.375rem)] transition-[background,box-shadow] [background:var(--preview-unsupported-bg)] shadow-[var(--neu-raised-sm-shadow)] hover:[background:var(--preview-unsupported-hover-bg)] scale-[2]">
         <div className="p-[clamp(0.585rem,1.35vw,0.75rem)]">
-          <div className="relative mb-[clamp(0.585rem,1.35vw,0.75rem)] aspect-square overflow-hidden rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--preview-unsupported-thumb-bg)]">
-            <div className="flex h-full w-full items-center justify-center rounded overflow-hidden shrink-0 bg-[var(--preview-unsupported-thumb-inner-bg)]">
+          <div className="relative mb-[clamp(0.585rem,1.35vw,0.75rem)] aspect-square overflow-hidden rounded-[clamp(0.4rem,1vw,0.5rem)] [background:var(--preview-unsupported-thumb-bg)] shadow-[var(--neu-inset-shadow)]">
+            <div className="flex h-full w-full items-center justify-center rounded overflow-hidden shrink-0 [background:var(--preview-unsupported-thumb-inner-bg)]">
               <FileIcon />
             </div>
           </div>

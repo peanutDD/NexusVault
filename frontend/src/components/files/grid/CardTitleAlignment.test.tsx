@@ -73,5 +73,11 @@ describe("card title alignment", () => {
       "truncate",
       "whitespace-nowrap",
     );
+
+    const titleRow = screen.getByTitle(folder.name).closest("div");
+    const moreButton = screen.getByRole("button", { name: "更多操作" });
+
+    expect(titleRow).toHaveClass("items-center");
+    expect(moreButton).toHaveClass("top-1/2", "-translate-y-1/2");
   });
 });

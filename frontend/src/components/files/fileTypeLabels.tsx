@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- FILE_TYPE_LABELS is config with JSX, not a component */
+import { Pin } from "lucide-react";
 import type { ReactNode } from "react";
 
 function IconBadge({
@@ -26,6 +27,23 @@ export const FILE_TYPE_LABELS: Record<
   string,
   { label: string; icon: ReactNode; order: number }
 > = {
+  pinned: {
+    label: "Pinned",
+    icon: (
+      <IconBadge
+        className={`${TYPE_BADGE_CLASS} fileListPinnedGroupIconBadge`}
+        data-oid="pinned-type"
+      >
+        <Pin
+          className="fileListPinnedGroupIcon h-[0.95em] w-[0.95em]"
+          aria-hidden
+          data-oid="pinned-icon"
+        />
+      </IconBadge>
+    ),
+
+    order: 0,
+  },
   image: {
     label: "Images",
     icon: (

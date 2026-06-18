@@ -124,7 +124,7 @@ const FileListPagination = memo(function FileListPagination({
         type="button"
         onClick={() => onPageChange?.(Math.max(1, page - 1))}
         disabled={page === 1}
-        className="glass-btn flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.75rem,2vw,1rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)]"
+        className="glass-btn paginationNeuButton flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.75rem,2vw,1rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)]"
         data-oid="23jcn1t"
       >
         <ChevronLeftIcon data-oid="g28pw:_" />
@@ -137,9 +137,9 @@ const FileListPagination = memo(function FileListPagination({
             type="button"
             onClick={() => onPageChange?.(pageNum)}
             className={cn(
-              "glass-btn h-[clamp(2rem,4.5vw,2.25rem)] w-[clamp(2rem,4.5vw,2.25rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium transition-colors",
+              "glass-btn paginationNeuButton h-[clamp(2rem,4.5vw,2.25rem)] w-[clamp(2rem,4.5vw,2.25rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium transition-colors",
               page === pageNum
-                ? "border-[var(--color-border-medium)] bg-[var(--glass-bg-soft)] text-[var(--glass-text)]"
+                ? "paginationNeuButtonActive border-[var(--color-border-medium)] bg-[var(--glass-bg-soft)] text-[var(--glass-text)]"
                 : "text-[var(--glass-text-muted)] hover:text-[var(--glass-text)]",
             )}
             data-oid="r4rm.3j"
@@ -152,7 +152,7 @@ const FileListPagination = memo(function FileListPagination({
         type="button"
         onClick={() => onPageChange?.(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
-        className="glass-btn flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.75rem,2vw,1rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)]"
+        className="glass-btn paginationNeuButton flex items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] px-[clamp(0.75rem,2vw,1rem)] py-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)]"
         data-oid="wyq2pvx"
       >
         下一页

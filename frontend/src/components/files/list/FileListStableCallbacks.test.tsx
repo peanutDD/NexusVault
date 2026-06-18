@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ComponentProps } from "react";
 import FileListGroupedView from "./FileListGroupedView";
@@ -112,6 +112,32 @@ const baseScrollerProps = {
 } satisfies ComponentProps<typeof FileListVirtualScroller>;
 
 describe("file-list memo callback stability", () => {
+  it("renders the pinned file group before folders and ordinary type groups", () => {
+    const pinnedFile = { ...file, id: "pinned-file", is_pinned: true };
+
+    render(
+      <FileListGroupedView
+        {...baseGroupedProps}
+        displayFolders={[folder]}
+        groupedFiles={[
+          { key: "pinned", label: "Pinned", icon: null, files: [pinnedFile] },
+          { key: "docs", label: "Docs", icon: null, files: [file] },
+        ]}
+      />,
+    );
+
+    const pinned = screen.getByText("Pinned");
+    const folders = screen.getByText("FOLDERS");
+    const docs = screen.getByText("Docs");
+
+    expect(pinned.compareDocumentPosition(folders)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(folders.compareDocumentPosition(docs)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it("keeps grouped FileGrid callbacks stable across parent renders", () => {
     captured.fileGridDrops = [];
     captured.fileGridPreviews = [];

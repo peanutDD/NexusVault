@@ -110,6 +110,16 @@ export function getErrorDetails(err: unknown, fallback: string): ErrorDetails {
         code: 'SERVER_ERROR',
       };
     }
+
+    if (
+      err.code === 'ECONNABORTED' ||
+      (typeof err.message === 'string' && err.message.toLowerCase().includes('timeout'))
+    ) {
+      return {
+        message: `请求超时，请确保后端服务正在运行并稍后重试（${apiBaseForMessage()}）`,
+        code: 'TIMEOUT',
+      };
+    }
     
     // 处理网络错误（无法连接到服务器）
     if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
@@ -132,6 +142,12 @@ export function getErrorDetails(err: unknown, fallback: string): ErrorDetails {
   
   // 处理通用错误
   if (err instanceof Error) {
+    if (err.message.toLowerCase().includes('timeout')) {
+      return {
+        message: `请求超时，请确保后端服务正在运行并稍后重试（${apiBaseForMessage()}）`,
+        code: 'TIMEOUT',
+      };
+    }
     // 处理网络错误
     if (err.message === 'Network Error' || err.message.includes('ERR_NETWORK')) {
       return {

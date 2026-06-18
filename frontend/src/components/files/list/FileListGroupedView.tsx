@@ -38,6 +38,11 @@ interface FileListGroupedViewProps {
   onRenameFolder: (folder: Folder) => void;
   onRenameFile: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
+  onShowActivity?: (file: FileMetadata) => void;
+  onShowVersions?: (file: FileMetadata) => void;
+  onManageTags?: (file: FileMetadata) => void;
+  onToggleFavorite?: (file: FileMetadata) => void;
+  onTogglePinned?: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
   onFileDragStart: (fileId: string, e: DragEvent) => void;
   onDropOnFolder: (folderId: string, fileIds: string[], folderIds: string[]) => void;
@@ -63,6 +68,11 @@ export default function FileListGroupedView({
   onRenameFolder,
   onRenameFile,
   onDelete,
+  onShowActivity,
+  onShowVersions,
+  onManageTags,
+  onToggleFavorite,
+  onTogglePinned,
   onDownload,
   onFileDragStart,
   onDropOnFolder,
@@ -72,6 +82,13 @@ export default function FileListGroupedView({
   onToggleFolderMenu,
   onCloseMenu,
 }: FileListGroupedViewProps) {
+  const pinnedGroup = mode === "type"
+    ? (groupedFiles ?? []).find((group) => group.key === "pinned")
+    : null;
+  const ordinaryFileGroups = mode === "type"
+    ? (groupedFiles ?? []).filter((group) => group.key !== "pinned")
+    : groupedFiles;
+
   const handleDeleteFolder = useCallback(
     (folderId: string) => {
       const folder = displayFolders.find((item) => item.id === folderId);
@@ -89,6 +106,42 @@ export default function FileListGroupedView({
   if (mode === "type") {
     return (
       <div className="space-y-[clamp(1.25rem,3vw,1.5rem)]">
+        {pinnedGroup ? (
+          <div key={`group-${pinnedGroup.key}`}>
+            <FileListGroupHeader
+              label={pinnedGroup.label}
+              count={pinnedGroup.files.length}
+              checkbox={
+                <GroupSelectCheckbox
+                  itemIds={pinnedGroup.files.map((f) => f.id)}
+                  selectedIds={selectedFiles}
+                  onToggle={(ids, selected) => ids.forEach((id) => onSelectFile(id, selected))}
+                />
+              }
+              icon={pinnedGroup.icon}
+            />
+            <FileGrid
+              files={pinnedGroup.files}
+              selectedFiles={selectedFiles}
+              onSelect={onSelectFile}
+              onPreview={onPreviewFile}
+              onShare={onShareFile}
+              onDownload={onDownload}
+              onRename={onRenameFile}
+              onDelete={onDelete}
+              onShowActivity={onShowActivity}
+              onShowVersions={onShowVersions}
+              onManageTags={onManageTags}
+              onToggleFavorite={onToggleFavorite}
+              onTogglePinned={onTogglePinned}
+              onDragStart={onFileDragStart}
+              onMobileFileDrop={handleMobileFileDrop}
+              openFileMenuId={openFileMenuId}
+              onToggleMenu={onToggleFileMenu}
+              onCloseMenu={onCloseMenu}
+            />
+          </div>
+        ) : null}
         {displayFolders.length > 0 ? (
           <div>
             <FileListGroupHeader
@@ -121,7 +174,7 @@ export default function FileListGroupedView({
             />
           </div>
         ) : null}
-        {(groupedFiles ?? []).map((group) => (
+        {(ordinaryFileGroups ?? []).map((group) => (
           <div key={`group-${group.key}`}>
             <FileListGroupHeader
               label={group.label}
@@ -144,6 +197,11 @@ export default function FileListGroupedView({
               onDownload={onDownload}
               onRename={onRenameFile}
               onDelete={onDelete}
+              onShowActivity={onShowActivity}
+              onShowVersions={onShowVersions}
+              onManageTags={onManageTags}
+              onToggleFavorite={onToggleFavorite}
+              onTogglePinned={onTogglePinned}
               onDragStart={onFileDragStart}
               onMobileFileDrop={handleMobileFileDrop}
               openFileMenuId={openFileMenuId}
@@ -195,6 +253,11 @@ export default function FileListGroupedView({
             onRenameFolder={onRenameFolder}
             onRenameFile={onRenameFile}
             onDelete={onDelete}
+            onShowActivity={onShowActivity}
+            onShowVersions={onShowVersions}
+            onManageTags={onManageTags}
+            onToggleFavorite={onToggleFavorite}
+            onTogglePinned={onTogglePinned}
             onFileDragStart={onFileDragStart}
             onDropOnFolder={onDropOnFolder}
             openFileMenuId={openFileMenuId}

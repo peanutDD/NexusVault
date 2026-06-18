@@ -110,7 +110,7 @@ export function BaseDialog({
                   'before:pointer-events-none before:absolute before:inset-0 before:rounded-[clamp(0.8rem,2vw,1rem)] before:content-[""]',
                   "before:bg-[image:var(--modal-surface-glass-highlight)]",
                 ].join(" ")
-              : "bg-[var(--modal-surface-bg)] border border-[var(--modal-surface-border)] text-[var(--color-text-primary)] rounded-[clamp(0.4rem,1vw,0.5rem)] w-full max-h-[90vh] overflow-y-auto p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-2xl transform transition-all duration-300 animate-fade-in",
+              : "[background:var(--neu-raised-bg)] border border-transparent text-[var(--color-text-primary)] rounded-[clamp(0.8rem,2vw,1rem)] w-full max-h-[90vh] overflow-y-auto p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-[var(--neu-raised-shadow)] transform transition-all duration-300 animate-fade-in",
           maxWidthClasses[maxWidth],
           className,
         )}

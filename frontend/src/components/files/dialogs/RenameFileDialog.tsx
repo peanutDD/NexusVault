@@ -110,7 +110,7 @@ export default function RenameFileDialog({
         data-oid=".l57pri"
       >
         <p
-          className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="pf4xm-t"
         >
           当前名称
@@ -126,7 +126,7 @@ export default function RenameFileDialog({
       </div>
       <div data-oid="cuffx5v">
         <p
-          className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="cb-z1sh"
         >
           新名称

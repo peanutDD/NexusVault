@@ -33,6 +33,11 @@ interface VirtualizedMixedGridProps {
   onRenameFolder: (folder: Folder) => void;
   onRenameFile: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
+  onShowActivity?: (file: FileMetadata) => void;
+  onShowVersions?: (file: FileMetadata) => void;
+  onManageTags?: (file: FileMetadata) => void;
+  onToggleFavorite?: (file: FileMetadata) => void;
+  onTogglePinned?: (file: FileMetadata) => void;
   onFileDragStart: (fileId: string, e: DragEvent) => void;
   onDropOnFolder: (
     folderId: string,
@@ -59,6 +64,11 @@ export default function VirtualizedMixedGrid({
   onRenameFolder,
   onRenameFile,
   onDelete,
+  onShowActivity,
+  onShowVersions,
+  onManageTags,
+  onToggleFavorite,
+  onTogglePinned,
   onFileDragStart,
   onDropOnFolder,
   openFileMenuId,
@@ -284,11 +294,17 @@ export default function VirtualizedMixedGrid({
                         onDownload={onDownloadFile}
                         onRename={onRenameFile}
                         onDelete={handleDeleteFile}
+                        onShowActivity={onShowActivity}
+                        onShowVersions={onShowVersions}
+                        onManageTags={onManageTags}
+                        onToggleFavorite={onToggleFavorite}
+                        onTogglePinned={onTogglePinned}
                         onDragStart={onFileDragStart}
                         onMobileFileDrop={handleMobileFileDrop}
                         isMenuOpen={openFileMenuId === file.id}
                         onToggleMenu={onToggleFileMenu}
                         onCloseMenu={onCloseMenu}
+                        thumbnailPriority="high"
                         data-oid="7hvdt_8"
                       />
                     );

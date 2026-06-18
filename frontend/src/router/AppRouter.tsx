@@ -8,7 +8,10 @@ const Register = lazy(() => import("../components/auth/Register"));
 const GithubCallback = lazy(() => import("../components/auth/GithubCallback"));
 const Files = lazy(() => import("../pages/Files"));
 const Settings = lazy(() => import("../pages/Settings"));
+const Activity = lazy(() => import("../pages/Activity"));
 const Share = lazy(() => import("../pages/Share"));
+const Shares = lazy(() => import("../pages/Shares"));
+const FileRequest = lazy(() => import("../pages/FileRequest"));
 const Trash = lazy(() => import("../pages/Trash"));
 
 function RouteFallback() {
@@ -61,6 +64,14 @@ export default function AppRouter() {
           }
         />
         <Route
+          path="/request/:token"
+          element={
+            <LazyRoute>
+              <FileRequest />
+            </LazyRoute>
+          }
+        />
+        <Route
           path="/files"
           element={
             <RequireAuth>
@@ -76,6 +87,26 @@ export default function AppRouter() {
             <RequireAuth>
               <LazyRoute>
                 <Settings />
+              </LazyRoute>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/activity"
+          element={
+            <RequireAuth>
+              <LazyRoute>
+                <Activity />
+              </LazyRoute>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/shares"
+          element={
+            <RequireAuth>
+              <LazyRoute>
+                <Shares />
               </LazyRoute>
             </RequireAuth>
           }

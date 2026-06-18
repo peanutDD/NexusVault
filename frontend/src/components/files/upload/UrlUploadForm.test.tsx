@@ -42,4 +42,39 @@ describe('UrlUploadForm', () => {
     );
     expect(blob).not.toHaveBeenCalled();
   });
+
+  it('keeps the Add file URL input focusable and editable', () => {
+    render(<UrlUploadForm onFileAdd={vi.fn()} />);
+
+    const input = screen.getByLabelText('File URL') as HTMLInputElement;
+    expect(input).not.toBeDisabled();
+    expect(input).toHaveClass('uploadUrlInput', 'min-w-0');
+
+    input.focus();
+    expect(input).toHaveFocus();
+
+    fireEvent.change(input, {
+      target: { value: 'https://example.com/photo.jpg' },
+    });
+
+    expect(input).toHaveValue('https://example.com/photo.jpg');
+    expect(screen.getByRole('button', { name: 'Upload' })).not.toBeDisabled();
+  });
+
+  it('puts the caret in the URL input when the URL panel is tapped', () => {
+    render(<UrlUploadForm onFileAdd={vi.fn()} />);
+
+    const input = screen.getByLabelText('File URL') as HTMLInputElement;
+    fireEvent.pointerDown(screen.getByTestId('upload-url-panel'), {
+      pointerType: 'touch',
+    });
+
+    expect(input).toHaveFocus();
+
+    fireEvent.change(input, {
+      target: { value: 'https://example.com/pasted-link.zip' },
+    });
+
+    expect(input).toHaveValue('https://example.com/pasted-link.zip');
+  });
 });

@@ -16,8 +16,11 @@ import {
   AUTH_CARD_CLASSES,
   AUTH_TITLE_CLASSES,
   AUTH_SUBTITLE_CLASSES,
+  AUTH_OAUTH_BUTTON_CLASSES,
+  AUTH_OAUTH_DISABLED_CLASSES,
 } from "./styles";
 import { CyberPrismLogo } from "../common/CyberPrismLogo";
+import AuthShapeWaveBackground from "./AuthShapeWaveBackground";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -70,16 +73,17 @@ export default function Login() {
 
   return (
     <div className={AUTH_PAGE_CLASSES} data-oid="c81a8nz">
-      <div className="w-full max-w-[clamp(22rem,92vw,28rem)] mx-[clamp(0.78rem,1.8vw,1rem)] animate-fade-in" data-oid="73-1cga">
+      <AuthShapeWaveBackground />
+      <div className="relative z-10 w-full max-w-[clamp(22rem,92vw,28rem)] mx-[clamp(0.78rem,1.8vw,1rem)] animate-fade-in" data-oid="73-1cga">
         <div className={AUTH_CARD_CLASSES} data-oid="12or9nf">
           {/* 顶部渐变光效，与主页卡片呼应 */}
           <div
-            className="pointer-events-none absolute inset-0 bg-[image:var(--auth-card-glow-bg)]"
+            className="authCardGlow pointer-events-none absolute inset-0 bg-[image:var(--auth-card-glow-bg)]"
             data-oid="wd63wdd"
           />
 
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[image:var(--auth-card-edge-bg)]"
+            className="authCardEdge pointer-events-none absolute inset-x-0 top-0 h-px bg-[image:var(--auth-card-edge-bg)]"
             data-oid="51vqbla"
           />
 
@@ -90,12 +94,12 @@ export default function Login() {
             >
               <div className="relative" data-oid="ibkt9b-">
                 <div
-                  className="pointer-events-none absolute -inset-[clamp(0.195rem,0.45vw,0.25rem)] rounded-[clamp(0.8rem,2vw,1rem)] bg-[image:var(--auth-logo-aura-bg)] opacity-60 blur-[clamp(0.6rem,1.4vw,0.75rem)]"
+                  className="authLogoAura pointer-events-none absolute -inset-[clamp(0.195rem,0.45vw,0.25rem)] rounded-[clamp(0.8rem,2vw,1rem)] bg-[image:var(--auth-logo-aura-bg)] opacity-[var(--auth-logo-aura-opacity)] blur-[clamp(0.6rem,1.4vw,0.75rem)]"
                   data-oid="_2u:we8"
                 />
 
                 <div
-                  className="relative flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-[clamp(0.8rem,2vw,1rem)] border border-[var(--auth-logo-shell-border)] bg-[var(--auth-logo-shell-bg)] shadow-[var(--auth-logo-shell-shadow)]"
+                  className="relative flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-[clamp(0.8rem,2vw,1rem)] border border-[var(--auth-logo-shell-border)] [background:var(--auth-logo-shell-bg)] shadow-[var(--auth-logo-shell-shadow)]"
                   data-oid="_29y:4u"
                 >
                   <CyberPrismLogo className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)]" data-oid="5vbrkrr" />
@@ -188,7 +192,7 @@ export default function Login() {
                 type="button"
                 onClick={handleGithubLogin}
                 disabled={githubLoading}
-                className="w-full inline-flex items-center justify-center rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--auth-oauth-button-border)] bg-[var(--auth-oauth-button-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--auth-oauth-button-text)] hover:bg-[var(--auth-oauth-button-bg-hover)] transition-colors"
+                className={AUTH_OAUTH_BUTTON_CLASSES}
                 data-oid="dd3dfhp"
               >
                 {githubLoading
@@ -201,7 +205,7 @@ export default function Login() {
               <button
                 type="button"
                 disabled
-                className="w-full inline-flex items-center justify-center rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--auth-oauth-disabled-border)] bg-[var(--auth-oauth-disabled-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--auth-oauth-disabled-text)] cursor-not-allowed"
+                className={AUTH_OAUTH_DISABLED_CLASSES}
                 data-oid="heomkn5"
               >
                 Sign in with Google (coming soon)

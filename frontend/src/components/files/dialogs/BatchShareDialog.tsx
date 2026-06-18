@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { shareService, type BatchShareRequest } from "../../../services/shares";
 import { fileService } from "../../../services/files";
 import { getErrorMessage } from "../../../utils/error";
+import { useClipboard } from "../../../hooks/useClipboard";
 import ErrorMessage from "../../common/feedback/ErrorMessage";
 import ConfirmDialog from "../../common/dialog/ConfirmDialog";
 import { Share2 } from "lucide-react";
@@ -19,9 +20,11 @@ export default function BatchShareDialog({
   onClose,
   onShareCreated,
 }: BatchShareDialogProps) {
+  const { copy } = useClipboard();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [shareUrls, setShareUrls] = useState<string[]>([]);
   const [failedCount, setFailedCount] = useState(0);
   const [formData, setFormData] = useState<Omit<BatchShareRequest, "file_ids">>(
@@ -52,6 +55,7 @@ export default function BatchShareDialog({
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setCopyMessage(null);
 
     try {
       const data: BatchShareRequest = {
@@ -73,11 +77,20 @@ export default function BatchShareDialog({
     }
   };
 
-  const handleCopyAllUrls = () => {
-    if (shareUrls.length > 0) {
+  const handleCopyAllUrls = async () => {
+    if (shareUrls.length === 0) return;
+
+    try {
       const urlsText = shareUrls.join("\n");
-      navigator.clipboard.writeText(urlsText);
-      alert(`已复制 ${shareUrls.length} 个分享链接到剪贴板`);
+      const copied = await copy(urlsText);
+      if (!copied) {
+        setError("复制链接失败");
+        return;
+      }
+      setError(null);
+      setCopyMessage(`已复制 ${shareUrls.length} 个分享链接到剪贴板`);
+    } catch (err) {
+      setError(getErrorMessage(err, "复制链接失败"));
     }
   };
 
@@ -104,6 +117,15 @@ export default function BatchShareDialog({
         />
       )}
 
+      {copyMessage && (
+        <ErrorMessage
+          message={copyMessage}
+          onClose={() => setCopyMessage(null)}
+          type="info"
+          data-oid="batch-copy-message"
+        />
+      )}
+
       {shareUrls.length > 0 ? (
         <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="jb5guxs">
           {/* 结果摘要 */}
@@ -112,7 +134,7 @@ export default function BatchShareDialog({
             data-oid="1i12zwm"
           >
             <p
-              className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+              className="text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
               data-oid="6dam64j"
             >
               分享链接
@@ -130,7 +152,7 @@ export default function BatchShareDialog({
           {/* 复制链接 */}
           <div data-oid="koybj05">
             <p
-              className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+              className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
               data-oid="ar8f.py"
             >
               复制链接
@@ -157,9 +179,18 @@ export default function BatchShareDialog({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(url);
-                      alert("链接已复制");
+                    onClick={async () => {
+                      try {
+                        const copied = await copy(url);
+                        if (!copied) {
+                          setError("复制链接失败");
+                          return;
+                        }
+                        setError(null);
+                        setCopyMessage("链接已复制");
+                      } catch (err) {
+                        setError(getErrorMessage(err, "复制链接失败"));
+                      }
                     }}
                     className="shrink-0 rounded-[clamp(0.4rem,1vw,0.5rem)] border border-[var(--dialog-action-border)] bg-[var(--dialog-action-bg)] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-action-text)] transition-colors hover:bg-[var(--dialog-action-hover-bg)]"
                     data-oid="9sc719o"
@@ -196,7 +227,7 @@ export default function BatchShareDialog({
             data-oid="edys2gx"
           >
             <p
-              className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+              className="text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
               data-oid="q623yi0"
             >
               将创建分享
@@ -220,7 +251,7 @@ export default function BatchShareDialog({
           {/* 可选设置 */}
           <div data-oid="::x5bx1">
             <p
-              className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+              className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
               data-oid="h0t-lrs"
             >
               可选设置

@@ -72,6 +72,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
   const [docLoading, setDocLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stageResizeTick, setStageResizeTick] = useState(0);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -162,6 +163,25 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
     };
   }, [blobUrl]);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        setStageResizeTick((tick) => tick + 1);
+      });
+    });
+
+    observer.observe(container);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
+
   // ---------------------------------------------------------------------------
   // 渲染页面
   // ---------------------------------------------------------------------------
@@ -221,7 +241,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
       renderPage(currentPage, userScale);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docLoading, error, currentPage, userScale]);
+  }, [docLoading, error, currentPage, userScale, stageResizeTick]);
 
   // ---------------------------------------------------------------------------
   // 翻页
@@ -304,7 +324,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
         {/* 文档加载中 */}
         {docLoading && (
           <div
-            className="flex h-full w-full min-h-[12.5rem] items-center justify-center"
+            className="flex h-full w-full min-h-[var(--preview-pdf-min-stage-height)] items-center justify-center"
             data-oid="ev5n:_x"
           >
             <div
@@ -326,7 +346,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
         {/* 出错 */}
         {error && !docLoading && (
           <div
-            className="flex h-full w-full min-h-[12.5rem] items-center justify-center px-[clamp(1.25rem,2.7vw,1.5rem)]"
+            className="flex h-full w-full min-h-[var(--preview-pdf-min-stage-height)] items-center justify-center px-[clamp(1.25rem,2.7vw,1.5rem)]"
             data-oid="8s9gc03"
           >
             <div
@@ -334,7 +354,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
               data-oid="ko1orak"
             >
               <div
-                className="flex h-[clamp(3.25rem,6.3vw,3.5rem)] w-[clamp(3.25rem,6.3vw,3.5rem)] items-center justify-center rounded-full bg-[var(--preview-pdf-error-icon-bg)]"
+                className="flex h-[clamp(3.25rem,6.3vw,3.5rem)] w-[clamp(3.25rem,6.3vw,3.5rem)] items-center justify-center rounded-full [background:var(--preview-pdf-error-icon-bg)] shadow-[var(--neu-inset-shadow)]"
                 data-oid="69txr4y"
               >
                 <svg
@@ -360,7 +380,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
                 href={blobUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-full bg-[var(--preview-pdf-open-btn-bg)] px-[clamp(1rem,2.25vw,1.25rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-pdf-open-btn-text)] transition-colors hover:bg-[var(--preview-pdf-open-btn-hover-bg)] active:bg-[var(--preview-pdf-open-btn-active-bg)]"
+                className="mobilePdfOpenButton rounded-full [background:var(--preview-pdf-open-btn-bg)] px-[clamp(1rem,2.25vw,1.25rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--preview-pdf-open-btn-text)] shadow-[var(--neu-control-shadow)] transition-[background,box-shadow] hover:[background:var(--preview-pdf-open-btn-hover-bg)] active:[background:var(--preview-pdf-open-btn-active-bg)] active:shadow-[var(--neu-pressed-shadow)]"
                 data-oid="hj9.2ui"
               >
                 在新标签中打开
@@ -406,8 +426,8 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
       {/* ------------------------------------------------------------------ */}
       {numPages > 0 && (
         <div
-          className="flex shrink-0 items-center justify-between gap-[clamp(0.39rem,0.9vw,0.5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]
-                     bg-[var(--preview-pdf-toolbar-bg)] backdrop-blur-md border-t border-[var(--preview-pdf-toolbar-border)]"
+          className="mobilePdfToolbar flex shrink-0 items-center justify-between gap-[clamp(0.39rem,0.9vw,0.5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]
+                     [background:var(--preview-pdf-toolbar-bg)] border-t border-[var(--preview-pdf-toolbar-border)] shadow-[var(--neu-raised-sm-shadow)]"
           onClick={(e) => e.stopPropagation()}
           data-oid="s1eh5vm"
         >
@@ -416,9 +436,9 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             type="button"
             onClick={goToPrev}
             disabled={currentPage <= 1}
-            className="flex h-[clamp(2rem,4.05vw,2.25rem)] w-[clamp(2rem,4.05vw,2.25rem)] items-center justify-center rounded-full
-                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-text)] transition-colors
-                       disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
+            className="mobilePdfToolbarButton flex h-[clamp(2rem,4.05vw,2.25rem)] w-[clamp(2rem,4.05vw,2.25rem)] items-center justify-center rounded-full
+                       [background:var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-text)] shadow-[var(--neu-control-shadow)] transition-[background,box-shadow]
+                       disabled:opacity-25 active:[background:var(--preview-pdf-btn-active-bg)] active:shadow-[var(--neu-pressed-shadow)] hover:[background:var(--preview-pdf-btn-hover-bg)]"
             aria-label="上一页"
             data-oid="ddcus-n"
           >
@@ -444,9 +464,9 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             type="button"
             onClick={zoomOut}
             disabled={userScale <= MIN_SCALE}
-            className="flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] items-center justify-center rounded-full
-                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] text-[clamp(1rem,2.4vw,1.125rem)] font-bold transition-colors
-                       disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
+            className="mobilePdfToolbarButton flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] items-center justify-center rounded-full
+                       [background:var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] text-[clamp(1rem,2.4vw,1.125rem)] font-bold shadow-[var(--neu-control-shadow)] transition-[background,box-shadow]
+                       disabled:opacity-25 active:[background:var(--preview-pdf-btn-active-bg)] active:shadow-[var(--neu-pressed-shadow)] hover:[background:var(--preview-pdf-btn-hover-bg)]"
             aria-label="缩小"
             data-oid="c841dnq"
           >
@@ -483,7 +503,7 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
               {numPages}
             </span>
             <span
-              className="text-[0.625rem] text-[var(--preview-pdf-page-subtext)] tabular-nums"
+              className="text-[length:var(--font-size-ui-5xs)] text-[var(--preview-pdf-page-subtext)] tabular-nums"
               data-oid="pbarn28"
             >
               {Math.round(userScale * 100)}%
@@ -495,9 +515,9 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             type="button"
             onClick={zoomIn}
             disabled={userScale >= MAX_SCALE}
-            className="flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] items-center justify-center rounded-full
-                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] transition-colors
-                       disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
+            className="mobilePdfToolbarButton flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] items-center justify-center rounded-full
+                       [background:var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-muted)] shadow-[var(--neu-control-shadow)] transition-[background,box-shadow]
+                       disabled:opacity-25 active:[background:var(--preview-pdf-btn-active-bg)] active:shadow-[var(--neu-pressed-shadow)] hover:[background:var(--preview-pdf-btn-hover-bg)]"
             aria-label="放大"
             data-oid="9sco1ge"
           >
@@ -523,9 +543,9 @@ function MobilePdfPreview({ blobUrl, title }: MobilePdfPreviewProps) {
             type="button"
             onClick={goToNext}
             disabled={currentPage >= numPages}
-            className="flex h-[clamp(2rem,4.05vw,2.25rem)] w-[clamp(2rem,4.05vw,2.25rem)] items-center justify-center rounded-full
-                       bg-[var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-text)] transition-colors
-                       disabled:opacity-25 active:bg-[var(--preview-pdf-btn-active-bg)] hover:bg-[var(--preview-pdf-btn-hover-bg)]"
+            className="mobilePdfToolbarButton flex h-[clamp(2rem,4.05vw,2.25rem)] w-[clamp(2rem,4.05vw,2.25rem)] items-center justify-center rounded-full
+                       [background:var(--preview-pdf-btn-bg)] text-[var(--preview-pdf-btn-text)] shadow-[var(--neu-control-shadow)] transition-[background,box-shadow]
+                       disabled:opacity-25 active:[background:var(--preview-pdf-btn-active-bg)] active:shadow-[var(--neu-pressed-shadow)] hover:[background:var(--preview-pdf-btn-hover-bg)]"
             aria-label="下一页"
             data-oid="86hhplk"
           >

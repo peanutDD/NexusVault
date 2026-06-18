@@ -7,6 +7,7 @@
     "tauri": "tauri",
     "dev": "vite --port 5173",
     "build": "tsc -b && vite build",
+    "build:tauri": "tsc -b && vite build --mode tauri",
     "android:env": "zsh ./scripts/android-env.zsh",
     "android:env:print": "zsh ./scripts/android-env.zsh --print",
     "android:env:persist": "zsh ./scripts/android-env.zsh --persist",

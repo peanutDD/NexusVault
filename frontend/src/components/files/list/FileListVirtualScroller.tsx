@@ -29,6 +29,11 @@ interface FileListVirtualScrollerProps {
   onRenameFolder: (folder: Folder) => void;
   onRenameFile: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
+  onShowActivity?: (file: FileMetadata) => void;
+  onShowVersions?: (file: FileMetadata) => void;
+  onManageTags?: (file: FileMetadata) => void;
+  onToggleFavorite?: (file: FileMetadata) => void;
+  onTogglePinned?: (file: FileMetadata) => void;
   onFileDragStart: (fileId: string, e: DragEvent) => void;
   onDropOnFolder: (
     folderId: string,
@@ -60,6 +65,11 @@ export default function FileListVirtualScroller({
   onRenameFolder,
   onRenameFile,
   onDelete,
+  onShowActivity,
+  onShowVersions,
+  onManageTags,
+  onToggleFavorite,
+  onTogglePinned,
   onFileDragStart,
   onDropOnFolder,
   onToggleFileMenu,
@@ -97,6 +107,11 @@ export default function FileListVirtualScroller({
           onRenameFolder={onRenameFolder}
           onRenameFile={onRenameFile}
           onDelete={onDelete}
+          onShowActivity={onShowActivity}
+          onShowVersions={onShowVersions}
+          onManageTags={onManageTags}
+          onToggleFavorite={onToggleFavorite}
+          onTogglePinned={onTogglePinned}
           onFileDragStart={onFileDragStart}
           onDropOnFolder={onDropOnFolder}
           openFileMenuId={openFileMenuId}
@@ -122,6 +137,11 @@ export default function FileListVirtualScroller({
         onRenameFolder={onRenameFolder}
         onRenameFile={onRenameFile}
         onDelete={onDelete}
+        onShowActivity={onShowActivity}
+        onShowVersions={onShowVersions}
+        onManageTags={onManageTags}
+        onToggleFavorite={onToggleFavorite}
+        onTogglePinned={onTogglePinned}
         onFileDragStart={onFileDragStart}
         onDropOnFolder={onDropOnFolder}
         openFileMenuId={openFileMenuId}
@@ -158,6 +178,11 @@ export default function FileListVirtualScroller({
           onDownload={onDownloadFile}
           onRename={onRenameFile}
           onDelete={onDelete}
+          onShowActivity={onShowActivity}
+          onShowVersions={onShowVersions}
+          onManageTags={onManageTags}
+          onToggleFavorite={onToggleFavorite}
+          onTogglePinned={onTogglePinned}
           onDragStart={onFileDragStart}
           onMobileFileDrop={handleMobileFileDrop}
           openFileMenuId={openFileMenuId}
@@ -175,6 +200,11 @@ export default function FileListVirtualScroller({
           onDownload={onDownloadFile}
           onRename={onRenameFile}
           onDelete={onDelete}
+          onShowActivity={onShowActivity}
+          onShowVersions={onShowVersions}
+          onManageTags={onManageTags}
+          onToggleFavorite={onToggleFavorite}
+          onTogglePinned={onTogglePinned}
           onDragStart={onFileDragStart}
           onMobileFileDrop={handleMobileFileDrop}
           openFileMenuId={openFileMenuId}

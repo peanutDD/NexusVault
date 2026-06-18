@@ -19,8 +19,11 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     files,
     folderPath,
     search,
+    searchMetadata,
     mimeType,
     sortBy,
+    activeCollection,
+    activeTagId,
     selectedFiles,
     selectedFolders,
     selectedFileIds,
@@ -46,6 +49,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     handleSearchChange,
     handleMimeTypeChange,
     handleSortChange,
+    handleCollectionChange,
+    handleResetFilters,
+    handleTagChange,
     toggleSelectAll,
     handleSelectFile,
     handleSelectFolder,
@@ -170,7 +176,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     >
       {/* 头部组件：包含面包屑和工具栏 */}
       <Suspense
-        fallback={<div className="h-[5.25rem] sm:h-[6rem]" data-oid="r-g:0nh" />}
+        fallback={<div className="h-[var(--filelist-header-skeleton-height)]" data-oid="r-g:0nh" />}
         data-oid="3jfxvzo"
       >
         <FileListHeader
@@ -203,6 +209,9 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       >
         <FileListContent
           files={files}
+          searchQuery={search}
+          searchMetadata={searchMetadata}
+          mimeType={mimeType}
           selectedFiles={selectedFiles}
           selectedFolders={selectedFolders}
           currentFolderId={currentFolderId}
@@ -239,6 +248,11 @@ export default function FileList({ onOpenUpload }: FileListProps) {
           setPreviewFile={setPreviewFile}
           setShareFile={setShareFile}
           batchDownloading={batchDownloading}
+          activeCollection={activeCollection}
+          activeTagId={activeTagId}
+          onCollectionChange={handleCollectionChange}
+          onResetFilters={handleResetFilters}
+          onTagChange={handleTagChange}
           data-oid="kdv9r9i"
         />
       </Suspense>

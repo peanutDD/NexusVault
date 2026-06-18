@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, useMemo } from "react";
-import { Check, Key, Copy, Trash2, X } from "lucide-react";
+import { Key, Copy, Pencil, Save, Trash2, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,8 +14,9 @@ import {
   settingsLabelClass,
   settingsPanelClass,
   settingsPrimaryButtonClass,
+  settingsSecondaryButtonClass,
 } from "./settingsUi";
-import { useApiTokens, useCreateApiToken, useDeleteApiToken } from "../../hooks/useApiTokens";
+import { useApiTokens, useCreateApiToken, useDeleteApiToken, useUpdateApiToken } from "../../hooks/useApiTokens";
 import { useClipboard } from "../../hooks/useClipboard";
 import { getErrorMessage } from "../../utils/error";
 
@@ -31,6 +32,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
   const { data: apiTokens = [], isLoading: tokensLoading } = useApiTokens();
   const createTokenMutation = useCreateApiToken();
   const deleteTokenMutation = useDeleteApiToken();
+  const updateTokenMutation = useUpdateApiToken();
   const { copy: copyToClipboard } = useClipboard();
 
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,15 @@ const ApiTokenSection = memo(function ApiTokenSection() {
   const [createdTokenValue, setCreatedTokenValue] = useState<string | null>(null);
   const [showCreatedTokenValue, setShowCreatedTokenValue] = useState(false);
   const [pendingDeleteToken, setPendingDeleteToken] = useState<ApiToken | null>(null);
+  const [editingToken, setEditingToken] = useState<ApiToken | null>(null);
+  const [editTokenName, setEditTokenName] = useState("");
+  const [editWebDavEnabled, setEditWebDavEnabled] = useState(true);
+  const [editWebDavReadOnly, setEditWebDavReadOnly] = useState(false);
+  const [editWebDavRootFolderId, setEditWebDavRootFolderId] = useState("");
+  const [tokenListExpanded, setTokenListExpanded] = useState(false);
+  const hasCollapsedTokens = apiTokens.length > 5;
+  const visibleTokens =
+    hasCollapsedTokens && !tokenListExpanded ? apiTokens.slice(0, 5) : apiTokens;
 
   const tokenSchema = useMemo(() => {
     return z.object({
@@ -120,6 +131,53 @@ const ApiTokenSection = memo(function ApiTokenSection() {
     });
   }, [deleteTokenMutation, pendingDeleteToken]);
 
+  const beginEditToken = useCallback((token: ApiToken) => {
+    setEditingToken(token);
+    setEditTokenName(token.name);
+    setEditWebDavEnabled(token.webdav_enabled);
+    setEditWebDavReadOnly(token.webdav_read_only);
+    setEditWebDavRootFolderId(token.webdav_root_folder_id ?? "");
+    setError(null);
+    setSuccess(null);
+  }, []);
+
+  const cancelEditToken = useCallback(() => {
+    setEditingToken(null);
+  }, []);
+
+  const saveEditToken = useCallback(() => {
+    if (!editingToken) return;
+    setError(null);
+    setSuccess(null);
+    updateTokenMutation.mutate(
+      {
+        tokenId: editingToken.id,
+        data: {
+          name: editTokenName.trim(),
+          webdav_enabled: editWebDavEnabled,
+          webdav_read_only: editWebDavReadOnly,
+          webdav_root_folder_id: editWebDavRootFolderId.trim() || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          setSuccess("API Token updated");
+          setEditingToken(null);
+        },
+        onError: (err) => {
+          setError(getErrorMessage(err, "Failed to update API Token"));
+        },
+      },
+    );
+  }, [
+    editTokenName,
+    editWebDavEnabled,
+    editWebDavReadOnly,
+    editWebDavRootFolderId,
+    editingToken,
+    updateTokenMutation,
+  ]);
+
   const handleCopyClick = useCallback(async () => {
     if (createdTokenValue) {
       const ok = await copyToClipboard(createdTokenValue);
@@ -138,7 +196,10 @@ const ApiTokenSection = memo(function ApiTokenSection() {
     setCreatedTokenValue(null);
   }, []);
 
-  const loading = createTokenMutation.isPending || deleteTokenMutation.isPending;
+  const loading =
+    createTokenMutation.isPending ||
+    deleteTokenMutation.isPending ||
+    updateTokenMutation.isPending;
 
   return (
     <SettingsCard
@@ -215,7 +276,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
         <form
           onSubmit={handleSubmit(handleCreateToken)}
           noValidate
-          className="grid gap-[clamp(0.78rem,1.8vw,1rem)] lg:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)]"
+          className="grid gap-[clamp(0.78rem,1.8vw,1rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,0.42fr)]"
           data-oid="l01z3qa"
         >
           <div data-oid="gier:.r">
@@ -263,7 +324,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
           <div className="grid gap-[clamp(0.585rem,1.35vw,0.75rem)] sm:grid-cols-2 lg:col-span-2">
             <label
               data-testid="webdav-enabled-option"
-              className="group relative grid cursor-pointer grid-cols-[clamp(2.1rem,4vw,2.4rem)_minmax(0,1fr)] gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.85rem)] text-[var(--settings-panel-value)] transition-colors hover:border-[var(--settings-panel-border-hover)] hover:bg-[var(--settings-kpi-bg)] has-[:checked]:border-[var(--settings-secondary-border-hover)] has-[:checked]:bg-[var(--settings-secondary-bg)]"
+              className="group relative grid cursor-pointer grid-cols-[clamp(2.1rem,4vw,2.4rem)_minmax(0,1fr)] gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] [background:var(--settings-panel-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.85rem)] text-[var(--settings-panel-value)] shadow-[var(--settings-panel-shadow)] transition-[border-color,box-shadow,background] hover:border-[var(--settings-panel-border-hover)] hover:bg-[var(--settings-kpi-bg)] hover:[background:var(--settings-kpi-bg)] has-[:checked]:border-[var(--settings-secondary-border-hover)] has-[:checked]:bg-[var(--settings-secondary-bg)] has-[:checked]:[background:var(--settings-secondary-bg)] has-[:checked]:shadow-[var(--settings-secondary-shadow)]"
             >
               <input
                 type="checkbox"
@@ -272,13 +333,8 @@ const ApiTokenSection = memo(function ApiTokenSection() {
               />
               <span
                 aria-hidden="true"
-                className="mt-[clamp(0.1rem,0.25vw,0.15rem)] flex h-[clamp(1.7rem,3.2vw,1.9rem)] w-[clamp(1.7rem,3.2vw,1.9rem)] items-center justify-center rounded-[clamp(0.55rem,1.2vw,0.65rem)] border border-[var(--settings-chip-border)] bg-[var(--settings-form-input-bg)] text-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all peer-checked:border-[var(--settings-secondary-border-hover)] peer-checked:bg-[var(--settings-secondary-bg-hover)] peer-checked:text-[var(--settings-secondary-text)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--settings-form-input-ring)]"
-              >
-                <Check
-                  className="h-[clamp(0.9rem,1.8vw,1rem)] w-[clamp(0.9rem,1.8vw,1rem)] stroke-[2.6]"
-                  aria-hidden="true"
-                />
-              </span>
+                className="settings-color-checkbox-indicator mt-[clamp(0.1rem,0.25vw,0.15rem)] flex h-[clamp(1.7rem,3.2vw,1.9rem)] w-[clamp(1.7rem,3.2vw,1.9rem)] items-center justify-center rounded-[clamp(0.55rem,1.2vw,0.65rem)] border border-[var(--settings-chip-border)] [background:var(--settings-form-input-bg)] text-transparent shadow-[var(--settings-form-input-shadow)] transition-all peer-checked:border-[var(--settings-secondary-border-hover)] peer-checked:[background:var(--settings-action-bg)] peer-checked:text-transparent peer-checked:shadow-[var(--settings-action-shadow-active)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--settings-form-input-ring)]"
+              />
               <span className="min-w-0">
                 <span className="font-brand block text-[length:var(--settings-text-sm)] font-semibold tracking-wide">
                   Enable WebDAV
@@ -290,7 +346,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
             </label>
             <label
               data-testid="webdav-readonly-option"
-              className="group relative grid cursor-pointer grid-cols-[clamp(2.1rem,4vw,2.4rem)_minmax(0,1fr)] gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.85rem)] text-[var(--settings-panel-value)] transition-colors hover:border-[var(--settings-panel-border-hover)] hover:bg-[var(--settings-kpi-bg)] has-[:checked]:border-[var(--settings-secondary-border-hover)] has-[:checked]:bg-[var(--settings-secondary-bg)]"
+              className="group relative grid cursor-pointer grid-cols-[clamp(2.1rem,4vw,2.4rem)_minmax(0,1fr)] gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] [background:var(--settings-panel-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.85rem)] text-[var(--settings-panel-value)] shadow-[var(--settings-panel-shadow)] transition-[border-color,box-shadow,background] hover:border-[var(--settings-panel-border-hover)] hover:bg-[var(--settings-kpi-bg)] hover:[background:var(--settings-kpi-bg)] has-[:checked]:border-[var(--settings-secondary-border-hover)] has-[:checked]:bg-[var(--settings-secondary-bg)] has-[:checked]:[background:var(--settings-secondary-bg)] has-[:checked]:shadow-[var(--settings-secondary-shadow)]"
             >
               <input
                 type="checkbox"
@@ -299,13 +355,8 @@ const ApiTokenSection = memo(function ApiTokenSection() {
               />
               <span
                 aria-hidden="true"
-                className="mt-[clamp(0.1rem,0.25vw,0.15rem)] flex h-[clamp(1.7rem,3.2vw,1.9rem)] w-[clamp(1.7rem,3.2vw,1.9rem)] items-center justify-center rounded-[clamp(0.55rem,1.2vw,0.65rem)] border border-[var(--settings-chip-border)] bg-[var(--settings-form-input-bg)] text-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all peer-checked:border-[var(--settings-secondary-border-hover)] peer-checked:bg-[var(--settings-secondary-bg-hover)] peer-checked:text-[var(--settings-secondary-text)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--settings-form-input-ring)]"
-              >
-                <Check
-                  className="h-[clamp(0.9rem,1.8vw,1rem)] w-[clamp(0.9rem,1.8vw,1rem)] stroke-[2.6]"
-                  aria-hidden="true"
-                />
-              </span>
+                className="settings-color-checkbox-indicator mt-[clamp(0.1rem,0.25vw,0.15rem)] flex h-[clamp(1.7rem,3.2vw,1.9rem)] w-[clamp(1.7rem,3.2vw,1.9rem)] items-center justify-center rounded-[clamp(0.55rem,1.2vw,0.65rem)] border border-[var(--settings-chip-border)] [background:var(--settings-form-input-bg)] text-transparent shadow-[var(--settings-form-input-shadow)] transition-all peer-checked:border-[var(--settings-secondary-border-hover)] peer-checked:[background:var(--settings-action-bg)] peer-checked:text-transparent peer-checked:shadow-[var(--settings-action-shadow-active)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--settings-form-input-ring)]"
+              />
               <span className="min-w-0">
                 <span className="font-brand block text-[length:var(--settings-text-sm)] font-semibold tracking-wide">
                   WebDAV read-only
@@ -340,7 +391,7 @@ const ApiTokenSection = memo(function ApiTokenSection() {
             <button
               type="submit"
               disabled={loading}
-              className={settingsPrimaryButtonClass("w-full sm:w-auto sm:min-w-[10rem]")}
+              className={settingsPrimaryButtonClass("w-full md:w-auto")}
               data-oid="qabeet7"
             >
               {createTokenMutation.isPending ? "Creating..." : "Create token"}
@@ -438,108 +489,238 @@ const ApiTokenSection = memo(function ApiTokenSection() {
             </p>
           </div>
         ) : (
-          <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="aqr55vy">
-            {apiTokens.map((token) => (
+          <div>
+            {hasCollapsedTokens && (
               <div
-                key={token.id}
-                className={cn(
-                  settingsPanelClass(),
-                  "hover:border-[var(--settings-panel-border-hover)] transition-colors",
-                )}
-                data-oid="r:tjzmm"
+                data-testid="existing-token-collapse-row"
+                className="mb-[clamp(0.585rem,1.35vw,0.75rem)] flex flex-row items-center justify-between gap-[clamp(0.39rem,0.9vw,0.5rem)]"
               >
-                <div
-                  className="flex items-start justify-between gap-[clamp(0.585rem,1.35vw,0.75rem)]"
-                  data-oid="uit:r1:"
+                <p
+                  data-testid="existing-token-collapse-summary"
+                  className="font-brand min-w-0 truncate text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-section-subtitle)]"
                 >
-                  <div className="min-w-0 flex-1" data-oid="ec9rooh">
-                    <div className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="oou06jt">
-                      <h4
-                        className="truncate text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
-                        data-oid="ga42q36"
-                      >
-                        {token.name}
-                      </h4>
-                      {token.expires_at &&
-                        new Date(token.expires_at) < new Date() && (
-                          <span
-                            className="font-brand rounded-full border border-[var(--settings-expired-border)] bg-[var(--settings-expired-bg)] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-expired-text)]"
-                            data-oid="f6orwcm"
-                          >
-                            Expired
-                          </span>
-                        )}
-                    </div>
-                    <div
-                      className="mt-[clamp(0.39rem,0.9vw,0.5rem)] grid gap-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)] sm:grid-cols-2"
-                      data-oid="zanp7p:"
-                    >
-                      <p
-                        className="font-brand font-normal tracking-wide"
-                        data-oid="bln6ddu"
-                      >
-                        Created: {new Date(token.created_at).toLocaleString()}
-                      </p>
-                      {token.last_used_at ? (
-                        <p
-                          className="font-brand font-normal tracking-wide"
-                          data-oid="keu..s7"
-                        >
-                          Last used:{" "}
-                          {new Date(token.last_used_at).toLocaleString()}
-                        </p>
-                      ) : (
-                        <p
-                          className="font-brand font-normal tracking-wide"
-                          data-oid="j4m-3vs"
-                        >
-                          Last used: -
-                        </p>
-                      )}
-                      <p
-                        className="font-brand sm:col-span-2 font-normal tracking-wide"
-                        data-oid="_yyzdgl"
-                      >
-                        Expires:
-                        {token.expires_at ? (
-                          <> {new Date(token.expires_at).toLocaleString()}</>
-                        ) : (
-                          " Never"
-                        )}
-                      </p>
-                      <p className="font-brand font-normal tracking-wide">
-                        WebDAV: {token.webdav_enabled ? "Enabled" : "Disabled"}
-                      </p>
-                      <p className="font-brand font-normal tracking-wide">
-                        Mode: {token.webdav_read_only ? "Read-only" : "Read/write"}
-                      </p>
-                      <p className="font-brand sm:col-span-2 font-normal tracking-wide">
-                        Root: {token.webdav_root_folder_id ?? "Full account"}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPendingDeleteToken(token)}
-                    disabled={loading}
-                    className={cn(
-                      "inline-flex items-center justify-center gap-[clamp(0.39rem,0.9vw,0.5rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[length:var(--settings-text-sm)] font-semibold",
-                      "border border-[var(--settings-danger-button-border)] bg-[var(--settings-danger-button-bg)] text-[var(--settings-danger-button-text)]",
-                      "hover:bg-[var(--settings-danger-button-bg-hover)] hover:border-[var(--settings-danger-button-border-hover)]",
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                    )}
-                    data-oid="novnj:6"
-                  >
-                    <Trash2
-                      className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]"
-                      aria-hidden="true"
-                      data-oid="8uqj4qt"
-                    />
-                    Delete
-                  </button>
-                </div>
+                  {tokenListExpanded
+                    ? `Showing all ${apiTokens.length} tokens`
+                    : `Showing 5 of ${apiTokens.length} tokens`}
+                </p>
+                <button
+                  type="button"
+                  className={settingsSecondaryButtonClass(
+                    "existingTokenNeuButton w-fit shrink-0 rounded-[clamp(0.55rem,1.2vw,0.65rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.2925rem,0.7vw,0.375rem)] text-[length:var(--settings-text-xs)] tracking-wide",
+                  )}
+                  onClick={() => setTokenListExpanded((expanded) => !expanded)}
+                >
+                  {tokenListExpanded
+                    ? "Show less"
+                    : `Show all ${apiTokens.length} tokens`}
+                </button>
               </div>
-            ))}
+            )}
+            <div
+              data-testid="existing-token-list-frame"
+              className={settingsPanelClass(
+                "existingTokenInsetFrame max-h-[clamp(22rem,55dvh,34rem)] overflow-y-auto rounded-[clamp(0.8rem,1.8vw,1rem)] p-[clamp(0.585rem,1.35vw,0.75rem)]",
+              )}
+            >
+              <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="aqr55vy">
+                {visibleTokens.map((token) => (
+                  <div
+                    key={token.id}
+                    className={cn(
+                      settingsPanelClass(),
+                      "existingTokenInsetRow overflow-hidden transition-[background,box-shadow,filter] hover:[filter:brightness(1.03)]",
+                    )}
+                    data-testid={`existing-token-row-${token.id}`}
+                    data-oid="r:tjzmm"
+                  >
+                    <div
+                      data-testid={`existing-token-main-row-${token.id}`}
+                      className="flex flex-col items-stretch justify-between gap-[clamp(0.585rem,1.35vw,0.75rem)] sm:flex-row sm:items-start"
+                      data-oid="uit:r1:"
+                    >
+                      <div className="min-w-0 flex-1" data-oid="ec9rooh">
+                        <div className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="oou06jt">
+                          <h4
+                            className="truncate text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
+                            data-oid="ga42q36"
+                          >
+                            {token.name}
+                          </h4>
+                          {token.expires_at &&
+                            new Date(token.expires_at) < new Date() && (
+                              <span
+                                className="font-brand rounded-full border border-[var(--settings-expired-border)] bg-[var(--settings-expired-bg)] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-expired-text)]"
+                                data-oid="f6orwcm"
+                              >
+                                Expired
+                              </span>
+                            )}
+                        </div>
+                        <div
+                          data-testid={`existing-token-meta-grid-${token.id}`}
+                          className="mt-[clamp(0.39rem,0.9vw,0.5rem)] grid grid-cols-1 gap-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-panel-muted)] sm:grid-cols-2"
+                          data-oid="zanp7p:"
+                        >
+                          <p
+                            className="font-brand font-normal tracking-wide"
+                            data-oid="bln6ddu"
+                          >
+                            Created: {new Date(token.created_at).toLocaleString()}
+                          </p>
+                          {token.last_used_at ? (
+                            <p
+                              className="font-brand font-normal tracking-wide"
+                              data-oid="keu..s7"
+                            >
+                              Last used:{" "}
+                              {new Date(token.last_used_at).toLocaleString()}
+                            </p>
+                          ) : (
+                            <p
+                              className="font-brand font-normal tracking-wide"
+                              data-oid="j4m-3vs"
+                            >
+                              Last used: -
+                            </p>
+                          )}
+                          <p
+                            className="font-brand sm:col-span-2 font-normal tracking-wide"
+                            data-oid="_yyzdgl"
+                          >
+                            Expires:
+                            {token.expires_at ? (
+                              <> {new Date(token.expires_at).toLocaleString()}</>
+                            ) : (
+                              " Never"
+                            )}
+                          </p>
+                          <p className="font-brand font-normal tracking-wide">
+                            WebDAV: {token.webdav_enabled ? "Enabled" : "Disabled"}
+                          </p>
+                          <p className="font-brand font-normal tracking-wide">
+                            Mode: {token.webdav_read_only ? "Read-only" : "Read/write"}
+                          </p>
+                          <p className="font-brand sm:col-span-2 font-normal tracking-wide">
+                            Root: {token.webdav_root_folder_id ?? "Full account"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex w-full flex-col gap-[clamp(0.39rem,0.9vw,0.5rem)] sm:w-auto sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => beginEditToken(token)}
+                          disabled={loading}
+                          aria-label={`Edit ${token.name}`}
+                          className={cn(
+                            "existingTokenFlatAction existingTokenFlatAction--edit inline-flex w-full items-center justify-center gap-[clamp(0.28rem,0.7vw,0.38rem)] rounded-full px-[clamp(0.58rem,1.35vw,0.74rem)] py-[clamp(0.3rem,0.78vw,0.4rem)] text-[length:var(--settings-text-xs)] font-semibold sm:w-auto",
+                            "transition-[background,color,filter] duration-150 disabled:cursor-not-allowed disabled:opacity-60",
+                          )}
+                        >
+                          <Pencil
+                            className="h-[clamp(0.68rem,1.55vw,0.82rem)] w-[clamp(0.68rem,1.55vw,0.82rem)]"
+                            aria-hidden="true"
+                          />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPendingDeleteToken(token)}
+                          disabled={loading}
+                          aria-label={`Delete ${token.name}`}
+                          className={cn(
+                            "existingTokenFlatAction existingTokenFlatAction--delete inline-flex w-full items-center justify-center gap-[clamp(0.28rem,0.7vw,0.38rem)] rounded-full px-[clamp(0.58rem,1.35vw,0.74rem)] py-[clamp(0.3rem,0.78vw,0.4rem)] text-[length:var(--settings-text-xs)] font-semibold sm:w-auto",
+                            "transition-[background,color,filter] duration-150 disabled:cursor-not-allowed disabled:opacity-60",
+                          )}
+                          data-oid="novnj:6"
+                        >
+                          <Trash2
+                            className="h-[clamp(0.68rem,1.55vw,0.82rem)] w-[clamp(0.68rem,1.55vw,0.82rem)]"
+                            aria-hidden="true"
+                            data-oid="8uqj4qt"
+                          />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    {editingToken?.id === token.id && (
+                      <div className="mt-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-panel-border)] [background:var(--settings-form-input-bg)] p-[clamp(0.78rem,1.8vw,1rem)] shadow-[var(--settings-form-input-shadow)]">
+                        <div className="grid gap-[clamp(0.78rem,1.8vw,1rem)] lg:grid-cols-2">
+                          <div>
+                            <label htmlFor={`edit-token-name-${token.id}`} className={settingsLabelClass()}>
+                              Edit token name
+                            </label>
+                            <input
+                              id={`edit-token-name-${token.id}`}
+                              value={editTokenName}
+                              onChange={(event) => setEditTokenName(event.target.value)}
+                              className={settingsInputClass(false)}
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`edit-token-root-${token.id}`} className={settingsLabelClass()}>
+                              Edit WebDAV root folder ID
+                            </label>
+                            <input
+                              id={`edit-token-root-${token.id}`}
+                              value={editWebDavRootFolderId}
+                              onChange={(event) => setEditWebDavRootFolderId(event.target.value)}
+                              placeholder="Full account"
+                              className={settingsInputClass(false)}
+                            />
+                          </div>
+                          <label className="group relative grid cursor-pointer grid-cols-[clamp(2.1rem,4vw,2.4rem)_minmax(0,1fr)] gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border border-[var(--settings-panel-border)] [background:var(--settings-panel-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.85rem)] text-[var(--settings-panel-value)] shadow-[var(--settings-panel-shadow)]">
+                            <input
+                              type="checkbox"
+                              checked={editWebDavEnabled}
+                              onChange={(event) => setEditWebDavEnabled(event.target.checked)}
+                              className="peer sr-only"
+                            />
+                            <span aria-hidden="true" className="settings-color-checkbox-indicator mt-[clamp(0.1rem,0.25vw,0.15rem)] flex h-[clamp(1.7rem,3.2vw,1.9rem)] w-[clamp(1.7rem,3.2vw,1.9rem)] rounded-[clamp(0.55rem,1.2vw,0.65rem)] border border-[var(--settings-chip-border)] [background:var(--settings-form-input-bg)] shadow-[var(--settings-form-input-shadow)] peer-checked:[background:var(--settings-action-bg)]" />
+                            <span>
+                              <span className="block text-[length:var(--settings-text-sm)] font-semibold">
+                                Edit WebDAV enabled
+                              </span>
+                            </span>
+                          </label>
+                          <label className="group relative grid cursor-pointer grid-cols-[clamp(2.1rem,4vw,2.4rem)_minmax(0,1fr)] gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border border-[var(--settings-panel-border)] [background:var(--settings-panel-bg)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.85rem)] text-[var(--settings-panel-value)] shadow-[var(--settings-panel-shadow)]">
+                            <input
+                              type="checkbox"
+                              checked={editWebDavReadOnly}
+                              onChange={(event) => setEditWebDavReadOnly(event.target.checked)}
+                              className="peer sr-only"
+                            />
+                            <span aria-hidden="true" className="settings-color-checkbox-indicator mt-[clamp(0.1rem,0.25vw,0.15rem)] flex h-[clamp(1.7rem,3.2vw,1.9rem)] w-[clamp(1.7rem,3.2vw,1.9rem)] rounded-[clamp(0.55rem,1.2vw,0.65rem)] border border-[var(--settings-chip-border)] [background:var(--settings-form-input-bg)] shadow-[var(--settings-form-input-shadow)] peer-checked:[background:var(--settings-action-bg)]" />
+                            <span>
+                              <span className="block text-[length:var(--settings-text-sm)] font-semibold">
+                                Edit WebDAV read-only
+                              </span>
+                            </span>
+                          </label>
+                        </div>
+                        <div className="mt-[clamp(0.78rem,1.8vw,1rem)] flex flex-col gap-[clamp(0.39rem,0.9vw,0.5rem)] sm:flex-row sm:justify-end">
+                          <button
+                            type="button"
+                            onClick={cancelEditToken}
+                            className={settingsSecondaryButtonClass("inline-flex items-center justify-center")}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={saveEditToken}
+                            disabled={loading}
+                            className={settingsPrimaryButtonClass("inline-flex items-center justify-center gap-[clamp(0.39rem,0.9vw,0.5rem)]")}
+                          >
+                            <Save className="h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]" aria-hidden="true" />
+                            Save token changes
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

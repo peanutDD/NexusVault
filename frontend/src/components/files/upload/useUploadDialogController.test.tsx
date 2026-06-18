@@ -70,4 +70,51 @@ describe("useUploadDialogController", () => {
     expect(capturedSignal?.aborted).toBe(true);
     expect(result.current.uploadFiles).toHaveLength(0);
   });
+
+  it("allows selecting the same local file again after the previous row reached a terminal state", async () => {
+    uploadFileWithInstant.mockResolvedValue({
+      file: {
+        id: "file-1",
+        filename: "note.txt",
+        original_filename: "note.txt",
+        file_size: 5,
+        mime_type: "text/plain",
+        category: null,
+        folder_id: "folder-1",
+        created_at: "2026-05-29T00:00:00Z",
+        deleted_at: null,
+      },
+    });
+
+    const { result } = renderHook(
+      () =>
+        useUploadDialogController({
+          open: true,
+          onClose: vi.fn(),
+          onUploadComplete: vi.fn(),
+        }),
+      { wrapper },
+    );
+    const file = makeFile("note.txt");
+
+    act(() => result.current.appendFilesToState([file]));
+    await act(async () => {
+      await result.current.handleAttach();
+    });
+
+    await waitFor(() => {
+      expect(result.current.uploadFiles).toHaveLength(1);
+      expect(result.current.uploadFiles[0].status).toBe("success");
+    });
+
+    act(() => result.current.appendFilesToState([file]));
+
+    expect(result.current.uploadFiles).toHaveLength(2);
+    expect(result.current.uploadFiles[1]).toMatchObject({
+      name: "note.txt",
+      status: "pending",
+      progress: 0,
+    });
+    expect(result.current.duplicateWarning).toBe("");
+  });
 });

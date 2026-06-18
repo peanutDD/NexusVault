@@ -2,7 +2,15 @@ import api, { limitedApi } from './api';
 import { REQUEST } from '../constants';
 import { BatchRequestManager } from '../utils/batchRequest';
 import { buildQueryParams } from '../utils/queryParams';
-import type { FileListQuery, FileListResponse, FileMetadata, StorageUsage } from '../types/files';
+import type {
+  FileListQuery,
+  FileListResponse,
+  FileCollectionCounts,
+  FileCollectionCountsQuery,
+  FileMetadata,
+  FulltextSearchMetadata,
+  StorageUsage,
+} from '../types/files';
 
 interface FulltextSearchHit {
   file: FileMetadata;
@@ -16,7 +24,10 @@ interface FulltextSearchResponse {
   query: string;
   count: number;
   index_status?: 'ready' | 'fallback';
+  search?: FulltextSearchMetadata;
 }
+
+export const FILE_COLLECTION_COUNTS_QUERY_KEY = ["file-collection-counts"] as const;
 
 async function fetchFilesByIds(ids: string[]): Promise<(FileMetadata | null)[]> {
   if (ids.length === 0) return [];
@@ -31,6 +42,8 @@ const fileMetadataBatch = new BatchRequestManager<FileMetadata | null, 'metadata
   REQUEST.BATCH_DELAY_MS,
   fetchFilesByIds,
 );
+
+const LIST_QUERY_TIMEOUT_CONFIG = { timeout: REQUEST.LIST_QUERY_TIMEOUT_MS } as const;
 
 export const fileListService = {
   async getFilesByIds(ids: string[]): Promise<(FileMetadata | null)[]> {
@@ -49,9 +62,12 @@ export const fileListService = {
         limit: query?.limit,
         folder_id: query?.folder_id || undefined,
         mime_type: query?.mime_type,
+        tag_id: query?.tag_id,
+        collection: query?.collection,
       });
       const response = await limitedApi.get<FulltextSearchResponse>(
         `/api/files/search/fulltext?${params.toString()}`,
+        LIST_QUERY_TIMEOUT_CONFIG,
       );
       return {
         files: response.data.files.map((hit) => ({
@@ -63,6 +79,18 @@ export const fileListService = {
         total: response.data.count,
         page: query?.page ?? 1,
         limit: query?.limit,
+        search:
+          response.data.search ??
+          ({
+            index_status: response.data.index_status ?? 'ready',
+            count: response.data.count,
+            ocr: {
+              enabled: false,
+              pdf_max_pages: 0,
+              tesseract_available: false,
+              poppler_available: false,
+            },
+          } satisfies FulltextSearchMetadata),
       };
     }
 
@@ -83,7 +111,24 @@ export const fileListService = {
     }
 
     const params = buildQueryParams(q);
-    const response = await limitedApi.get<FileListResponse>(`/api/files?${params.toString()}`);
+    const response = await limitedApi.get<FileListResponse>(
+      `/api/files?${params.toString()}`,
+      LIST_QUERY_TIMEOUT_CONFIG,
+    );
+    return response.data;
+  },
+
+  async getCollectionCounts(query?: FileCollectionCountsQuery): Promise<FileCollectionCounts> {
+    const params = buildQueryParams({
+      folder_id: query?.folder_id,
+      search: query?.search?.trim() || undefined,
+      mime_type: query?.mime_type,
+    });
+    const suffix = params.toString();
+    const response = await api.get<FileCollectionCounts>(
+      `/api/files/collection-counts${suffix ? `?${suffix}` : ''}`,
+      LIST_QUERY_TIMEOUT_CONFIG,
+    );
     return response.data;
   },
 

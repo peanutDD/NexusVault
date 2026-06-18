@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { cn } from "../../../utils/cn";
 import { SpinnerIcon } from "./FilePreviewIcons";
 
@@ -6,6 +6,7 @@ interface VideoPreviewProps {
   blobUrl: string;
   useHls: boolean;
   loop: boolean;
+  rotation: number;
   videoReady: boolean;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   onReady: () => void;
@@ -16,6 +17,7 @@ export function VideoPreview({
   blobUrl,
   useHls,
   loop,
+  rotation,
   videoReady,
   videoRef,
   onReady,
@@ -46,10 +48,13 @@ export function VideoPreview({
         preload="metadata"
         poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3C/svg%3E"
         className={cn(
-          "pointer-events-auto max-h-full max-w-full rounded-[clamp(0.4rem,1vw,0.5rem)] object-contain shadow-2xl transition-opacity duration-200 cursor-pointer",
+          "pointer-events-auto max-h-full max-w-full origin-center transform-[rotate(var(--preview-rotation))] rounded-[clamp(0.4rem,1vw,0.5rem)] object-contain shadow-2xl transition-[opacity,transform] duration-200 ease-out cursor-pointer",
           videoReady ? "opacity-100" : "opacity-0",
         )}
-        style={{ backgroundColor: "transparent" }}
+        style={{
+          "--preview-rotation": `${rotation}deg`,
+          backgroundColor: "transparent",
+        } as CSSProperties}
         onClick={(e) => e.stopPropagation()}
         onLoadedMetadata={onReady}
         onLoadedData={onReady}

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { fileService } from '../../services/files';
+import { FILE_COLLECTION_COUNTS_QUERY_KEY } from '../../services/fileListService';
 import { folderService } from '../../services/folders';
 import type { FileListResponse } from '../../types/files';
 import type { FolderContentsResponse } from '../../types/folders';
@@ -56,6 +57,7 @@ export function useFileMutations() {
       // 下次用户切换页面/窗口聚焦时会自动重新获取最新数据。
       void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
       void queryClient.invalidateQueries({ queryKey: ['trash'], refetchType: 'none' });
+      void queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY });
     },
   });
 
@@ -91,6 +93,7 @@ export function useFileMutations() {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
       void queryClient.invalidateQueries({ queryKey: ['trash'], refetchType: 'none' });
+      void queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY });
     },
   });
 
@@ -118,6 +121,7 @@ export function useFileMutations() {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['folders'], refetchType: 'none' });
       void queryClient.invalidateQueries({ queryKey: ['files'], refetchType: 'none' });
+      void queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY });
     },
   });
 
@@ -133,6 +137,7 @@ export function useFileMutations() {
     mutationFn: ({ id, name }: { id: string; name: string }) => fileService.renameFile(id, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['files'] });
+      queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY });
     },
   });
 
@@ -149,6 +154,7 @@ export function useFileMutations() {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({ queryKey: ['folders', 'contents'] });
       queryClient.invalidateQueries({ queryKey: ['files'] });
+      queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY });
     },
   });
 

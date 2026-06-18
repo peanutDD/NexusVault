@@ -82,6 +82,41 @@
     }
 }
 
+.neuromorphic-style .uploadProgressTrack,
+.neuromorphic-style .uploadProgressTrack {
+    border: 0;
+    background: var(--neu-inset-bg);
+    box-shadow: var(--neu-inset-shadow);
+    padding: clamp(0.04rem, 0.12vw, 0.0625rem);
+}
+
+.neuromorphic-style .uploadProgress,
+.neuromorphic-style .uploadProgress {
+    background: transparent;
+}
+
+.neuromorphic-style .uploadProgress::-webkit-progress-bar,
+.neuromorphic-style .uploadProgress::-webkit-progress-bar {
+    background: transparent;
+    box-shadow: none;
+}
+
+.neuromorphic-style .uploadProgress::-webkit-progress-value,
+.neuromorphic-style .uploadProgress::-webkit-progress-value {
+    background-image: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    background-size: 100% 100%;
+    box-shadow: none;
+    animation: none;
+}
+
+.neuromorphic-style .uploadProgress::-moz-progress-bar,
+.neuromorphic-style .uploadProgress::-moz-progress-bar {
+    background-image: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+    background-size: 100% 100%;
+    box-shadow: none;
+    animation: none;
+}
+
 .uploadFileItemCyber {
     border: 1px solid var(--upload-tech-border);
     box-shadow:
@@ -114,7 +149,192 @@
         color-mix(in srgb, var(--upload-accent) 18%, transparent);
 }
 
+.uploadFileItemThumbnail {
+    display: block;
+}
+
+.uploadFileItemNameTooltipTrigger {
+    cursor: default;
+    outline: none;
+}
+
+.uploadFileItemNameTooltipTrigger:focus-visible {
+    border-radius: clamp(0.35rem, 0.8vw, 0.4375rem);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--upload-accent) 34%, transparent);
+}
+
+.uploadFilenameTooltip {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    transform: translateY(-100%);
+    transition:
+        opacity 90ms ease,
+        transform 90ms ease;
+    transition-delay: 0ms;
+    animation-name: uploadFilenameTooltipIn;
+    animation-duration: 90ms;
+    animation-timing-function: ease-out;
+}
+
+.uploadFilenameTooltipShell {
+    max-width: min(32.5rem, calc(100vw - 1.5rem));
+    border: 1px solid var(--upload-tooltip-ring);
+    border-radius: clamp(0.45rem, 1vw, 0.5rem);
+    background: var(--upload-tooltip-bg);
+    box-shadow:
+        0 clamp(0.65rem, 1.4vw, 0.9rem) clamp(1.4rem, 2.8vw, 1.8rem)
+            color-mix(in srgb, var(--upload-backdrop) 40%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--upload-text) 7%, transparent);
+    padding: clamp(0.42rem, 1vw, 0.5rem) clamp(0.58rem, 1.35vw, 0.75rem);
+}
+
+.uploadFilenameTooltipText {
+    display: block;
+    color: var(--upload-tooltip-text);
+    font-size: clamp(0.72rem, 1.65vw, 0.82rem);
+    font-weight: 650;
+    line-height: 1.34;
+    overflow-wrap: anywhere;
+}
+
+@keyframes uploadFilenameTooltipIn {
+    from {
+        opacity: 0;
+        transform: translateY(calc(-100% + 0.125rem));
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(-100%);
+    }
+}
+
 .uploadFileItemActionBtn {
     border: 1px solid var(--upload-item-action-border);
     backdrop-filter: blur(clamp(0.375rem, 0.8vw, 0.5rem));
+}
+
+.neuromorphic-style .uploadFileItemCyber,
+.neuromorphic-style .uploadFileItemCyber {
+    border-color: transparent;
+    background: var(--neu-raised-bg);
+    box-shadow: var(--neu-raised-sm-shadow);
+}
+
+.neuromorphic-style .uploadFileItemCyber::before,
+.neuromorphic-style .uploadFileItemCyber::before,
+.neuromorphic-style .uploadFileItemIconHighlight,
+.neuromorphic-style .uploadFileItemIconHighlight {
+    display: none;
+}
+
+.neuromorphic-style .uploadFileItemName,
+.neuromorphic-style .uploadFileItemName {
+    text-shadow: none;
+}
+
+.neuromorphic-style .uploadFileItemNameTooltipTrigger:focus-visible,
+.neuromorphic-style .uploadFileItemNameTooltipTrigger:focus-visible {
+    box-shadow: var(--neu-pressed-shadow);
+}
+
+.neuromorphic-style .uploadFilenameTooltipShell,
+.neuromorphic-style .uploadFilenameTooltipShell {
+    border: 0;
+    background: var(--neu-raised-bg);
+    box-shadow: var(--neu-raised-sm-shadow);
+}
+
+.neuromorphic-style .uploadFilenameTooltipText,
+.neuromorphic-style .uploadFilenameTooltipText {
+    color: var(--color-text-primary);
+}
+
+.neuromorphic-style .uploadFileItemIcon,
+.neuromorphic-style .uploadFileItemIcon {
+    border-color: transparent;
+    background: var(--neu-inset-bg) !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    backdrop-filter: none;
+}
+
+.neuromorphic-style .uploadFileItemActionBtn,
+.neuromorphic-style .uploadFileItemActionBtn {
+    border-color: transparent;
+    background: var(--neu-raised-bg);
+    box-shadow: var(--neu-raised-sm-shadow);
+    backdrop-filter: none;
+    color: var(--color-text-secondary);
+}
+
+.neuromorphic-style .uploadFileItemActionBtn:hover,
+.neuromorphic-style .uploadFileItemActionBtn:hover {
+    background: var(--neu-raised-bg);
+    color: var(--color-text-primary);
+}
+
+.neuromorphic-style .uploadFileItemActionBtn:active,
+.neuromorphic-style .uploadFileItemActionBtn:active {
+    box-shadow: var(--neu-pressed-shadow);
+    transform: translateY(0.0625rem);
+}
+
+.neuromorphic-style .uploadErrorTooltipShell,
+.neuromorphic-style .uploadErrorTooltipShell {
+    border: 0;
+    background: var(--neu-raised-bg) !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    outline: 0;
+}
+
+.neuromorphic-style .uploadErrorTooltipAccent,
+.neuromorphic-style .uploadErrorTooltipAccent {
+    display: none;
+}
+
+.neuromorphic-style .uploadErrorTooltipBody,
+.neuromorphic-style .uploadErrorTooltipBody {
+    border-radius: clamp(0.45rem, 1vw, 0.5rem);
+    background: var(--neu-inset-bg);
+    box-shadow: var(--neu-inset-shadow);
+    padding: clamp(0.585rem, 1.35vw, 0.75rem);
+}
+
+.neuromorphic-style .uploadErrorTooltipTitle,
+.neuromorphic-style .uploadErrorTooltipTitle {
+    color: rgba(var(--rgb-red-400), 0.94);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.neuromorphic-style .uploadErrorTooltipText,
+.neuromorphic-style .uploadErrorTooltipText {
+    color: var(--color-text-secondary);
+}
+
+.neuromorphic-style .uploadErrorTooltipClose,
+.neuromorphic-style .uploadErrorTooltipClose {
+    border-radius: clamp(0.45rem, 1vw, 0.5rem);
+    background: var(--neu-raised-bg);
+    box-shadow: var(--neu-raised-sm-shadow);
+    color: var(--color-text-muted);
+}
+
+.neuromorphic-style .uploadErrorTooltipClose:hover,
+.neuromorphic-style .uploadErrorTooltipClose:hover {
+    background: var(--neu-raised-bg);
+    color: var(--color-text-primary);
+}
+
+.neuromorphic-style .uploadErrorTooltipClose:active,
+.neuromorphic-style .uploadErrorTooltipClose:active {
+    box-shadow: var(--neu-pressed-shadow);
+    transform: translateY(0.0625rem);
+}
+
+.neuromorphic-style .uploadErrorTooltipArrow,
+.neuromorphic-style .uploadErrorTooltipArrow {
+    background: var(--neu-raised-bg);
+    box-shadow: var(--neu-raised-sm-shadow);
 }

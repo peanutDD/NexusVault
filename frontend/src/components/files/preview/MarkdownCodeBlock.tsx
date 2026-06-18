@@ -18,20 +18,21 @@ export default function MarkdownCodeBlock({
   return (
     <div
       className={cn(
-        "mb-[clamp(0.585rem,1.35vw,0.75rem)] overflow-hidden rounded-[clamp(0.3rem,0.8vw,0.375rem)] border",
-        "border-[var(--preview-markdown-codeblock-border)] bg-[var(--preview-markdown-codeblock-bg)]",
+        "previewMarkdownCodeBlock mb-[clamp(0.585rem,1.35vw,0.75rem)] overflow-hidden rounded-[clamp(0.3rem,0.8vw,0.375rem)] border backdrop-blur-xl",
+        "border-[var(--preview-markdown-codeblock-border)] [background:var(--preview-markdown-codeblock-bg)] shadow-[inset_0_1px_0_var(--preview-markdown-container-border)]",
       )}
+      data-testid="markdown-code-block"
     >
       <div
         className={cn(
           "flex items-center justify-between gap-[clamp(0.585rem,1.35vw,0.75rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)]",
-          "bg-[var(--preview-markdown-codeblock-header-bg)]",
+          "[background:var(--preview-markdown-codeblock-header-bg)]",
         )}
       >
         <span
           className={cn(
-            "rounded px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] text-[0.7rem] font-mono",
-            "bg-[var(--preview-markdown-codeblock-label-bg)] text-[var(--preview-markdown-codeblock-label-text)]",
+            "rounded px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--font-size-ui-3xs)] font-mono",
+            "[background:var(--preview-markdown-codeblock-label-bg)] text-[var(--preview-markdown-codeblock-label-text)] shadow-[var(--neu-inset-shadow)]",
           )}
         >
           {language ?? "text"}
@@ -40,16 +41,16 @@ export default function MarkdownCodeBlock({
           type="button"
           onClick={() => void copy(rawText)}
           className={cn(
-            "rounded px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] text-[0.7rem] transition-colors",
+            "rounded px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--font-size-ui-3xs)] transition-colors",
             copied
-              ? "bg-[var(--preview-markdown-codeblock-btn-copied-bg)] text-[var(--preview-markdown-codeblock-btn-copied-text)]"
-              : "bg-[var(--preview-markdown-codeblock-btn-bg)] text-[var(--preview-markdown-codeblock-btn-text)] hover:bg-[var(--preview-markdown-codeblock-btn-hover-bg)] hover:text-[var(--preview-markdown-codeblock-btn-hover-text)]",
+              ? "[background:var(--preview-markdown-codeblock-btn-copied-bg)] text-[var(--preview-markdown-codeblock-btn-copied-text)] shadow-[var(--neu-pressed-shadow)]"
+              : "[background:var(--preview-markdown-codeblock-btn-bg)] text-[var(--preview-markdown-codeblock-btn-text)] shadow-[var(--neu-control-shadow)] hover:[background:var(--preview-markdown-codeblock-btn-hover-bg)] hover:text-[var(--preview-markdown-codeblock-btn-hover-text)]",
           )}
         >
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="overflow-auto p-[clamp(0.585rem,1.35vw,0.75rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-mono text-[var(--preview-markdown-code-text)]">
+      <pre className="previewMarkdownCodeScroll overflow-auto p-[clamp(0.585rem,1.35vw,0.75rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-mono text-[var(--preview-markdown-code-text)]">
         <code className={codeClassName} style={{ background: "transparent" }}>
           {code}
         </code>

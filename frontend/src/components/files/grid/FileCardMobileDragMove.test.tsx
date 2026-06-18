@@ -86,13 +86,28 @@ describe("FileCard mobile drag move", () => {
     expect(checkbox).toHaveClass("selection-checkbox-hover-reveal");
   });
 
+  it("anchors the checkbox close to the thumbnail outer edge", () => {
+    renderFile();
+
+    expect(screen.getByRole("button", { name: "选择" })).toHaveClass(
+      "left-[clamp(0.06rem,0.16vw,0.1rem)]",
+      "top-[clamp(0.06rem,0.16vw,0.1rem)]",
+    );
+  });
+
   it("uses a high-contrast unselected checkbox treatment", () => {
     const { container } = renderFile();
 
     expect(container.querySelector(".card-checkbox-unselected")).toBeTruthy();
     expect(
       container.querySelector(".card-checkbox-unselected-ring"),
-    ).toBeTruthy();
+    ).not.toBeInTheDocument();
+  });
+
+  it("marks card checkboxes for the neuromorphic CodePen square override", () => {
+    const { container } = renderFile();
+
+    expect(container.querySelector(".card-checkbox-codepen-box")).toBeTruthy();
   });
 
   it("keeps native HTML drag on desktop pointer devices", () => {

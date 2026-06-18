@@ -10,6 +10,7 @@ import {
 import { formatFileSize } from "../../../utils/format";
 import { cn } from "../../../utils/cn";
 import { getMimeTypeInfo } from "../../../utils/mimeType";
+import { isImageType } from "../../../utils/mimeType";
 import { createPortal } from "react-dom";
 import "./UploadFileItem.css";
 
@@ -95,6 +96,8 @@ const UploadFileItem = memo(function UploadFileItem({
   onRetry,
 }: UploadFileItemProps) {
   const [now, setNow] = useState(() => (file.startTime ? file.startTime : 0));
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const thumbnailUrlRef = useRef<string | null>(null);
 
   // 上传中时每秒更新一次
   useEffect(() => {
@@ -110,6 +113,40 @@ const UploadFileItem = memo(function UploadFileItem({
     };
   }, [file.status]);
 
+  useEffect(() => {
+    let active = true;
+    const updateThumbnailUrl = (nextThumbnailUrl: string | null) => {
+      if (thumbnailUrlRef.current === nextThumbnailUrl) return;
+      queueMicrotask(() => {
+        if (!active) return;
+        thumbnailUrlRef.current = nextThumbnailUrl;
+        setThumbnailUrl(nextThumbnailUrl);
+      });
+    };
+
+    if (
+      !file.file ||
+      !isImageType(file.mimeType) ||
+      typeof URL === "undefined" ||
+      typeof URL.createObjectURL !== "function"
+    ) {
+      updateThumbnailUrl(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    const objectUrl = URL.createObjectURL(file.file);
+    updateThumbnailUrl(objectUrl);
+
+    return () => {
+      active = false;
+      if (typeof URL.revokeObjectURL === "function") {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [file.file, file.mimeType]);
+
   const elapsedMs = file.startTime ? Math.max(0, now - file.startTime) : 0;
   const progress = Math.max(0, Math.min(100, file.progress));
   const uploadedBytes = (progress / 100) * Math.max(0, file.size);
@@ -117,6 +154,20 @@ const UploadFileItem = memo(function UploadFileItem({
     file.status === "uploading"
       ? calculateRemainingTime(uploadedBytes, file.size, elapsedMs)
       : "";
+  const [showNameTooltip, setShowNameTooltip] = useState(false);
+  const [nameTooltipRect, setNameTooltipRect] = useState<DOMRect | null>(null);
+  const nameRef = useRef<HTMLParagraphElement>(null);
+  const nameTooltipId = useId().replace(/:/g, "");
+
+  const openNameTooltip = useCallback(() => {
+    if (!nameRef.current) return;
+    setNameTooltipRect(nameRef.current.getBoundingClientRect());
+    setShowNameTooltip(true);
+  }, []);
+
+  const closeNameTooltip = useCallback(() => {
+    setShowNameTooltip(false);
+  }, []);
 
   // 使用 useMemo 缓存图标颜色
   const mimeTypeInfo = useMemo(
@@ -204,6 +255,7 @@ const UploadFileItem = memo(function UploadFileItem({
   return (
     <div
       className="uploadFileItemCyber relative overflow-hidden rounded-[clamp(0.6rem,1.4vw,0.75rem)] bg-[var(--upload-item-bg)]"
+      data-testid="upload-file-item-shell"
       data-oid="k8dog6k"
     >
       {/* 主内容 */}
@@ -211,28 +263,55 @@ const UploadFileItem = memo(function UploadFileItem({
         {/* 文件图标 */}
         <div
           className={cn(
-            "relative flex h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)] shrink-0 items-center justify-center overflow-hidden rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--upload-item-icon-border)] bg-[var(--upload-item-icon-bg)] shadow-[var(--upload-item-icon-shadow)] backdrop-blur-sm",
+            "uploadFileItemIcon relative flex h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)] shrink-0 items-center justify-center overflow-hidden rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--upload-item-icon-border)] bg-[var(--upload-item-icon-bg)] shadow-[var(--upload-item-icon-shadow)] backdrop-blur-sm",
             mimeTypeInfo.bgClass,
           )}
+          data-testid="upload-file-item-icon"
           data-oid="ah7zqi4"
         >
-          <div
-            className="pointer-events-none absolute inset-0 bg-[var(--upload-item-icon-highlight)]"
-            data-oid="pr6z4n:"
-          />
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt={file.name}
+              className="uploadFileItemThumbnail relative z-[1] h-full w-full object-cover"
+              data-testid="upload-file-item-thumbnail"
+              data-oid="upload-thumb"
+            />
+          ) : (
+            <>
+              <div
+                className="uploadFileItemIconHighlight pointer-events-none absolute inset-0 bg-[var(--upload-item-icon-highlight)]"
+                data-oid="pr6z4n:"
+              />
 
-          <FileIcon color={mimeTypeInfo.color} data-oid="vd5lvr1" />
+              <FileIcon color={mimeTypeInfo.color} data-oid="vd5lvr1" />
+            </>
+          )}
         </div>
 
         {/* 文件信息 */}
         <div className="min-w-0 flex-1" data-oid="cpn:rfo">
           <p
-            className="uploadFileItemName truncate text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--upload-item-text)]"
-            title={file.name}
+            ref={nameRef}
+            className="uploadFileItemName uploadFileItemNameTooltipTrigger truncate text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--upload-item-text)]"
+            tabIndex={0}
+            aria-describedby={`upload-filename-tooltip-${nameTooltipId}`}
+            data-testid="upload-file-item-name"
+            onMouseEnter={openNameTooltip}
+            onMouseLeave={closeNameTooltip}
+            onFocus={openNameTooltip}
+            onBlur={closeNameTooltip}
             data-oid="5epl46k"
           >
             {file.name}
           </p>
+          {showNameTooltip && nameTooltipRect && (
+            <UploadFilenameTooltip
+              id={`upload-filename-tooltip-${nameTooltipId}`}
+              name={file.name}
+              anchorRect={nameTooltipRect}
+            />
+          )}
           {renderStatusText()}
         </div>
 
@@ -271,6 +350,7 @@ const UploadFileItem = memo(function UploadFileItem({
         >
           <div
             className="uploadProgressTrack h-full overflow-hidden"
+            data-testid="upload-progress-track"
             data-oid="mzsp8:w"
           >
             <progress
@@ -278,6 +358,7 @@ const UploadFileItem = memo(function UploadFileItem({
               value={Math.max(0, Math.min(100, file.progress))}
               max={100}
               aria-label="Upload progress"
+              data-testid="upload-progress"
               data-oid="f4wnu8j"
             />
           </div>
@@ -286,6 +367,50 @@ const UploadFileItem = memo(function UploadFileItem({
     </div>
   );
 });
+
+function UploadFilenameTooltip({
+  id,
+  name,
+  anchorRect,
+}: {
+  id: string;
+  name: string;
+  anchorRect: DOMRect;
+}) {
+  const viewportWidth = typeof window === "undefined" ? 1024 : window.innerWidth;
+  const maxWidth = Math.min(520, Math.max(260, viewportWidth - 24));
+  const left = Math.min(
+    Math.max(12, anchorRect.left),
+    Math.max(12, viewportWidth - maxWidth - 12),
+  );
+  const top = Math.max(12, anchorRect.top - 8);
+
+  return createPortal(
+    <div
+      id={id}
+      role="tooltip"
+      className="uploadFilenameTooltip fixed z-[10000] pointer-events-none"
+      style={{ left, top, maxWidth }}
+      data-testid="upload-filename-tooltip"
+      data-oid="ph7krff"
+    >
+      <div
+        className="uploadFilenameTooltipShell"
+        data-testid="upload-filename-tooltip-shell"
+        data-oid="klyjzsq"
+      >
+        <span
+          className="uploadFilenameTooltipText"
+          data-testid="upload-filename-tooltip-text"
+          data-oid="6m_d2gs"
+        >
+          {name}
+        </span>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 // 文件图标
 function FileIcon({ color }: { color: string }) {
@@ -514,31 +639,36 @@ function ErrorTooltip({
     >
       {/* 主容器 - 渐变背景 */}
       <div
-        className="overflow-hidden rounded-[clamp(0.2rem,0.6vw,0.25rem)] bg-[var(--upload-tooltip-bg)] shadow-lg ring-1 ring-[var(--upload-tooltip-ring)]"
+        className="uploadErrorTooltipShell overflow-hidden rounded-[clamp(0.2rem,0.6vw,0.25rem)] bg-[var(--upload-tooltip-bg)] shadow-lg ring-1 ring-[var(--upload-tooltip-ring)]"
+        data-testid="upload-error-tooltip-shell"
         data-oid="t6diyo-"
       >
         {/* 顶部装饰条 */}
         <div
-          className="h-[clamp(0.0975rem,0.3vw,0.125rem)] bg-[var(--upload-tooltip-accent)]"
+          className="uploadErrorTooltipAccent h-[clamp(0.0975rem,0.3vw,0.125rem)] bg-[var(--upload-tooltip-accent)]"
+          data-testid="upload-error-tooltip-accent"
           data-oid="5g7g-d6"
         />
 
         {/* 内容区 */}
-        <div className="p-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="2-w.4.-">
+        <div
+          className="p-[clamp(0.585rem,1.35vw,0.75rem)]"
+          data-oid="2-w.4.-"
+        >
           {/* 标题 */}
           <div
             className="mb-[clamp(0.39rem,0.9vw,0.5rem)] flex items-center justify-between"
             data-oid="1c9i-64"
           >
             <span
-              className="text-[clamp(0.68rem,1.6vw,0.75rem)] font-semibold uppercase tracking-wide text-[var(--upload-tooltip-title)]"
+              className="uploadErrorTooltipTitle text-[clamp(0.68rem,1.6vw,0.75rem)] font-semibold uppercase tracking-wide text-[var(--upload-tooltip-title)]"
               data-oid="ru4su2-"
             >
               错误详情
             </span>
             <button
               onClick={onClose}
-              className="flex h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] items-center justify-center rounded text-[var(--upload-tooltip-close)] transition-colors hover:bg-[var(--upload-tooltip-close-bg)] hover:text-[var(--upload-tooltip-close-hover)]"
+              className="uploadErrorTooltipClose flex h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)] items-center justify-center rounded text-[var(--upload-tooltip-close)] transition-colors hover:bg-[var(--upload-tooltip-close-bg)] hover:text-[var(--upload-tooltip-close-hover)]"
               title="关闭"
               aria-label="关闭"
               data-oid="mqjxnlk"
@@ -562,9 +692,14 @@ function ErrorTooltip({
           </div>
 
           {/* 错误内容 */}
-          <div className="max-h-[clamp(7.75rem,14.4vw,8rem)] overflow-y-auto" data-oid="jx7jgkh">
+          <div
+            className="uploadErrorTooltipBody max-h-[clamp(7.75rem,14.4vw,8rem)] overflow-y-auto"
+            data-testid="upload-error-tooltip-body"
+            data-oid="jx7jgkh"
+          >
             <p
-              className="whitespace-pre-line text-[clamp(0.625rem,1.6vw,0.6875rem)] leading-relaxed text-[var(--upload-tooltip-text)]"
+              className="uploadErrorTooltipText whitespace-pre-line text-[clamp(0.625rem,1.6vw,0.6875rem)] leading-relaxed text-[var(--upload-tooltip-text)]"
+              data-testid="upload-error-tooltip-text"
               data-oid="hj.49bw"
             >
               {error}
@@ -579,7 +714,8 @@ function ErrorTooltip({
         data-oid="wys7u4a"
       >
         <div
-          className="h-[clamp(0.585rem,1.35vw,0.75rem)] w-[clamp(0.585rem,1.35vw,0.75rem)] rotate-45 bg-[var(--upload-tooltip-arrow-bg)] ring-1 ring-[var(--upload-tooltip-ring)]"
+          className="uploadErrorTooltipArrow h-[clamp(0.585rem,1.35vw,0.75rem)] w-[clamp(0.585rem,1.35vw,0.75rem)] rotate-45 bg-[var(--upload-tooltip-arrow-bg)] ring-1 ring-[var(--upload-tooltip-ring)]"
+          data-testid="upload-error-tooltip-arrow"
           data-oid="o2:lpz9"
         />
       </div>

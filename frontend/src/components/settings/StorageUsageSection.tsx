@@ -30,7 +30,7 @@ const StorageUsageSection = memo(function StorageUsageSection() {
         <div className="space-y-[clamp(0.78rem,1.8vw,1rem)]" data-oid="yvquog4">
           <div className="grid gap-[clamp(0.585rem,1.35vw,0.75rem)] sm:grid-cols-2" data-oid="ght-we:">
             <div
-              className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
+              className="rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-panel-border)] [background:var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)] shadow-[var(--settings-panel-shadow)]"
               data-oid="5t21sp4"
             >
               <div
@@ -79,7 +79,7 @@ const StorageUsageSection = memo(function StorageUsageSection() {
             </div>
 
             <div
-              className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
+              className="rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-panel-border)] [background:var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)] shadow-[var(--settings-panel-shadow)]"
               data-oid="xg85hgm"
             >
               <p
@@ -106,7 +106,7 @@ const StorageUsageSection = memo(function StorageUsageSection() {
           {storageUsage.quota !== null &&
             storageUsage.usage_percent !== null && (
               <div
-                className="rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
+                className="rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-panel-border)] [background:var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)] shadow-[var(--settings-panel-shadow)]"
                 data-oid="b.98t02"
               >
                 <div

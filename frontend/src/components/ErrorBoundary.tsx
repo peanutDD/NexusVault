@@ -40,7 +40,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             出错了
           </h1>
           <p
-            className="mb-[clamp(0.75rem,2vw,1rem)] max-w-[28rem] text-center text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--error-boundary-muted)]"
+            className="mb-[clamp(0.75rem,2vw,1rem)] max-w-[var(--app-error-copy-max-width)] text-center text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--error-boundary-muted)]"
             data-oid="oez77o8"
           >
             {this.state.error?.message ?? "未知错误"}

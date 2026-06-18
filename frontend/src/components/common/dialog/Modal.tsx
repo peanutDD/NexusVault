@@ -10,6 +10,8 @@ interface ModalProps {
   description?: string;
   variant?: "default" | "glass" | "upload";
   loading?: boolean;
+  panelClassName?: string;
+  placement?: "nav-safe-start" | "nav-safe-center";
 }
 
 const maxWidthClasses = {
@@ -27,6 +29,8 @@ export default function Modal({
   description,
   variant = "default",
   loading = false,
+  panelClassName,
+  placement = "nav-safe-start",
 }: ModalProps) {
   // 使用 useDialog hook 统一处理 ESC 关闭
   const { handleBackdropClick } = useDialog({
@@ -40,7 +44,8 @@ export default function Modal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center p-[clamp(0.78rem,1.8vw,1rem)] animate-fade-in",
+        "fixed inset-0 z-50 flex justify-center px-[clamp(0.78rem,1.8vw,1rem)] pb-[clamp(0.78rem,1.8vw,1rem)] pt-[calc(clamp(5.5rem,10vw,8rem)+env(safe-area-inset-top))] animate-fade-in",
+        placement === "nav-safe-center" ? "items-center" : "items-start",
         variant === "glass" || isUploadVariant
           ? "bg-[var(--modal-backdrop-glass)]"
           : "bg-[var(--modal-backdrop)]",
@@ -57,6 +62,7 @@ export default function Modal({
           variant === "glass"
             ? [
                 "relative w-full max-h-[90vh] overflow-y-auto rounded-[clamp(0.8rem,2vw,1rem)] p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-2xl",
+                "max-h-[calc(100dvh_-_clamp(6.5rem,12vw,9rem))]",
                 "border border-[var(--modal-surface-glass-border)] bg-[var(--modal-surface-glass-bg)] text-[var(--color-text-primary)] ring-1 ring-[var(--modal-surface-ring)]",
                 "backdrop-blur-xl backdrop-saturate-150",
                 'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
@@ -66,13 +72,15 @@ export default function Modal({
             : isUploadVariant
               ? [
                   "relative w-full max-h-[90vh] overflow-y-auto rounded-[clamp(0.8rem,2vw,1rem)] p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-2xl text-[var(--color-text-primary)]",
+                  "max-h-[calc(100dvh_-_clamp(6.5rem,12vw,9rem))]",
                   "border border-[var(--modal-surface-glass-border)] bg-[var(--modal-surface-bg)] ring-1 ring-[var(--modal-surface-ring)]",
                   "backdrop-blur-xl backdrop-saturate-150",
                   'before:pointer-events-none before:absolute before:inset-0 before:rounded-[clamp(0.8rem,2vw,1rem)] before:content-[""]',
                   "before:bg-[image:var(--modal-surface-glass-highlight)]",
                 ].join(" ")
-              : "bg-[var(--modal-surface-bg)] border border-[var(--modal-surface-border)] text-[var(--color-text-primary)] rounded-[clamp(0.4rem,1vw,0.5rem)] w-full max-h-[90vh] overflow-y-auto p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-2xl transform transition-all duration-300 animate-fade-in",
+              : "[background:var(--neu-raised-bg)] border border-transparent text-[var(--color-text-primary)] rounded-[clamp(0.8rem,2vw,1rem)] w-full max-h-[calc(100dvh_-_clamp(6.5rem,12vw,9rem))] overflow-y-auto p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-[var(--neu-raised-shadow)] transform transition-all duration-300 animate-fade-in",
           maxWidthClasses[maxWidth],
+          panelClassName,
         )}
         onClick={(e) => e.stopPropagation()}
         data-oid="o0:osfm"
@@ -125,7 +133,7 @@ export default function Modal({
         {description && (
           <p
             className={cn(
-              "relative mb-[clamp(0.78rem,1.8vw,1rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] transition-colors duration-200",
+              "relative mb-[clamp(0.78rem,1.8vw,1rem)] max-w-full min-w-0 text-[clamp(0.75rem,1.8vw,0.875rem)] transition-colors duration-200 [overflow-wrap:anywhere]",
               "text-[var(--color-text-secondary)]",
             )}
             data-oid="s-bcnks"

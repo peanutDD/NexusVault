@@ -78,6 +78,8 @@ export const SIZES = ['Bytes', 'KB', 'MB', 'GB', 'TB'] as const;
 export const REQUEST = {
   /** 全局请求并发上限 */
   LIMITER_MAX_CONCURRENT: 20,
+  /** 文件列表 / 文件夹内容等导航查询超时（ms），避免骨架屏无限卡住 */
+  LIST_QUERY_TIMEOUT_MS: 15_000,
   /** 批量请求收集窗口（ms） */
   BATCH_DELAY_MS: 50,
   /** GET 请求重试次数 */

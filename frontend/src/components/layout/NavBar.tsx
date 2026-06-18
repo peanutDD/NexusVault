@@ -1,14 +1,21 @@
 import { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  type NavigateOptions,
+} from "react-router-dom";
 import { APP_NAME } from "../../config/env";
 import { cn } from "../../utils/cn";
-import { ArrowLeft, LogOut, Settings, Trash2 } from "lucide-react";
+import { ArrowLeft, ListChecks, LogOut, Settings, Trash2 } from "lucide-react";
+import { CyberPrismLogo } from "../common/CyberPrismLogo";
 import ThemeToggle from "../common/ThemeToggle";
 import {
   currentFilesLocation,
   readTrashReturnTarget,
   rememberTrashReturnTarget,
 } from "../../utils/trashReturnTarget";
+import { rememberSettingsReturnTarget } from "../../utils/settingsReturnTarget";
+import { rememberActivityReturnTarget } from "../../utils/activityReturnTarget";
 
 interface NavBarProps {
   title?: string;
@@ -30,10 +37,18 @@ export default function NavBar({
   const navigate = useNavigate();
   const location = useLocation();
   const filesLocation = currentFilesLocation(location.pathname, location.search);
+  const currentLocation = `${location.pathname}${location.search}`;
 
   useEffect(() => {
     rememberTrashReturnTarget(filesLocation);
-  }, [filesLocation]);
+    rememberSettingsReturnTarget(location.pathname, location.search);
+    rememberActivityReturnTarget(location.pathname, location.search);
+  }, [filesLocation, location.pathname, location.search]);
+
+  const navigateIfChanged = (target: string, options?: NavigateOptions) => {
+    if (currentLocation === target) return;
+    navigate(target, options);
+  };
 
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -44,7 +59,7 @@ export default function NavBar({
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 top-0 z-50 overflow-hidden bg-nav-surface pt-[env(safe-area-inset-top)] backdrop-blur-[var(--nav-surface-blur)]"
+        "nav-surface-shell fixed inset-x-0 top-0 z-50 overflow-visible pt-[env(safe-area-inset-top)] backdrop-blur-[var(--nav-surface-blur)]"
       )}
       onDoubleClick={handleDoubleClick}
       data-oid="2f5wd3k"
@@ -68,7 +83,7 @@ export default function NavBar({
       />
 
       <div
-        className="mx-auto max-w-[80rem] px-[clamp(1rem,2.5vw,2rem)]"
+        className="mx-auto max-w-[var(--app-shell-max-width)] px-[clamp(1rem,2.5vw,2rem)]"
         data-oid="q:y39os"
       >
         <div
@@ -107,14 +122,21 @@ export default function NavBar({
             )}
 
             <div className="flex min-w-0 items-center gap-[clamp(0.75rem,2vw,1rem)]" data-oid="iqbhzo8">
-              <div className="shrink-0 select-none" data-oid="mtnbm56">
+              <button
+                type="button"
+                onClick={() => navigateIfChanged("/files")}
+                aria-label="Home"
+                title="Home"
+                className="shrink-0 cursor-pointer select-none border-0 bg-transparent p-0 text-[var(--nav-title-text)] transition-transform duration-200 hover:scale-[1.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--nav-btn-border-hover)]"
+                data-oid="mtnbm56"
+              >
                 <CyberPrismLogo
                   className="h-[clamp(2.6rem,4vw,3.3rem)] w-[clamp(2.6rem,4vw,3.3rem)]"
                   data-oid="b:z042i"
                 />
-              </div>
+              </button>
               <h1
-                className="nav-title-fluid font-brand truncate font-normal tracking-widest text-[var(--nav-title-text)] drop-shadow-sm select-none"
+                className="nav-title-fluid nav-brand-title truncate select-none"
                 data-oid="m354-f5"
               >
                 {title}
@@ -131,7 +153,7 @@ export default function NavBar({
             {/* 右侧“控制面板” */}
             <div
               className={cn(
-                "nav-panel relative flex items-center shrink-0",
+                "nav-panel relative flex items-center shrink-0 overflow-visible",
                 "bg-[var(--nav-panel-bg)] border border-[var(--nav-panel-border)]",
                 "shadow-[var(--nav-panel-shadow)]",
               )}
@@ -170,7 +192,31 @@ export default function NavBar({
               {showSettings && (
                 <button
                   type="button"
-                  onClick={() => navigate("/settings")}
+                  onClick={() => navigateIfChanged("/activity")}
+                  aria-label="Activity"
+                  title="Activity"
+                  className={cn(
+                    "nav-btn inline-flex items-center justify-center whitespace-nowrap",
+                    "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
+                    "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
+                    "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
+                    "active:translate-y-px transition-all duration-200",
+                  )}
+                  data-oid="activity-nav"
+                >
+                  <ListChecks
+                    className="nav-icon shrink-0 text-[var(--nav-btn-icon)]"
+                    aria-hidden="true"
+                  />
+
+                  <span className="hidden sm:inline whitespace-nowrap">Activity</span>
+                </button>
+              )}
+
+              {showSettings && (
+                <button
+                  type="button"
+                  onClick={() => navigateIfChanged("/settings")}
                   aria-label="Settings"
                   className={cn(
                     "nav-btn inline-flex items-center justify-center whitespace-nowrap",
@@ -201,7 +247,7 @@ export default function NavBar({
                 onClick={() => {
                   const returnTo = filesLocation ?? readTrashReturnTarget() ?? "/files";
                   rememberTrashReturnTarget(returnTo);
-                  navigate("/trash", {
+                  navigateIfChanged("/trash", {
                     state: { from: returnTo },
                   });
                 }}
@@ -257,150 +303,5 @@ export default function NavBar({
         </div>
       </div>
     </nav>
-  );
-}
-
-function CyberPrismLogo({ className }: { className?: string }) {
-  return (
-    <svg
-      className={cn("drop-shadow-lg", className)}
-      viewBox="0 0 96 96"
-      role="img"
-      aria-label="Logo"
-      data-oid="4nnbgu6"
-    >
-      <defs data-oid="8nhf6p2">
-        <linearGradient
-          id="cp_a"
-          x1="0"
-          y1="0"
-          x2="1"
-          y2="1"
-          data-oid="-_xpsym"
-        >
-          <stop offset="0" stopColor="#32d6c6" data-oid="7qeipmf" />
-          <stop offset="1" stopColor="#46b7ff" data-oid="16dww:g" />
-        </linearGradient>
-        <linearGradient
-          id="cp_b"
-          x1="1"
-          y1="0"
-          x2="0"
-          y2="1"
-          data-oid="aqaw5qj"
-        >
-          <stop offset="0" stopColor="#a855f7" data-oid="i39.l-y" />
-          <stop offset="1" stopColor="#ff4fd8" data-oid="4xeiw9." />
-        </linearGradient>
-        <linearGradient
-          id="cp_c"
-          x1="0"
-          y1="0"
-          x2="0"
-          y2="1"
-          data-oid="_.h6e8."
-        >
-          <stop offset="0" stopColor="#8b5cf6" data-oid="an8o8-y" />
-          <stop offset="1" stopColor="#22c55e" data-oid=".-mofzf" />
-        </linearGradient>
-        <linearGradient
-          id="cp_d"
-          x1="1"
-          y1="0"
-          x2="0"
-          y2="1"
-          data-oid="6q3hqng"
-        >
-          <stop offset="0" stopColor="#22c55e" data-oid="m0dqanz" />
-          <stop offset="1" stopColor="#46b7ff" data-oid="7tvw.75" />
-        </linearGradient>
-        <filter
-          id="cp_glow"
-          x="-50%"
-          y="-50%"
-          width="200%"
-          height="200%"
-          data-oid="q9ub-1q"
-        >
-          <feGaussianBlur stdDeviation="3" result="blur" data-oid="ui:pwdo" />
-          <feColorMatrix
-            in="blur"
-            type="matrix"
-            values="
-              1 0 0 0 0
-              0 1 0 0 0
-              0 0 1 0 0
-              0 0 0 0.6 0"
-            result="glow"
-            data-oid="mt3skb4"
-          />
-
-          <feMerge data-oid="lx6zqh6">
-            <feMergeNode in="glow" data-oid="x6uk50x" />
-            <feMergeNode in="SourceGraphic" data-oid="pbvn:x7" />
-          </feMerge>
-        </filter>
-      </defs>
-
-      {/* 外层霓虹光晕 */}
-      <g filter="url(#cp_glow)" opacity="0.95" data-oid="_vsfh.g">
-        {/* 钻石外轮廓（对齐参考图的“钻石”形状） */}
-        <polygon
-          points="48,10 82,40 48,86 14,40"
-          fill="rgba(178,139,255,0.10)"
-          data-oid="gfua909"
-        />
-
-        {/* 4 个切面 */}
-        <polygon
-          points="48,10 14,40 48,48"
-          fill="url(#cp_a)"
-          data-oid="ifyhtkf"
-        />
-
-        <polygon
-          points="48,10 82,40 48,48"
-          fill="url(#cp_b)"
-          data-oid="jh4q-:c"
-        />
-
-        <polygon
-          points="14,40 48,86 48,48"
-          fill="url(#cp_c)"
-          data-oid="fuhycej"
-        />
-
-        <polygon
-          points="82,40 48,86 48,48"
-          fill="url(#cp_d)"
-          data-oid="8gpvr18"
-        />
-
-        {/* 高光（上半部分轻微发亮） */}
-        <polygon
-          points="48,14 72,39 48,32 24,39"
-          fill="rgba(255,255,255,0.22)"
-          data-oid="5lp9r7s"
-        />
-
-        {/* 内部切线（更像切割钻石） */}
-        <path
-          d="M48 10 L48 86 M14 40 L82 40 M24 39 L48 48 L72 39"
-          fill="none"
-          stroke="rgba(255,255,255,0.20)"
-          strokeWidth="1"
-          data-oid="ls3a7qg"
-        />
-
-        {/* 外描边 */}
-        <polygon
-          points="48,10 82,40 48,86 14,40"
-          fill="none"
-          stroke="rgba(255,255,255,0.28)"
-          strokeWidth="1"
-          data-oid="po92g4t"
-        />
-      </g>
-    </svg>
   );
 }

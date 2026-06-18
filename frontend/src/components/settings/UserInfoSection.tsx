@@ -275,17 +275,17 @@ const UserInfoSection = memo(function UserInfoSection() {
               data-oid=":o6py4z"
             />
 
-            <button
-              type="button"
-              onClick={handleSendVerificationCode}
-              disabled={
-                !canSendCode || sendingCode || sendCodeCooldown > 0 || loading
-              }
-              className={settingsSecondaryButtonClass(
-                "shrink-0 whitespace-nowrap sm:min-w-[6.5rem]",
-              )}
-              data-oid="zvpvalp"
-            >
+              <button
+                type="button"
+                onClick={handleSendVerificationCode}
+                disabled={
+                  !canSendCode || sendingCode || sendCodeCooldown > 0 || loading
+                }
+                className={settingsSecondaryButtonClass(
+                  "w-full whitespace-nowrap sm:w-auto sm:self-start",
+                )}
+                data-oid="zvpvalp"
+              >
               {sendCodeCooldown > 0
                 ? `${sendCodeCooldown}s`
                 : sendingCode
@@ -328,23 +328,31 @@ const UserInfoSection = memo(function UserInfoSection() {
           )}
         </div>
         <div
-          className={settingsPanelClass()}
+          data-testid="settings-registered-field"
+          className="xl:mt-[calc(clamp(0.195rem,0.45vw,0.25rem)+0.8lh)]"
           data-oid="gjqcw3z"
         >
           <p
-            className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-panel-label)]"
+            className={settingsLabelClass()}
             data-oid=":komo1h"
           >
             Registered
           </p>
-          <p
-            className="mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-panel-value)]"
-            data-oid="ma009es"
+          <div
+            data-testid="settings-registered-value"
+            className={settingsPanelClass(
+              "flex items-center px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] text-[length:var(--settings-text-md)]",
+            )}
           >
-            {user?.created_at
-              ? new Date(user.created_at).toLocaleString()
-              : "-"}
-          </p>
+            <p
+              className="font-semibold text-[var(--settings-panel-value)]"
+              data-oid="ma009es"
+            >
+              {user?.created_at
+                ? new Date(user.created_at).toLocaleString()
+                : "-"}
+            </p>
+          </div>
         </div>
         <div
           data-testid="settings-account-actions"
@@ -353,7 +361,7 @@ const UserInfoSection = memo(function UserInfoSection() {
           <button
             type="submit"
             disabled={loading}
-            className={settingsPrimaryButtonClass("w-full sm:w-auto sm:min-w-[8rem]")}
+            className={settingsPrimaryButtonClass("w-full md:w-auto")}
             data-oid="-o5ufhh"
           >
             {loading ? "Saving..." : "Save"}

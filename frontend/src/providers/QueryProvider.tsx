@@ -1,30 +1,17 @@
 import {
   Component,
   lazy,
+  useEffect,
+  useRef,
   Suspense,
   type ErrorInfo,
   type ReactNode,
 } from "react";
-import axios from "axios";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { trackError } from "../utils/telemetry";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 30,
-      retry: (failureCount, error: unknown) => {
-        if (axios.isAxiosError(error)) {
-          const status = error.response?.status;
-          if (status != null && [401, 403, 404].includes(status)) return false;
-        }
-        return failureCount < 3;
-      },
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+import { useAuthStore } from "../store/authStore";
+import { clearFileListCacheSync } from "../utils/fileListCache";
+import { appQueryClient } from "./queryClient";
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(() =>
@@ -64,7 +51,7 @@ function QueryDevtools() {
     <QueryDevtoolsBoundary>
       <Suspense fallback={null}>
         <ReactQueryDevtools
-          client={queryClient}
+          client={appQueryClient}
           initialIsOpen={false}
           buttonPosition="bottom-right"
           position="bottom"
@@ -75,9 +62,30 @@ function QueryDevtools() {
   );
 }
 
+function AuthQueryScopeReset() {
+  const authScope = useAuthStore((state) => state.user?.id ?? null);
+  const previousAuthScope = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (previousAuthScope.current === undefined) {
+      previousAuthScope.current = authScope;
+      return;
+    }
+
+    if (previousAuthScope.current !== authScope) {
+      appQueryClient.clear();
+      clearFileListCacheSync();
+      previousAuthScope.current = authScope;
+    }
+  }, [authScope]);
+
+  return null;
+}
+
 export function QueryProvider({ children }: { children: ReactNode }) {
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={appQueryClient}>
+      <AuthQueryScopeReset />
       {children}
       <QueryDevtools />
     </QueryClientProvider>

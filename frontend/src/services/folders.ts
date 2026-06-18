@@ -1,6 +1,9 @@
 import api from './api';
+import { REQUEST } from '../constants';
 import type { Folder, FolderPathResponse, FolderContentsResponse } from '../types/folders';
 import { getErrorMessage } from '../utils/error';
+
+const LIST_QUERY_TIMEOUT_CONFIG = { timeout: REQUEST.LIST_QUERY_TIMEOUT_MS } as const;
 
 export interface BatchMoveFilesResult {
   moved: number;
@@ -24,7 +27,7 @@ export const folderService = {
     const url = params.toString()
       ? `/api/folders?${params.toString()}`
       : '/api/folders';
-    const response = await api.get<{ folders: Folder[] }>(url);
+    const response = await api.get<{ folders: Folder[] }>(url, LIST_QUERY_TIMEOUT_CONFIG);
     return response.data.folders;
   },
 
@@ -40,7 +43,7 @@ export const folderService = {
     const url = params.toString()
       ? `/api/folders/contents?${params.toString()}`
       : '/api/folders/contents';
-    const response = await api.get<FolderContentsResponse>(url);
+    const response = await api.get<FolderContentsResponse>(url, LIST_QUERY_TIMEOUT_CONFIG);
     return response.data;
   },
 
@@ -72,7 +75,8 @@ export const folderService = {
    */
   async getPath(id: string): Promise<Folder[]> {
     const response = await api.get<FolderPathResponse>(
-      `/api/folders/${id}/path`
+      `/api/folders/${id}/path`,
+      LIST_QUERY_TIMEOUT_CONFIG,
     );
     return response.data.path;
   },

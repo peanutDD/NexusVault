@@ -253,7 +253,7 @@ const PasswordChangeSection = memo(function PasswordChangeSection() {
           <button
             type="submit"
             disabled={loading}
-            className={settingsPrimaryButtonClass("w-full sm:w-auto sm:min-w-[10rem]")}
+            className={settingsPrimaryButtonClass("w-full md:w-auto")}
             data-oid="-zsxz4-"
           >
             {loading ? "Changing..." : "Change password"}

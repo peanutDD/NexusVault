@@ -6,6 +6,11 @@ import {
   Eye,
   MoreVertical,
   PencilLine,
+  History,
+  ListChecks,
+  Pin,
+  Star,
+  Tags,
 } from "lucide-react";
 import { formatFileSizeCompact } from "../../../utils/format";
 import type { FileMetadata } from "../../../types/files";
@@ -27,6 +32,11 @@ interface FileCardProps {
   onDownload: (file: FileMetadata) => void;
   onRename: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata) => void;
+  onShowActivity?: (file: FileMetadata) => void;
+  onShowVersions?: (file: FileMetadata) => void;
+  onManageTags?: (file: FileMetadata) => void;
+  onToggleFavorite?: (file: FileMetadata) => void;
+  onTogglePinned?: (file: FileMetadata) => void;
   onDragStart?: (fileId: string, e: React.DragEvent) => void;
   onMobileFileDragStart?: (fileId: string) => void;
   onMobileFileDragEnd?: () => void;
@@ -64,6 +74,11 @@ const FileCard = memo(
     onDownload,
     onRename,
     onDelete,
+    onShowActivity,
+    onShowVersions,
+    onManageTags,
+    onToggleFavorite,
+    onTogglePinned,
     onDragStart,
     onMobileFileDragStart,
     onMobileFileDragEnd,
@@ -287,6 +302,7 @@ const FileCard = memo(
         className={cn(
           "glass-card group relative rounded-[clamp(0.3rem,0.8vw,0.375rem)] transition-colors",
           isSelected && "border-[var(--cta-primary-border)]",
+          isMenuOpen && "fileCardMenuOpen",
           isMobileDragging &&
             "border-[var(--color-border-strong)] opacity-80 pointer-events-none",
         )}
@@ -324,12 +340,26 @@ const FileCard = memo(
               onPreview(file);
             }}
             data-oid="ota.b1o"
-          >
+            >
+            {(file.is_favorite || file.is_pinned) && (
+              <div className="absolute right-[clamp(0.1rem,0.3vw,0.15rem)] top-[clamp(0.1rem,0.3vw,0.15rem)] z-10 flex gap-[clamp(0.1rem,0.3vw,0.15rem)]">
+                {file.is_pinned && (
+                  <span className="fileCardFlagBadge rounded-full bg-[var(--file-card-preview-btn-bg)] p-[clamp(0.16rem,0.4vw,0.2rem)] text-[var(--neu-primary)]">
+                    <Pin className="fileCardFlagBadgeGlyph h-[clamp(0.55rem,1.6vw,0.7rem)] w-[clamp(0.55rem,1.6vw,0.7rem)] text-[var(--neu-primary)]" />
+                  </span>
+                )}
+                {file.is_favorite && (
+                  <span className="fileCardFlagBadge rounded-full bg-[var(--file-card-preview-btn-bg)] p-[clamp(0.16rem,0.4vw,0.2rem)] text-[var(--neu-primary)]">
+                    <Star className="fileCardFlagBadgeGlyph h-[clamp(0.55rem,1.6vw,0.7rem)] w-[clamp(0.55rem,1.6vw,0.7rem)] text-[var(--neu-primary)]" />
+                  </span>
+                )}
+              </div>
+            )}
             <SelectionCheckbox
               isSelected={isSelected}
               onClick={() => onSelect(file.id, !isSelected)}
               size="responsive"
-              positionClassName="absolute left-[clamp(0.15rem,0.35vw,0.25rem)] top-[clamp(0.15rem,0.35vw,0.25rem)]"
+              positionClassName="absolute left-[clamp(0.06rem,0.16vw,0.1rem)] top-[clamp(0.06rem,0.16vw,0.1rem)]"
               data-oid="jgxtjef"
             />
 
@@ -403,14 +433,14 @@ const FileCard = memo(
               </p>
               {file.search_snippet && (
                 <p
-                  className="min-w-0 truncate whitespace-nowrap text-[clamp(0.38rem,1.25vw,0.55rem)] text-[var(--file-card-text-muted)]"
+                  className="flex min-w-0 items-center gap-[clamp(0.2rem,0.7vw,0.25rem)] truncate whitespace-nowrap text-[clamp(0.38rem,1.25vw,0.55rem)] text-[var(--file-card-text-muted)]"
                   title={file.search_snippet}
                   data-oid="fulltext-snippet"
                 >
-                  <span className="font-medium text-[var(--file-card-text)]">
+                  <span className="shrink-0 rounded-full border border-[var(--color-border-medium)] px-[clamp(0.2rem,0.7vw,0.25rem)] py-[clamp(0.05rem,0.2vw,0.08rem)] font-medium leading-none text-[var(--file-card-text)]">
                     {matchSourceLabel}
-                  </span>{" "}
-                  {file.search_snippet}
+                  </span>
+                  <span className="min-w-0 truncate">{file.search_snippet}</span>
                 </p>
               )}
             </div>
@@ -440,13 +470,13 @@ const FileCard = memo(
                 />
 
                 <div
-                  className="absolute bottom-full right-0 z-50 mb-[clamp(0.2rem,0.7vw,0.25rem)] w-max origin-bottom-right scale-[0.7] rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--file-card-menu-border)] bg-[var(--file-card-menu-bg)] py-[clamp(0.2rem,0.7vw,0.25rem)] pl-[clamp(0.4rem,1vw,0.5rem)] pr-[clamp(0.75rem,2vw,1rem)] shadow-xl sm:scale-90 md:scale-100"
+                  className="fileCardActionMenu fileCardActionMenuFile absolute bottom-full right-0 z-50 mb-[clamp(0.2rem,0.7vw,0.25rem)] w-max origin-bottom-right rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--file-card-menu-border)] py-[clamp(0.2rem,0.7vw,0.25rem)] pl-[clamp(0.4rem,1vw,0.5rem)] pr-[clamp(0.75rem,2vw,1rem)] shadow-xl"
                   data-file-menu="true"
                   data-oid="qo212qm"
                 >
                     <button
                       type="button"
-                      className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
                       onClick={(e) => {
                         e.stopPropagation();
                         onCloseMenu();
@@ -455,7 +485,7 @@ const FileCard = memo(
                       data-oid="3ttph4t"
                     >
                       <Download
-                        className="scale-50 shrink-0 text-[var(--file-card-menu-text)]"
+                        className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]"
                         data-oid="._hoyss"
                       />
 
@@ -465,7 +495,7 @@ const FileCard = memo(
                     </button>
                     <button
                       type="button"
-                      className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
                       onClick={(e) => {
                         e.stopPropagation();
                         onCloseMenu();
@@ -474,7 +504,7 @@ const FileCard = memo(
                       data-oid="2tdrqm8"
                     >
                       <Send
-                        className="scale-50 shrink-0 text-[var(--file-card-menu-text)]"
+                        className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]"
                         data-oid="9ff2t63"
                       />
 
@@ -484,7 +514,7 @@ const FileCard = memo(
                     </button>
                     <button
                       type="button"
-                      className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
                       onClick={(e) => {
                         e.stopPropagation();
                         onCloseMenu();
@@ -493,7 +523,7 @@ const FileCard = memo(
                       data-oid="s945:ua"
                     >
                       <PencilLine
-                        className="scale-50 shrink-0 text-[var(--file-card-menu-text)]"
+                        className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]"
                         data-oid="rpc2y2d"
                       />
 
@@ -501,14 +531,74 @@ const FileCard = memo(
                         重命名
                       </span>
                     </button>
+                    <button
+                      type="button"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseMenu();
+                        onShowVersions?.(file);
+                      }}
+                    >
+                      <History className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]" />
+                      <span className="whitespace-nowrap">版本历史</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseMenu();
+                        onShowActivity?.(file);
+                      }}
+                    >
+                      <ListChecks className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]" />
+                      <span className="whitespace-nowrap">活动记录</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseMenu();
+                        onManageTags?.(file);
+                      }}
+                    >
+                      <Tags className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]" />
+                      <span className="whitespace-nowrap">标签</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseMenu();
+                        onToggleFavorite?.(file);
+                      }}
+                    >
+                      <Star className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]" />
+                      <span className="whitespace-nowrap">{file.is_favorite ? "取消收藏" : "收藏"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseMenu();
+                        onTogglePinned?.(file);
+                      }}
+                    >
+                      <Pin className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]" />
+                      <span className="whitespace-nowrap">{file.is_pinned ? "取消置顶" : "置顶"}</span>
+                    </button>
                     <div
-                      className="my-[clamp(0.0975rem,0.3vw,0.125rem)] border-t border-[var(--file-card-menu-divider)]"
+                      className="fileCardActionMenuDivider my-[clamp(0.0975rem,0.3vw,0.125rem)] border-t border-[var(--file-card-menu-divider)]"
                       data-oid="qe35:8s"
                     />
 
                     <button
                       type="button"
-                      className="flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
+                      className="fileCardActionMenuItem flex w-full items-center justify-start gap-0 rounded px-0 py-0 text-left text-[clamp(8px,2.2vw,10px)] text-[var(--file-card-menu-text)] transition-colors hover:bg-[var(--file-card-menu-item-hover-bg)]"
                       onClick={(e) => {
                         e.stopPropagation();
                         onCloseMenu();
@@ -517,7 +607,7 @@ const FileCard = memo(
                       data-oid="opuf8vv"
                     >
                       <Trash2
-                        className="scale-50 shrink-0 text-[var(--file-card-menu-text)]"
+                        className="fileCardActionMenuIcon shrink-0 text-[var(--file-card-menu-text)]"
                         data-oid="pc2osxw"
                       />
 
@@ -539,6 +629,8 @@ const FileCard = memo(
     prev.file.file_size === next.file.file_size &&
     prev.file.created_at === next.file.created_at &&
     prev.file.mime_type === next.file.mime_type &&
+    prev.file.is_favorite === next.file.is_favorite &&
+    prev.file.is_pinned === next.file.is_pinned &&
     prev.isSelected === next.isSelected &&
     prev.isMenuOpen === next.isMenuOpen &&
     prev.thumbnailPriority === next.thumbnailPriority &&
@@ -548,6 +640,11 @@ const FileCard = memo(
     prev.onDownload === next.onDownload &&
     prev.onRename === next.onRename &&
     prev.onDelete === next.onDelete &&
+    prev.onShowActivity === next.onShowActivity &&
+    prev.onShowVersions === next.onShowVersions &&
+    prev.onManageTags === next.onManageTags &&
+    prev.onToggleFavorite === next.onToggleFavorite &&
+    prev.onTogglePinned === next.onTogglePinned &&
     prev.onDragStart === next.onDragStart &&
     prev.onMobileFileDrop === next.onMobileFileDrop &&
     prev.onMobileFileDragStart === next.onMobileFileDragStart &&

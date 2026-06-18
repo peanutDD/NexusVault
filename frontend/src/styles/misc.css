@@ -3,11 +3,10 @@
    ========================================================================== */
 
 @layer utilities {
-    /* 虚拟列表行：浏览器跳过不可见区域渲染，提升长列表滚动性能 */
+    /* 虚拟列表行：由 React 虚拟化控制渲染范围，行自身不能 paint-contain 卡片阴影 */
     .virtualized-row {
-        content-visibility: auto;
-        contain-intrinsic-size: auto var(--virtual-row-height, 20rem);
         background: transparent;
+        overflow: visible;
     }
 
     /* 存储进度条 */

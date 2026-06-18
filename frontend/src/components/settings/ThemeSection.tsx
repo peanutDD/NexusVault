@@ -9,11 +9,8 @@ const OPTIONS: Array<{
   title: string;
   description: string;
 }> = [
-  { value: "dark", title: "Dark", description: "Green dark theme." },
+  { value: "dark", title: "Dark", description: "Soft raised dark surfaces." },
   { value: "light", title: "Light", description: "Use light theme." },
-  { value: "purple", title: "Purple", description: "Classic purple theme." },
-  { value: "terminal", title: "Terminal", description: "Blackglass neon terminal." },
-  { value: "portfolio", title: "Portfolio", description: "Neon developer portfolio." },
 ];
 
 export default function ThemeSection() {
@@ -29,19 +26,19 @@ export default function ThemeSection() {
       }
       data-oid="gg52g.s"
     >
-      <div className="grid gap-[clamp(0.39rem,0.9vw,0.5rem)] sm:grid-cols-2 xl:grid-cols-5" data-oid="yfy4n_7">
+      <div className="grid gap-[clamp(0.39rem,0.9vw,0.5rem)] sm:grid-cols-2" data-oid="yfy4n_7">
         {OPTIONS.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => setTheme(opt.value)}
             className={cn(
-              "rounded-[clamp(0.6rem,1.4vw,0.75rem)] border px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.585rem,1.35vw,0.75rem)] text-left transition-colors",
-              "min-h-[5.75rem]",
-              "bg-[var(--settings-panel-bg)] border-[var(--settings-panel-border)] text-[var(--color-text-primary)]",
-              "hover:bg-[var(--glass-bg-strong)] hover:border-[var(--color-border-medium)]",
+              "rounded-[clamp(0.7rem,1.6vw,0.75rem)] border px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.75rem)] text-left transition-[border-color,box-shadow,background,transform]",
+              "min-h-[clamp(4.75rem,11vw,5.75rem)]",
+              "[background:var(--settings-panel-bg)] border-[var(--settings-panel-border)] text-[var(--color-text-primary)] shadow-[var(--settings-panel-shadow)]",
+              "hover:[background:var(--settings-secondary-bg-hover)] hover:border-[var(--settings-secondary-border-hover)] hover:shadow-[var(--settings-secondary-shadow-hover)] hover:-translate-y-[clamp(0.08rem,0.18vw,0.125rem)]",
               theme === opt.value &&
-                "bg-[var(--settings-chip-bg-hover)] border-[var(--cta-primary-border)] shadow-[var(--shadow-glass-card)]",
+                "[background:var(--settings-theme-option-active-bg)] hover:[background:var(--settings-theme-option-active-bg-hover)] border-[var(--settings-theme-option-active-border)] text-[var(--settings-theme-option-active-text)] shadow-[var(--settings-theme-option-active-shadow)]",
             )}
             aria-pressed={theme === opt.value}
             data-oid="uxa2l.x"
@@ -53,7 +50,11 @@ export default function ThemeSection() {
               {opt.title}
             </div>
             <div
-              className="font-brand mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] tracking-wide text-[var(--color-text-muted)]"
+              className={cn(
+                "font-brand mt-[clamp(0.195rem,0.45vw,0.25rem)] text-[length:var(--settings-text-xs)] tracking-wide text-[var(--color-text-muted)]",
+                theme === opt.value &&
+                  "text-[var(--settings-theme-option-active-muted)]",
+              )}
               data-oid="pb91c.w"
             >
               {opt.description}
@@ -63,7 +64,7 @@ export default function ThemeSection() {
       </div>
 
       <div
-        className="mt-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] border border-[var(--settings-panel-border)] bg-[var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)]"
+        className="mt-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.7rem,1.6vw,0.75rem)] border border-[var(--settings-panel-border)] [background:var(--settings-panel-bg)] p-[clamp(0.78rem,1.8vw,1rem)] shadow-[var(--settings-panel-shadow)]"
         data-oid="t8wonjh"
       >
         <div

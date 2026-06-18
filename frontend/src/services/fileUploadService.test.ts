@@ -306,4 +306,36 @@ describe('fileUploadService upload orchestration', () => {
       vi.useRealTimers();
     }
   });
+
+  it('stages a large chunked upload before the user confirms without completing it', async () => {
+    const file = makeFile('movie.mp4', 'video/mp4', 'abcde');
+
+    apiPost.mockResolvedValueOnce({
+      data: {
+        upload_id: 'upload-1',
+        chunk_size: 5,
+        total_parts: 1,
+      },
+    });
+    apiGet.mockResolvedValue({ data: { uploaded_parts: [], total_parts: 1 } });
+    apiPut.mockResolvedValue({ data: { ok: true } });
+
+    await fileUploadService.stagePreUpload(file);
+
+    expect(apiPost).toHaveBeenCalledWith(
+      '/api/files/upload/chunked/init',
+      expect.objectContaining({ filename: 'movie.mp4' }),
+      expect.anything(),
+    );
+    expect(apiPut).toHaveBeenCalledWith(
+      '/api/files/upload/chunked/upload-1/chunk?part=1',
+      expect.any(Blob),
+      expect.anything(),
+    );
+    expect(apiPost).not.toHaveBeenCalledWith(
+      '/api/files/upload/chunked/upload-1/complete',
+      expect.anything(),
+      expect.anything(),
+    );
+  });
 });

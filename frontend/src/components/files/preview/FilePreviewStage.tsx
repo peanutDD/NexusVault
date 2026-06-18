@@ -1,25 +1,36 @@
 import type { ReactNode } from "react";
+import { cn } from "../../../utils/cn";
 
 interface FilePreviewStageProps {
   showLabel: boolean;
   onClose: () => void;
+  isDocumentPreview?: boolean;
   children: ReactNode;
 }
 
 export default function FilePreviewStage({
   showLabel,
   onClose,
+  isDocumentPreview = false,
   children,
 }: FilePreviewStageProps) {
   return (
     <div
-      className="relative z-[3] flex min-h-0 flex-1 flex-col items-center justify-center pl-[clamp(4.5rem,13vw,7rem)] pr-[clamp(4.5rem,13vw,7rem)] py-[clamp(1rem,4vh,2.5rem)]"
+      className={cn(
+        "previewStageShell relative z-[3] flex min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center px-[clamp(0.75rem,5vw,4.5rem)] py-[clamp(0.55rem,1.2vh,0.85rem)]",
+        isDocumentPreview ? "previewStageDocumentShell" : undefined,
+      )}
       style={{ perspective: "87.5rem" }}
       onClick={onClose}
+      data-testid="preview-stage-shell"
       data-oid="wc3_jmf"
     >
       <div
-        className="relative h-[min(72vh,44rem)] w-[min(92vw,70rem)] pointer-events-auto"
+        className={cn(
+          "previewStageDisplay relative top-[calc(clamp(0.77rem,1.58vh,1.18rem)*-1)] w-full min-w-0 max-w-[var(--app-preview-stage-max-width)] pointer-events-auto",
+          isDocumentPreview ? "previewStageDocumentDisplay" : undefined,
+        )}
+        data-testid="preview-stage-display"
         data-preview-content
         style={{
           transform:
@@ -101,6 +112,7 @@ function PreviewScreen({
 function PreviewLabel() {
   return (
     <div
+      data-testid="preview-stage-label"
       className="pointer-events-none absolute left-[clamp(1.2rem,3vw,2.5rem)] top-[clamp(0.6rem,1.6vw,1.2rem)] z-[100] [transform:translateZ(3.75rem)]"
       data-oid="bpc3euq"
     >
@@ -120,36 +132,28 @@ function PreviewLabel() {
 
 function PreviewPedestal() {
   return (
-    <div className="preview-rainbow-pedestal pointer-events-none absolute left-1/2 top-full -translate-x-1/2 translate-y-[clamp(0.55rem,1.6vw,1rem)] [transform-style:preserve-3d]">
-      <div className="relative mx-auto h-[clamp(1.2rem,3.2vw,2.1rem)] w-[clamp(1.6rem,3.8vw,2.5rem)] [transform-style:preserve-3d]">
-        {["-0.25rem", "-0.5rem"].map((z) => (
-          <div
-            key={z}
-            className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] bg-transparent border border-[var(--preview-shell-border)]"
-            style={{ transform: `translateZ(${z}px)` }}
-          />
-        ))}
-        <div className="absolute inset-0 rounded-[clamp(0.32rem,0.8vw,0.5rem)] border border-[var(--preview-neck-front-border)] bg-[var(--preview-neck-front-bg)] shadow-[var(--preview-neck-front-shadow)] [transform:translateZ(0rem)]">
-          <div className="absolute inset-[clamp(0.18rem,0.45vw,0.3rem)] rounded-[clamp(0.24rem,0.6vw,0.38rem)] border border-[var(--preview-neck-inner-border)] bg-[var(--preview-neck-inner-bg)]" />
-          <div className="absolute inset-x-[clamp(0.2rem,0.55vw,0.34rem)] bottom-[clamp(0.12rem,0.3vw,0.22rem)] h-[clamp(0.18rem,0.45vw,0.28rem)] rounded-full bg-[var(--preview-neck-bottom-bg)]" />
-        </div>
+    <div
+      data-testid="preview-pedestal"
+      className="preview-rainbow-pedestal pointer-events-none absolute left-1/2 top-full -translate-x-1/2 translate-y-[clamp(0.12rem,0.4vw,0.3rem)] [transform-style:preserve-3d]"
+    >
+      <div
+        data-testid="preview-pedestal-spine"
+        className="previewPedestalSpine relative mx-auto h-[clamp(0.72rem,1.8vw,1.25rem)] w-[clamp(1.8rem,4.4vw,2.9rem)] rounded-[clamp(0.28rem,0.7vw,0.45rem)]"
+      >
+        <div className="previewPedestalSpineDepth absolute inset-x-[clamp(0.1rem,0.3vw,0.18rem)] top-full h-[clamp(0.26rem,0.8vw,0.44rem)] origin-top rounded-b-[clamp(0.22rem,0.55vw,0.36rem)]" />
+        <div className="previewPedestalSpineHighlight absolute inset-[clamp(0.12rem,0.3vw,0.18rem)] rounded-[clamp(0.18rem,0.45vw,0.3rem)]" />
       </div>
 
-      <div className="relative mx-auto -mt-[clamp(0.18rem,0.38vw,0.32rem)] h-[clamp(0.55rem,1.3vw,0.9rem)] w-[clamp(5.2rem,12.5vw,7rem)] [transform-style:preserve-3d]">
-        {["-0.25rem", "-0.5rem"].map((z) => (
-          <div
-            key={z}
-            className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] bg-transparent border border-[var(--preview-shell-border)]"
-            style={{ transform: `translateZ(${z}px)` }}
-          />
-        ))}
-        <div className="absolute inset-0 rounded-[clamp(0.7rem,1.6vw,1.1rem)] border border-[var(--preview-base-border)] bg-[var(--preview-base-bg)] shadow-[var(--preview-base-shadow)] [transform:translateZ(0rem)]">
-          <div className="absolute inset-[clamp(0.12rem,0.3vw,0.2rem)] rounded-[clamp(0.6rem,1.4vw,0.95rem)] border border-[var(--preview-base-inner-border)] bg-[var(--preview-base-inner-bg)]" />
-          <div className="absolute left-1/2 top-0 h-[clamp(0.2rem,0.5vw,0.32rem)] w-[clamp(3.2rem,7.5vw,4.4rem)] -translate-x-1/2 rounded-b-full bg-[var(--preview-base-top-glow)] blur-[clamp(0.25rem,1vw,0.5rem)]" />
-        </div>
+      <div
+        data-testid="preview-pedestal-foot"
+        className="previewPedestalFoot relative mx-auto -mt-[clamp(0.08rem,0.25vw,0.16rem)] h-[clamp(0.55rem,1.25vw,0.82rem)] w-[clamp(5.8rem,13vw,7.8rem)] rounded-[clamp(0.65rem,1.5vw,1rem)]"
+      >
+        <div className="previewPedestalFootDepth absolute inset-x-[clamp(0.2rem,0.55vw,0.34rem)] top-[55%] h-[clamp(0.28rem,0.7vw,0.46rem)] rounded-b-full" />
+        <div className="previewPedestalFootInner absolute inset-[clamp(0.11rem,0.3vw,0.18rem)] rounded-full" />
+        <div className="previewPedestalFootSlot absolute left-1/2 top-[clamp(0.14rem,0.35vw,0.22rem)] h-[clamp(0.12rem,0.3vw,0.18rem)] w-[clamp(3.5rem,8vw,5.1rem)] -translate-x-1/2 rounded-full" />
       </div>
 
-      <div className="mx-auto -mt-[clamp(0.35rem,0.6vw,0.55rem)] h-[clamp(0.3rem,0.8vw,0.5rem)] w-[clamp(4.2rem,10vw,5.8rem)] rounded-full bg-[var(--preview-base-ambient)] blur-[clamp(0.375rem,1.6vw,0.75rem)]" />
+      <div className="previewPedestalShadow mx-auto -mt-[clamp(0.34rem,0.75vw,0.5rem)] h-[clamp(0.26rem,0.7vw,0.42rem)] w-[clamp(5.1rem,11vw,7rem)] rounded-full blur-[clamp(0.28rem,1vw,0.48rem)]" />
     </div>
   );
 }

@@ -43,19 +43,22 @@ export function createMarkdownComponents(
       </MarkdownHeading>
     ),
     p: ({ ...props }) => (
-      <p className="mb-[clamp(0.585rem,1.35vw,0.75rem)] text-[0.78rem] leading-6 text-[var(--preview-markdown-text)]" {...props} />
+      <p className="mb-[clamp(0.585rem,1.35vw,0.75rem)] text-[clamp(0.75rem,1.65vw,0.8rem)] leading-6 text-[var(--preview-markdown-text)]" {...props} />
     ),
     ul: ({ ...props }) => (
-      <ul className="mb-[clamp(0.585rem,1.35vw,0.75rem)] list-disc pl-[clamp(1rem,2.25vw,1.25rem)] text-[0.76rem] leading-6 text-[var(--preview-markdown-list)] marker:text-[var(--preview-markdown-li-marker)]" {...props} />
+      <ul className="mb-[clamp(0.585rem,1.35vw,0.75rem)] list-disc pl-[clamp(1rem,2.25vw,1.25rem)] text-[clamp(0.74rem,1.55vw,0.78rem)] leading-6 text-[var(--preview-markdown-list)] marker:text-[var(--preview-markdown-li-marker)]" {...props} />
     ),
     ol: ({ ...props }) => (
-      <ol className="mb-[clamp(0.585rem,1.35vw,0.75rem)] list-decimal pl-[clamp(1rem,2.25vw,1.25rem)] text-[0.76rem] leading-6 text-[var(--preview-markdown-list)] marker:text-[var(--preview-markdown-li-marker)]" {...props} />
+      <ol className="mb-[clamp(0.585rem,1.35vw,0.75rem)] list-decimal pl-[clamp(1rem,2.25vw,1.25rem)] text-[clamp(0.74rem,1.55vw,0.78rem)] leading-6 text-[var(--preview-markdown-list)] marker:text-[var(--preview-markdown-li-marker)]" {...props} />
     ),
     li: ({ ...props }) => <li className="mb-[clamp(0.2925rem,0.675vw,0.375rem)]" {...props} />,
-    code: ({ inline, className, children, ...props }) =>
-      inline ? (
+    code: ({ inline, className, children, ...props }) => {
+      const isInlineCode =
+        inline ?? (!className && !String(children).includes("\n"));
+
+      return isInlineCode ? (
         <code
-          className="rounded px-[clamp(0.195rem,0.45vw,0.25rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[0.7rem] font-mono bg-[var(--preview-markdown-code-inline-bg)] text-[var(--preview-markdown-code-inline-text)] ring-1 ring-inset ring-[var(--preview-markdown-code-inline-ring)]"
+          className="rounded px-[clamp(0.195rem,0.45vw,0.25rem)] py-[clamp(0.0975rem,0.3vw,0.125rem)] text-[length:var(--font-size-ui-3xs)] font-mono [background:var(--preview-markdown-code-inline-bg)] text-[var(--preview-markdown-code-inline-text)] ring-1 ring-inset ring-[var(--preview-markdown-code-inline-ring)]"
           {...props}
         >
           {children as ReactNode}
@@ -67,7 +70,8 @@ export function createMarkdownComponents(
         >
           {children as ReactNode}
         </code>
-      ),
+      );
+    },
     pre: ({ children, ...props }) => {
       const childNode = Array.isArray(children) ? children[0] : children;
       type CodeProps = { className?: string; children?: ReactNode };
@@ -95,7 +99,7 @@ export function createMarkdownComponents(
       }
       return (
         <pre
-          className="mb-[clamp(0.585rem,1.35vw,0.75rem)] overflow-auto rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--preview-markdown-pre-border)] bg-[var(--preview-markdown-pre-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-mono text-[var(--preview-markdown-pre-text)]"
+          className="previewMarkdownPre mb-[clamp(0.585rem,1.35vw,0.75rem)] overflow-auto rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--preview-markdown-pre-border)] [background:var(--preview-markdown-pre-bg)] p-[clamp(0.585rem,1.35vw,0.75rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-mono text-[var(--preview-markdown-pre-text)] shadow-[inset_0_1px_0_var(--preview-markdown-container-border)] backdrop-blur-xl"
           {...props}
         >
           {children as ReactNode}
@@ -103,11 +107,11 @@ export function createMarkdownComponents(
       );
     },
     blockquote: ({ ...props }) => (
-      <blockquote className="mb-[clamp(0.585rem,1.35vw,0.75rem)] border-l-2 pl-[clamp(0.585rem,1.35vw,0.75rem)] text-[0.76rem] leading-6 italic border-[var(--preview-markdown-blockquote-border)] text-[var(--preview-markdown-blockquote-text)]" {...props} />
+      <blockquote className="mb-[clamp(0.585rem,1.35vw,0.75rem)] border-l-2 pl-[clamp(0.585rem,1.35vw,0.75rem)] text-[clamp(0.74rem,1.55vw,0.78rem)] leading-6 italic border-[var(--preview-markdown-blockquote-border)] text-[var(--preview-markdown-blockquote-text)]" {...props} />
     ),
     a: ({ ...props }) => (
       <a
-        className="text-[0.76rem] font-medium underline decoration-[0.08em] underline-offset-2 text-[var(--preview-markdown-link)] hover:text-[var(--preview-markdown-link-hover)]"
+        className="text-[clamp(0.74rem,1.55vw,0.78rem)] font-medium underline decoration-[0.08em] underline-offset-2 text-[var(--preview-markdown-link)] hover:text-[var(--preview-markdown-link-hover)]"
         target="_blank"
         rel="noreferrer"
         {...props}
@@ -122,8 +126,8 @@ export function createMarkdownComponents(
       <MarkdownImage src={typeof src === "string" ? src : undefined} {...props} />
     ),
     table: ({ ...props }) => (
-      <div className="mb-[clamp(0.585rem,1.35vw,0.75rem)] overflow-auto rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--preview-markdown-table-border)]">
-        <table className="min-w-full text-[0.72rem] text-[var(--preview-markdown-table-text)]" {...props} />
+      <div className="previewMarkdownTableShell mb-[clamp(0.585rem,1.35vw,0.75rem)] overflow-auto rounded-[clamp(0.3rem,0.8vw,0.375rem)] border border-[var(--preview-markdown-table-border)] shadow-[inset_0_1px_0_var(--preview-markdown-container-border)] backdrop-blur-xl">
+        <table className="min-w-full text-[clamp(0.7rem,1.45vw,0.74rem)] text-[var(--preview-markdown-table-text)]" {...props} />
       </div>
     ),
     th: ({ ...props }) => (

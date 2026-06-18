@@ -119,7 +119,7 @@ function FileRowSkeleton() {
 export function FileListSkeleton({ count = 5 }: { count?: number }) {
   return (
     <div
-      className="min-w-[60rem] overflow-hidden rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--skeleton-surface-bg-strong)]"
+      className="min-w-[var(--app-filelist-skeleton-min-width)] overflow-hidden rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--skeleton-surface-bg-strong)]"
       data-oid="rzzj7yc"
     >
       <table className="w-full table-fixed border-collapse" data-oid="by7hc9y">
@@ -129,8 +129,8 @@ export function FileListSkeleton({ count = 5 }: { count?: number }) {
             data-oid="4yuyl-a"
           >
             <th className="w-[clamp(2.75rem,5.4vw,3rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="xklb.0q" />
-            <th className="w-[4.5rem] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="itq1s5-" />
-            <th className="min-w-[11.25rem] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="vi91p5d" />
+            <th className="w-[clamp(4rem,8.1vw,4.5rem)] px-[clamp(0.39rem,0.9vw,0.5rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="itq1s5-" />
+            <th className="min-w-[clamp(9.5rem,18vw,11.25rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="vi91p5d" />
             <th className="w-[clamp(4.75rem,9vw,5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="._zf406" />
             <th className="w-[clamp(6.75rem,12.6vw,7rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="5wyw3nr" />
             <th className="w-[clamp(5.75rem,10.8vw,6rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="5kdefrh" />

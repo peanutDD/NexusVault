@@ -29,28 +29,29 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "glass-panel-soft flex flex-col items-center justify-center px-[clamp(0.75rem,2vw,1rem)] py-[clamp(3rem,8vw,4rem)] text-center",
+        "emptyStateSurface glass-panel-soft flex flex-col items-center justify-center px-[clamp(0.75rem,2vw,1rem)] py-[clamp(3rem,8vw,4rem)] text-center",
         className,
       )}
+      data-testid="empty-state"
       data-oid="4twbe5_"
     >
       {icon && (
         <div
-          className="mb-[clamp(0.75rem,2vw,1rem)] flex h-[clamp(4rem,10vw,5rem)] w-[clamp(4rem,10vw,5rem)] items-center justify-center rounded-full bg-[rgba(var(--rgb-white),0.06)] ring-1 ring-[var(--color-border-soft)]"
+          className="emptyStateIconShell mb-[clamp(0.75rem,2vw,1rem)] flex h-[clamp(4rem,10vw,5rem)] w-[clamp(4rem,10vw,5rem)] items-center justify-center rounded-full bg-[rgba(var(--rgb-white),0.06)] ring-1 ring-[var(--color-border-soft)]"
           data-oid="2z8bf-l"
         >
           {icon}
         </div>
       )}
       <p
-        className="text-[clamp(1rem,2.3vw,1.125rem)] font-medium text-[var(--color-text-secondary)]"
+        className="emptyStateTitle text-[clamp(1rem,2.3vw,1.125rem)] font-medium text-[var(--color-text-secondary)]"
         data-oid="b_tqwby"
       >
         {title}
       </p>
       {description && (
         <p
-          className="mt-[clamp(0.2rem,0.7vw,0.25rem)] max-w-[24rem] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--color-text-muted)]"
+          className="emptyStateDescription mt-[clamp(0.2rem,0.7vw,0.25rem)] max-w-[var(--app-empty-state-max-width)] text-[clamp(0.75rem,1.8vw,0.875rem)] text-[var(--color-text-muted)]"
           data-oid="eio-46a"
         >
           {description}

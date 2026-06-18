@@ -61,7 +61,7 @@ export function SelectionCheckbox({
       {isSelected ? (
         <span
           className={cn(
-            "card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-[var(--selection-check-surface)] transition-colors duration-150 group-hover:bg-[var(--selection-check-surface-hover)]",
+            "card-checkbox-codepen-box card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-[var(--selection-check-surface)] transition-colors duration-150 group-hover:bg-[var(--selection-check-surface-hover)]",
             isResponsive
               ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
               : isSmall
@@ -96,7 +96,7 @@ export function SelectionCheckbox({
       ) : (
         <span
           className={cn(
-            "card-checkbox-unselected flex items-center justify-center rounded-full bg-[var(--selection-check-unselected-surface)] transition-colors duration-150 group-hover:bg-[var(--selection-check-unselected-surface-hover)]",
+            "card-checkbox-codepen-box card-checkbox-unselected flex items-center justify-center rounded-full bg-[var(--selection-check-unselected-surface)] transition-colors duration-150 group-hover:bg-[var(--selection-check-unselected-surface-hover)]",
             isResponsive
               ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
               : isSmall
@@ -104,19 +104,7 @@ export function SelectionCheckbox({
                 : "h-[clamp(0.78rem,1.8vw,1rem)] w-[clamp(0.78rem,1.8vw,1rem)]",
           )}
           data-oid="4jdh1lb"
-        >
-          <span
-            className={cn(
-              "card-checkbox-unselected-ring rounded-full border-[var(--selection-check-unselected-ring)] transition-colors duration-150 group-hover:border-[var(--selection-check-unselected-ring-hover)]",
-              isResponsive
-                ? "h-[clamp(0.35rem,0.6vw,0.52rem)] w-[clamp(0.35rem,0.6vw,0.52rem)]"
-                : isSmall
-                  ? "h-[clamp(0.2925rem,0.675vw,0.375rem)] w-[clamp(0.2925rem,0.675vw,0.375rem)]"
-                  : "h-[clamp(0.4875rem,1.125vw,0.625rem)] w-[clamp(0.4875rem,1.125vw,0.625rem)]",
-            )}
-            data-oid="v3q45d5"
-          />
-        </span>
+        />
       )}
     </button>
   );

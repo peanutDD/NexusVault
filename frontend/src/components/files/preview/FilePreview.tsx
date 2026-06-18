@@ -1,7 +1,7 @@
 /**
  * FilePreview
  * 文件预览弹窗：支持图片、视频、音频、PDF、文本
- * 多文件时可左右切换，图片支持缩放、旋转
+ * 多文件时可左右切换，图片支持缩放/旋转，视频支持旋转
  */
 
 // =============================================================================
@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { useMemo, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { fileService } from "../../../services/files";
 import { formatFileSize } from "../../../utils/format";
 import { cn } from "../../../utils/cn";
@@ -150,6 +151,7 @@ export default function FilePreview({
       file?.original_filename ? truncateFilename(file.original_filename) : "",
     [file],
   );
+  const showCounterStrip = files.length > 1;
 
   // -------------------------------------------------------------------------
   // 图片控制回调
@@ -183,10 +185,10 @@ export default function FilePreview({
   // -------------------------------------------------------------------------
   // 渲染
   // -------------------------------------------------------------------------
-  return (
+  const previewDialog = (
     <div
       ref={previewRootRef}
-      className="preview-cyberpunk-root fixed inset-0 z-50 flex flex-col overflow-hidden text-[var(--preview-text-primary)]"
+      className="previewDialog preview-root fixed inset-0 z-[70] flex flex-col overflow-hidden text-[var(--preview-text-primary)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="preview-title"
@@ -227,62 +229,23 @@ export default function FilePreview({
         />
       </div>
 
-      {/* ---- 左侧导航按钮 ---- */}
-      {files.length > 1 && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            goToPrev();
-          }}
-          disabled={!canGoPrev}
-          className={cn(
-            "absolute z-20 top-1/2 -translate-y-1/2 left-[clamp(0.5rem,2vw,1rem)]",
-            "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
-            "border-[clamp(1px,0.2vw,2px)] border-solid border-[var(--preview-nav-border)]",
-            "shadow-[var(--preview-nav-shadow)]",
-            "bg-[image:var(--preview-nav-bg)] backdrop-blur-xl text-[var(--preview-icon)] transition-all duration-200",
-            canGoPrev
-              ? "hover:text-[var(--preview-nav-hover-text)] hover:scale-105 hover:border-[var(--preview-nav-border-hover)] cursor-pointer"
-              : "opacity-30 cursor-not-allowed",
-          )}
-          aria-label="上一个文件"
-          data-oid="1u2s148"
-        >
-          <svg
-            className="shrink-0 w-[clamp(1rem,2.5vw,1.5rem)] h-[clamp(1rem,2.5vw,1.5rem)]"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            strokeWidth="clamp(1.5, 0.4vw, 2.5)"
-            data-oid="2mniwy."
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-              data-oid=":-.ujt6"
-            />
-          </svg>
-        </button>
-      )}
-
       {/* ---- 顶部工具栏（文件计数器） ---- */}
-      <div
-        className="relative z-20 flex shrink-0 items-center justify-between bg-[image:var(--preview-toolbar-mobile-bg)] px-[clamp(0.78rem,1.8vw,1rem)] pb-[clamp(0.585rem,1.35vw,0.75rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)]"
-        onClick={(e) => e.stopPropagation()}
-        data-oid="0_8_xes"
-      >
-        <div className="flex items-center gap-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="omtvpu3" />
-        <div className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="sj8woog" />
-        {files.length > 1 && (
+      {showCounterStrip && (
+        <div
+          className="previewCounterStrip relative z-20 flex shrink-0 items-center justify-between [background:var(--preview-modal-bg)] px-[clamp(0.78rem,1.8vw,1rem)] pb-[clamp(0.585rem,1.35vw,0.75rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)]"
+          onClick={(e) => e.stopPropagation()}
+          data-testid="preview-counter-strip"
+          data-oid="0_8_xes"
+        >
+          <div className="flex items-center gap-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="omtvpu3" />
+          <div className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)]" data-oid="sj8woog" />
           <div
             className="pointer-events-none absolute left-1/2 top-[clamp(0.585rem,1.35vw,0.75rem)] -translate-x-1/2"
             data-oid="ptnb6vs"
           >
             <div
               className={cn(
-                "inline-flex items-center rounded-full bg-[var(--preview-counter-bg)] backdrop-blur-xl border-solid",
+                "inline-flex items-center rounded-full [background:var(--preview-counter-bg)] backdrop-blur-xl border-solid",
                 "gap-[clamp(0.25rem,0.8vw,0.5rem)] pl-[clamp(0.5rem,1.2vw,0.75rem)] pr-[clamp(0.5rem,1.2vw,0.75rem)]",
                 "pt-[clamp(0.2rem,0.5vw,0.25rem)] pb-[clamp(0.2rem,0.5vw,0.25rem)]",
                 "border-[clamp(1px,0.15vw,2px)] border-[var(--preview-counter-border)] text-[clamp(0.6rem,1.2vw,0.7rem)]",
@@ -298,43 +261,87 @@ export default function FilePreview({
               </span>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* ---- 主内容区 ---- */}
-      <FilePreviewContent
-        file={file}
-        loading={loading}
-        error={error}
-        supported={supported}
-        isImage={isImage}
-        isPDF={isPDF}
-        isVideo={isVideo}
-        isAudio={isAudio}
-        isText={isText}
-        isMarkdown={isMarkdown}
-        blobUrl={blobUrl}
-        gifFirstFrameUrl={gifFirstFrameUrl}
-        textContent={textContent}
-        useHls={useHls}
-        imageLoaded={imageLoaded}
-        videoRef={videoRef}
-        loop={isLooping}
-        setImageLoaded={setImageLoaded}
-        tryVideoAudioFallback={tryVideoAudioFallback}
-        onImageError={onImageError}
-        onClose={onClose}
-        formatDate={formatPreviewDate}
-        zoom={zoom}
-        rotation={rotation}
-        pan={pan}
-        isDraggingImage={isDraggingImage}
-        onImagePointerDown={onImagePointerDown}
-        onImagePointerMove={onImagePointerMove}
-        onImagePointerUp={onImagePointerUp}
-        onImagePointerCancel={onImagePointerCancel}
-        data-oid="gyzog51"
-      />
+      <div
+        className="previewStageControlPlane relative z-10 flex min-h-0 w-full min-w-0 flex-1 [background:var(--preview-modal-bg)]"
+        data-testid="preview-stage-control-plane"
+      >
+        {/* ---- 主内容区 ---- */}
+        <FilePreviewContent
+          file={file}
+          loading={loading}
+          error={error}
+          supported={supported}
+          isImage={isImage}
+          isPDF={isPDF}
+          isVideo={isVideo}
+          isAudio={isAudio}
+          isText={isText}
+          isMarkdown={isMarkdown}
+          blobUrl={blobUrl}
+          gifFirstFrameUrl={gifFirstFrameUrl}
+          textContent={textContent}
+          useHls={useHls}
+          imageLoaded={imageLoaded}
+          videoRef={videoRef}
+          loop={isLooping}
+          setImageLoaded={setImageLoaded}
+          tryVideoAudioFallback={tryVideoAudioFallback}
+          onImageError={onImageError}
+          onClose={onClose}
+          formatDate={formatPreviewDate}
+          zoom={zoom}
+          rotation={rotation}
+          pan={pan}
+          isDraggingImage={isDraggingImage}
+          onImagePointerDown={onImagePointerDown}
+          onImagePointerMove={onImagePointerMove}
+          onImagePointerUp={onImagePointerUp}
+          onImagePointerCancel={onImagePointerCancel}
+          data-oid="gyzog51"
+        />
+
+        {/* ---- 左侧导航按钮 ---- */}
+        {showCounterStrip && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToPrev();
+            }}
+            disabled={!canGoPrev}
+            className={cn(
+              "previewNavButton absolute z-[1000] top-1/2 -translate-y-1/2 left-[clamp(0.5rem,2vw,1rem)]",
+              "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
+              "border-[clamp(1px,0.2vw,2px)] border-solid border-[var(--preview-nav-border)]",
+              "shadow-[var(--preview-nav-shadow)]",
+              "bg-[image:var(--preview-nav-bg)] backdrop-blur-xl text-[var(--preview-icon)] transition-all duration-200",
+              canGoPrev
+                ? "hover:text-[var(--preview-nav-hover-text)] hover:scale-105 hover:border-[var(--preview-nav-border-hover)] cursor-pointer"
+                : "opacity-30 cursor-not-allowed",
+            )}
+            aria-label="上一个文件"
+            data-oid="1u2s148"
+          >
+            <svg
+              className="shrink-0 w-[clamp(1rem,2.5vw,1.5rem)] h-[clamp(1rem,2.5vw,1.5rem)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="clamp(1.5, 0.4vw, 2.5)"
+              data-oid="2mniwy."
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 19l-7-7 7-7"
+                data-oid=":-.ujt6"
+              />
+            </svg>
+          </button>
+        )}
 
       <FilePreviewToolbar
         section="upper"
@@ -348,11 +355,11 @@ export default function FilePreview({
         onResetView={handleResetView}
         onToggleLoop={handleToggleLoop}
         isLooping={isLooping}
-        className="absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] bottom-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
+        className="previewToolbarUpper previewMobileChromeLane absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] bottom-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
         data-oid="raibeex"
       />
 
-      {files.length > 1 && (
+      {showCounterStrip && (
         <button
           type="button"
           onClick={(e) => {
@@ -361,7 +368,7 @@ export default function FilePreview({
           }}
           disabled={!canGoNext}
           className={cn(
-            "absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-1/2 -translate-y-1/2",
+            "previewNavButton absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-1/2 -translate-y-1/2",
             "flex items-center justify-center rounded-full w-[clamp(2rem,5vw,3rem)] h-[clamp(2rem,5vw,3rem)]",
             "border-[clamp(1px,0.2vw,2px)] border-solid border-[var(--preview-nav-border)]",
             "shadow-[var(--preview-nav-shadow)]",
@@ -403,45 +410,91 @@ export default function FilePreview({
         onResetView={handleResetView}
         onToggleLoop={handleToggleLoop}
         isLooping={isLooping}
-        className="absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
+        className="previewToolbarLower previewMobileChromeLane absolute z-[1000] right-[clamp(0.5rem,2vw,1rem)] top-[calc(50%+clamp(1rem,2.5vw,1.5rem)+clamp(0.75rem,1.8vw,1rem))]"
         data-oid="h1nkeo3"
       />
+      </div>
 
       {/* ---- 底部文件信息 ---- */}
       <div
-        className="relative z-20 shrink-0 bg-[image:var(--preview-toolbar-mobile-bottom-bg)] px-[clamp(0.8rem,2vw,1rem)] py-[clamp(0.9rem,2.25vw,1.25rem)]"
+        className="relative z-20 shrink-0 bg-[image:var(--preview-toolbar-mobile-bottom-bg)] px-[clamp(0.8rem,2vw,1rem)] pb-[clamp(0.9rem,2.25vw,1.25rem)] pt-[clamp(0.18rem,0.45vw,0.25rem)]"
         onClick={(e) => e.stopPropagation()}
+        data-testid="preview-file-info-strip"
         data-oid="8u:a17z"
       >
         <div className="mx-auto max-w-[clamp(38rem,96vw,48rem)]" data-oid="j24dcaf">
           <div
             className={cn(
-              "mx-auto max-w-[clamp(34rem,96vw,42rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] bg-[var(--preview-caption-bg)] text-center backdrop-blur-sm border-solid",
+              "previewFileInfoCard mx-auto max-w-[clamp(34rem,96vw,50rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] [background:var(--preview-caption-bg)] text-center backdrop-blur-sm border-solid",
               "p-[clamp(0.5rem,1.2vw,0.75rem)]",
               "border-[clamp(1px,0.15vw,2px)] border-[var(--preview-caption-border)]",
               "shadow-[var(--preview-caption-shadow)]",
             )}
+            data-testid="preview-file-info-card"
             data-oid="86:.xt."
           >
-            <h2
-              id="preview-title"
-              className="truncate font-medium text-[var(--preview-text-primary)] text-[clamp(0.8rem,1.8vw,1rem)]"
-              title={file.original_filename}
-              data-oid="fl7a_5r"
+            <div
+              className="previewFileInfoContent"
+              data-testid="preview-file-info-content"
             >
-              {displayFilename}
-            </h2>
-            <p
-              className="text-[var(--preview-text-muted)] mt-[clamp(0.2rem,0.5vw,0.25rem)] text-[clamp(0.65rem,1.4vw,0.75rem)]"
-              data-oid="n97uwfn"
-            >
-              {formatFileSize(file.file_size)} ·{" "}
-              {getMimeTypeLabel(file.mime_type, file.original_filename)} ·{" "}
-              {formatPreviewDate(file.created_at)}
-            </p>
+              <div
+                className="previewFileInfoNameBlock min-w-0"
+                data-testid="preview-file-info-name-block"
+              >
+                <h2
+                  id="preview-title"
+                  className="previewFileInfoTitle truncate font-medium text-[var(--preview-text-primary)]"
+                  title={file.original_filename}
+                  data-testid="preview-file-info-title"
+                  data-oid="fl7a_5r"
+                >
+                  {displayFilename}
+                </h2>
+              </div>
+              <p
+                className="previewFileInfoMeta previewFileInfoMetaRail previewFileInfoMetaCapsule text-[var(--preview-text-muted)]"
+                data-testid="preview-file-info-meta"
+                data-oid="n97uwfn"
+              >
+                <span
+                  className="previewFileInfoMetaItem previewFileInfoSize"
+                  data-testid="preview-file-info-size"
+                >
+                  {formatFileSize(file.file_size)}
+                </span>
+                <span
+                  className="previewFileInfoMetaSeparator"
+                  data-testid="preview-file-info-size-separator"
+                  aria-hidden="true"
+                >
+                  ·
+                </span>
+                <span
+                  className="previewFileInfoMetaItem previewFileInfoType"
+                  data-testid="preview-file-info-type"
+                >
+                  {getMimeTypeLabel(file.mime_type, file.original_filename)}
+                </span>
+                <span
+                  className="previewFileInfoMetaSeparator"
+                  data-testid="preview-file-info-type-separator"
+                  aria-hidden="true"
+                >
+                  ·
+                </span>
+                <span
+                  className="previewFileInfoMetaItem previewFileInfoDate"
+                  data-testid="preview-file-info-date"
+                >
+                  {formatPreviewDate(file.created_at)}
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
+
+  return createPortal(previewDialog, document.body);
 }

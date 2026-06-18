@@ -81,7 +81,7 @@ function renderTrash({
   );
 }
 
-describe("Trash page", () => {
+describe.sequential("Trash page", () => {
   it("keeps the Trash console sticky despite the shared glass-panel position rule", () => {
     const fileListGlassCss = readFileSync(
       resolve(__dirname, "../components/files/list/FileListGlass.css"),
@@ -115,10 +115,79 @@ describe("Trash page", () => {
     expect(fileListGlassCss).toContain(
       "gap: var(--trash-console-mobile-row-gap)",
     );
+    const trashConsoleButtonRule = readFileListGlassRule(
+      ".fileListGlassScope .trashConsoleToolbar .glass-btn.toolbarActionBtn.trashConsoleButton",
+    );
+    expect(trashConsoleButtonRule).toContain(
+      "box-shadow: inset 0 1px 0 rgba(var(--rgb-white), 0.18)",
+    );
+    expect(trashConsoleButtonRule).not.toContain("rgba(0, 0, 0, 0.3)");
+    expect(trashConsoleButtonRule).not.toContain("0 clamp(");
+    const trashConsoleActionsRule = readFileListGlassRule(
+      ".fileListGlassScope .trashConsoleToolbar .trashConsoleActions",
+    );
+    expect(trashConsoleActionsRule).toContain("overflow: visible");
+    expect(trashConsoleActionsRule).toContain("padding-inline: clamp(");
+    expect(trashConsoleActionsRule).toContain("margin-inline: calc(");
+  });
+
+  it("maps the Trash console summary bar to neuromorphic inset and raised primitives", () => {
+    const css = readFileSync(
+      resolve(__dirname, "../components/files/list/FileListGlass.css"),
+      "utf8",
+    ).replace(/\s+/g, " ");
+
+    expect(css).toContain(
+      '.neuromorphic-style .fileListGlassScope .trashConsoleToolbar',
+    );
+    expect(css).toContain(
+      '.neuromorphic-style .fileListGlassScope .trashConsoleSummaryRow',
+    );
+    expect(css).toContain(
+      '.neuromorphic-style .fileListGlassScope .trashConsoleTitle',
+    );
+    expect(css).toContain(
+      '.neuromorphic-style .fileListGlassScope .trashConsoleSummaryChip',
+    );
+    expect(css).toContain("background: var(--neu-inset-bg)");
+    expect(css).toContain("box-shadow: var(--neu-inset-shadow)");
+    expect(css).toContain("background: var(--neu-raised-bg)");
+    expect(css).toContain("box-shadow: var(--neu-raised-sm-shadow)");
+    expect(css).toContain("color: var(--neu-primary)");
+  });
+
+  it("maps the Trash empty state to explicit neuromorphic raised and inset primitives", () => {
+    const css = readFileSync(
+      resolve(__dirname, "../components/files/list/FileListGlass.css"),
+      "utf8",
+    ).replace(/\s+/g, " ");
+
+    expect(css).toContain(
+      '.neuromorphic-style .fileListGlassScope .trashEmptyState',
+    );
+    expect(css).toContain(
+      '[data-theme="light"] .fileListGlassScope .trashEmptyState',
+    );
+    expect(css).toContain(
+      '.neuromorphic-style .fileListGlassScope .trashEmptyState .emptyStateIconShell',
+    );
+    expect(css).toContain(
+      '[data-theme="light"] .fileListGlassScope .trashEmptyState .emptyStateIconShell',
+    );
+    expect(css).toContain(
+      '.neuromorphic-style .fileListGlassScope .trashEmptyState .emptyStateIconShell svg',
+    );
+    expect(css).toContain("background: var(--trash-panel-bg)");
+    expect(css).toContain("box-shadow: var(--trash-panel-shadow)");
+    expect(css).toContain("min-height: clamp(13rem, 40dvh, 24rem)");
+    expect(css).toContain("margin-bottom: clamp(1.5rem, 4vw, 3rem)");
+    expect(css).toContain("background: var(--trash-tech-panel-strong)");
+    expect(css).toContain("box-shadow: var(--neu-inset-shadow)");
+    expect(css).toContain("color: var(--trash-accent)");
   });
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     useAuthStore.setState({
       user: {
         id: "user-1",
@@ -139,7 +208,7 @@ describe("Trash page", () => {
     category: null,
     folder_id: null,
     created_at: "2026-05-01T00:00:00.000Z",
-    deleted_at: "2026-05-08T00:00:00.000Z",
+    deleted_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   });
 
   it("renders deleted files and restores one", async () => {
@@ -171,7 +240,7 @@ describe("Trash page", () => {
       "lg:grid-cols-8",
       "xl:grid-cols-10",
     );
-    expect(screen.getByTestId("page-layout")).toHaveAttribute(
+    expect(screen.getByTestId("page-layout")).not.toHaveAttribute(
       "data-background-class-name",
       "bg-[color:var(--filelist-page-bg)]",
     );
@@ -188,12 +257,33 @@ describe("Trash page", () => {
     expect(screen.getByTestId("trash-console-inner")).toHaveClass(
       "gap-[clamp(0.65rem,1.6vw,0.9rem)]",
     );
+    expect(screen.getByTestId("trash-console-actions")).not.toHaveClass(
+      "sm:overflow-x-auto",
+    );
+    expect(screen.getByTestId("trash-console-actions")).toHaveClass(
+      "sm:overflow-visible",
+    );
     expect(screen.getByTestId("trash-console-summary-row")).toHaveClass(
       "trashConsoleSummaryRow",
       "inline-flex",
       "w-full",
       "max-w-full",
       "self-stretch",
+    );
+    expect(screen.getByTestId("trash-console-title")).toHaveClass(
+      "trashConsoleTitle",
+    );
+    expect(screen.getByTestId("trash-console-count-chip")).toHaveClass(
+      "trashConsoleSummaryChip",
+      "trashConsoleCountChip",
+    );
+    expect(screen.getByTestId("trash-console-size-chip")).toHaveClass(
+      "trashConsoleSummaryChip",
+      "trashConsoleSizeChip",
+    );
+    expect(screen.getByTestId("trash-console-retention-chip")).toHaveClass(
+      "trashConsoleSummaryChip",
+      "trashConsoleRetentionChip",
     );
     expect(screen.getByTestId("trash-shell")).toHaveClass("fileListGlassScope");
     expect(screen.queryByTestId("trash-console-grid")).not.toBeInTheDocument();
@@ -249,6 +339,10 @@ describe("Trash page", () => {
     expect(screen.getByRole("button", { name: "选择" })).toHaveClass(
       "selection-checkbox-hover-reveal",
     );
+    expect(screen.getByRole("button", { name: "选择" })).toHaveClass(
+      "left-[clamp(0.06rem,0.16vw,0.1rem)]",
+      "top-[clamp(0.06rem,0.16vw,0.1rem)]",
+    );
     expect(screen.getByRole("button", { name: "选择" })).not.toHaveClass(
       "invisible",
       "group-hover:visible",
@@ -276,6 +370,7 @@ describe("Trash page", () => {
     );
     expect(screen.getByTestId("trash-card-restore-file-1")).toHaveClass(
       "trashCardActionButton",
+      "trashCardNeuButton",
       "glass-btn",
       "allFilesBtnHighlight",
     );
@@ -287,6 +382,7 @@ describe("Trash page", () => {
     );
     expect(screen.getByRole("button", { name: "彻底删除 file-1.txt" })).toHaveClass(
       "trashCardActionButton",
+      "trashCardNeuButton",
       "glass-btn",
       "uploadBtnHighlight",
     );
@@ -297,6 +393,57 @@ describe("Trash page", () => {
     await waitFor(() => {
       expect(fileService.restoreFile).toHaveBeenCalledWith("file-1");
     });
+  });
+
+  it("removes a restored card immediately even if a stale trash refetch returns it", async () => {
+    vi.mocked(fileService.listTrash).mockResolvedValue({
+      files: [makeTrashFile("file-1", "file-1.txt")],
+    });
+    vi.mocked(fileService.restoreFile).mockResolvedValue({
+      id: "file-1",
+      filename: "file-1.txt",
+      original_filename: "file-1.txt",
+      file_size: 128,
+      mime_type: "text/plain",
+      category: null,
+      folder_id: null,
+      created_at: "2026-05-01T00:00:00.000Z",
+      deleted_at: null,
+    });
+
+    renderTrash();
+
+    expect(await screen.findByText("file-1.txt")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "还原 file-1.txt" }));
+
+    await waitFor(() => {
+      expect(fileService.restoreFile).toHaveBeenCalledWith("file-1");
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId("trash-card-file-1")).not.toBeInTheDocument();
+    });
+  });
+
+  it("overrides trash card action buttons to raised neuromorphic buttons after legacy highlights", () => {
+    const css = readFileSync(
+      resolve(__dirname, "../components/files/list/FileListGlass.css"),
+      "utf8",
+    );
+    const legacyUploadIndex = css.indexOf(
+      ".fileListGlassScope .glass-btn.uploadBtnHighlight",
+    );
+    const neuromorphicTrashIndex = css.indexOf(
+      '.neuromorphic-style .fileListGlassScope .trashCardNeuButton',
+    );
+
+    expect(neuromorphicTrashIndex).toBeGreaterThan(legacyUploadIndex);
+    expect(css).toContain(
+      '.neuromorphic-style .fileListGlassScope .trashCardNeuButton',
+    );
+    expect(css).toContain("background: var(--neu-raised-bg)");
+    expect(css).toContain("box-shadow: var(--neu-raised-sm-shadow)");
+    expect(css).toContain("text-shadow: none");
+    expect(css).toContain("box-shadow: var(--neu-pressed-shadow)");
   });
 
   it("confirms before emptying trash", async () => {
@@ -461,6 +608,16 @@ describe("Trash page", () => {
     renderTrash({ initialEntries: ["/trash"] });
 
     expect(await screen.findByText("回收站为空")).toBeInTheDocument();
+    expect(screen.getByText("回收站为空")).toHaveClass("emptyStateTitle");
+    expect(screen.getByText("删除的文件会在这里保留 30 天")).toHaveClass(
+      "emptyStateDescription",
+    );
+    expect(screen.getByTestId("empty-state")).toHaveClass(
+      "emptyStateSurface",
+      "trashEmptyState",
+    );
+    expect(screen.getByTestId("empty-state").querySelector(".emptyStateIconShell"))
+      .toBeInTheDocument();
   });
 
   it("returns to the previous files location instead of hardcoding files home", async () => {

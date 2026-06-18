@@ -195,7 +195,7 @@ export default function BatchMoveDialog({
           data-oid="r14y2ft"
         >
           <p
-            className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+            className="text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
             data-oid="ii2_3y4"
           >
             冲突文件
@@ -204,7 +204,7 @@ export default function BatchMoveDialog({
             {errorDetails.map((item, index) => (
               <li
                 key={`${item}-${index}`}
-                className="text-[0.625rem] text-[var(--notice-error)]"
+                className="text-[length:var(--font-size-ui-5xs)] text-[var(--notice-error)]"
                 data-oid="tz5pq6a"
               >
                 {`${index + 1}. ${item}`}
@@ -229,7 +229,7 @@ export default function BatchMoveDialog({
         data-oid="0wuphy5"
       >
         <p
-          className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="mil:15n"
         >
           已选择
@@ -247,7 +247,7 @@ export default function BatchMoveDialog({
       {/* 目标位置：标题 + 列表 */}
       <div data-oid="x:-p7se">
         <p
-          className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[0.65rem] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
+          className="mb-[clamp(0.2925rem,0.675vw,0.375rem)] text-[length:var(--font-size-ui-4xs)] uppercase tracking-[0.18em] text-[var(--dialog-panel-title)]"
           data-oid="07cslc8"
         >
           目标位置

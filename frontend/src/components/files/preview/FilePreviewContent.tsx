@@ -104,18 +104,23 @@ export function FilePreviewContent(props: FilePreviewContentProps) {
     (isGif && !blobUrl && gifFirstFrameUrl);
   const imagePreviewSrc =
     isGif && !blobUrl ? gifFirstFrameUrl : (blobUrl ?? gifFirstFrameUrl);
+  const isDocumentPreview = isText || isMarkdown || isPDF;
 
   return (
     <FilePreviewStage
-      showLabel={!loading && !error && supported}
+      showLabel={!loading && !error && supported && !isText}
       onClose={onClose}
+      isDocumentPreview={isDocumentPreview}
     >
       {loading ? <PreviewLoadingState /> : null}
       {error && !loading ? (
         <PreviewErrorState error={error} onClose={onClose} />
       ) : null}
       {!loading && !error && supported ? (
-        <div className="relative flex h-full w-full items-center justify-center p-[clamp(1rem,3vw,2rem)]">
+        <div
+          className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center p-[clamp(1rem,3vw,2rem)]"
+          data-testid="preview-content-inner"
+        >
           {showImagePreview && imagePreviewSrc ? (
             <ImagePreview
               src={imagePreviewSrc}
@@ -149,6 +154,7 @@ export function FilePreviewContent(props: FilePreviewContentProps) {
               blobUrl={blobUrl}
               useHls={useHls}
               loop={loop}
+              rotation={rotation}
               videoReady={videoReady}
               videoRef={videoRef}
               onReady={() => setVideoReady(true)}

@@ -132,7 +132,9 @@ export function useUploadDialogController({
 
       const currentFiles = uploadFilesRef.current;
       const currentKeys = new Set(
-        currentFiles.filter((f) => f.file).map((f) => fileDedupKey(f.file!)),
+        currentFiles
+          .filter((f) => f.file && (f.status === "pending" || f.status === "uploading"))
+          .map((f) => fileDedupKey(f.file!)),
       );
       const seen = new Set<string>();
       const deduped: File[] = [];
@@ -196,8 +198,11 @@ export function useUploadDialogController({
         toUploadFile(file, baseId, index),
       );
       updateUploadFiles([...currentFiles, ...newEntries]);
+      for (const file of filesToAdd) {
+        void fileService.stagePreUpload?.(file, folderId).catch(() => undefined);
+      }
     },
-    [clearWarnings, maxBatchCount, updateUploadFiles],
+    [clearWarnings, folderId, maxBatchCount, updateUploadFiles],
   );
 
   const handleUrlFileAdd = useCallback(
@@ -290,7 +295,9 @@ export function useUploadDialogController({
     isUploadingRef.current = uploadFilesRef.current.some(
       (f) => f.status === "uploading",
     );
-    if (hasNewSuccess) onUploadComplete();
+    if (hasNewSuccess) {
+      onUploadComplete();
+    }
   }, [folderId, onClose, onUploadComplete, updateUploadFiles]);
 
   const uploadStats = useMemo(() => getUploadStats(uploadFiles), [uploadFiles]);
@@ -325,18 +332,22 @@ export function useUploadDialogController({
   const handleRemove = useCallback(
     (id: string) => {
       const file = uploadFilesRef.current.find((item) => item.id === id);
+      if (file?.file) fileService.cancelStagedPreUpload?.(file.file, folderId);
       if (file?.status === "pending" || file?.status === "uploading") {
         cancelUploadTask(id);
       }
       updateUploadFiles((prev) => prev.filter((f) => f.id !== id));
     },
-    [cancelUploadTask, updateUploadFiles],
+    [cancelUploadTask, folderId, updateUploadFiles],
   );
 
   const handleClearAll = useCallback(() => {
+    for (const file of uploadFilesRef.current) {
+      if (file.file) fileService.cancelStagedPreUpload?.(file.file, folderId);
+    }
     cancelAllUploads();
     updateUploadFiles([]);
-  }, [cancelAllUploads, updateUploadFiles]);
+  }, [cancelAllUploads, folderId, updateUploadFiles]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();

@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import compression from "vite-plugin-compression";
 // import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from "rollup-plugin-visualizer";
+import { manualChunkName } from "./vite.manualChunks";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -110,6 +111,11 @@ export default defineConfig(({ mode }) => {
         changeOrigin: true,
         secure: false,
       },
+      "/dav": {
+        target: proxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   preview: {
@@ -124,88 +130,7 @@ export default defineConfig(({ mode }) => {
     rollupOptions: {
       output: {
         // 使用函数形式的 manualChunks 实现更细粒度的代码拆分
-        manualChunks(id) {
-          // node_modules 中的依赖
-          if (id.includes("node_modules")) {
-            // React core must not include router/state packages that import
-            // other vendor modules, otherwise Rollup creates vendor cycles.
-            if (
-              id.includes("/react/") ||
-              id.includes("/react-dom/") ||
-              id.includes("/scheduler/") ||
-              id.includes("/use-sync-external-store/")
-            ) {
-              return "react-vendor";
-            }
-            if (
-              id.includes("react-router-dom") ||
-              id.includes("react-router") ||
-              id.includes("@remix-run/router")
-            ) {
-              return "router-vendor";
-            }
-            if (id.includes("zustand")) {
-              return "state-vendor";
-            }
-            if (
-              id.includes("@tanstack/react-query") ||
-              id.includes("@tanstack/query-core") ||
-              id.includes("@tanstack/react-query-devtools")
-            ) {
-              return "query-vendor";
-            }
-            if (
-              id.includes("react-hook-form") ||
-              id.includes("@hookform/resolvers") ||
-              id.includes("/zod/")
-            ) {
-              return "form-vendor";
-            }
-            // UI 组件库和图标
-            if (
-              id.includes("lucide-react") ||
-              id.includes("three") ||
-              id.includes("framer-motion")
-            ) {
-              return "ui-vendor";
-            }
-            // 工具库
-            if (
-              id.includes("axios") ||
-              id.includes("date-fns") ||
-              id.includes("clsx") ||
-              id.includes("tailwind-merge")
-            ) {
-              return "utils-vendor";
-            }
-            // 其他大型依赖单独拆分
-            if (id.includes("@tanstack/react-virtual")) {
-              return "vendor-virtual";
-            }
-            if (id.includes("hls.js")) {
-              return "vendor-hls";
-            }
-            if (id.includes("three")) {
-              return "vendor-three";
-            }
-            if (id.includes("zip.js") || id.includes("jszip")) {
-              return "vendor-zip";
-            }
-            if (id.includes("@sentry")) {
-              return "vendor-sentry";
-            }
-            // PDF.js 单独分包（~1MB），仅在预览 PDF 时懒加载
-            if (id.includes("pdfjs-dist")) {
-              return "vendor-pdfjs";
-            }
-            // 其他 node_modules 依赖
-            return "vendor-other";
-          }
-
-          // App source is already split by route and dialog lazy imports.
-          // Keep source modules in Rollup's natural graph to avoid circular
-          // chunks between pages, list components, and preview-only code.
-        },
+        manualChunks: manualChunkName,
       },
     },
     chunkSizeWarningLimit: 500,

@@ -146,119 +146,398 @@
             0 0 var(--dialog-tech-glow-3xl) var(--dialog-tech-secondary-soft);
     }
 
-    /* 删除确认弹窗 - 科幻风玻璃拟态 */
-    .confirm-dialog-sci-fi-backdrop {
-        background-image: linear-gradient(
-            135deg,
-            var(--confirm-danger-sci-fi-b) 0%,
-            transparent 50%,
-            var(--confirm-danger-sci-fi-a) 100%
-        );
-        background-size: 100% 100%;
-    }
-
-    .confirm-dialog-sci-fi-panel {
-        border-color: var(--confirm-danger-glass-border);
-        box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 0.08),
-            0 0 var(--dialog-tech-glow-lg) rgba(var(--rgb-malachite-500), 0.1),
-            0 0 clamp(2.5rem, 6vw, 3rem) rgba(var(--rgb-emerald-400), 0.06),
-            inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    }
-
-    .confirm-dialog-sci-fi .confirm-dialog-sci-fi-panel.glass-panel::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        border-radius: inherit;
-        padding: 1px;
-        background: linear-gradient(
-            135deg,
-            rgba(var(--rgb-emerald-400), 0.2) 0%,
-            transparent 40%,
-            transparent 60%,
-            transparent 60%,
-            rgba(var(--rgb-malachite-500), 0.18) 100%
-        );
-        -webkit-mask:
-            linear-gradient(#fff 0 0) content-box,
-            linear-gradient(#fff 0 0);
-        mask:
-            linear-gradient(#fff 0 0) content-box,
-            linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-        opacity: 0.9;
-    }
-
-    .confirm-dialog-sci-fi-icon {
-        box-shadow:
-            0 0 0 1px rgba(var(--rgb-malachite-500), 0.35),
-            0 0 var(--dialog-tech-glow-sm) rgba(var(--rgb-malachite-500), 0.22);
-    }
-
-    .confirm-dialog-sci-fi-confirm {
-        box-shadow:
-            0 0 0 1px rgba(var(--rgb-malachite-500), 0.35),
-            0 0 clamp(1rem, 2.5vw, 1.25rem) rgba(var(--rgb-malachite-500), 0.2);
-    }
-
-    .confirm-dialog-sci-fi-confirm:hover:not(:disabled) {
-        box-shadow:
-            0 0 0 1px rgba(var(--rgb-malachite-500), 0.44),
-            0 0 var(--dialog-tech-glow-lg) rgba(var(--rgb-malachite-500), 0.3),
-            0 0 var(--dialog-tech-glow-2xl) rgba(var(--rgb-emerald-400), 0.1);
-    }
-
-    .confirm-dialog-sci-fi-panel .confirm-dialog-sci-fi-gradient {
-        background: linear-gradient(
-            to bottom,
-            rgba(var(--rgb-malachite-500), 0.12),
-            rgba(var(--rgb-emerald-400), 0.06),
-            transparent
-        );
-    }
-
-    .confirm-dialog-sci-fi-grid {
-        background-image:
-            linear-gradient(rgba(var(--rgb-emerald-400), 0.6) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(var(--rgb-emerald-400), 0.6) 1px, transparent 1px);
-        background-size: clamp(0.625rem, 2vw, 0.75rem) clamp(0.625rem, 2vw, 0.75rem);
-        opacity: 0.04;
-    }
-
     /* 凹槽头部：内凹设计 */
     .confirm-dialog-groove {
         position: relative;
     }
 
-    .confirm-dialog-groove-sci-fi {
-        background: linear-gradient(
-            180deg,
-            rgba(0, 0, 0, 0.35) 0%,
-            rgba(var(--rgb-malachite-500), 0.06) 50%,
-            rgba(0, 0, 0, 0.3) 100%
-        );
-        box-shadow:
-            inset 0 2px clamp(0.625rem, 2vw, 0.75rem) rgba(0, 0, 0, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    .neuromorphic-style .confirm-dialog-tech,
+    .neuromorphic-style .confirm-dialog-tech,
+    .neuromorphic-style .modal-dialog-tech,
+    .neuromorphic-style .modal-dialog-tech {
+        background-image: none;
     }
 
-    .confirm-dialog-groove-sci-fi::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 1px;
-        background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(var(--rgb-malachite-500), 0.26) 20%,
-            rgba(var(--rgb-emerald-400), 0.18) 80%,
-            transparent 100%
+    .neuromorphic-style .confirm-dialog-tech-backdrop,
+    .neuromorphic-style .confirm-dialog-tech-backdrop {
+        background: var(--confirm-backdrop-glass);
+        background-image: none;
+        -webkit-backdrop-filter: blur(clamp(0.625rem, 1.4vw, 0.8125rem)) saturate(1.05);
+        backdrop-filter: blur(clamp(0.625rem, 1.4vw, 0.8125rem)) saturate(1.05);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-panel,
+    .neuromorphic-style .confirm-dialog-tech-panel,
+    .neuromorphic-style .modal-dialog-tech-panel,
+    .neuromorphic-style .modal-dialog-tech-panel {
+        border-color: transparent;
+        background: var(--neu-raised-bg);
+        box-shadow: var(--neu-raised-shadow);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-panel::before,
+    .neuromorphic-style .confirm-dialog-tech-panel::before,
+    .neuromorphic-style .modal-dialog-tech-panel::before,
+    .neuromorphic-style .modal-dialog-tech-panel::before,
+    .neuromorphic-style .confirm-dialog-tech-panel::after,
+    .neuromorphic-style .confirm-dialog-tech-panel::after,
+    .neuromorphic-style .modal-dialog-tech-panel::after,
+    .neuromorphic-style .modal-dialog-tech-panel::after {
+        content: none;
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-topline,
+    .neuromorphic-style .confirm-dialog-tech-topline,
+    .neuromorphic-style .modal-dialog-tech-topline,
+    .neuromorphic-style .modal-dialog-tech-topline,
+    .neuromorphic-style .confirm-dialog-tech-grid,
+    .neuromorphic-style .confirm-dialog-tech-grid,
+    .neuromorphic-style .modal-dialog-tech-grid,
+    .neuromorphic-style .modal-dialog-tech-grid {
+        display: none;
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-groove,
+    .neuromorphic-style .confirm-dialog-tech-groove {
+        border-color: transparent;
+        background: var(--neu-inset-bg);
+        box-shadow: var(--neu-inset-shadow);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-groove::after,
+    .neuromorphic-style .confirm-dialog-tech-groove::after {
+        content: none;
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-icon,
+    .neuromorphic-style .confirm-dialog-tech-icon {
+        background: var(--neu-raised-bg);
+        box-shadow: var(--neu-raised-sm-shadow);
+        color: var(--neu-primary);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-title,
+    .neuromorphic-style .confirm-dialog-tech-title {
+        text-shadow: none;
+    }
+
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-panel-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-panel-bg)]"] {
+        border-color: transparent;
+        background: var(--neu-inset-bg);
+        box-shadow: var(--neu-inset-shadow);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech [class*="border-[var(--dialog-field-border)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="border-[var(--dialog-field-border)]"] {
+        border-color: transparent;
+        background: var(--neu-inset-bg);
+        box-shadow: var(--neu-inset-shadow);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-list-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-list-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-list-input-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-list-input-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-list-loading-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-list-loading-bg)]"] {
+        border-color: transparent;
+        background: var(--neu-inset-bg);
+        box-shadow: var(--neu-inset-shadow);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-action-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-action-bg)]"] {
+        border-color: transparent;
+        background: var(--neu-raised-bg);
+        box-shadow: var(--neu-raised-sm-shadow);
+        text-shadow: none;
+    }
+
+    :root,
+    :root[data-theme="dark"],
+    :root.dark {
+        --file-activity-alert-bg: rgba(20, 83, 45, 0.3);
+        --file-activity-alert-title-text: rgb(187, 247, 208);
+        --file-activity-alert-body-text: rgb(74, 222, 128);
+        --file-activity-alert-icon-text: rgb(74, 222, 128);
+        --file-activity-alert-border: rgba(74, 222, 128, 0.08);
+        --file-activity-alert-glow: rgba(74, 222, 128, 0.1);
+        --file-activity-row-glow-start: rgba(74, 222, 128, 0.08);
+        --file-activity-row-glow-end: rgba(20, 83, 45, 0.12);
+        --file-activity-rail-gradient: linear-gradient(
+            180deg,
+            rgba(74, 222, 128, 0.46),
+            rgba(34, 197, 94, 0.22)
         );
-        pointer-events: none;
+        --file-activity-rail-shadow: none;
+        --file-activity-title-border: transparent;
+        --file-activity-title-bg: transparent;
+        --file-activity-title-text: var(--file-activity-alert-title-text);
+        --file-activity-title-box-shadow: none;
+        --file-activity-title-shadow: none;
+        --file-activity-title-dot-bg: transparent;
+        --file-activity-title-dot-shadow: none;
+        --file-activity-filename-text: var(--file-activity-alert-body-text);
+        --file-activity-time-text: var(--file-activity-alert-body-text);
+        --file-activity-time-shadow: none;
+    }
+
+    :root[data-theme="light"],
+    :root.light {
+        --file-activity-alert-bg: rgb(220, 252, 231);
+        --file-activity-alert-title-text: rgb(22, 101, 52);
+        --file-activity-alert-body-text: rgb(22, 163, 74);
+        --file-activity-alert-icon-text: rgb(22, 163, 74);
+        --file-activity-alert-border: rgba(22, 163, 74, 0.14);
+        --file-activity-alert-glow: rgba(22, 163, 74, 0.12);
+        --file-activity-row-glow-start: rgba(22, 163, 74, 0.08);
+        --file-activity-row-glow-end: rgba(220, 252, 231, 0.52);
+        --file-activity-rail-gradient: linear-gradient(
+            180deg,
+            rgba(22, 163, 74, 0.36),
+            rgba(34, 197, 94, 0.2)
+        );
+        --file-activity-rail-shadow: none;
+        --file-activity-title-border: transparent;
+        --file-activity-title-bg: transparent;
+        --file-activity-title-text: var(--file-activity-alert-title-text);
+        --file-activity-title-box-shadow: none;
+        --file-activity-title-shadow: none;
+        --file-activity-title-dot-bg: transparent;
+        --file-activity-title-dot-shadow: none;
+        --file-activity-filename-text: var(--file-activity-alert-body-text);
+        --file-activity-time-text: var(--file-activity-alert-body-text);
+        --file-activity-time-shadow: 0 1px 0 rgba(var(--rgb-white), 0.56);
+    }
+
+    .fileActionDialogShell,
+    .singleShareDialogShell,
+    .neuromorphic-style .fileActionDialogShell,
+    .neuromorphic-style .singleShareDialogShell,
+    .neuromorphic-style .singleShareDialogShell {
+        border-color: transparent !important;
+        background: var(--neu-raised-bg) !important;
+        box-shadow: var(--neu-raised-shadow) !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+    }
+
+    .fileActionDialogShell::before,
+    .fileActionDialogShell::after,
+    .singleShareDialogShell::before,
+    .singleShareDialogShell::after,
+    .neuromorphic-style .fileActionDialogShell::before,
+    .neuromorphic-style .fileActionDialogShell::after,
+    .neuromorphic-style .singleShareDialogShell::before,
+    .neuromorphic-style .singleShareDialogShell::after {
+        content: none !important;
+    }
+
+    .fileActionDialogShell .modal-dialog-tech-topline,
+    .fileActionDialogShell .modal-dialog-tech-grid,
+    .singleShareDialogShell .modal-dialog-tech-topline,
+    .singleShareDialogShell .modal-dialog-tech-grid,
+    .neuromorphic-style .fileActionDialogShell .modal-dialog-tech-topline,
+    .neuromorphic-style .fileActionDialogShell .modal-dialog-tech-grid,
+    .neuromorphic-style .singleShareDialogShell .modal-dialog-tech-topline,
+    .neuromorphic-style .singleShareDialogShell .modal-dialog-tech-grid {
+        display: none !important;
+    }
+
+    .fileActionDialogShell [aria-label="关闭"],
+    .singleShareDialogShell [aria-label="关闭"],
+    .neuromorphic-style .fileActionDialogShell [aria-label="关闭"],
+    .neuromorphic-style .singleShareDialogShell [aria-label="关闭"] {
+        border-radius: clamp(0.55rem, 1.25vw, 0.7rem) !important;
+        background: var(--neu-raised-bg) !important;
+        box-shadow: var(--neu-raised-sm-shadow) !important;
+    }
+
+    .fileActionDialogInsetList,
+    .neuromorphic-style .fileActionDialogInsetList {
+        border: 1px solid transparent !important;
+        background: var(--neu-inset-bg) !important;
+        box-shadow: var(--neu-inset-shadow) !important;
+    }
+
+    .fileActionDialogEmptyState,
+    .neuromorphic-style .fileActionDialogEmptyState {
+        display: block;
+        width: 100%;
+        margin: 0;
+        color: var(--dialog-panel-text);
+        text-shadow: none;
+    }
+
+    .fileActionDialogRaisedRow,
+    .neuromorphic-style .fileActionDialogRaisedRow {
+        border-color: transparent !important;
+        background: var(--neu-raised-bg) !important;
+        box-shadow: var(--neu-raised-sm-shadow) !important;
+    }
+
+    .fileActionDialogInsetRow,
+    .neuromorphic-style .fileActionDialogInsetRow {
+        border-color: transparent !important;
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 0% 8%, var(--file-activity-row-glow-start), transparent 36%),
+            radial-gradient(circle at 94% 12%, var(--file-activity-row-glow-end), transparent 34%),
+            var(--file-activity-alert-bg) !important;
+        box-shadow: inset 0 0 0 1px var(--file-activity-alert-border) !important;
+    }
+
+    .fileActionDialogInsetRow::before,
+    .neuromorphic-style .fileActionDialogInsetRow::before {
+        content: none;
+    }
+
+    .fileActionDialogEventTitle,
+    .neuromorphic-style .fileActionDialogEventTitle {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: clamp(0.34rem, 0.85vw, 0.46rem);
+        border: 1px solid var(--file-activity-title-border);
+        background: var(--file-activity-title-bg);
+        color: var(--file-activity-title-text) !important;
+        box-shadow: var(--file-activity-title-box-shadow);
+        text-shadow: var(--file-activity-title-shadow);
+        padding: 0 !important;
+    }
+
+    .fileActionDialogEventTitle::before,
+    .neuromorphic-style .fileActionDialogEventTitle::before {
+        content: "\2713";
+        flex: 0 0 auto;
+        display: inline-flex;
+        width: clamp(1.05rem, 2.25vw, 1.22rem);
+        height: clamp(1.05rem, 2.25vw, 1.22rem);
+        align-items: center;
+        justify-content: center;
+        border-radius: 999rem;
+        border: clamp(0.11rem, 0.28vw, 0.14rem) solid var(--file-activity-alert-icon-text);
+        background: var(--file-activity-title-dot-bg);
+        color: var(--file-activity-alert-icon-text);
+        font-size: clamp(0.62rem, 1.35vw, 0.72rem);
+        font-weight: 900;
+        line-height: 1;
+        box-shadow: var(--file-activity-title-dot-shadow);
+    }
+
+    .fileActionDialogEventFilename,
+    .neuromorphic-style .fileActionDialogEventFilename {
+        color: var(--file-activity-filename-text);
+        line-height: 1.42;
+        text-shadow: none;
+    }
+
+    .fileActionDialogEventTime,
+    .neuromorphic-style .fileActionDialogEventTime {
+        color: var(--file-activity-time-text);
+        font-weight: 650;
+        letter-spacing: 0.01em;
+        text-shadow: var(--file-activity-time-shadow);
+    }
+
+    .neuromorphic-style .singleShareDialogPanel,
+    .neuromorphic-style .singleShareDialogPanel,
+    .neuromorphic-style .singleShareDialogInset,
+    .neuromorphic-style .singleShareDialogInset,
+    .neuromorphic-style .singleShareDialogField,
+    .neuromorphic-style .singleShareDialogField {
+        border-color: transparent !important;
+        background: var(--neu-inset-bg) !important;
+        box-shadow: var(--neu-inset-shadow) !important;
+    }
+
+    .neuromorphic-style .singleShareDialogPanel,
+    .neuromorphic-style .singleShareDialogPanel {
+        border-radius: clamp(0.7rem, 1.6vw, 0.75rem);
+        padding: clamp(0.585rem, 1.35vw, 0.75rem);
+    }
+
+    .neuromorphic-style .singleShareDialogLabel,
+    .neuromorphic-style .singleShareDialogLabel {
+        color: var(--color-text-secondary);
+        font-weight: 600;
+    }
+
+    .neuromorphic-style .singleShareDialogAction,
+    .neuromorphic-style .singleShareDialogAction {
+        border-color: transparent !important;
+        background: var(--neu-raised-bg) !important;
+        box-shadow: var(--neu-raised-sm-shadow) !important;
+        color: var(--color-text-primary) !important;
+        text-shadow: none;
+    }
+
+    .neuromorphic-style .singleShareDialogPrimary,
+    .neuromorphic-style .singleShareDialogPrimary {
+        border-color: transparent !important;
+        background: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark)) !important;
+        box-shadow: var(--neu-raised-sm-shadow) !important;
+        color: rgba(var(--rgb-white), 0.98) !important;
+        text-shadow: none;
+    }
+
+    .neuromorphic-style .singleShareDialogAction:active:not(:disabled),
+    .neuromorphic-style .singleShareDialogAction:active:not(:disabled),
+    .neuromorphic-style .singleShareDialogPrimary:active:not(:disabled),
+    .neuromorphic-style .singleShareDialogPrimary:active:not(:disabled) {
+        box-shadow: var(--neu-pressed-shadow) !important;
+        transform: translateY(0.0625rem);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-batch-action-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-batch-action-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-primary-btn-bg)]"],
+    .neuromorphic-style .confirm-dialog-tech [class*="bg-[var(--dialog-primary-btn-bg)]"] {
+        border-color: transparent;
+        background: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+        box-shadow: var(--neu-raised-sm-shadow);
+        color: rgba(var(--rgb-white), 0.98);
+        text-shadow: none;
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-cancel,
+    .neuromorphic-style .confirm-dialog-tech-cancel {
+        border-color: transparent;
+        background: var(--neu-raised-bg);
+        box-shadow: var(--neu-raised-sm-shadow);
+        text-shadow: none;
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-cancel:hover:not(:disabled),
+    .neuromorphic-style .confirm-dialog-tech-cancel:hover:not(:disabled) {
+        border-color: transparent;
+        background: var(--neu-raised-bg);
+        box-shadow: var(--neu-raised-sm-shadow);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-confirm,
+    .neuromorphic-style .confirm-dialog-tech-confirm {
+        border-color: transparent;
+        background: linear-gradient(145deg, var(--neu-primary), var(--neu-primary-dark));
+        box-shadow: var(--neu-raised-sm-shadow);
+        color: rgba(var(--rgb-white), 0.98);
+        text-shadow: none;
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-confirm:hover:not(:disabled),
+    .neuromorphic-style .confirm-dialog-tech-confirm:hover:not(:disabled) {
+        box-shadow: var(--neu-raised-sm-shadow);
+    }
+
+    .neuromorphic-style .confirm-dialog-tech-cancel:active:not(:disabled),
+    .neuromorphic-style .confirm-dialog-tech-cancel:active:not(:disabled),
+    .neuromorphic-style .confirm-dialog-tech-confirm:active:not(:disabled),
+    .neuromorphic-style .confirm-dialog-tech-confirm:active:not(:disabled) {
+        box-shadow: var(--neu-pressed-shadow);
+        transform: translateY(0.0625rem);
     }
 }
