@@ -120,9 +120,10 @@ describe("light theme tokens", () => {
     expect(readToken(tokens, "--auth-card-border")).toBe("transparent");
     expect(readToken(tokens, "--auth-card-shadow")).toBe("var(--neu-surface-shadow)");
     expect(readToken(tokens, "--auth-card-backdrop")).toBe("none");
-    expect(readToken(tokens, "--auth-card-glow-bg")).toBe("none");
-    expect(readToken(tokens, "--auth-card-edge-bg")).toBe("none");
-    expect(readToken(tokens, "--auth-logo-aura-bg")).toBe("none");
+    expect(tokens.has("--auth-card-glow-bg")).toBe(false);
+    expect(tokens.has("--auth-card-edge-bg")).toBe(false);
+    expect(tokens.has("--auth-logo-aura-bg")).toBe(false);
+    expect(tokens.has("--auth-logo-aura-opacity")).toBe(false);
     expect(readToken(tokens, "--auth-logo-shell-bg")).toBe("var(--neu-inset-bg)");
     expect(readToken(tokens, "--auth-logo-shell-shadow")).toBe("var(--neu-inset-shadow)");
     expect(readToken(tokens, "--auth-input-bg")).toBe("var(--neu-inset-bg)");
@@ -134,28 +135,11 @@ describe("light theme tokens", () => {
     expect(readToken(tokens, "--auth-oauth-disabled-bg")).toBe("var(--neu-inset-bg)");
   });
 
-  it("defines auth Shape Wave tokens without replacing the auth page background", () => {
+  it("keeps the auth page flat without obsolete Shape Wave tokens", () => {
     const tokens = readCssCustomProperties(LIGHT_NEU_SELECTOR);
 
     expect(readToken(tokens, "--auth-page-bg")).toBe("var(--surface-page-gradient)");
-    expect(readToken(tokens, "--auth-shape-wave-opacity")).toBe("0.46");
-    expect(readToken(tokens, "--auth-shape-wave-wash")).toBe("rgba(229, 231, 235, 0.34)");
-    expect(readToken(tokens, "--auth-shape-wave-color-emerald")).toBe("rgb(var(--rgb-emerald-400))");
-    expect(readToken(tokens, "--auth-shape-wave-color-cyan")).toBe("rgb(var(--rgb-cyan-400))");
-    expect(readToken(tokens, "--auth-shape-wave-color-orange")).toBe("rgb(var(--rgb-orange-500))");
-    expect(readToken(tokens, "--auth-shape-wave-color-rose")).toBe("rgb(var(--rgb-rose-400))");
-    expect(readToken(tokens, "--auth-shape-wave-color-yellow")).toBe("rgb(var(--rgb-amber-400))");
-    expect(readToken(tokens, "--auth-shape-wave-color-pink")).toBe("rgb(var(--rgb-fuchsia-500))");
-    expect(readToken(tokens, "--auth-shape-wave-color-slate")).toBe("rgb(var(--rgb-slate-500))");
-    expect(readToken(tokens, "--auth-shape-wave-color-violet")).toBe("rgb(var(--rgb-purple-500))");
-    expect(readToken(tokens, "--auth-shape-wave-color-blue")).toBe("rgb(var(--rgb-sky-400))");
-    expect(readToken(tokens, "--auth-shape-wave-color-mint")).toBe("rgb(var(--rgb-emerald-300))");
-    expect(readToken(tokens, "--auth-shape-wave-gradient-purple-start")).toBe("rgb(var(--rgb-purple-500))");
-    expect(readToken(tokens, "--auth-shape-wave-gradient-purple-end")).toBe("rgb(var(--rgb-cyan-400))");
-    expect(readToken(tokens, "--auth-shape-wave-gradient-cyan-start")).toBe("rgb(var(--rgb-cyan-400))");
-    expect(readToken(tokens, "--auth-shape-wave-gradient-cyan-end")).toBe("rgb(var(--rgb-emerald-400))");
-    expect(readToken(tokens, "--auth-shape-wave-gradient-solar-start")).toBe("rgb(var(--rgb-orange-500))");
-    expect(readToken(tokens, "--auth-shape-wave-gradient-solar-end")).toBe("rgb(var(--rgb-rose-400))");
+    expect([...tokens.keys()].some((name) => name.startsWith("--auth-shape-wave"))).toBe(false);
   });
 
   it("uses pure primary action fills and opts light into the AJgeEd fireworks background", () => {

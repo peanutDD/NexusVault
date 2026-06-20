@@ -18,7 +18,6 @@ import {
   AUTH_SUBTITLE_CLASSES,
 } from "./styles";
 import { CyberPrismLogo } from "../common/CyberPrismLogo";
-import AuthShapeWaveBackground from "./AuthShapeWaveBackground";
 
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -59,20 +58,8 @@ export default function Register() {
 
   return (
     <div className={AUTH_PAGE_CLASSES} data-oid="gscu-88">
-      <AuthShapeWaveBackground />
       <div className="relative z-10 w-full max-w-[clamp(22rem,92vw,28rem)] mx-[clamp(0.78rem,1.8vw,1rem)] animate-fade-in" data-oid="3ffslsk">
         <div className={AUTH_CARD_CLASSES} data-oid="l6j05_4">
-          {/* 顶部渐变光效，与主页卡片呼应 */}
-          <div
-            className="authCardGlow pointer-events-none absolute inset-0 bg-[image:var(--auth-card-glow-bg)]"
-            data-oid="0q6535j"
-          />
-
-          <div
-            className="authCardEdge pointer-events-none absolute inset-x-0 top-0 h-px bg-[image:var(--auth-card-edge-bg)]"
-            data-oid="q40rv1l"
-          />
-
           <div className="relative z-10" data-oid="ic-zt:0">
             <div
               className="flex items-center justify-center mb-[clamp(1.75rem,3.6vw,2rem)]"
@@ -80,12 +67,7 @@ export default function Register() {
             >
               <div className="relative" data-oid="4tynibj">
                 <div
-                  className="authLogoAura pointer-events-none absolute -inset-[clamp(0.195rem,0.45vw,0.25rem)] rounded-[clamp(0.8rem,2vw,1rem)] bg-[image:var(--auth-logo-aura-bg)] opacity-[var(--auth-logo-aura-opacity)] blur-[clamp(0.6rem,1.4vw,0.75rem)]"
-                  data-oid="zdazne6"
-                />
-
-                <div
-                  className="relative flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-[clamp(0.8rem,2vw,1rem)] border border-[var(--auth-logo-shell-border)] [background:var(--auth-logo-shell-bg)] shadow-[var(--auth-logo-shell-shadow)]"
+                  className="neu-raised-sm relative flex h-[clamp(3.75rem,7.2vw,4rem)] w-[clamp(3.75rem,7.2vw,4rem)] items-center justify-center rounded-[clamp(0.8rem,2vw,1rem)]"
                   data-oid="7s9x215"
                 >
                   <CyberPrismLogo className="h-[clamp(2.25rem,4.5vw,2.5rem)] w-[clamp(2.25rem,4.5vw,2.5rem)]" data-oid="1hcfwy6" />

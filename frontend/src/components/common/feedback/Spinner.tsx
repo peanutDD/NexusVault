@@ -26,7 +26,7 @@ export default function Spinner({ size = "md", className }: SpinnerProps) {
       aria-label="加载中"
       data-oid="jsww135"
     >
-      <span className="appSpinnerShell inline-flex items-center justify-center rounded-full">
+      <span className="neu-raised-sm appSpinnerShell inline-flex items-center justify-center rounded-full">
         <span
           className={cn(
             "appSpinnerRing",

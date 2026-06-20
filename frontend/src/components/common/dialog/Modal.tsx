@@ -46,10 +46,7 @@ export default function Modal({
       className={cn(
         "fixed inset-0 z-50 flex justify-center px-[clamp(0.78rem,1.8vw,1rem)] pb-[clamp(0.78rem,1.8vw,1rem)] pt-[calc(clamp(5.5rem,10vw,8rem)+env(safe-area-inset-top))] animate-fade-in",
         placement === "nav-safe-center" ? "items-center" : "items-start",
-        variant === "glass" || isUploadVariant
-          ? "bg-[var(--modal-backdrop-glass)]"
-          : "bg-[var(--modal-backdrop)]",
-        variant === "glass" && "modal-dialog-tech",
+        "bg-[var(--modal-backdrop)]",
       )}
       onClick={handleBackdropClick}
       role="dialog"
@@ -59,44 +56,13 @@ export default function Modal({
     >
       <div
         className={cn(
-          variant === "glass"
-            ? [
-                "relative w-full max-h-[90vh] overflow-y-auto rounded-[clamp(0.8rem,2vw,1rem)] p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-2xl",
-                "max-h-[calc(100dvh_-_clamp(6.5rem,12vw,9rem))]",
-                "border border-[var(--modal-surface-glass-border)] bg-[var(--modal-surface-glass-bg)] text-[var(--color-text-primary)] ring-1 ring-[var(--modal-surface-ring)]",
-                "backdrop-blur-xl backdrop-saturate-150",
-                'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
-                "before:bg-[image:var(--modal-surface-glass-highlight)]",
-                "modal-dialog-tech-panel",
-              ].join(" ")
-            : isUploadVariant
-              ? [
-                  "relative w-full max-h-[90vh] overflow-y-auto rounded-[clamp(0.8rem,2vw,1rem)] p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-2xl text-[var(--color-text-primary)]",
-                  "max-h-[calc(100dvh_-_clamp(6.5rem,12vw,9rem))]",
-                  "border border-[var(--modal-surface-glass-border)] bg-[var(--modal-surface-bg)] ring-1 ring-[var(--modal-surface-ring)]",
-                  "backdrop-blur-xl backdrop-saturate-150",
-                  'before:pointer-events-none before:absolute before:inset-0 before:rounded-[clamp(0.8rem,2vw,1rem)] before:content-[""]',
-                  "before:bg-[image:var(--modal-surface-glass-highlight)]",
-                ].join(" ")
-              : "[background:var(--neu-raised-bg)] border border-transparent text-[var(--color-text-primary)] rounded-[clamp(0.8rem,2vw,1rem)] w-full max-h-[calc(100dvh_-_clamp(6.5rem,12vw,9rem))] overflow-y-auto p-[clamp(1.25rem,2.7vw,1.5rem)] shadow-[var(--neu-raised-shadow)] transform transition-all duration-300 animate-fade-in",
+          "neu-raised relative w-full max-h-[calc(100dvh_-_clamp(6.5rem,12vw,9rem))] overflow-y-auto rounded-[clamp(0.8rem,2vw,1rem)] p-[clamp(1.25rem,2.7vw,1.5rem)] text-[var(--color-text-primary)] transform transition-all duration-300 animate-fade-in",
           maxWidthClasses[maxWidth],
           panelClassName,
         )}
         onClick={(e) => e.stopPropagation()}
         data-oid="o0:osfm"
       >
-        {variant === "glass" && (
-          <>
-            <div
-              className="modal-dialog-tech-topline absolute inset-x-0 top-0 h-[clamp(0.0975rem,0.3vw,0.125rem)] rounded-t-2xl pointer-events-none"
-              aria-hidden
-            />
-            <div
-              className="modal-dialog-tech-grid absolute inset-0 rounded-[clamp(0.8rem,2vw,1rem)] pointer-events-none"
-              aria-hidden
-            />
-          </>
-        )}
         <div
           className="relative flex justify-between items-center mb-[clamp(0.78rem,1.8vw,1rem)]"
           data-oid="5kruig."
@@ -117,9 +83,7 @@ export default function Modal({
             disabled={loading}
             className={cn(
               "text-[clamp(1.25rem,3.5vw,1.5rem)] leading-none transition-colors duration-200 w-[clamp(1.75rem,3.6vw,2rem)] h-[clamp(1.75rem,3.6vw,2rem)] flex items-center justify-center rounded-full",
-              variant === "glass"
-                ? "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--modal-close-hover-bg)]"
-                : isUploadVariant
+              isUploadVariant
                   ? "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--modal-close-hover-bg-upload)] rounded-[clamp(0.3rem,0.8vw,0.375rem)]"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--modal-close-hover-bg-upload)]",
               loading && "opacity-50 cursor-not-allowed",

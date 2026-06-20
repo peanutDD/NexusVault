@@ -129,13 +129,6 @@ export default function ConfirmDialog({
   const displayIconBg = iconBgClass ?? config.iconBg;
   const displayIconColor = iconColorClass ?? config.iconColor;
 
-  const glassConfirmClass =
-    variant === "danger"
-      ? "border-[var(--confirm-danger-glass-border)] bg-[var(--confirm-danger-glass-bg)] hover:bg-[var(--confirm-danger-glass-bg-hover)] shadow-[var(--confirm-danger-glass-shadow)]"
-      : variant === "warning"
-        ? "border-[var(--confirm-warning-glass-border)] bg-[var(--confirm-warning-glass-bg)] hover:bg-[var(--confirm-warning-glass-bg-hover)] shadow-[var(--confirm-warning-glass-shadow)]"
-        : "border-[var(--confirm-info-glass-border)] bg-[var(--confirm-info-glass-bg)] hover:bg-[var(--confirm-info-glass-bg-hover)] shadow-[var(--confirm-info-glass-shadow)]";
-
   useDialog({
     open,
     onClose: onCancel,
@@ -156,14 +149,9 @@ export default function ConfirmDialog({
 
   if (!open) return null;
 
-  const isTechGlass = isGlass;
-
   return (
     <div
-      className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center p-[clamp(0.78rem,1.8vw,1rem)]",
-        isTechGlass && "confirm-dialog-tech",
-      )}
+      className="fixed inset-0 z-50 flex items-center justify-center p-[clamp(0.78rem,1.8vw,1rem)]"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -173,11 +161,7 @@ export default function ConfirmDialog({
       {/* 背景遮罩 */}
       <div
         className={cn(
-          "absolute inset-0 animate-in fade-in duration-150",
-          isGlass
-            ? "bg-[var(--confirm-backdrop-glass)] backdrop-blur-sm"
-            : "bg-[var(--confirm-backdrop)]",
-          isTechGlass && "confirm-dialog-tech-backdrop",
+          "absolute inset-0 animate-in fade-in duration-150 bg-[var(--confirm-backdrop)]",
         )}
         onClick={() => !loading && onCancel()}
         data-oid="r8-ttbu"
@@ -186,46 +170,20 @@ export default function ConfirmDialog({
       {/* 对话框 */}
       <div
         className={cn(
-          "relative w-full overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-150",
+          "neu-raised relative w-full overflow-hidden animate-in zoom-in-95 fade-in duration-150 text-[var(--confirm-title-text)]",
           isGlass
-            ? [
-                "glass-panel max-w-[clamp(22rem,92vw,28rem)] rounded-[clamp(0.8rem,2vw,1rem)] ring-1",
-                "ring-[var(--confirm-surface-ring)] border border-[var(--confirm-surface-glass-border)] bg-[var(--confirm-surface-glass-bg)] text-[var(--confirm-title-text)] backdrop-blur-2xl backdrop-saturate-150",
-                'before:pointer-events-none before:absolute before:inset-0 before:content-[""]',
-                "before:bg-[image:var(--confirm-surface-glass-highlight)]",
-                isTechGlass && "confirm-dialog-tech-panel",
-              ]
-                .filter(Boolean)
-                .join(" ")
-            : "max-w-[clamp(18rem,88vw,20rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] bg-[var(--confirm-surface-bg)] ring-1 ring-[var(--confirm-surface-ring)] border border-[var(--confirm-surface-border)] text-[var(--confirm-title-text)]",
+            ? "max-w-[clamp(22rem,92vw,28rem)] rounded-[clamp(0.8rem,2vw,1rem)]"
+            : "max-w-[clamp(18rem,88vw,20rem)] rounded-[clamp(0.4rem,1vw,0.5rem)]",
         )}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         data-oid="6ko0hpy"
       >
-        {isTechGlass && (
-          <div
-            className="confirm-dialog-tech-topline absolute inset-x-0 top-0 h-[clamp(0.0975rem,0.3vw,0.125rem)] rounded-t-2xl pointer-events-none"
-            aria-hidden
-            data-oid="pylj62m"
-          />
-        )}
-        {isTechGlass && (
-          <div
-            className="confirm-dialog-tech-grid absolute inset-0 rounded-[clamp(0.8rem,2vw,1rem)] pointer-events-none"
-            aria-hidden
-            data-oid="vx:q17l"
-          />
-        )}
-
         <div className="relative" data-oid="blq_hlw">
           {/* 凹槽头部：贴顶、内凹、内容在槽内不溢出 */}
           <div
             className={cn(
-              "confirm-dialog-groove flex items-center gap-[clamp(0.4875rem,1.125vw,0.625rem)] rounded-t-2xl border-b px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] min-h-0 overflow-hidden",
-              isTechGlass
-                ? "confirm-dialog-tech-groove border-[var(--confirm-groove-border)]"
-                : "bg-[var(--confirm-groove-bg)] border-[var(--confirm-groove-border)] shadow-[var(--confirm-groove-shadow)]",
+              "neu-inset confirm-dialog-groove flex items-center gap-[clamp(0.4875rem,1.125vw,0.625rem)] rounded-t-[clamp(0.8rem,2vw,1rem)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.4875rem,1.125vw,0.625rem)] min-h-0 overflow-hidden",
             )}
             data-oid="0m-vx_c"
           >
@@ -234,7 +192,6 @@ export default function ConfirmDialog({
                 "flex h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)] shrink-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)]",
                 displayIconBg,
                 displayIconColor,
-                isTechGlass && "confirm-dialog-tech-icon",
               )}
               data-oid=":w1nhqb"
             >
@@ -244,7 +201,6 @@ export default function ConfirmDialog({
               id={titleId}
               className={cn(
                 "min-w-0 flex-1 truncate text-[clamp(0.75rem,1.8vw,0.875rem)] font-semibold text-[var(--confirm-title-text)]",
-                isTechGlass && "confirm-dialog-tech-title tracking-wide",
               )}
               data-oid="q.4_c_i"
             >
@@ -258,9 +214,7 @@ export default function ConfirmDialog({
               id={messageId}
               className={cn(
                 "max-w-full py-[clamp(0.585rem,1.35vw,0.75rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] leading-relaxed break-words whitespace-pre-line",
-                isTechGlass
-                  ? "text-[var(--confirm-message-text)]"
-                  : "text-[var(--confirm-message-text-muted)]",
+                "text-[var(--confirm-message-text)]",
               )}
               data-oid="uzv244-"
             >
@@ -270,8 +224,7 @@ export default function ConfirmDialog({
             {/* 操作区：上边框区分 */}
             <div
               className={cn(
-                "flex gap-[clamp(0.39rem,0.9vw,0.5rem)] pt-[clamp(0.585rem,1.35vw,0.75rem)] border-t",
-                "border-[var(--confirm-divider)]",
+                "flex gap-[clamp(0.39rem,0.9vw,0.5rem)] pt-[clamp(0.585rem,1.35vw,0.75rem)]",
               )}
               data-oid="unt1r:p"
             >
@@ -280,11 +233,7 @@ export default function ConfirmDialog({
                 onClick={onCancel}
                 disabled={loading}
                 className={cn(
-                  "flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                  isGlass
-                    ? "glass-btn text-[var(--confirm-cancel-text)] hover:text-[var(--confirm-cancel-text-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--confirm-cancel-ring)]"
-                    : "bg-[var(--confirm-cancel-bg)] text-[var(--confirm-cancel-text)] hover:bg-[var(--confirm-cancel-bg-hover)] hover:text-[var(--confirm-cancel-text-hover)]",
-                  isTechGlass && "confirm-dialog-tech-cancel border",
+                  "neu-raised-sm flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--confirm-cancel-text)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--confirm-cancel-ring)] active:shadow-[var(--neu-pressed-shadow)] disabled:cursor-not-allowed disabled:opacity-50",
                 )}
                 data-oid="n20odi3"
               >
@@ -296,17 +245,8 @@ export default function ConfirmDialog({
                 onClick={onConfirm}
                 disabled={loading}
                 className={cn(
-                  "flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--confirm-title-text)] transition-all disabled:cursor-not-allowed disabled:opacity-50",
-                  isGlass
-                    ? cn(
-                        "glass-btn border text-[var(--confirm-title-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]",
-                        glassConfirmClass,
-                        isTechGlass && "confirm-dialog-tech-confirm",
-                      )
-                    : cn(
-                        config.buttonBg,
-                        "text-[var(--btn-danger-text)] disabled:cursor-not-allowed disabled:opacity-50",
-                      ),
+                  "neu-semantic-raised flex-1 rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.75rem,1.8vw,0.875rem)] font-medium text-[var(--confirm-title-text)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] active:shadow-[var(--neu-pressed-shadow)]",
+                  config.buttonBg,
                   "disabled:cursor-not-allowed disabled:opacity-50",
                 )}
                 data-oid="o731x2c"

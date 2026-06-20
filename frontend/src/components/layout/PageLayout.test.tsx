@@ -31,6 +31,15 @@ function renderLayout(
 }
 
 describe("PageLayout", () => {
+  it("uses the global flat primitive for the application canvas", () => {
+    renderLayout();
+
+    expect(screen.getByTestId("page-layout-shell")).toHaveClass("neu-flat");
+    expect(screen.getByTestId("page-layout-shell")).not.toHaveClass(
+      "bg-[image:var(--surface-page-gradient)]",
+    );
+  });
+
   it("renders an optional decorative background layer behind page content", () => {
     renderLayout(<canvas data-testid="decorative-canvas" />);
 
@@ -48,14 +57,12 @@ describe("PageLayout", () => {
     expect(screen.getByTestId("page-content")).toBeInTheDocument();
   });
 
-  it("uses the background shorthand for solid file-list pages so theme gradients render", () => {
+  it("keeps the global flat material when a file-list background token is requested", () => {
     renderLayout(undefined, true);
 
-    expect(screen.getByTestId("page-layout-shell")).toHaveClass(
-      "[background:var(--filelist-page-bg)]",
-    );
+    expect(screen.getByTestId("page-layout-shell")).toHaveClass("neu-flat");
     expect(screen.getByTestId("page-layout-shell")).not.toHaveClass(
-      "bg-[color:var(--filelist-page-bg)]",
+      "[background:var(--filelist-page-bg)]",
     );
   });
 

@@ -44,16 +44,11 @@ describe("BottomBar", () => {
   it("exposes a Neuromorphic-ready footer surface without changing content", () => {
     render(<BottomBar />);
 
-    expect(screen.getByTestId("bottom-bar")).toHaveClass(
-      "bottomBarNeuromorphicSurface",
-      "shadow-[var(--footer-surface-shadow)]",
-    );
-    expect(screen.getByTestId("bottom-bar-surface")).toHaveClass(
-      "[background:var(--footer-surface-bg)]",
-    );
-    expect(screen.getByTestId("bottom-bar-grid")).toHaveClass(
-      "[background-image:var(--footer-grid-bg-image)]",
-    );
+    expect(screen.getByTestId("bottom-bar")).toHaveClass("neu-raised");
+    expect(screen.queryByTestId("bottom-bar-surface")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bottom-bar-grid")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bottom-bar-gradient")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bottom-bar-shimmer")).not.toBeInTheDocument();
     expect(screen.getByText(/All rights reserved/i)).toBeInTheDocument();
   });
 

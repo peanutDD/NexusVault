@@ -13,11 +13,8 @@ describe("BaseDialog", () => {
     const dialog = screen.getByRole("dialog", { name: "默认基础弹窗" });
     const panel = dialog.querySelector("[data-oid='uliq6c0']");
 
-    expect(panel).toHaveClass(
-      "[background:var(--neu-raised-bg)]",
-      "shadow-[var(--neu-raised-shadow)]",
-      "border-transparent",
-    );
+    expect(panel).toHaveClass("neu-raised");
+    expect(dialog.querySelector(".modal-dialog-tech-grid")).toBeNull();
     expect(panel).not.toHaveClass("shadow-2xl");
   });
 });

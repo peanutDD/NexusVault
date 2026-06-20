@@ -22,11 +22,12 @@ describe("BrowserCompatibilityWarning", () => {
     const alert = screen.getByRole("alert");
     expect(alert).toHaveClass(
       "appAlertMessage",
-      "appAlertMessage--codepen",
       "appAlertMessage--warning",
+      "neu-semantic-raised",
     );
-    expect(alert.querySelector(".appAlertMessageAmbient")).toBeInTheDocument();
-    expect(alert.querySelector(".appAlertMessageHairline")).toBeInTheDocument();
+    expect(alert).not.toHaveClass("appAlertMessage--codepen");
+    expect(alert.querySelector(".appAlertMessageAmbient")).not.toBeInTheDocument();
+    expect(alert.querySelector(".appAlertMessageHairline")).not.toBeInTheDocument();
     expect(alert.querySelector(".appAlertMessageIcon")).toBeInTheDocument();
     expect(alert).not.toHaveClass("bg-[rgba(var(--rgb-pistachio-400),0.86)]");
 

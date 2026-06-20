@@ -41,8 +41,8 @@ describe("NavBar", () => {
     renderNavBar();
 
     const nav = screen.getByRole("navigation");
-    expect(nav).toHaveClass("nav-surface-shell");
-    expect(nav).not.toHaveClass("bg-nav-surface");
+    expect(nav).toHaveClass("neu-raised", "nav-surface-shell");
+    expect(nav).not.toHaveClass("backdrop-blur-[var(--nav-surface-blur)]");
 
     const logo = screen.getByRole("img", { name: "Logo" });
     expect(logo).toHaveAttribute("data-testid", "pixel-logo");
@@ -59,7 +59,7 @@ describe("NavBar", () => {
     expect(title).not.toHaveTextContent("File Upload Download Server");
   });
 
-  it("renders every top menu action as an inner-glow nav button without changing labels", async () => {
+  it("renders every top menu action from the shared raised primitive without changing labels", async () => {
     const onLogout = vi.fn();
     renderNavBar(onLogout);
 
@@ -74,17 +74,31 @@ describe("NavBar", () => {
 
     for (const button of buttons) {
       expect(button).toHaveClass("nav-btn");
-      expect(button).toHaveClass("border-[var(--nav-btn-border)]");
-      expect(button).toHaveClass("bg-[var(--nav-btn-bg)]");
+      expect(button).toHaveClass("neu-raised-sm");
+      expect(button).not.toHaveClass("border-[var(--nav-btn-border)]");
+      expect(button).not.toHaveClass("bg-[var(--nav-btn-bg)]");
     }
+
+    const panel = screen.getByTestId("nav-panel");
+    expect(panel).toHaveClass("neu-inset");
+    expect(panel).not.toHaveClass("border-[var(--nav-panel-border)]");
 
     const usernameChip = screen.getByTitle("tyone");
     expect(usernameChip).toHaveClass("nav-chip");
-    expect(usernameChip).toHaveClass("border-[var(--nav-chip-border)]");
-    expect(usernameChip).toHaveClass("bg-[var(--nav-chip-bg)]");
+    expect(usernameChip).toHaveClass("neu-inset");
 
     await userEvent.click(screen.getByRole("button", { name: "Logout" }));
     expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render legacy glow, divider, or ambience layers", () => {
+    renderNavBar();
+
+    const nav = screen.getByRole("navigation");
+    expect(nav.innerHTML).not.toContain("--nav-top-glow");
+    expect(nav.innerHTML).not.toContain("--nav-bottom-line");
+    expect(nav.innerHTML).not.toContain("--nav-side-ambience");
+    expect(nav.innerHTML).not.toContain("--nav-panel-edge-glow");
   });
 
   it("does not clip the theme toggle tooltip when the nav is narrow", () => {

@@ -6,10 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import {
-  settingsInputClass,
-  settingsSecondaryButtonClass,
-} from "../settings/settingsUi";
 import { cn } from "../../utils/cn";
 
 interface NeuDatePickerProps {
@@ -21,13 +17,11 @@ interface NeuDatePickerProps {
 
 const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"] as const;
 
-const triggerClassName = settingsInputClass(
-  false,
-  "settings-neu-inset-control flex min-h-[clamp(2.5rem,5.8vw,2.75rem)] items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] pr-[clamp(2.7rem,6.4vw,3.1rem)] text-left text-[length:var(--settings-text-sm)] font-semibold",
-);
+const triggerClassName =
+  "neu-inset relative flex w-full min-w-0 min-h-[clamp(2.5rem,5.8vw,2.75rem)] items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.7rem,1.6vw,0.75rem)] px-[clamp(0.78rem,1.8vw,1rem)] pr-[clamp(2.7rem,6.4vw,3.1rem)] py-[clamp(0.68rem,1.5vw,0.75rem)] text-left text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-form-input-text)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]";
 
 const popoverClassName =
-  "settings-neu-raised-card fixed z-40 overflow-y-auto overscroll-contain rounded-[clamp(1rem,2vw,1.1rem)] border border-[var(--settings-surface-border)] [background:var(--settings-surface-bg)] p-[clamp(0.62rem,1.7vw,0.76rem)] shadow-[var(--settings-surface-shadow)]";
+  "neu-raised fixed z-40 overflow-y-auto overscroll-contain rounded-[clamp(1rem,2vw,1.1rem)] p-[clamp(0.62rem,1.7vw,0.76rem)]";
 
 const CALENDAR_POPOVER_GAP_PX = 9;
 const CALENDAR_POPOVER_MAX_WIDTH_PX = 316;
@@ -311,7 +305,7 @@ export function NeuDatePicker({
               width: popoverPosition.width,
             }}
           >
-          <div className="mb-[clamp(0.62rem,1.6vw,0.76rem)] flex items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.84rem,2vw,1rem)] border border-[var(--settings-panel-border)] [background:var(--settings-panel-bg)] px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.58rem,1.6vw,0.72rem)] shadow-[var(--settings-panel-shadow)]">
+          <div className="neu-inset mb-[clamp(0.62rem,1.6vw,0.76rem)] flex items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.84rem,2vw,1rem)] px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.58rem,1.6vw,0.72rem)]">
             <div className="min-w-0">
               <span className="block text-[length:var(--settings-text-xs)] font-semibold uppercase tracking-[0.14em] text-[var(--settings-panel-label)]">
                 Calendar
@@ -320,12 +314,10 @@ export function NeuDatePicker({
                 {`${viewMonth.getFullYear()}年${String(viewMonth.getMonth() + 1).padStart(2, "0")}月`}
               </span>
             </div>
-            <div className="flex items-center gap-[clamp(0.34rem,0.9vw,0.46rem)] rounded-[clamp(0.84rem,2vw,1rem)] border border-[var(--settings-kpi-border)] [background:var(--settings-kpi-bg)] p-[clamp(0.18rem,0.52vw,0.26rem)] shadow-[var(--settings-kpi-shadow)]">
+            <div className="neu-inset flex items-center gap-[clamp(0.34rem,0.9vw,0.46rem)] rounded-[clamp(0.84rem,2vw,1rem)] p-[clamp(0.18rem,0.52vw,0.26rem)]">
               <button
                 aria-label={`上一个${ariaLabel}月份`}
-                className={settingsSecondaryButtonClass(
-                  "inline-flex h-[clamp(1.9rem,5vw,2.15rem)] min-w-[clamp(1.9rem,5vw,2.15rem)] shrink-0 items-center justify-center rounded-[clamp(0.74rem,1.8vw,0.9rem)] px-0 py-0 leading-none",
-                )}
+                className="neu-raised-sm inline-flex h-[clamp(1.9rem,5vw,2.15rem)] min-w-[clamp(1.9rem,5vw,2.15rem)] shrink-0 items-center justify-center rounded-[clamp(0.74rem,1.8vw,0.9rem)] px-0 py-0 leading-none active:shadow-[var(--neu-pressed-shadow)]"
                 type="button"
                 onClick={() => setViewMonth((current) => shiftMonth(current, -1))}
               >
@@ -333,9 +325,7 @@ export function NeuDatePicker({
               </button>
               <button
                 aria-label={`下一个${ariaLabel}月份`}
-                className={settingsSecondaryButtonClass(
-                  "inline-flex h-[clamp(1.9rem,5vw,2.15rem)] min-w-[clamp(1.9rem,5vw,2.15rem)] shrink-0 items-center justify-center rounded-[clamp(0.74rem,1.8vw,0.9rem)] px-0 py-0 leading-none",
-                )}
+                className="neu-raised-sm inline-flex h-[clamp(1.9rem,5vw,2.15rem)] min-w-[clamp(1.9rem,5vw,2.15rem)] shrink-0 items-center justify-center rounded-[clamp(0.74rem,1.8vw,0.9rem)] px-0 py-0 leading-none active:shadow-[var(--neu-pressed-shadow)]"
                 type="button"
                 onClick={() => setViewMonth((current) => shiftMonth(current, 1))}
               >
@@ -344,7 +334,7 @@ export function NeuDatePicker({
             </div>
           </div>
 
-          <div className="rounded-[clamp(0.92rem,2.2vw,1rem)] border border-[var(--settings-panel-border)] [background:var(--settings-panel-bg)] p-[clamp(0.56rem,1.5vw,0.7rem)] shadow-[var(--settings-panel-shadow)]">
+          <div className="neu-inset rounded-[clamp(0.92rem,2.2vw,1rem)] p-[clamp(0.56rem,1.5vw,0.7rem)]">
             <div className="grid grid-cols-7 gap-[clamp(0.16rem,0.5vw,0.24rem)]">
               {weekdayLabels.map((weekday) => (
                 <span
@@ -366,12 +356,12 @@ export function NeuDatePicker({
                     key={dayValue}
                     aria-pressed={selected}
                     className={cn(
-                      "flex h-[clamp(1.8rem,4.7vw,2rem)] items-center justify-center rounded-[clamp(0.62rem,1.6vw,0.76rem)] border text-[length:var(--settings-text-sm)] font-semibold transition-[background,border-color,box-shadow,transform,color] duration-200",
+                      "flex h-[clamp(1.8rem,4.7vw,2rem)] items-center justify-center rounded-[clamp(0.62rem,1.6vw,0.76rem)] text-[length:var(--settings-text-sm)] font-semibold transition-[background,box-shadow,transform,color] duration-200",
                       selected
-                        ? "border-[var(--settings-action-border)] [background:var(--settings-action-bg)] text-[var(--settings-action-text)] shadow-[var(--settings-action-shadow-active)]"
+                        ? "neu-pressed text-[var(--settings-action-text)]"
                         : inCurrentMonth
-                          ? "border-transparent [background:var(--settings-kpi-bg)] text-[var(--settings-title)] shadow-[var(--settings-kpi-shadow)] hover:border-[var(--settings-panel-border)] hover:-translate-y-[clamp(0.02rem,0.08vw,0.04rem)]"
-                          : "border-transparent bg-transparent text-[var(--settings-panel-label)]/70",
+                          ? "neu-raised-sm text-[var(--settings-title)]"
+                          : "neu-flat text-[var(--settings-panel-label)]/70",
                       today && !selected && "ring-1 ring-[var(--settings-form-input-ring)]",
                     )}
                     data-testid={`${testIdPrefix}-day-${dayValue}`}
@@ -390,9 +380,7 @@ export function NeuDatePicker({
 
             <div className="mt-[clamp(0.62rem,1.6vw,0.76rem)] flex items-center justify-between gap-[clamp(0.56rem,1.5vw,0.7rem)]">
               <button
-                className={settingsSecondaryButtonClass(
-                  "px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.34rem,0.95vw,0.46rem)] text-[length:var(--settings-text-xs)]",
-                )}
+                className="neu-raised-sm px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.34rem,0.95vw,0.46rem)] text-[length:var(--settings-text-xs)] active:shadow-[var(--neu-pressed-shadow)]"
                 data-testid={`${testIdPrefix}-clear`}
                 type="button"
                 onClick={() => {
@@ -403,9 +391,7 @@ export function NeuDatePicker({
                 清除
               </button>
               <button
-                className={settingsSecondaryButtonClass(
-                  "px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.34rem,0.95vw,0.46rem)] text-[length:var(--settings-text-xs)]",
-                )}
+                className="neu-raised-sm px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.34rem,0.95vw,0.46rem)] text-[length:var(--settings-text-xs)] active:shadow-[var(--neu-pressed-shadow)]"
                 data-testid={`${testIdPrefix}-today`}
                 type="button"
                 onClick={() => {

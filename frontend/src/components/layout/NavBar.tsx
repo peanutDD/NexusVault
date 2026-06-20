@@ -26,6 +26,9 @@ interface NavBarProps {
   showSettings?: boolean;
 }
 
+const navButtonClass =
+  "neu-raised-sm nav-btn inline-flex items-center justify-center whitespace-nowrap nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)] transition-[box-shadow,color,transform] duration-200 active:translate-y-px active:shadow-[var(--neu-pressed-shadow)]";
+
 export default function NavBar({
   title = APP_NAME,
   backTo,
@@ -59,29 +62,11 @@ export default function NavBar({
   return (
     <nav
       className={cn(
-        "nav-surface-shell fixed inset-x-0 top-0 z-50 overflow-visible pt-[env(safe-area-inset-top)] backdrop-blur-[var(--nav-surface-blur)]"
+        "neu-raised nav-surface-shell fixed inset-x-0 top-0 z-50 overflow-visible pt-[env(safe-area-inset-top)]"
       )}
       onDoubleClick={handleDoubleClick}
       data-oid="2f5wd3k"
     >
-      {/* 顶部紫色微光线条（对齐参考图） */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[image:var(--nav-top-glow)]"
-        data-oid="uu11gmg"
-      />
-
-      {/* 底部青绿色分隔线（对齐参考图） */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[clamp(0.0975rem,0.3vw,0.125rem)] bg-[var(--nav-bottom-line)]"
-        data-oid="mpflc4s"
-      />
-
-      {/* 两侧淡紫氛围光 */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-[image:var(--nav-side-ambience)]"
-        data-oid="u0bfbwi"
-      />
-
       <div
         className="mx-auto max-w-[var(--app-shell-max-width)] px-[clamp(1rem,2.5vw,2rem)]"
         data-oid="q:y39os"
@@ -95,13 +80,7 @@ export default function NavBar({
               <button
                 type="button"
                 onClick={() => navigate(backTo.path)}
-                className={cn(
-                  "nav-btn inline-flex items-center justify-center whitespace-nowrap",
-                  "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
-                  "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
-                  "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
-                  "active:translate-y-px transition-all duration-200",
-                )}
+                className={navButtonClass}
                 aria-label={backTo.label}
                 title={backTo.label}
                 data-oid="ao_vrim"
@@ -153,24 +132,15 @@ export default function NavBar({
             {/* 右侧“控制面板” */}
             <div
               className={cn(
-                "nav-panel relative flex items-center shrink-0 overflow-visible",
-                "bg-[var(--nav-panel-bg)] border border-[var(--nav-panel-border)]",
-                "shadow-[var(--nav-panel-shadow)]",
+                "neu-inset nav-panel relative flex shrink-0 items-center overflow-visible",
               )}
+              data-testid="nav-panel"
               data-oid="grfmuct"
             >
-              {/* 细微霓虹描边 */}
-              <div
-                className="pointer-events-none absolute inset-0 bg-[image:var(--nav-panel-edge-glow)]"
-                data-oid="5nuvn0z"
-              />
-
               {username != null && (
                 <div
                   className={cn(
-                    "nav-chip hidden sm:flex items-center",
-                    "bg-[var(--nav-chip-bg)] border border-[var(--nav-chip-border)]",
-                    "text-[var(--nav-chip-text)]",
+                    "neu-inset nav-chip hidden items-center text-[var(--nav-chip-text)] sm:flex",
                   )}
                   title={username}
                   data-oid="s_n1clb"
@@ -195,13 +165,7 @@ export default function NavBar({
                   onClick={() => navigateIfChanged("/activity")}
                   aria-label="Activity"
                   title="Activity"
-                  className={cn(
-                    "nav-btn inline-flex items-center justify-center whitespace-nowrap",
-                    "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
-                    "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
-                    "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
-                    "active:translate-y-px transition-all duration-200",
-                  )}
+                  className={navButtonClass}
                   data-oid="activity-nav"
                 >
                   <ListChecks
@@ -218,13 +182,7 @@ export default function NavBar({
                   type="button"
                   onClick={() => navigateIfChanged("/settings")}
                   aria-label="Settings"
-                  className={cn(
-                    "nav-btn inline-flex items-center justify-center whitespace-nowrap",
-                    "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
-                    "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
-                    "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
-                    "active:translate-y-px transition-all duration-200",
-                  )}
+                  className={navButtonClass}
                   data-oid="p:eh6bw"
                 >
                   <Settings
@@ -253,13 +211,7 @@ export default function NavBar({
                 }}
                 aria-label="Trash"
                 title="Trash"
-                className={cn(
-                  "nav-btn inline-flex items-center justify-center whitespace-nowrap",
-                  "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
-                  "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
-                  "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
-                  "active:translate-y-px transition-all duration-200",
-                )}
+                className={navButtonClass}
                 data-oid="trash-nav"
               >
                 <Trash2
@@ -276,13 +228,7 @@ export default function NavBar({
                 type="button"
                 onClick={onLogout}
                 aria-label="Logout"
-                className={cn(
-                  "nav-btn inline-flex items-center justify-center whitespace-nowrap",
-                  "nav-ui-fluid font-brand font-semibold tracking-wide text-[var(--nav-btn-text)]",
-                  "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
-                  "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-danger-hover)]",
-                  "active:translate-y-px transition-all duration-200",
-                )}
+                className={`${navButtonClass} font-brand`}
                 data-oid="0-jtd0c"
               >
                 <LogOut

@@ -10,10 +10,14 @@ describe("ErrorMessage", () => {
     render(<ErrorMessage message="Something failed" onClose={onClose} type="warning" />);
 
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveClass("appAlertMessage", "appAlertMessage--warning");
-    expect(alert).toHaveClass("appAlertMessage--codepen");
-    expect(alert.querySelector(".appAlertMessageAmbient")).toBeInTheDocument();
-    expect(alert.querySelector(".appAlertMessageHairline")).toBeInTheDocument();
+    expect(alert).toHaveClass(
+      "appAlertMessage",
+      "appAlertMessage--warning",
+      "neu-semantic-raised",
+    );
+    expect(alert).not.toHaveClass("appAlertMessage--codepen");
+    expect(alert.querySelector(".appAlertMessageAmbient")).not.toBeInTheDocument();
+    expect(alert.querySelector(".appAlertMessageHairline")).not.toBeInTheDocument();
     expect(alert.querySelector(".appAlertMessageIcon")).toBeInTheDocument();
     expect(alert.querySelector(".appAlertMessageTitle")).toHaveTextContent("Warning");
     expect(alert.querySelector(".appAlertMessageText")).toHaveTextContent("Something failed");
@@ -36,23 +40,13 @@ describe("ErrorMessage", () => {
     expect(screen.getByText("Warning")).toBeInTheDocument();
   });
 
-  it("maps neuromorphic alerts to the CodePen Alert Messages raised surface", () => {
-    const css = readFileSync("src/styles/base.css", "utf8").replace(/\s+/g, " ");
+  it("uses the shared semantic primitive without decorative alert layers", () => {
+    const source = readFileSync("src/components/common/feedback/ErrorMessage.tsx", "utf8");
 
-    expect(css).toContain(".appAlertMessage--codepen");
-    expect(css).toContain("--app-alert-surface: rgba(var(--rgb-emerald-950)");
-    expect(css).toContain("--app-alert-surface: rgba(var(--rgb-red-950)");
-    expect(css).toContain("--app-alert-surface: rgba(var(--rgb-amber-950)");
-    expect(css).toContain("border-radius: clamp(0.85rem, 2vw, 1.1rem)");
-    expect(css).toContain("min-height: clamp(4rem, 8vw, 5rem)");
-    expect(css).toContain("padding: clamp(0.9rem, 2vw, 1.15rem) clamp(1rem, 2.4vw, 1.35rem)");
-    expect(css).toContain("height: clamp(1.35rem, 2.6vw, 1.65rem)");
-    expect(css).toContain('.neuromorphic-style .appAlertMessageAmbient');
-    expect(css).toContain("display: none");
-    expect(css).toContain('.appAlertMessageIcon');
-    expect(css).toContain("background: transparent");
-    expect(css).toContain('.neuromorphic-style .appAlertMessageClose:active');
-    expect(css).toContain("box-shadow: var(--neu-pressed-shadow)");
+    expect(source).toContain('"neu-semantic-raised"');
+    expect(source).not.toContain("appAlertMessage--codepen");
+    expect(source).not.toContain("appAlertMessageAmbient");
+    expect(source).not.toContain("appAlertMessageHairline");
   });
 
   it("uses app alert messages instead of native browser alerts in share copy flows", () => {

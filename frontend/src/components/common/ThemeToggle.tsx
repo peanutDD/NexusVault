@@ -38,11 +38,9 @@ export default function ThemeToggle({
       type="button"
       onClick={toggleTheme}
       className={cn(
-        "nav-btn nav-theme-toggle nav-theme-tooltip inline-flex items-center justify-center whitespace-nowrap",
+        "neu-raised-sm nav-btn nav-theme-toggle nav-theme-tooltip inline-flex items-center justify-center whitespace-nowrap",
         "nav-ui-fluid font-semibold tracking-wide text-[var(--nav-btn-text)]",
-        "bg-[var(--nav-btn-bg)] border border-[var(--nav-btn-border)]",
-        "hover:bg-[var(--nav-btn-bg-hover)] hover:border-[var(--nav-btn-border-hover)]",
-        "transition-all duration-200",
+        "transition-[box-shadow,color] duration-200 active:shadow-[var(--neu-pressed-shadow)]",
         className,
       )}
       aria-label={`Switch theme: current ${currentThemeLabel}, click to switch to ${nextThemeLabel}`}

@@ -28,15 +28,12 @@ export default function PageLayout({
   backgroundClassName,
   backgroundLayer,
 }: PageLayoutProps) {
-  const backgroundClass =
-    backgroundClassName ??
-    (useSolidBackground
-      ? "[background:var(--filelist-page-bg)]"
-      : "bg-[image:var(--surface-page-gradient)]");
+  void useSolidBackground;
+  const backgroundClass = backgroundClassName ?? "";
 
   return (
     <div
-      className={`relative isolate flex min-h-screen flex-col transition-colors duration-300 ${backgroundClass}`}
+      className={`neu-flat relative isolate flex min-h-screen flex-col transition-colors duration-300 ${backgroundClass}`}
       data-testid="page-layout-shell"
       data-oid="umkt5hh"
     >

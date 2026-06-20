@@ -49,7 +49,7 @@ type ShapeWaveBackgroundProps = {
   className?: string;
   enabled?: () => boolean;
   testId: string;
-  tokenPrefix: "--auth-shape-wave" | "--filelist-shape-wave";
+  tokenPrefix: "--filelist-shape-wave";
   transparentBackground?: boolean;
 };
 

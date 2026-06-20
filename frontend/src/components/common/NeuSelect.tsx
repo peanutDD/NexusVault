@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { settingsInputClass } from "../settings/settingsUi";
 import { cn } from "../../utils/cn";
 
 export interface NeuSelectOption {
@@ -16,13 +15,11 @@ interface NeuSelectProps {
   value: string;
 }
 
-const triggerClassName = settingsInputClass(
-  false,
-  "settings-neu-inset-control flex min-h-[clamp(2.5rem,5.8vw,2.75rem)] items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] pr-[clamp(2.55rem,6vw,2.9rem)] text-left text-[length:var(--settings-text-sm)] font-semibold",
-);
+const triggerClassName =
+  "neu-inset relative flex w-full min-w-0 min-h-[clamp(2.5rem,5.8vw,2.75rem)] items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.7rem,1.6vw,0.75rem)] px-[clamp(0.78rem,1.8vw,1rem)] pr-[clamp(2.55rem,6vw,2.9rem)] py-[clamp(0.68rem,1.5vw,0.75rem)] text-left text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-form-input-text)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]";
 
 const menuClassName =
-  "settings-neu-raised-card absolute left-0 right-0 top-[calc(100%+clamp(0.48rem,1.35vw,0.62rem))] z-40 rounded-[clamp(1rem,2vw,1.1rem)] border border-[var(--settings-surface-border)] [background:var(--settings-surface-bg)] p-[clamp(0.38rem,1vw,0.5rem)] shadow-[var(--settings-surface-shadow)]";
+  "neu-raised-sm absolute left-0 right-0 top-[calc(100%+clamp(0.48rem,1.35vw,0.62rem))] z-40 rounded-[clamp(1rem,2vw,1.1rem)] p-[clamp(0.38rem,1vw,0.5rem)]";
 
 export function NeuSelect({
   ariaLabel,
@@ -96,10 +93,10 @@ export function NeuSelect({
                   key={option.value}
                   aria-selected={selected}
                   className={cn(
-                    "flex w-full items-center gap-[clamp(0.62rem,1.6vw,0.76rem)] rounded-[clamp(0.8rem,1.9vw,0.96rem)] border px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.62rem,1.7vw,0.78rem)] text-left text-[length:var(--settings-text-sm)] font-semibold transition-[background,border-color,box-shadow,transform] duration-200",
+                    "flex w-full items-center gap-[clamp(0.62rem,1.6vw,0.76rem)] rounded-[clamp(0.8rem,1.9vw,0.96rem)] px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.62rem,1.7vw,0.78rem)] text-left text-[length:var(--settings-text-sm)] font-semibold transition-[background,box-shadow,transform] duration-200",
                     selected
-                      ? "border-[var(--settings-action-border)] [background:var(--settings-action-bg)] text-[var(--settings-action-text)] shadow-[var(--settings-action-shadow-active)]"
-                      : "border-transparent [background:var(--settings-panel-bg)] text-[var(--settings-title)] shadow-[var(--settings-panel-shadow)] hover:border-[var(--settings-panel-border)] hover:-translate-y-[clamp(0.03rem,0.09vw,0.05rem)]",
+                      ? "neu-pressed text-[var(--settings-action-text)]"
+                      : "neu-raised-sm text-[var(--settings-title)]",
                   )}
                   role="option"
                   type="button"

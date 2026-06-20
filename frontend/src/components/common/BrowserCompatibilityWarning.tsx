@@ -46,7 +46,7 @@ export default function BrowserCompatibilityWarning({
   return (
     <div
       className={cn(
-        "appAlertMessage appAlertMessage--codepen appAlertMessage--warning",
+        "appAlertMessage appAlertMessage--warning neu-semantic-raised",
         "fixed left-[clamp(0.78rem,1.8vw,1rem)] right-[clamp(0.78rem,1.8vw,1rem)] top-[clamp(0.78rem,1.8vw,1rem)] z-50",
         "mx-auto max-w-[min(64rem,calc(100vw-1.56rem))] overflow-hidden",
         "animate-fade-in transition-all duration-200",
@@ -55,14 +55,6 @@ export default function BrowserCompatibilityWarning({
       role="alert"
       data-oid="a4b.e6y"
     >
-      <div
-        className="appAlertMessageAmbient pointer-events-none absolute inset-0"
-        data-oid="browser-alert-ambient"
-      />
-      <div
-        className="appAlertMessageHairline pointer-events-none absolute inset-x-0 top-0"
-        data-oid="browser-alert-hairline"
-      />
       <div
         className="appAlertMessageContent relative z-10 flex min-w-0 flex-col gap-[clamp(0.75rem,1.6vw,0.9rem)] sm:flex-row sm:items-center sm:justify-between"
         data-oid="ob_p7ma"
@@ -91,7 +83,7 @@ export default function BrowserCompatibilityWarning({
           <button
             type="button"
             onClick={() => setShowWarning(false)}
-            className="appAlertMessageClose shrink-0 rounded-[clamp(0.4rem,1vw,0.5rem)] p-[clamp(0.3rem,0.8vw,0.375rem)] text-[var(--color-text-muted)] transition-colors hover:bg-[rgba(var(--rgb-white),0.06)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+            className="appAlertMessageClose neu-raised-sm shrink-0 rounded-[clamp(0.4rem,1vw,0.5rem)] p-[clamp(0.3rem,0.8vw,0.375rem)] text-[var(--color-text-muted)] transition-[box-shadow,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] active:shadow-[var(--neu-pressed-shadow)]"
             aria-label="关闭提示"
             title="关闭提示"
             data-oid="6ij2eek"

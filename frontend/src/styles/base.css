@@ -76,8 +76,6 @@
   }
 
   .appSpinnerShell {
-    background: var(--neu-raised-bg, var(--glass-bg-soft));
-    box-shadow: var(--neu-raised-sm-shadow, var(--shadow-glass-sm));
     padding: clamp(0.3rem, 0.7vw, 0.4rem);
   }
 
@@ -90,46 +88,34 @@
     color: var(--spinner-accent-color);
   }
 
-  .appAlertMessage--codepen {
-    --app-alert-surface: rgba(var(--rgb-slate-900), 0.72);
+  .appAlertMessage {
     --app-alert-title: rgba(var(--rgb-white), 0.9);
     --app-alert-text: rgba(var(--rgb-white), 0.78);
-    background: var(--app-alert-surface);
+    background: var(--neu-raised-bg);
+    background-image: none;
     border: 0;
     border-radius: clamp(0.85rem, 2vw, 1.1rem);
-    box-shadow: 0 0.7rem 1.6rem rgba(var(--rgb-black), 0.16);
     min-height: clamp(4rem, 8vw, 5rem);
     padding: clamp(0.9rem, 2vw, 1.15rem) clamp(1rem, 2.4vw, 1.35rem);
-    backdrop-filter: none;
   }
 
   .appAlertMessage--info {
-    --app-alert-surface: rgba(var(--rgb-emerald-950), 0.72);
     --app-alert-title: rgba(var(--rgb-emerald-200), 0.96);
     --app-alert-text: rgba(var(--rgb-emerald-400), 0.98);
   }
 
   .appAlertMessage--error {
-    --app-alert-surface: rgba(var(--rgb-red-950), 0.72);
     --app-alert-title: rgba(var(--rgb-red-200), 0.96);
     --app-alert-text: rgba(var(--rgb-red-400), 0.98);
   }
 
   .appAlertMessage--warning {
-    --app-alert-surface: rgba(var(--rgb-amber-950), 0.72);
     --app-alert-title: rgba(var(--rgb-amber-200), 0.96);
     --app-alert-text: rgba(var(--rgb-amber-400), 0.98);
   }
 
   .appAlertMessageContent {
     gap: clamp(0.7rem, 1.6vw, 1rem);
-  }
-
-  .appAlertMessageAmbient,
-  .appAlertMessageHairline,
-  .neuromorphic-style .appAlertMessageAmbient,
-  .neuromorphic-style .appAlertMessageHairline {
-    display: none;
   }
 
   .appAlertMessageIcon {
@@ -167,12 +153,10 @@
 
   .appAlertMessageClose {
     align-self: flex-start;
-    background: rgba(var(--rgb-white), 0.04);
     color: var(--app-alert-text);
   }
 
   .appAlertMessageClose:hover {
-    background: rgba(var(--rgb-white), 0.08);
     color: var(--app-alert-title);
   }
 
@@ -1554,20 +1538,4 @@
     max-inline-size: 100%;
   }
 
-  .neuromorphic-style .appAlertMessageClose:active {
-    box-shadow: var(--neu-pressed-shadow);
-    transform: translateY(1px);
-  }
-
-  .neuromorphic-style .appSpinnerShell,
-  .neuromorphic-style .appSpinnerShell {
-    background: var(--neu-raised-bg);
-    box-shadow: var(--neu-raised-sm-shadow);
-  }
-
-  .neuromorphic-style .appSpinnerIcon,
-  .neuromorphic-style .appSpinnerIcon {
-    display: inline-flex;
-    color: var(--neu-primary);
-  }
 }

@@ -19,15 +19,13 @@ describe("Modal", () => {
       "pt-[calc(clamp(5.5rem,10vw,8rem)+env(safe-area-inset-top))]",
     );
     expect(panel).toHaveClass(
-      "[background:var(--neu-raised-bg)]",
-      "shadow-[var(--neu-raised-shadow)]",
-      "border-transparent",
+      "neu-raised",
       "max-h-[calc(100dvh_-_clamp(6.5rem,12vw,9rem))]",
     );
     expect(panel).not.toHaveClass("shadow-2xl");
   });
 
-  it("uses the themed tech glass shell without changing close behavior", async () => {
+  it("uses the shared raised shell without changing close behavior", async () => {
     const onClose = vi.fn();
 
     render(
@@ -37,8 +35,9 @@ describe("Modal", () => {
     );
 
     const dialog = screen.getByRole("dialog", { name: "分享文件" });
-    expect(dialog).toHaveClass("modal-dialog-tech");
-    expect(dialog.querySelector(".modal-dialog-tech-panel")).not.toBeNull();
+    expect(dialog).not.toHaveClass("modal-dialog-tech");
+    expect(dialog.querySelector(".modal-dialog-tech-grid")).toBeNull();
+    expect(dialog.querySelector(".neu-raised")).not.toBeNull();
     expect(screen.getByRole("button", { name: "创建分享" })).toBeVisible();
 
     await userEvent.click(screen.getByRole("button", { name: "关闭" }));

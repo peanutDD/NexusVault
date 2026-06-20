@@ -5,47 +5,11 @@ export default function BottomBar() {
 
   return (
     <footer
-      className="bottomBarNeuromorphicSurface relative overflow-hidden border-t border-[var(--footer-border)] shadow-[var(--footer-surface-shadow)] flex-shrink-0"
+      className="neu-raised relative flex-shrink-0 overflow-hidden"
       role="contentinfo"
       data-testid="bottom-bar"
       data-oid="o966s9d"
     >
-      {/* 科技感背景：网格 + 渐变光带 */}
-      <div
-        className="absolute inset-0 [background:var(--footer-surface-bg)]"
-        data-testid="bottom-bar-surface"
-        data-oid="b8plw_1"
-      />
-
-      <div
-        className="absolute inset-0 opacity-[0.07] [background-image:var(--footer-grid-bg-image)] [background-size:var(--footer-grid-bg-size)]"
-        data-testid="bottom-bar-grid"
-        data-oid="tyd9q4h"
-      />
-
-      <div
-        className="absolute inset-0 bg-[image:var(--footer-bg-gradient)]"
-        data-testid="bottom-bar-gradient"
-        data-oid="f03tbot"
-      />
-
-      <div
-        className="absolute inset-x-0 top-0 h-px bg-[image:var(--footer-top-line)]"
-        data-oid="-d84jy2"
-      />
-
-      <div
-        className="absolute inset-x-0 bottom-0 h-px bg-[image:var(--footer-bottom-line)]"
-        data-oid="vafjflx"
-      />
-
-      {/* 顶部流动光效（CSS 动画） */}
-      <div
-        className="absolute inset-x-0 top-0 h-[2px] opacity-80 [background:var(--footer-shimmer-bg)] [background-size:var(--footer-shimmer-bg-size)] [animation:footerShimmer_4s_ease-in-out_infinite]"
-        data-testid="bottom-bar-shimmer"
-        data-oid="mm5c9s9"
-      />
-
       <div
         className="relative mx-auto max-w-[var(--app-shell-max-width)] px-[clamp(1rem,2.5vw,2rem)] py-[clamp(2rem,5vw,2.5rem)]"
         data-oid=".0dbe-l"

@@ -107,7 +107,7 @@ export default function ErrorMessage({
     <div
       className={cn(
         "appAlertMessage",
-        "appAlertMessage--codepen",
+        "neu-semantic-raised",
         `appAlertMessage--${type}`,
         "relative w-full min-w-0 overflow-hidden",
         "animate-fade-in transition-all duration-200",
@@ -116,16 +116,6 @@ export default function ErrorMessage({
       role="alert"
       data-oid="zlnjhhp"
     >
-      <div
-        className="appAlertMessageAmbient pointer-events-none absolute inset-0"
-        data-oid="5ndz-4."
-      />
-
-      <div
-        className="appAlertMessageHairline pointer-events-none absolute inset-x-0 top-0"
-        data-oid="lvqttey"
-      />
-
       <div className="appAlertMessageContent relative z-10 flex min-w-0 items-start" data-oid="be8-oiu">
         <div className="appAlertMessageIcon shrink-0" data-oid="-.r0ji4">
           <Icon
@@ -148,7 +138,7 @@ export default function ErrorMessage({
         {onClose && (
           <button
             onClick={onClose}
-            className="appAlertMessageClose shrink-0 rounded-[clamp(0.4rem,1vw,0.5rem)] p-[clamp(0.3rem,0.8vw,0.375rem)] text-[var(--color-text-muted)] transition-colors hover:bg-[rgba(var(--rgb-white),0.06)] hover:text-[var(--color-text-primary)]"
+            className="appAlertMessageClose neu-raised-sm shrink-0 rounded-[clamp(0.4rem,1vw,0.5rem)] p-[clamp(0.3rem,0.8vw,0.375rem)] text-[var(--color-text-muted)] transition-[box-shadow,color] active:shadow-[var(--neu-pressed-shadow)]"
             aria-label="关闭"
             data-oid="q78a2sh"
           >

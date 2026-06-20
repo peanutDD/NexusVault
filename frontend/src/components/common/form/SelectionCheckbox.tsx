@@ -61,7 +61,7 @@ export function SelectionCheckbox({
       {isSelected ? (
         <span
           className={cn(
-            "card-checkbox-codepen-box card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full bg-[var(--selection-check-surface)] transition-colors duration-150 group-hover:bg-[var(--selection-check-surface-hover)]",
+            "neu-pressed card-checkbox-codepen-box card-checkbox-outer-crystal card-checkbox-selected flex items-center justify-center rounded-full transition-colors duration-150",
             isResponsive
               ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
               : isSmall
@@ -96,7 +96,7 @@ export function SelectionCheckbox({
       ) : (
         <span
           className={cn(
-            "card-checkbox-codepen-box card-checkbox-unselected flex items-center justify-center rounded-full bg-[var(--selection-check-unselected-surface)] transition-colors duration-150 group-hover:bg-[var(--selection-check-unselected-surface-hover)]",
+            "neu-inset card-checkbox-codepen-box card-checkbox-unselected flex items-center justify-center rounded-full transition-colors duration-150",
             isResponsive
               ? "h-[clamp(0.72rem,1.1vw,0.95rem)] w-[clamp(0.72rem,1.1vw,0.95rem)]"
               : isSmall
