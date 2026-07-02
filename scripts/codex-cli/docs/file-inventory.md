@@ -176,7 +176,7 @@ Skill 顺序职责：
 
 重要策略函数：
 
-- `decide_fix_or_skip`：默认处理 `Critical/High/Medium`，保护锁文件、包配置、`.env`，默认排除 docs 和 `.md`。
+- `decide_fix_or_skip`：默认处理 `Critical/High/Medium+/Medium`，保护锁文件、包配置、`.env`，默认排除 docs 和 `.md`；过滤后的行动级问题必须作为 `blocked_policy` 记录，不能静默 clean。
 - `generate_fix_patch`：为单条 issue 生成 patch，要求输出非空且包含 `@@` hunk。
 - `review_issue_key`：用文件、行号、严重级别、描述组成 issue key，避免同文件多问题互相覆盖。
 - `parse_security_audit` / `parse_quality_score`：清理模型 JSON 输出并解析。
@@ -212,7 +212,8 @@ Skill 顺序职责：
 2. 运行修复 pipeline：ReadReview、Decision、BatchFix、SecurityCheck、QualityScore、Documentation。
 3. 调用 `enforce_review_policy`，确保 `Medium/Medium+/High/Critical` 未修复问题有说明。
 4. 运行反馈 pipeline：DryRunFeedback、Feedback。
-5. 生成 `PrAutoFixOutput` JSON。
+5. 若发布被阻塞，追加最终状态 ledger，保证本地记录包含 `blocked_push` 原因和解决办法。
+6. 生成 `PrAutoFixOutput` JSON。
 
 这里定义了“单次命令只处理当前 Review”的边界。`max_rounds` 是外层 workflow 轮次提示，不代表当前命令内部会循环请求多轮 Gemini。
 

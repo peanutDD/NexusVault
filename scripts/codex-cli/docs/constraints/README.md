@@ -19,6 +19,8 @@
 - 默认对高风险文件做硬过滤（锁文件/配置文件/.env 等），并允许通过环境变量追加保护名单
 - 未传 `--yes` 时不得提交/推送（Dry-Run 默认安全）
 - 安全审计未通过或不可解析时必须 fail-closed，不得提交/推送
+- `Medium/Medium+/High/Critical` Gemini findings 未全部 `resolved` 前，不得标记 `gemini-review-clean` 或 `ready_to_merge=true`
+- 外力失败、策略过滤、验证/提交/推送失败必须记录具体原因、解决办法、是否可重试，并写入 PR 评论和本地 ledger
 
 ### 兼容性约束
 

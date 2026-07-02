@@ -751,6 +751,20 @@ impl Skill for FeedbackSkill {
                     ctx.pending_explanations.push(explanation.clone());
                 }
                 eprintln!("⚠️ [AutoFix] {}", explanation);
+                if ctx.enable_pr_comments {
+                    let msg = format!(
+                        "🤖 **Codex 自动修复发布阻塞**\n\n{}\n{}",
+                        explanation,
+                        review_status_block(ctx)
+                    );
+                    if let Err(comment_error) = repo::post_comment(ctx.pr_number, &msg) {
+                        let comment_explanation = format!("PR 评论失败：{}", comment_error);
+                        if !ctx.pending_explanations.contains(&comment_explanation) {
+                            ctx.pending_explanations.push(comment_explanation.clone());
+                        }
+                        eprintln!("⚠️ [AutoFix] {}", comment_explanation);
+                    }
+                }
                 return Ok(());
             }
 
@@ -768,7 +782,14 @@ impl Skill for FeedbackSkill {
                 review_status_block(ctx)
             );
             if ctx.enable_pr_comments {
-                repo::post_comment(ctx.pr_number, &gh_msg)?;
+                if let Err(error) = repo::post_comment(ctx.pr_number, &gh_msg) {
+                    let explanation = format!("PR 评论失败：{}", error);
+                    ctx.push_blocked = true;
+                    if !ctx.pending_explanations.contains(&explanation) {
+                        ctx.pending_explanations.push(explanation.clone());
+                    }
+                    eprintln!("⚠️ [AutoFix] {}", explanation);
+                }
             } else {
                 eprintln!("{}", gh_msg);
             }
@@ -948,7 +969,9 @@ fn review_status_block(ctx: &SkillContext) -> String {
 fn status_label(status: &str) -> &'static str {
     match status {
         "resolved" => "✅ 已解决",
-        "blocked" => "⚠️ 推送阻塞",
+        "blocked_push" => "⚠️ 推送阻塞",
+        "blocked_external" => "🌐 外力阻塞",
+        "blocked_policy" => "🛡️ 策略阻塞",
         "tracked" => "📘 已记录",
         _ => "🧭 未解决",
     }
@@ -1647,6 +1670,7 @@ mod tests {
                 },
             ],
         });
+        ctx.selected_issues = ctx.parsed_data.as_ref().unwrap().issues.clone();
         ctx.fix_attempts.push(FixAttempt {
             round: 1,
             issue_key: "src/a.rs:10:Medium:first".to_string(),
@@ -1669,7 +1693,10 @@ mod tests {
         assert!(block.contains("📋 Review 问题对应状态"));
         assert!(block.contains("| # | Gemini 问题 | 状态 | 说明 |"));
         assert!(block.contains("| 1 | [Medium] `src/a.rs`:10 first | ✅ 已解决 | 修复摘要"));
-        assert!(block.contains("| 2 | [Medium+] `src/b.rs`:20 second | 🧭 未解决 | empty patch |"));
+        assert!(block.contains(
+            "| 2 | [Medium+] `src/b.rs`:20 second | 🧭 未解决 | 具体原因：empty patch；解决办法："
+        ));
+        assert!(block.contains("可重试：true |"));
     }
 
     #[test]

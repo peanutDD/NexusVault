@@ -422,10 +422,10 @@ pub struct PrAutoFixOutput {
 | `quality_score` | 0 到 100 |
 | `quality_score_available` | 质量评分是否成功解析 |
 | `security_passed` | prompt-based 安全审计是否通过 |
-| `push_blocked` | 当前实现主要由安全或策略状态影响，true 时需要人处理 |
-| `has_pending` | 是否存在 Medium 以上未自动解决问题 |
-| `pending_count` | 未解决说明数量 |
-| `review_clean` | 安全通过、未阻塞、无 pending |
+| `push_blocked` | 验证、提交、推送、GitHub API fallback 或 PR 评论失败，true 时需要人处理 |
+| `has_pending` | 是否存在 Medium/Medium+/High/Critical 未解决或被阻塞问题 |
+| `pending_count` | 未解决/阻塞说明数量 |
+| `review_clean` | 行动级 Gemini 问题全部 resolved，且未被外力、策略或发布链路阻塞 |
 | `apply_fail_reason` | `malformed_diff`、`context_mismatch`、`drift`、`unknown` 等 |
 | `retry_count` | patch retry 次数 |
 | `fallback_used` | 是否使用完整文件兜底成功 |
@@ -434,7 +434,7 @@ pub struct PrAutoFixOutput {
 | `review_record_path` | ledger 路径，通常是 `docs/auto-review-ledger.md` |
 | `fixed_explanations` | 已修复问题说明 |
 | `pending_explanations` | 未修复原因 |
-| `issue_statuses` | 每条 Medium 以上问题的一对一状态 |
+| `issue_statuses` | 每条 Medium/Medium+/High/Critical 问题的一对一状态，含 `resolved`、`pending_fix_failed`、`blocked_external`、`blocked_policy`、`blocked_push` |
 
 修改该结构是破坏性风险最高的操作之一。新增字段相对安全；删除或改名会破坏 workflow 的 `jq` 解析。
 
@@ -501,11 +501,12 @@ feedback_pipeline:
 3. 执行修复 pipeline。
 4. 如果没有产生修复文件，跳过安全、评分、文档。
 5. 如果安全检查发现可转换为 review issue 的 finding，会执行一次安全修复补丁轮。
-6. 执行 `enforce_review_policy`，确保每条 Medium 以上问题都有 resolved 或 pending 说明。
+6. 执行 `enforce_review_policy`，确保每条 Medium/Medium+/High/Critical 问题都有 resolved、pending_fix_failed 或 blocked 说明。
 7. 把安全 finding 加入 pending。
 8. 写 `docs/auto-review-ledger.md` 和 per-PR ledger。
 9. 执行反馈 pipeline。
-10. 汇总 `PrAutoFixOutput`。
+10. 如果发布失败，追加最终状态 ledger，记录 `blocked_push` 的具体原因和解决办法。
+11. 汇总 `PrAutoFixOutput`。
 
 ### 6.5 Pipeline
 
@@ -546,7 +547,7 @@ pub struct Pipeline {
 | `quality_score_available` | QualityScore | Feedback、output | 评分是否可用 |
 | `security_passed` | SecurityCheck | runtime、Feedback、output | 安全检查是否通过 |
 | `security_findings` | SecurityCheck | runtime、Feedback | 安全问题 |
-| `push_blocked` | policy / security path | output、Feedback | 是否阻止自动推送 |
+| `push_blocked` | Feedback/publish path | output、Feedback、ledger | 是否阻止自动推送或 PR 评论 |
 | `auto_push` | CLI | Feedback、output | 是否允许提交/推送 |
 | `enable_pr_comments` | CLI | Feedback | 是否发 PR 评论 |
 | `changelog_path` | CLI | Documentation | changelog 覆盖路径 |

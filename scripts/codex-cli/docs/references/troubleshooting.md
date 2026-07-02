@@ -65,11 +65,33 @@
 - 如果 issue 已过期（代码已变化），需要重新生成 review
 - unified diff 只是兼容路径；新问题优先让模型输出 SEARCH/REPLACE block
 
-### 7) 没有任何修复但出现 pending
+### 7) 没有任何修复但出现 pending / blocked
 
 当 `selected_issues > 0` 且 `fixed_files = 0` 时，运行时会跳过 SecurityCheck / QualityScore / Documentation，并在最终 JSON/PR 评论中保留未修复原因。这样避免对原始未修复代码误打质量分。
 
-### 8) PR 评论失败
+状态含义：
+
+- `pending_fix_failed`：Codex 已尝试，但补丁生成、应用、重试或完整文件兜底没有修好。处理：检查目标文件和 Codex 输出，必要时人工修复，或手动触发第 3 轮/更多轮。
+- `blocked_external`：断网、Codex 额度不足/超时、GitHub 连接失败、runner 中断、Gemini 未返回等外力因素。处理：恢复外部条件后手动触发下一轮。
+- `blocked_policy`：受保护文件、docs 默认过滤、危险路径或策略限制。处理：人工批准策略变更、调整 `CODEX_EXCLUDE_DOCS` / `CODEX_PROTECTED_FILES`，或人工修复。
+- `blocked_push`：本地修复已生成，但 pre-push 验证、`git commit`、`git push`、GitHub API fallback 或 PR 评论失败。处理：按 `failure_stage` 和 `failure_reason` 修复后重跑。
+
+### 8) blocked_push：验证/提交/推送失败
+
+必须先看 PR 评论或 ledger 中的字段：
+
+- `failure_stage`：失败阶段，例如 `pre-push validation`、`git commit`、`git push`、`GitHub API fallback`、`PR comment`。
+- `failure_reason`：原始错误摘要。
+- `blocked_action`：被阻止的动作。
+- `remediation`：可执行解决办法。
+
+常见处理：
+
+- `pre-push validation`：本地执行 `CODEX_AUTO_FIX_VERIFY_COMMANDS` 对应的 lint/typecheck/test/format 命令，修复失败后重跑。
+- `git push` 或 GitHub API fallback：检查网络、branch protection、`GITHUB_TOKEN` 权限和远端分支状态。
+- `PR comment`：检查 `gh` 登录、token 权限、GitHub API 可用性；必要时先保留本地 ledger，再手动补评论或重跑。
+
+### 9) PR 评论失败
 
 原因：`gh` 未安装/未登录/权限不足。
 
@@ -77,9 +99,18 @@
 
 - GitHub Actions：确保 runner 有 `gh`，并正确配置 token 权限
 - 或直接禁用：`--no-pr-comments`
-- 如果 stderr 包含 `Empty reply from server`、timeout 或 disconnect，工具会自动重试；三次后仍失败才需要人工检查网络或 GitHub 状态
+- 如果 stderr 包含 `Empty reply from server`、timeout 或 disconnect，工具会自动重试；三次后仍失败会标记为 `blocked_push` 或 `blocked_external`，并给出恢复办法
 
-### 9) changelog 写入失败或不希望写入
+### 10) 需要第 3 轮或更多轮
+
+默认自动闭环最多 2 轮。如果第 2 轮后仍未 clean：
+
+1. 先按 `remediation` 处理根因。
+2. 删除 `gemini-review-round-max` / `gemini-review-needs-human` 标签。
+3. 添加 `gemini-review-round-3`；更多轮依次使用 `gemini-review-round-4`、`gemini-review-round-5`。
+4. 评论 `/gemini review` 触发新一轮 Gemini Review。
+
+### 11) changelog 写入失败或不希望写入
 
 处理：
 

@@ -8,7 +8,7 @@ fixed="${FIXED:-false}"
 push_blocked="${PUSH_BLOCKED:-false}"
 pending_count="${PENDING_COUNT:-0}"
 max_rounds="${MAX_ROUNDS:-2}"
-strict="${CODEX_AUTO_FIX_STRICT:-false}"
+strict="${CODEX_AUTO_FIX_STRICT:-true}"
 
 round_label() {
   printf 'gemini-review-round-%s' "$1"
@@ -47,14 +47,7 @@ ready_to_merge="false"
 human_block="false"
 state_label=""
 
-if [[ "$strict" != "true" ]]; then
-  action="relaxed_clear"
-  next_round="gemini-review-round-max"
-  request_review="false"
-  ready_to_merge="true"
-  human_block="false"
-  state_label="gemini-review-clean"
-elif [[ "$current" == "gemini-review-round-max" ]]; then
+if [[ "$current" == "gemini-review-round-max" ]]; then
   action="max_stop"
   request_review="false"
   ready_to_merge="false"
@@ -65,23 +58,11 @@ elif [[ "$push_blocked" == "true" ]]; then
   human_block="true"
   state_label="gemini-review-needs-human"
 elif (( pending_count > 0 )) && [[ "$fixed" == "false" ]]; then
-  if [[ "$strict" == "true" ]]; then
-    action="needs_human"
-    next_round="$current"
-    request_review="false"
-    human_block="true"
-    state_label="gemini-review-needs-human"
-  elif (( current_number >= max_rounds )); then
-    action="complete_with_pending"
-    next_round="gemini-review-round-max"
-    request_review="false"
-    human_block="true"
-    state_label="gemini-review-needs-human"
-  else
-    action="advance_with_pending"
-    request_review="true"
-    state_label="gemini-review-pending"
-  fi
+  action="needs_human"
+  next_round="$current"
+  request_review="false"
+  human_block="true"
+  state_label="gemini-review-needs-human"
 elif (( pending_count > 0 )) && [[ "$fixed" == "true" ]]; then
   if (( current_number >= max_rounds )); then
     action="complete_with_pending"
@@ -154,7 +135,9 @@ post_comment() {
     >/dev/null || true
 }
 
-issue_status_note="问题清单见上方 Codex 分析评论中的 \`Medium/Medium+/High/Critical 对应状态\` 表；每个 Gemini 问题都会标记已解决、未解决或推送阻塞。"
+issue_status_note="问题清单见上方 Codex 分析评论中的 \`Medium/Medium+/High/Critical 对应状态\` 表；每个 Gemini 问题都会标记已解决、未解决、外力阻塞、策略阻塞或推送阻塞。"
+retry_guidance="具体原因、解决办法、可重试标记和下一步见上方 Codex 分析评论；如属于断网、Codex 额度不足、GitHub 连接失败、runner 中断或 Gemini 未返回等外力因素，恢复后可手动触发第 3 轮或更多轮继续修复。"
+blocked_push_guidance="blocked_push：本地可能已经产生修复文件，但发布链路失败。请检查失败阶段：pre-push 验证 / git commit / git push / GitHub API fallback / PR comment；按上方原始错误摘要修复验证命令、token/branch protection、网络或 GitHub 状态后再重跑。"
 
 apply_plan() {
   ensure_label "gemini-review-round-1" "6f42c1" "Gemini/Codex review loop round 1"
@@ -177,24 +160,19 @@ apply_plan() {
   done
 
   case "$action" in
-    relaxed_clear)
-      add_label "gemini-review-round-max"
-      add_label "gemini-review-clean"
-      post_comment "🤖 **Codex 已按宽松模式清理本轮 Gemini Review。** 自动修复/分析已经执行；剩余 Medium/Medium+/High/Critical 说明不再阻塞自动闭环。${issue_status_note} 如需更严格审核，请临时设置 \`CODEX_AUTO_FIX_STRICT=true\` 后重跑。"
-      ;;
     max_stop)
       add_label "gemini-review-round-max"
-      post_comment "🤖 **Codex 自动修复已达到 ${max_rounds} 轮上限。** ${issue_status_note} 请人工 Review 后决定合并或重跑。"
+      post_comment "🤖 **Codex 自动修复已达到默认 ${max_rounds} 轮上限。** ${issue_status_note} ${retry_guidance} 请人工 Review 后决定合并、人工修复或手动触发第 3 轮或更多轮。"
       ;;
     push_blocked)
       add_label "$current"
       add_label "gemini-review-needs-human"
-      post_comment "🤖 **Codex 自动修复已阻塞。** 安全审计 fail-closed，未推送自动修复。${issue_status_note} 请人工处理后决定是否重跑 Gemini Review。"
+      post_comment "🤖 **Codex 自动修复已阻塞。** ${issue_status_note} ${blocked_push_guidance} ${retry_guidance}"
       ;;
     needs_human)
       add_label "$current"
       add_label "gemini-review-needs-human"
-      post_comment "🤖 **Codex 未能清理当前 Gemini Review 的 Medium/Medium+/High/Critical 问题。** ${issue_status_note} 本轮不会误判为可合并，请人工处理或重跑。"
+      post_comment "🤖 **Codex 未能清理当前 Gemini Review 的 Medium/Medium+/High/Critical 问题。** ${issue_status_note} ${retry_guidance} 本轮不会误判为可合并，请人工处理或手动触发第 3 轮或更多轮。"
       ;;
     advance|advance_with_pending)
       add_label "$next_round"
@@ -207,7 +185,7 @@ apply_plan() {
         REVIEW_REQUESTED_AT="$review_requested_at" bash .github/scripts/gemini-review-watchdog.sh watch
       fi
       if [[ "$action" == "advance_with_pending" ]]; then
-        post_comment "🤖 **Codex 已推送部分修复，并请求下一轮 Gemini Review。** ${issue_status_note} 当前仍有 Medium/Medium+/High/Critical 未自动修复说明，下一轮后仍存在则需要人工决策。"
+        post_comment "🤖 **Codex 已推送部分修复，并请求下一轮 Gemini Review。** ${issue_status_note} ${retry_guidance} 当前仍有 Medium/Medium+/High/Critical 未自动修复说明，下一轮后仍存在则需要人工决策。"
       else
         post_comment "🤖 **Codex 本轮已完成，已请求下一轮 Gemini Review。** ${issue_status_note}"
       fi
@@ -220,7 +198,7 @@ apply_plan() {
     complete_with_pending)
       add_label "gemini-review-round-max"
       add_label "gemini-review-needs-human"
-      post_comment "🤖 **Codex/Gemini 自动 Review 已达到 ${max_rounds} 轮，但仍有 Medium/Medium+/High/Critical 未自动修复说明。** ${issue_status_note} 请人工处理或明确接受这些 pending 后再合并。"
+      post_comment "🤖 **Codex/Gemini 自动 Review 已达到默认 ${max_rounds} 轮，但仍有 Medium/Medium+/High/Critical 未自动修复说明。** ${issue_status_note} ${retry_guidance} 请人工处理或继续手动触发更多轮。"
       ;;
   esac
 }

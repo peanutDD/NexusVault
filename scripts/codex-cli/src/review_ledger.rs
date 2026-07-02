@@ -109,8 +109,8 @@ pub fn build_entry(input: &ReviewLedgerEntryInput) -> String {
         }
     }
 
-    entry.push_str("\n| # | Severity | File:line | 原始问题 | Suggestion | Constraints | Auto-fix scope | 状态 | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 |\n");
-    entry.push_str("|---|---|---|---|---|---|---|---|---|---|---|\n");
+    entry.push_str("\n| # | Severity | File:line | 原始问题 | Suggestion | Constraints | Auto-fix scope | 状态 | Failure class | Failure stage | Retryable | Blocked action | 修复方式 / 失败原因 | 关联文件 | 解决答案 / 未解决原因 | Remediation |\n");
+    entry.push_str("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
     for (index, status) in input.statuses.iter().enumerate() {
         let constraints = if status.constraints.is_empty() {
             "(none)".to_string()
@@ -127,7 +127,7 @@ pub fn build_entry(input: &ReviewLedgerEntryInput) -> String {
                 .collect::<Vec<_>>()
                 .join("<br>")
         };
-        let method_or_failure = if status.status == "resolved" || status.status == "blocked" {
+        let method_or_failure = if status.status == "resolved" {
             &status.fix_method
         } else {
             status
@@ -137,7 +137,7 @@ pub fn build_entry(input: &ReviewLedgerEntryInput) -> String {
                 .unwrap_or(&status.fix_method)
         };
         entry.push_str(&format!(
-            "| {} | {} | `{}`:{} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | `{}`:{} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             index + 1,
             markdown_table_cell(&status.severity),
             markdown_table_cell(&status.file),
@@ -147,9 +147,14 @@ pub fn build_entry(input: &ReviewLedgerEntryInput) -> String {
             markdown_table_cell(&constraints),
             markdown_table_cell(&status.auto_fix_scope),
             markdown_table_cell(&status.status),
+            markdown_table_cell(&status.failure_class),
+            markdown_table_cell(&status.failure_stage),
+            status.retryable,
+            markdown_table_cell(&status.blocked_action),
             markdown_table_cell(method_or_failure),
             markdown_table_cell(&related_files),
-            markdown_table_cell(&status.explanation)
+            markdown_table_cell(&status.explanation),
+            markdown_table_cell(&status.remediation)
         ));
     }
     entry.push('\n');
@@ -171,13 +176,24 @@ pub fn issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus> {
             let line = issue.line.unwrap_or(0);
             let is_actionable = is_review_severity_medium_or_higher(&issue.severity);
             let was_selected = selected.contains(&issue_key);
-            let failure_reason = latest_failure_reason_for_issue(ctx, &issue_key);
+            let latest_failure_reason = latest_failure_reason_for_issue(ctx, &issue_key);
             let fix_method = fix_method_for_issue(ctx, &issue_key);
             let related_files = related_files_for_issue(ctx, issue, fixed.contains(&issue_key));
+            let failure_stage = latest_failure_stage_for_issue(ctx, &issue_key);
+            let mut failure = FailureDetails::empty();
             let (status, explanation) = if fixed.contains(&issue_key) && ctx.push_blocked {
+                failure = push_blocked_details(ctx);
                 (
-                    "blocked".to_string(),
-                    "已生成修复，但推送被自动化保护策略阻止".to_string(),
+                    failure.failure_class.clone(),
+                    format!(
+                        "本地修复已生成，但发布链路被阻塞。具体原因：{}；解决办法：{}；可重试：{}",
+                        failure
+                            .failure_reason
+                            .as_deref()
+                            .unwrap_or("发布链路失败，未捕获到更具体错误"),
+                        failure.remediation,
+                        if failure.retryable { "true" } else { "false" }
+                    ),
                 )
             } else if fixed.contains(&issue_key) {
                 (
@@ -190,10 +206,22 @@ pub fn issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus> {
                     "审计追踪：Low/Info 问题未进入自动修复范围".to_string(),
                 )
             } else {
+                let reason = pending_reason_for_issue(ctx, &issue_key, was_selected);
+                failure = unresolved_issue_details(&reason, failure_stage.as_deref(), was_selected);
                 (
-                    "pending".to_string(),
-                    pending_reason_for_issue(ctx, &issue_key, was_selected),
+                    failure.failure_class.clone(),
+                    format!(
+                        "具体原因：{}；解决办法：{}；可重试：{}",
+                        reason,
+                        failure.remediation,
+                        if failure.retryable { "true" } else { "false" }
+                    ),
                 )
+            };
+            let failure_reason = if status == "resolved" || status == "tracked" {
+                latest_failure_reason
+            } else {
+                failure.failure_reason.clone().or(latest_failure_reason)
             };
 
             ReviewIssueStatus {
@@ -213,6 +241,11 @@ pub fn issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus> {
                 fix_method,
                 failure_reason,
                 related_files,
+                failure_class: failure.failure_class,
+                failure_stage: failure.failure_stage,
+                retryable: failure.retryable,
+                blocked_action: failure.blocked_action,
+                remediation: failure.remediation,
             }
         })
         .collect()
@@ -221,7 +254,7 @@ pub fn issue_statuses(ctx: &SkillContext) -> Vec<ReviewIssueStatus> {
 pub fn pending_count(statuses: &[ReviewIssueStatus]) -> usize {
     statuses
         .iter()
-        .filter(|status| status.status == "pending" || status.status == "blocked")
+        .filter(|status| !matches!(status.status.as_str(), "resolved" | "tracked"))
         .count()
 }
 
@@ -255,6 +288,149 @@ pub(crate) fn pending_reason_for_issue(
                 "策略过滤或受保护路径，未自动修复".to_string()
             }
         })
+}
+
+#[derive(Debug, Clone)]
+struct FailureDetails {
+    failure_class: String,
+    failure_stage: String,
+    retryable: bool,
+    blocked_action: String,
+    remediation: String,
+    failure_reason: Option<String>,
+}
+
+impl FailureDetails {
+    fn empty() -> Self {
+        Self {
+            failure_class: String::new(),
+            failure_stage: String::new(),
+            retryable: false,
+            blocked_action: String::new(),
+            remediation: String::new(),
+            failure_reason: None,
+        }
+    }
+}
+
+fn latest_failure_stage_for_issue(ctx: &SkillContext, issue_key: &str) -> Option<String> {
+    ctx.fix_attempts
+        .iter()
+        .rev()
+        .find(|attempt| attempt.issue_key == issue_key && !attempt.success)
+        .map(|attempt| attempt.stage.clone())
+}
+
+fn push_blocked_details(ctx: &SkillContext) -> FailureDetails {
+    let reason = ctx
+        .pending_explanations
+        .iter()
+        .rev()
+        .find(|explanation| {
+            explanation.contains("自动修复提交前验证或推送失败")
+                || explanation.contains("CODEX_AUTO_FIX_VERIFY_COMMANDS")
+                || explanation.contains("git push")
+                || explanation.contains("GitHub API")
+                || explanation.contains("PR 评论")
+        })
+        .cloned()
+        .unwrap_or_else(|| "发布链路失败，未捕获到更具体错误".to_string());
+
+    let stage = if reason.contains("CODEX_AUTO_FIX_VERIFY_COMMANDS") || reason.contains("验证失败")
+    {
+        "pre-push validation"
+    } else if reason.contains("git commit") {
+        "git commit"
+    } else if reason.contains("git push") {
+        "git push"
+    } else if reason.contains("GitHub API") {
+        "GitHub API fallback"
+    } else if reason.contains("PR 评论") || reason.contains("gh pr comment") {
+        "PR comment"
+    } else {
+        "publish"
+    };
+
+    let remediation = if stage == "pre-push validation" {
+        "修复验证命令失败原因后重新运行；先在本地执行 CODEX_AUTO_FIX_VERIFY_COMMANDS 对应的 lint/typecheck/test/format 命令，确认通过后再触发下一轮。"
+            .to_string()
+    } else {
+        "恢复 GitHub 网络连接，检查 gh/GITHUB_TOKEN 权限、branch protection 和远端状态；确认发布链路可用后手动触发第 3 轮或更多轮继续。"
+            .to_string()
+    };
+
+    FailureDetails {
+        failure_class: "blocked_push".to_string(),
+        failure_stage: stage.to_string(),
+        retryable: true,
+        blocked_action: "commit/push/PR comment/state advancement".to_string(),
+        remediation,
+        failure_reason: Some(reason),
+    }
+}
+
+fn unresolved_issue_details(reason: &str, stage: Option<&str>, selected: bool) -> FailureDetails {
+    if !selected {
+        return FailureDetails {
+            failure_class: "blocked_policy".to_string(),
+            failure_stage: "decision_filter".to_string(),
+            retryable: false,
+            blocked_action: "automatic source modification".to_string(),
+            remediation:
+                "人工批准修改受保护文件或调整 CODEX_EXCLUDE_DOCS/CODEX_PROTECTED_FILES/CODEX_ALLOWED_SEVERITIES 后再重跑。"
+                    .to_string(),
+            failure_reason: Some(reason.to_string()),
+        };
+    }
+
+    if is_external_failure(reason) {
+        return FailureDetails {
+            failure_class: "blocked_external".to_string(),
+            failure_stage: stage.unwrap_or("external_dependency").to_string(),
+            retryable: true,
+            blocked_action: "new Codex repair attempt".to_string(),
+            remediation:
+                "恢复网络、Codex 额度/GitHub 连接或 runner 状态后，手动触发第 3 轮或更多轮继续修复。"
+                    .to_string(),
+            failure_reason: Some(reason.to_string()),
+        };
+    }
+
+    FailureDetails {
+        failure_class: "pending_fix_failed".to_string(),
+        failure_stage: stage.unwrap_or("auto_fix").to_string(),
+        retryable: true,
+        blocked_action: "automatic issue fix".to_string(),
+        remediation:
+            "检查目标文件、Gemini 原问题和 Codex 输出；可手动修复后重跑，或手动触发第 3 轮或更多轮让 Codex 继续尝试。"
+                .to_string(),
+        failure_reason: Some(reason.to_string()),
+    }
+}
+
+fn is_external_failure(reason: &str) -> bool {
+    let lower = reason.to_ascii_lowercase();
+    [
+        "timeout",
+        "timed out",
+        "connection",
+        "network",
+        "github",
+        "gh ",
+        "rate limit",
+        "quota",
+        "runner",
+        "remaining=",
+        "自动修复剩余时间不足",
+        "本地 codex 命令超时",
+        "断网",
+        "额度",
+        "连接",
+        "gemini 未返回",
+        "gemini review 未返回",
+    ]
+    .iter()
+    .any(|needle| lower.contains(needle))
 }
 
 fn append_ledger_file(

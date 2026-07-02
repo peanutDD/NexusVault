@@ -166,12 +166,17 @@ async fn run_auto_fix_loop(
 
     let summary = ctx.parsed_data.as_ref().map(|d| d.summary.clone());
     let source_fixed = review_ledger::source_fix_created(&ctx);
-    let review_record_path = review_ledger::append_from_context(&mut ctx, summary.clone())?;
+    let mut review_record_path = review_ledger::append_from_context(&mut ctx, summary.clone())?;
 
     let feedback_pipeline = Pipeline::new()
         .with_skill(Box::new(DryRunFeedbackSkill))
         .with_skill(Box::new(FeedbackSkill));
     feedback_pipeline.run(&mut ctx, client).await?;
+    if ctx.push_blocked
+        && let Some(path) = review_ledger::append_from_context(&mut ctx, summary.clone())?
+    {
+        review_record_path = Some(path);
+    }
 
     let mut files = ctx.fixed_files.clone();
     files.sort();

@@ -100,7 +100,12 @@ printf '%s\n' "$REVIEW_TEXT" > /tmp/review.md
 - `retry_count`：发生过 `patch_apply_retry` 的次数。
 - `fallback_used`：是否成功使用 full-file fallback。
 - `final_status`：`clean`、`pending` 或 `needs-human`。
-- `issue_statuses`：每个 `Medium/Medium+/High/Critical` Gemini issue 的一一对应状态；PR 评论必须展示同源状态表。
+- `issue_statuses`：每个 `Medium/Medium+/High/Critical` Gemini issue 的一一对应状态；PR 评论必须展示同源状态表。行动级状态只允许 `resolved`、`pending_fix_failed`、`blocked_external`、`blocked_policy`、`blocked_push`。
+- `failure_stage` / `failure_reason` / `retryable` / `blocked_action` / `remediation`：用于说明断网、Codex 额度、GitHub 连接、runner、Gemini 未返回、验证/提交/推送失败等问题的具体原因和解决办法。
+
+Gemini kickoff workflow 应设置 `GEMINI_REVIEW_REQUIRED=true`。如果 Gemini 未在
+watchdog 时间内返回 Review，应添加 `gemini-review-needs-human` 并发布
+`blocked_external` 说明，而不是静默等待下一次事件。
 
 ### 仓库根目录与规则/Changelog 参数化
 

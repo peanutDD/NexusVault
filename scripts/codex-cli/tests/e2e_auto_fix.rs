@@ -349,7 +349,7 @@ fn pr_auto_fix_posts_issue_status_checklist_comment_in_dry_run() {
     assert_eq!(json["fixed"], true);
     assert_eq!(json["has_pending"], true);
     assert_eq!(json["issue_statuses"][0]["status"], "resolved");
-    assert_eq!(json["issue_statuses"][1]["status"], "pending");
+    assert_eq!(json["issue_statuses"][1]["status"], "pending_fix_failed");
 
     let comment = fs::read_to_string(gh_comment).unwrap();
     assert!(comment.contains("Codex 已在本地生成并应用补丁"));
@@ -361,6 +361,64 @@ fn pr_auto_fix_posts_issue_status_checklist_comment_in_dry_run() {
     assert!(comment.contains("🧭 未解决明细"));
     assert!(comment.contains("fix value"));
     assert!(comment.contains("fix other"));
+}
+
+#[test]
+fn pr_auto_fix_posts_push_blocked_status_comment_when_publish_fails() {
+    let workspace = TestWorkspace::new("pr-push-blocked-comment");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的问题，并在发布失败时评论具体原因和解决办法。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("sr_success");
+    let fake_gh = workspace.fake_gh();
+    let gh_comment = workspace.path.join("gh-comment.md");
+
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    let path = std::env::var("PATH")
+        .map(|current| format!("{}:{}", fake_gh.parent().unwrap().display(), current))
+        .unwrap_or_else(|_| fake_gh.parent().unwrap().display().to_string());
+    let output = command
+        .args([
+            "pr-auto-fix",
+            "--pr-number",
+            "24",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--gemini-review",
+            review.to_str().unwrap(),
+            "--disable-changelog",
+            "--max-rounds",
+            "2",
+            "--yes",
+        ])
+        .env("PATH", path)
+        .env("CODEX_AGENT_COMMAND", &fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30")
+        .env("CODEX_AUTO_FIX_VERIFY_COMMANDS", "exit 12")
+        .env("FAKE_GH_COMMENT_PATH", &gh_comment)
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+    let comment = fs::read_to_string(gh_comment).unwrap();
+    assert!(comment.contains("Codex 自动修复发布阻塞"));
+    assert!(comment.contains("Review 问题对应状态"));
+    assert!(comment.contains("⚠️ 推送阻塞"));
+    assert!(comment.contains("CODEX_AUTO_FIX_VERIFY_COMMANDS"));
+    assert!(comment.contains("解决办法"));
 }
 
 #[test]
@@ -478,12 +536,73 @@ fn auto_fix_local_reports_push_blocked_when_pre_push_validation_fails() {
                 .unwrap()
                 .contains("CODEX_AUTO_FIX_VERIFY_COMMANDS 验证失败"))
     );
+    assert_eq!(json["issue_statuses"][0]["status"], "blocked_push");
+    assert_eq!(json["issue_statuses"][0]["failure_class"], "blocked_push");
+    assert_eq!(
+        json["issue_statuses"][0]["failure_stage"],
+        "pre-push validation"
+    );
+    assert_eq!(json["issue_statuses"][0]["retryable"], true);
+    assert!(
+        json["issue_statuses"][0]["remediation"]
+            .as_str()
+            .unwrap()
+            .contains("修复验证命令失败原因后重新运行")
+    );
     assert!(
         workspace
             .git_stdout(&repo, &["log", "--oneline", "-1"])
             .contains("initial"),
         "failed validation must not create an auto-fix commit"
     );
+}
+
+#[test]
+fn auto_fix_local_updates_ledger_after_push_blocked_failure() {
+    let workspace = TestWorkspace::new("push-blocked-ledger");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的问题，并记录最终失败原因。\n",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("sr_success");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"))
+        .args([
+            "auto-fix-local",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--review-file",
+            review.to_str().unwrap(),
+            "--max-rounds",
+            "2",
+            "--yes",
+        ])
+        .env("CODEX_AGENT_COMMAND", &fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30")
+        .env("CODEX_AUTO_FIX_VERIFY_COMMANDS", "exit 12")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+    let json = parse_stdout(&output);
+    assert_eq!(json["push_blocked"], true);
+
+    let ledger = fs::read_to_string(repo.join("docs/auto-review-ledgers/local.md")).unwrap();
+    assert!(ledger.contains("blocked_push"));
+    assert!(ledger.contains("CODEX_AUTO_FIX_VERIFY_COMMANDS"));
+    assert!(ledger.contains("修复验证命令失败原因后重新运行"));
 }
 
 #[test]
@@ -633,6 +752,18 @@ fn auto_fix_local_returns_json_when_runtime_budget_is_exhausted() {
     assert_eq!(json["fixed"], false);
     assert_eq!(json["has_pending"], true);
     assert_eq!(json["final_status"], "pending");
+    assert_eq!(json["issue_statuses"][0]["status"], "blocked_external");
+    assert_eq!(
+        json["issue_statuses"][0]["failure_class"],
+        "blocked_external"
+    );
+    assert_eq!(json["issue_statuses"][0]["retryable"], true);
+    assert!(
+        json["issue_statuses"][0]["remediation"]
+            .as_str()
+            .unwrap()
+            .contains("手动触发第 3 轮或更多轮")
+    );
     assert!(
         json["pending_explanations"]
             .as_array()
@@ -698,7 +829,7 @@ fn auto_fix_local_reports_unfixed_same_file_issue_independently() {
             .unwrap()
             .contains("修复摘要")
     );
-    assert_eq!(statuses[1]["status"], "pending");
+    assert_eq!(statuses[1]["status"], "pending_fix_failed");
     assert_eq!(statuses[1]["line"], 5);
     assert!(
         statuses[1]["explanation"]

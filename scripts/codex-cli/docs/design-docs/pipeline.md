@@ -55,7 +55,7 @@
 - `issue_statuses` 在 stdout JSON 中一一映射当前 Gemini Review 的每个
   `Medium/Medium+/High/Critical` issue，并驱动 PR 评论中的对应状态表
 - `pending_explanations` 记录 `Medium/Medium+/High/Critical` 未修复原因；禁用 PR 评论时会进入最终 JSON
-- `has_pending` / `pending_count` / `review_clean` 让 workflow 状态机区分 clean、pending 与安全阻断
+- `has_pending` / `pending_count` / `review_clean` 让 workflow 状态机区分 clean、`pending_fix_failed`、`blocked_external`、`blocked_policy` 与 `blocked_push`
 
 ### 如何新增 Skill（扩展点）
 

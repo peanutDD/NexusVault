@@ -10,7 +10,6 @@ fn pending_without_fix_blocks_instead_of_claiming_clean() {
         ("FIXED", "false"),
         ("PUSH_BLOCKED", "false"),
         ("PENDING_COUNT", "2"),
-        ("CODEX_AUTO_FIX_STRICT", "true"),
     ]);
 
     assert_eq!(output["action"], "needs_human");
@@ -20,38 +19,51 @@ fn pending_without_fix_blocks_instead_of_claiming_clean() {
 }
 
 #[test]
-fn relaxed_pending_without_fix_clears_review_state() {
+fn pending_without_strict_env_blocks_by_default() {
     let output = plan(&[
         ("CURRENT_ROUND", "gemini-review-round-1"),
         ("FIXED", "false"),
         ("PUSH_BLOCKED", "false"),
         ("PENDING_COUNT", "2"),
-        ("CODEX_AUTO_FIX_STRICT", "false"),
     ]);
 
-    assert_eq!(output["action"], "relaxed_clear");
-    assert_eq!(output["next_round"], "gemini-review-round-max");
+    assert_eq!(output["action"], "needs_human");
+    assert_eq!(output["next_round"], "gemini-review-round-1");
     assert_eq!(output["request_review"], "false");
-    assert_eq!(output["ready_to_merge"], "true");
-    assert_eq!(output["human_block"], "false");
-    assert_eq!(output["state_label"], "gemini-review-clean");
+    assert_eq!(output["ready_to_merge"], "false");
+    assert_eq!(output["human_block"], "true");
+    assert_eq!(output["state_label"], "gemini-review-needs-human");
 }
 
 #[test]
-fn relaxed_push_blocked_clears_review_state() {
+fn push_blocked_blocks_by_default() {
     let output = plan(&[
         ("CURRENT_ROUND", "gemini-review-round-1"),
         ("FIXED", "false"),
         ("PUSH_BLOCKED", "true"),
         ("PENDING_COUNT", "3"),
-        ("CODEX_AUTO_FIX_STRICT", "false"),
     ]);
 
-    assert_eq!(output["action"], "relaxed_clear");
+    assert_eq!(output["action"], "push_blocked");
+    assert_eq!(output["request_review"], "false");
+    assert_eq!(output["ready_to_merge"], "false");
+    assert_eq!(output["human_block"], "true");
+    assert_eq!(output["state_label"], "gemini-review-needs-human");
+}
+
+#[test]
+fn manual_third_round_can_complete_cleanly_when_user_sets_round_label() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-3"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "false"),
+        ("PENDING_COUNT", "0"),
+    ]);
+
+    assert_eq!(output["action"], "complete");
+    assert_eq!(output["next_round"], "gemini-review-round-max");
     assert_eq!(output["request_review"], "false");
     assert_eq!(output["ready_to_merge"], "true");
-    assert_eq!(output["human_block"], "false");
-    assert_eq!(output["state_label"], "gemini-review-clean");
 }
 
 #[test]
@@ -262,12 +274,12 @@ fn codex_auto_fix_has_coherent_runtime_budget() {
         "the CLI should receive a budget lower than the step timeout so it can return JSON before Actions kills it"
     );
     assert!(
-        workflow.contains("CODEX_AUTO_FIX_STRICT: false"),
-        "review automation should run in relaxed mode so recoverable patch/audit failures do not interrupt GPT-5.5 repair"
+        workflow.contains("CODEX_AUTO_FIX_STRICT: true"),
+        "review automation must run in strict mode so pending Medium/Medium+/High/Critical findings never become clean"
     );
     assert!(
         workflow.contains("CODEX_AUTO_FIX_DIRECT_FULL_FILE: true"),
-        "relaxed review automation should write complete files directly instead of blocking on patch context mismatch"
+        "review automation should allow direct full-file repair as a deterministic fallback for patch context mismatch"
     );
     assert!(
         workflow.contains("CODEX_AGENT_MODEL: ${{ env.CODEX_AGENT_MODEL }}"),
@@ -275,11 +287,11 @@ fn codex_auto_fix_has_coherent_runtime_budget() {
     );
     assert!(
         workflow.contains("steps.round.outputs.current_round == 'gemini-review-round-max' && env.CODEX_AUTO_FIX_STRICT == 'true'"),
-        "relaxed review automation must not skip new Gemini review events just because an old round-max label is present"
+        "strict review automation should stop only on the explicit round-max label; manual round-3+ labels must still run"
     );
     assert!(
         workflow.contains("WAIT_FOR_GEMINI_REVIEW: false"),
-        "relaxed review automation should clear state immediately instead of waiting for another Gemini review"
+        "strict review automation should keep bounded state advancement and let humans manually trigger round 3+ when needed"
     );
     assert!(
         workflow.contains("codex_auto_fix_budget_seconds=${CODEX_AUTO_FIX_BUDGET_SECONDS}"),
@@ -436,8 +448,8 @@ fn gemini_kickoff_only_skips_actual_auto_fix_commit_subjects() {
         "Gemini kickoff should only skip the exact auto-fix bot commit subject prefix"
     );
     assert!(
-        workflow.contains("GEMINI_REVIEW_REQUIRED: false"),
-        "Gemini kickoff should request review without making missing Gemini responses a blocking check in relaxed mode"
+        workflow.contains("GEMINI_REVIEW_REQUIRED: true"),
+        "Gemini kickoff should mark missing Gemini responses as external blockage instead of silently continuing"
     );
 }
 
@@ -473,6 +485,27 @@ fn state_script_names_medium_and_medium_plus_as_pending_scope() {
     assert!(
         !script.contains("medium+ review items"),
         "state labels must not narrow the loop to Medium+ only"
+    );
+}
+
+#[test]
+fn state_script_failure_comments_include_remediation_and_manual_rerun_guidance() {
+    let script =
+        fs::read_to_string(workflow_script()).expect("workflow state script should be readable");
+
+    assert!(
+        script.contains("具体原因")
+            && script.contains("解决办法")
+            && script.contains("可重试")
+            && script.contains("手动触发第 3 轮或更多轮"),
+        "failure comments must tell humans why the loop stopped, how to fix it, whether retry is safe, and how to continue beyond two rounds"
+    );
+    assert!(
+        script.contains("blocked_push")
+            && script.contains(
+                "pre-push 验证 / git commit / git push / GitHub API fallback / PR comment"
+            ),
+        "push-blocked comments must name the possible failed publish stage"
     );
 }
 

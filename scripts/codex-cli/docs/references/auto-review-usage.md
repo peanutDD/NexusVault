@@ -76,6 +76,7 @@ CODEX_AGENT_COMMAND="/usr/local/bin/codex-gpt55 exec --skip-git-repo-check -"
 - `MAX_ROUNDS=2`：默认最多两轮 Gemini Review。
 - `GEMINI_BOT=gemini-code-assist[bot]`：只监听 Gemini 的评论。
 - `GEMINI_TRIGGER_MARKER=## Gemini Code Assist Review`：只处理 Review 正文。
+- `GEMINI_REVIEW_REQUIRED=true`：Gemini 请求超时默认视为 `blocked_external`，不会静默继续。
 - `concurrency`：同一 PR 自动修复串行执行，避免 runner 并发改同一分支。
 
 workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
@@ -92,6 +93,7 @@ workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
 |------|------|--------|
 | `CODEX_AGENT_COMMAND` | 本地 Codex 执行命令 | 必填 |
 | `CODEX_AGENT_TIMEOUT_SECONDS` | 单次调用超时（秒） | 900 |
+| `CODEX_AUTO_FIX_STRICT` | 是否禁止 pending/外力失败被标记为 clean | `true` |
 
 ### 筛选策略配置
 
@@ -113,12 +115,12 @@ workflow 支持三种 `CODEX_AGENT_COMMAND` 来源：
 
 1. 打开 PR。
 2. workflow 会自动评论 `/gemini review` 请求第一轮 Gemini Review。
-3. Gemini 发布 Review 后，`codex-fix` job 自动启动。
+3. Gemini 发布 Review 后，`codex-fix` job 自动启动；如果 Gemini 在 watchdog 时间内未返回 Review，workflow 添加 `gemini-review-needs-human` 并说明恢复配额/权限/GitHub 连接后如何重跑。
 4. 如果有可修复的 `Critical/High/Medium+/Medium` 问题，Codex 修复并 push。
 5. 第一轮清洁或成功推送修复后，workflow 将标签推进到 `gemini-review-round-2`，并再次评论 `/gemini review`。
-6. 第二轮清洁或成功推送修复后，workflow 将标签推进到 `gemini-review-round-max`；若没有 pending，同时添加 `gemini-review-clean`。
-7. 如果 `pending_explanations` 非空且本轮没有任何修复，workflow 添加 `gemini-review-needs-human`，不会发布“无需修复/建议合并”的误导评论。
-8. 人类做最终 Review 并决定是否 merge。
+6. 第二轮清洁后，workflow 将标签推进到 `gemini-review-round-max`，并添加 `gemini-review-clean`。
+7. 如果第二轮仍有 `Medium/Medium+/High/Critical` 未解决项，或遇到断网、Codex 额度不足、GitHub 连接失败、runner 中断、Gemini 未返回、验证/提交/推送失败，workflow 添加 `gemini-review-needs-human`，不会发布“无需修复/建议合并”的误导评论。
+8. 人类做最终 Review 并决定 merge、人工处理，或手动触发第 3 轮/更多轮继续修复。
 
 ## 自动修复策略
 
@@ -171,7 +173,12 @@ CODEX_EXCLUDE_DOCS=true
       "line": 12,
       "description": "Gemini issue text",
       "status": "resolved",
-      "explanation": "已自动修复"
+      "explanation": "已自动修复",
+      "failure_class": "",
+      "failure_stage": "",
+      "retryable": false,
+      "blocked_action": "",
+      "remediation": ""
     }
   ]
 }
@@ -181,7 +188,12 @@ CODEX_EXCLUDE_DOCS=true
 
 - `fixed=true`：本轮有变更且已允许进入后续轮次。
 - `review_record_path`：本轮写入的本地逐项处理台账；无可记录问题或禁用文档记录时为 `null`。
-- `issue_statuses`：Gemini 每条结构化 review 问题的一一对应状态；Low/Info 会以 `tracked` 记录。
+- `issue_statuses`：Gemini 每条结构化 review 问题的一一对应状态；Low/Info 会以 `tracked` 记录。`Medium/Medium+/High/Critical` 只能是 `resolved`、`pending_fix_failed`、`blocked_external`、`blocked_policy` 或 `blocked_push`。
+- `failure_class`：失败分类，和 `status` 对齐；用于区分 Codex 未修好、外力阻塞、策略阻塞和发布阻塞。
+- `failure_stage`：失败阶段，例如 `patch_generation`、`decision_filter`、`pre-push validation`、`git push`、`PR comment`。
+- `retryable`：恢复原因后是否适合重跑。
+- `blocked_action`：被阻止的动作，例如 `automatic issue fix` 或 `commit/push/PR comment/state advancement`。
+- `remediation`：可执行解决办法；所有非 `resolved` 的行动级问题都必须提供。
 
 ## 本地处理台账
 
@@ -190,9 +202,9 @@ CODEX_EXCLUDE_DOCS=true
 - Gemini 提出的问题是什么。
 - 问题位于哪个文件和行。
 - Gemini 建议、约束和该 issue 是否进入自动修复范围。
-- Codex 标记为 `resolved`、`pending`、`blocked` 还是 `tracked`。
+- Codex 标记为 `resolved`、`pending_fix_failed`、`blocked_external`、`blocked_policy`、`blocked_push` 还是 `tracked`。
 - 已解决时的修复摘要和修复方式。
-- 未解决或阻塞时的原因。
+- 未解决或阻塞时的具体原因、失败阶段、是否可重试、被阻止动作和解决办法。
 - 本轮关联了哪些文件。
 
 Ledger 会记录 Low/Info 问题；它们默认是 `tracked` / `not_selected`，用于审计追踪，不会因此进入自动修复或 pending 阻塞。
@@ -200,8 +212,8 @@ Ledger 会记录 Low/Info 问题；它们默认是 `tracked` / `not_selected`，
 `--disable-changelog` 会同时关闭 changelog 和 ledger 写入，主要用于测试或不希望产生文档变更的本地运行。
 - `fixed=false`：没有变更，或变更被安全门禁拦截。
 - `push_blocked=true`：生成了变更，但安全审计 fail-closed，未 commit/push。
-- `has_pending=true` / `pending_count>0`：仍有 `Medium/Medium+/High/Critical` 问题没有自动修复，PR 不可视为 clean。
-- `review_clean=true`：当前 Codex 解析出的 `Medium/Medium+/High/Critical` 问题全部修复或不存在，且未被安全门禁阻断。
+- `has_pending=true` / `pending_count>0`：仍有 `Medium/Medium+/High/Critical` 问题没有自动修复或被外力/策略/发布阻塞，PR 不可视为 clean。
+- `review_clean=true`：当前 Codex 解析出的 `Medium/Medium+/High/Critical` 问题全部修复或不存在，且未被安全门禁、外力或发布链路阻断。
 - `issue_statuses`：当前 Gemini Review 中每个结构化问题的一一对应状态；PR 评论会用同一份数据渲染 `Review 问题对应状态` 表。
 - `fixed_explanations`：`Medium/Medium+/High/Critical` 问题已自动修复时的 issue 级说明。
 - `pending_explanations`：`Medium/Medium+/High/Critical` 问题未修复时的原因。
@@ -229,13 +241,18 @@ Ledger 会记录 Low/Info 问题；它们默认是 `tracked` / `not_selected`，
 - CI 通过。
 - 人类看过最终 diff。
 
-## 重跑方式
+## 第 3 轮及更多手动重跑
 
-如果需要重新进入自动修复：
+默认自动闭环最多跑 2 轮。第 2 轮后如果仍有 `pending_fix_failed`、`blocked_external`、`blocked_policy` 或 `blocked_push`，不会自动标记 clean。
 
-1. 删除 `gemini-review-round-max` 标签。
-2. 添加或保留 `gemini-review-round-1`。
-3. 在 PR 评论 `/gemini review`。
+如果需要第 3 轮或更多轮：
+
+1. 先按 PR 评论/ledger 的 `remediation` 处理根因：恢复网络或 Codex 额度、重新登录 `gh`、修复验证命令、调整受保护路径策略，或人工批准高风险文件改动。
+2. 删除 `gemini-review-round-max` 和 `gemini-review-needs-human` 标签。
+3. 添加 `gemini-review-round-3`（后续可用 `gemini-review-round-4`、`gemini-review-round-5` 等手动标签）。
+4. 在 PR 评论 `/gemini review`，等待 Gemini 新一轮 Review 后触发 Codex。
+
+如果问题属于 `blocked_policy`，不要只重跑；必须先人工批准对应策略变更或手动修复。
 
 ## 常见故障
 

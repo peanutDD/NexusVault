@@ -178,6 +178,16 @@ pub struct ReviewIssueStatus {
     pub failure_reason: Option<String>,
     #[serde(default)]
     pub related_files: Vec<String>,
+    #[serde(default)]
+    pub failure_class: String,
+    #[serde(default)]
+    pub failure_stage: String,
+    #[serde(default)]
+    pub retryable: bool,
+    #[serde(default)]
+    pub blocked_action: String,
+    #[serde(default)]
+    pub remediation: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
