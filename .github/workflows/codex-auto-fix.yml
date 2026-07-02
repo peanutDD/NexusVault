@@ -41,6 +41,14 @@ env:
         cargo clippy --all-targets --all-features -- -D warnings
       )
     fi
+    if git status --short -- scripts/codex-cli/ | grep -q .; then
+      (
+        cd scripts/codex-cli
+        cargo fmt -- --check
+        cargo clippy --all-targets -- -D warnings
+        cargo test
+      )
+    fi
 
 concurrency:
   group: codex-auto-fix-pr-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}

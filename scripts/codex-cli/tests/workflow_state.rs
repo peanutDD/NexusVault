@@ -336,6 +336,20 @@ fn codex_auto_fix_runs_backend_pre_push_format_validation() {
 }
 
 #[test]
+fn codex_auto_fix_runs_codex_cli_pre_push_validation() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        workflow.contains("git status --short -- scripts/codex-cli/")
+            && workflow.contains("cargo fmt -- --check")
+            && workflow.contains("cargo clippy --all-targets -- -D warnings")
+            && workflow.contains("cargo test"),
+        "codex-cli auto-fix changes must run format, clippy, and tests before publish so corrupted Rust files cannot be marked clean"
+    );
+}
+
+#[test]
 fn codex_auto_fix_supports_markdown_rollback_switch() {
     let workflow = fs::read_to_string(codex_auto_fix_workflow())
         .expect("codex auto-fix workflow should be readable");
