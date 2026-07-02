@@ -422,7 +422,7 @@ pub struct PrAutoFixOutput {
 | `quality_score` | 0 到 100 |
 | `quality_score_available` | 质量评分是否成功解析 |
 | `security_passed` | prompt-based 安全审计是否通过 |
-| `push_blocked` | 验证、提交、推送、GitHub API fallback 或 PR 评论失败，true 时需要人处理 |
+| `push_blocked` | 验证、提交、推送或 GitHub API fallback 失败，true 时需要人处理；成功推送后的 PR 评论失败单独记录，不能误标为 `blocked_push` |
 | `has_pending` | 是否存在 Medium/Medium+/High/Critical 未解决或被阻塞问题 |
 | `pending_count` | 未解决/阻塞说明数量 |
 | `review_clean` | 行动级 Gemini 问题全部 resolved，且未被外力、策略或发布链路阻塞 |
@@ -547,7 +547,7 @@ pub struct Pipeline {
 | `quality_score_available` | QualityScore | Feedback、output | 评分是否可用 |
 | `security_passed` | SecurityCheck | runtime、Feedback、output | 安全检查是否通过 |
 | `security_findings` | SecurityCheck | runtime、Feedback | 安全问题 |
-| `push_blocked` | Feedback/publish path | output、Feedback、ledger | 是否阻止自动推送或 PR 评论 |
+| `push_blocked` | Feedback/publish path | output、Feedback、ledger | 是否阻止自动验证、提交或推送 |
 | `auto_push` | CLI | Feedback、output | 是否允许提交/推送 |
 | `enable_pr_comments` | CLI | Feedback | 是否发 PR 评论 |
 | `changelog_path` | CLI | Documentation | changelog 覆盖路径 |

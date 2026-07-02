@@ -74,13 +74,13 @@
 - `pending_fix_failed`：Codex 已尝试，但补丁生成、应用、重试或完整文件兜底没有修好。处理：检查目标文件和 Codex 输出，必要时人工修复，或手动触发第 3 轮/更多轮。
 - `blocked_external`：断网、Codex 额度不足/超时、GitHub 连接失败、runner 中断、Gemini 未返回等外力因素。处理：恢复外部条件后手动触发下一轮。
 - `blocked_policy`：受保护文件、docs 默认过滤、危险路径或策略限制。处理：人工批准策略变更、调整 `CODEX_EXCLUDE_DOCS` / `CODEX_PROTECTED_FILES`，或人工修复。
-- `blocked_push`：本地修复已生成，但 pre-push 验证、`git commit`、`git push`、GitHub API fallback 或 PR 评论失败。处理：按 `failure_stage` 和 `failure_reason` 修复后重跑。
+- `blocked_push`：本地修复已生成，但 pre-push 验证、`git commit`、`git push` 或 GitHub API fallback 失败。处理：按 `failure_stage` 和 `failure_reason` 修复后重跑。PR 评论失败应单独按评论发布问题处理，不能把已经成功推送的修复误标为 `blocked_push`。
 
 ### 8) blocked_push：验证/提交/推送失败
 
 必须先看 PR 评论或 ledger 中的字段：
 
-- `failure_stage`：失败阶段，例如 `pre-push validation`、`git commit`、`git push`、`GitHub API fallback`、`PR comment`。
+- `failure_stage`：失败阶段，例如 `pre-push validation`、`git commit`、`git push`、`GitHub API fallback`。
 - `failure_reason`：原始错误摘要。
 - `blocked_action`：被阻止的动作。
 - `remediation`：可执行解决办法。
@@ -89,7 +89,6 @@
 
 - `pre-push validation`：本地执行 `CODEX_AUTO_FIX_VERIFY_COMMANDS` 对应的 lint/typecheck/test/format 命令，修复失败后重跑。
 - `git push` 或 GitHub API fallback：检查网络、branch protection、`GITHUB_TOKEN` 权限和远端分支状态。
-- `PR comment`：检查 `gh` 登录、token 权限、GitHub API 可用性；必要时先保留本地 ledger，再手动补评论或重跑。
 
 ### 9) PR 评论失败
 

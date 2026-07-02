@@ -330,8 +330,8 @@ fn push_blocked_details(ctx: &SkillContext) -> FailureDetails {
             explanation.contains("自动修复提交前验证或推送失败")
                 || explanation.contains("CODEX_AUTO_FIX_VERIFY_COMMANDS")
                 || explanation.contains("git push")
+                || explanation.contains("git commit")
                 || explanation.contains("GitHub API")
-                || explanation.contains("PR 评论")
         })
         .cloned()
         .unwrap_or_else(|| "发布链路失败，未捕获到更具体错误".to_string());
@@ -345,8 +345,6 @@ fn push_blocked_details(ctx: &SkillContext) -> FailureDetails {
         "git push"
     } else if reason.contains("GitHub API") {
         "GitHub API fallback"
-    } else if reason.contains("PR 评论") || reason.contains("gh pr comment") {
-        "PR comment"
     } else {
         "publish"
     };
@@ -363,7 +361,7 @@ fn push_blocked_details(ctx: &SkillContext) -> FailureDetails {
         failure_class: "blocked_push".to_string(),
         failure_stage: stage.to_string(),
         retryable: true,
-        blocked_action: "commit/push/PR comment/state advancement".to_string(),
+        blocked_action: "commit/push/state advancement".to_string(),
         remediation,
         failure_reason: Some(reason),
     }

@@ -154,7 +154,7 @@ PR 模式默认会发布评论：
 
 - Dry-Run：说明已生成并应用补丁，但未推送
 - Push：说明已修复文件、质量评分、安全扫描结果，并按 issue 展示“已自动修复问题”
-- 发布阻塞：如果 pre-push 验证、`git commit`、`git push`、GitHub API fallback 或 PR 评论失败，评论必须说明具体阶段、原始错误摘要、被阻止动作和解决办法。
+- 发布阻塞：如果 pre-push 验证、`git commit`、`git push` 或 GitHub API fallback 失败，评论必须说明具体阶段、原始错误摘要、被阻止动作和解决办法。PR 评论失败应单独记录为评论发布失败，不能把已经成功推送的修复误标为 `blocked_push`。
 - 未修复：`Medium/Medium+/High/Critical` 问题必须说明原因；禁用评论时写入最终 JSON 的 `pending_explanations`
 - 对应状态：每次解析到 Gemini Review 后，评论必须包含 `Medium/Medium+/High/Critical 对应状态` 表，将每个 Gemini issue 一一标记为已解决、未解决、外力阻塞、策略阻塞或推送阻塞
 - JSON：`issue_statuses`、`fixed_explanations` 与 `pending_explanations` 必须让人类和 workflow 能区分已修复、未修复和停止原因

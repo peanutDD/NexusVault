@@ -784,7 +784,6 @@ impl Skill for FeedbackSkill {
             if ctx.enable_pr_comments {
                 if let Err(error) = repo::post_comment(ctx.pr_number, &gh_msg) {
                     let explanation = format!("PR 评论失败：{}", error);
-                    ctx.push_blocked = true;
                     if !ctx.pending_explanations.contains(&explanation) {
                         ctx.pending_explanations.push(explanation.clone());
                     }

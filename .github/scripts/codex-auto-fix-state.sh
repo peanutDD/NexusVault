@@ -8,7 +8,6 @@ fixed="${FIXED:-false}"
 push_blocked="${PUSH_BLOCKED:-false}"
 pending_count="${PENDING_COUNT:-0}"
 max_rounds="${MAX_ROUNDS:-2}"
-strict="${CODEX_AUTO_FIX_STRICT:-true}"
 
 round_label() {
   printf 'gemini-review-round-%s' "$1"
@@ -33,7 +32,6 @@ bool() {
 
 fixed="$(bool "$fixed")"
 push_blocked="$(bool "$push_blocked")"
-strict="$(bool "$strict")"
 current_number="$(round_number "$current")"
 next_number=$((current_number + 1))
 next_round="gemini-review-round-max"
@@ -137,7 +135,7 @@ post_comment() {
 
 issue_status_note="问题清单见上方 Codex 分析评论中的 \`Medium/Medium+/High/Critical 对应状态\` 表；每个 Gemini 问题都会标记已解决、未解决、外力阻塞、策略阻塞或推送阻塞。"
 retry_guidance="具体原因、解决办法、可重试标记和下一步见上方 Codex 分析评论；如属于断网、Codex 额度不足、GitHub 连接失败、runner 中断或 Gemini 未返回等外力因素，恢复后可手动触发第 3 轮或更多轮继续修复。"
-blocked_push_guidance="blocked_push：本地可能已经产生修复文件，但发布链路失败。请检查失败阶段：pre-push 验证 / git commit / git push / GitHub API fallback / PR comment；按上方原始错误摘要修复验证命令、token/branch protection、网络或 GitHub 状态后再重跑。"
+blocked_push_guidance="blocked_push：本地可能已经产生修复文件，但发布链路失败。请检查失败阶段：pre-push 验证 / git commit / git push / GitHub API fallback；按上方原始错误摘要修复验证命令、token/branch protection、网络或 GitHub 状态后再重跑。"
 
 apply_plan() {
   ensure_label "gemini-review-round-1" "6f42c1" "Gemini/Codex review loop round 1"

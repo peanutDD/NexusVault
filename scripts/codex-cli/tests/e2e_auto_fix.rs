@@ -422,6 +422,79 @@ fn pr_auto_fix_posts_push_blocked_status_comment_when_publish_fails() {
 }
 
 #[test]
+fn pr_auto_fix_does_not_mark_successful_push_as_blocked_when_comment_fails() {
+    let workspace = TestWorkspace::new("pr-comment-failure-after-push");
+    let repo = workspace.create_repo();
+    write_repo_file(&repo, "src/lib.rs", "pub fn value() -> i32 {\n    1\n}\n");
+    write_repo_file(
+        &repo,
+        "AGENTS.md",
+        "只修复 Gemini Review 指出的问题，并记录 PR 评论失败。",
+    );
+    workspace.git(&repo, &["add", "."]);
+    workspace.git(&repo, &["commit", "-m", "initial"]);
+    let remote = workspace.create_bare_remote();
+    workspace.git(
+        &repo,
+        &["remote", "add", "origin", remote.to_str().unwrap()],
+    );
+
+    let review = workspace.path.join("review.md");
+    fs::write(
+        &review,
+        "## Gemini Code Assist Review\n\nMedium: fix value.\n",
+    )
+    .unwrap();
+    let fake_agent = workspace.fake_agent("sr_success");
+    let fake_gh = workspace.fake_gh();
+    let gh_comment = workspace.path.join("gh-comment.md");
+
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codex-auto-fix"));
+    let path = std::env::var("PATH")
+        .map(|current| format!("{}:{}", fake_gh.parent().unwrap().display(), current))
+        .unwrap_or_else(|_| fake_gh.parent().unwrap().display().to_string());
+    let output = command
+        .args([
+            "pr-auto-fix",
+            "--pr-number",
+            "24",
+            "--repo-root",
+            repo.to_str().unwrap(),
+            "--gemini-review",
+            review.to_str().unwrap(),
+            "--disable-changelog",
+            "--max-rounds",
+            "2",
+            "--yes",
+        ])
+        .env("PATH", path)
+        .env("CODEX_AGENT_COMMAND", &fake_agent)
+        .env("CODEX_AGENT_TIMEOUT_SECONDS", "30")
+        .env("FAKE_GH_COMMENT_PATH", &gh_comment)
+        .env("FAKE_GH_COMMENT_FAIL", "1")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "stderr={}", stderr(&output));
+    let json = parse_stdout(&output);
+    assert_eq!(json["fixed"], true);
+    assert_eq!(json["push_blocked"], false);
+    assert_eq!(json["issue_statuses"][0]["status"], "resolved");
+    assert!(
+        json["pending_explanations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|item| item.as_str().unwrap().contains("PR 评论失败"))
+    );
+    assert!(
+        workspace
+            .git_stdout(&repo, &["log", "--oneline", "-1"])
+            .contains("codex auto-fix")
+    );
+}
+
+#[test]
 fn auto_fix_local_warns_but_pushes_when_security_audit_fails() {
     let workspace = TestWorkspace::new("security-warn");
     let repo = workspace.create_repo();
@@ -1455,6 +1528,10 @@ impl TestWorkspace {
             r#"#!/bin/sh
 set -eu
 if [ "$1" = "pr" ] && [ "$2" = "comment" ]; then
+  if [ "${FAKE_GH_COMMENT_FAIL:-}" = "1" ]; then
+    printf '%s\n' "simulated gh comment failure" >&2
+    exit 1
+  fi
   shift 3
   while [ "$#" -gt 0 ]; do
     case "$1" in

@@ -16,7 +16,7 @@ Actionable findings may only use these final issue statuses:
 - `pending_fix_failed`: Codex attempted the fix but patch generation, patch application, retry, or fallback did not resolve it.
 - `blocked_external`: network, Codex quota/timeout, GitHub connectivity, runner interruption, missing Gemini response, or another external dependency blocked repair.
 - `blocked_policy`: protected file, dangerous path, docs filtering, or another policy requires human approval before modification.
-- `blocked_push`: local repair was generated but pre-push validation, `git commit`, `git push`, GitHub API fallback, or PR comment publication failed.
+- `blocked_push`: local repair was generated but pre-push validation, `git commit`, `git push`, or GitHub API fallback failed. PR comment publication failures must be recorded separately and must not make a successfully pushed repair look push-blocked.
 
 `Low` and `Info` may remain `tracked`.
 

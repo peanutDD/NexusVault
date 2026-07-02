@@ -502,10 +502,12 @@ fn state_script_failure_comments_include_remediation_and_manual_rerun_guidance()
     );
     assert!(
         script.contains("blocked_push")
-            && script.contains(
-                "pre-push 验证 / git commit / git push / GitHub API fallback / PR comment"
-            ),
+            && script.contains("pre-push 验证 / git commit / git push / GitHub API fallback"),
         "push-blocked comments must name the possible failed publish stage"
+    );
+    assert!(
+        !script.contains("GitHub API fallback / PR comment"),
+        "comment publication failure must not be classified as push-blocked"
     );
 }
 

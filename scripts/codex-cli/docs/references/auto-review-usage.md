@@ -190,9 +190,9 @@ CODEX_EXCLUDE_DOCS=true
 - `review_record_path`：本轮写入的本地逐项处理台账；无可记录问题或禁用文档记录时为 `null`。
 - `issue_statuses`：Gemini 每条结构化 review 问题的一一对应状态；Low/Info 会以 `tracked` 记录。`Medium/Medium+/High/Critical` 只能是 `resolved`、`pending_fix_failed`、`blocked_external`、`blocked_policy` 或 `blocked_push`。
 - `failure_class`：失败分类，和 `status` 对齐；用于区分 Codex 未修好、外力阻塞、策略阻塞和发布阻塞。
-- `failure_stage`：失败阶段，例如 `patch_generation`、`decision_filter`、`pre-push validation`、`git push`、`PR comment`。
+- `failure_stage`：失败阶段，例如 `patch_generation`、`decision_filter`、`pre-push validation`、`git push`。
 - `retryable`：恢复原因后是否适合重跑。
-- `blocked_action`：被阻止的动作，例如 `automatic issue fix` 或 `commit/push/PR comment/state advancement`。
+- `blocked_action`：被阻止的动作，例如 `automatic issue fix` 或 `commit/push/state advancement`。
 - `remediation`：可执行解决办法；所有非 `resolved` 的行动级问题都必须提供。
 
 ## 本地处理台账
