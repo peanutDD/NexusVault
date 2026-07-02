@@ -180,6 +180,21 @@ fn codex_auto_fix_serial_runner_has_timeouts() {
 }
 
 #[test]
+fn codex_auto_fix_targets_self_hosted_file_server_runner() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+
+    assert!(
+        workflow.contains("    runs-on: [self-hosted, file-server]"),
+        "codex-fix must explicitly target self-hosted runners with the file-server label"
+    );
+    assert!(
+        !workflow.contains("    runs-on: file-server\n"),
+        "single-label runs-on can leave matching self-hosted runners unclear in the Actions UI"
+    );
+}
+
+#[test]
 fn codex_auto_fix_runs_doctor_before_long_auto_fix_step() {
     let workflow = fs::read_to_string(codex_auto_fix_workflow())
         .expect("codex auto-fix workflow should be readable");
