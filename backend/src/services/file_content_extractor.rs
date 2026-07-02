@@ -2,7 +2,13 @@
 //!
 //! 从各种文件格式中提取文本内容，用于语义搜索。
 
-use std::path::Path;
+use std::{
+    io::{Cursor, Read},
+    path::Path,
+};
+
+use quick_xml::{events::Event, reader::Reader};
+use zip::ZipArchive;
 
 use crate::utils::AppError;
 
@@ -79,43 +85,22 @@ impl FileContentExtractor {
 
     /// 提取 PDF 内容
     fn extract_pdf_content(data: &[u8]) -> Result<String, AppError> {
-        use pdf_extract;
-
-        // pdf-extract 可以直接从内存中的字节数据提取文本
-        let text = pdf_extract::extract_text_from_mem(data)
-            .map_err(|e| AppError::File(format!("PDF 解析失败: {}", e)))?;
-
-        Ok(text)
+        Ok(extract_pdf_literals(data).join("\n"))
     }
 
     /// 提取 DOCX 内容
     fn extract_docx_content(data: &[u8]) -> Result<String, AppError> {
-        use docx_lite::extract_text;
-        use std::io::Write;
-
-        // docx-lite 需要文件路径，因此先写入临时文件
-        let temp_dir = std::env::temp_dir().join("file-storage-backend-docx");
-        std::fs::create_dir_all(&temp_dir)
-            .map_err(|e| AppError::File(format!("创建临时目录失败: {}", e)))?;
-
-        let temp_file = temp_dir.join(format!("docx_{}", uuid::Uuid::new_v4()));
-        let mut file = std::fs::File::create(&temp_file)
-            .map_err(|e| AppError::File(format!("创建临时文件失败: {}", e)))?;
-
-        file.write_all(data)
-            .map_err(|e| AppError::File(format!("写入临时文件失败: {}", e)))?;
-        file.flush()
-            .map_err(|e| AppError::File(format!("刷新临时文件失败: {}", e)))?;
-        drop(file); // 确保文件已关闭
-
-        // 提取文本
-        let text = extract_text(&temp_file)
-            .map_err(|e| AppError::File(format!("DOCX 解析失败: {}", e)))?;
-
-        // 清理临时文件
-        let _ = std::fs::remove_file(&temp_file);
-
-        Ok(text)
+        let reader = Cursor::new(data);
+        let mut archive =
+            ZipArchive::new(reader).map_err(|e| AppError::File(format!("DOCX 解析失败: {}", e)))?;
+        let mut document = archive
+            .by_name("word/document.xml")
+            .map_err(|e| AppError::File(format!("DOCX 缺少主文档: {}", e)))?;
+        let mut xml = String::new();
+        document
+            .read_to_string(&mut xml)
+            .map_err(|e| AppError::File(format!("DOCX 文本读取失败: {}", e)))?;
+        extract_docx_document_text(&xml)
     }
 
     /// 提取 XLSX 内容（简化版，只提取文本单元格）
@@ -203,5 +188,234 @@ impl FileContentExtractor {
 
         // 组合格式：文件名 + 内容预览
         format!("文件名: {}\n内容: {}", filename, content_preview)
+    }
+}
+
+fn extract_docx_document_text(xml: &str) -> Result<String, AppError> {
+    let mut reader = Reader::from_str(xml);
+    reader.config_mut().trim_text(false);
+    let mut in_text = 0usize;
+    let mut text = String::new();
+
+    loop {
+        match reader
+            .read_event()
+            .map_err(|e| AppError::File(format!("DOCX XML 解析失败: {}", e)))?
+        {
+            Event::Start(event) if xml_local_name(event.local_name().as_ref()) == "t" => {
+                in_text += 1;
+            }
+            Event::Empty(event) => match xml_local_name(event.local_name().as_ref()).as_str() {
+                "tab" => text.push('\t'),
+                "br" | "cr" => text.push('\n'),
+                _ => {}
+            },
+            Event::Text(event) if in_text > 0 => {
+                text.push_str(
+                    &event
+                        .decode()
+                        .map_err(|e| AppError::File(format!("DOCX 文本解码失败: {}", e)))?,
+                );
+            }
+            Event::CData(event) if in_text > 0 => {
+                text.push_str(
+                    &event
+                        .decode()
+                        .map_err(|e| AppError::File(format!("DOCX CDATA 解码失败: {}", e)))?,
+                );
+            }
+            Event::End(event) => match xml_local_name(event.local_name().as_ref()).as_str() {
+                "t" => in_text = in_text.saturating_sub(1),
+                "p" if !text.ends_with('\n') => text.push('\n'),
+                _ => {}
+            },
+            Event::Eof => break,
+            _ => {}
+        }
+    }
+
+    Ok(text.trim().to_string())
+}
+
+fn xml_local_name(name: &[u8]) -> String {
+    let raw = std::str::from_utf8(name).unwrap_or_default();
+    raw.rsplit(':').next().unwrap_or(raw).to_ascii_lowercase()
+}
+
+fn extract_pdf_literals(data: &[u8]) -> Vec<String> {
+    let mut chunks = Vec::new();
+    let mut index = 0usize;
+
+    while index < data.len() {
+        match data[index] {
+            b'(' => {
+                if let Some((value, next)) = parse_pdf_literal(data, index + 1) {
+                    push_pdf_text_chunk(&mut chunks, value);
+                    index = next;
+                    continue;
+                }
+            }
+            b'<' if data.get(index + 1) != Some(&b'<') => {
+                if let Some((value, next)) = parse_pdf_hex_string(data, index + 1) {
+                    push_pdf_text_chunk(&mut chunks, value);
+                    index = next;
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        index += 1;
+    }
+
+    chunks
+}
+
+fn push_pdf_text_chunk(chunks: &mut Vec<String>, value: String) {
+    let normalized = value.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.chars().any(char::is_alphanumeric) {
+        chunks.push(normalized);
+    }
+}
+
+fn parse_pdf_literal(data: &[u8], mut index: usize) -> Option<(String, usize)> {
+    let mut depth = 1usize;
+    let mut out = Vec::new();
+
+    while index < data.len() {
+        match data[index] {
+            b'\\' => {
+                index += 1;
+                if index >= data.len() {
+                    break;
+                }
+                match data[index] {
+                    b'n' => out.push(b'\n'),
+                    b'r' => out.push(b'\r'),
+                    b't' => out.push(b'\t'),
+                    b'b' => out.push(0x08),
+                    b'f' => out.push(0x0c),
+                    b'(' | b')' | b'\\' => out.push(data[index]),
+                    b'\r' => {
+                        if data.get(index + 1) == Some(&b'\n') {
+                            index += 1;
+                        }
+                    }
+                    b'\n' => {}
+                    digit if digit.is_ascii_digit() && digit < b'8' => {
+                        let mut value = digit - b'0';
+                        let mut count = 1;
+                        while count < 3 {
+                            let Some(next) = data.get(index + 1) else {
+                                break;
+                            };
+                            if !next.is_ascii_digit() || *next >= b'8' {
+                                break;
+                            }
+                            index += 1;
+                            value = value.saturating_mul(8).saturating_add(data[index] - b'0');
+                            count += 1;
+                        }
+                        out.push(value);
+                    }
+                    other => out.push(other),
+                }
+            }
+            b'(' => {
+                depth += 1;
+                out.push(data[index]);
+            }
+            b')' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return Some((String::from_utf8_lossy(&out).into_owned(), index + 1));
+                }
+                out.push(data[index]);
+            }
+            byte => out.push(byte),
+        }
+        index += 1;
+    }
+
+    None
+}
+
+fn parse_pdf_hex_string(data: &[u8], mut index: usize) -> Option<(String, usize)> {
+    let mut hex = Vec::new();
+
+    while index < data.len() {
+        match data[index] {
+            b'>' => {
+                if hex.len() % 2 == 1 {
+                    hex.push(b'0');
+                }
+                let bytes = hex
+                    .chunks(2)
+                    .filter_map(|pair| {
+                        let high = hex_value(pair[0])?;
+                        let low = hex_value(pair[1])?;
+                        Some((high << 4) | low)
+                    })
+                    .collect::<Vec<_>>();
+                return Some((String::from_utf8_lossy(&bytes).into_owned(), index + 1));
+            }
+            byte if byte.is_ascii_hexdigit() => hex.push(byte),
+            byte if byte.is_ascii_whitespace() => {}
+            _ => return None,
+        }
+        index += 1;
+    }
+
+    None
+}
+
+fn hex_value(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn docx_content_extractor_reads_document_xml_text() {
+        use std::io::Write;
+        use zip::{write::SimpleFileOptions, ZipWriter};
+
+        let cursor = Cursor::new(Vec::new());
+        let mut writer = ZipWriter::new(cursor);
+        writer
+            .start_file("word/document.xml", SimpleFileOptions::default())
+            .unwrap();
+        writer
+            .write_all(
+                br#"<w:document xmlns:w="word"><w:body><w:p><w:r><w:t>Hello</w:t></w:r><w:r><w:tab/><w:t>DOCX</w:t></w:r></w:p></w:body></w:document>"#,
+            )
+            .unwrap();
+        let docx = writer.finish().unwrap().into_inner();
+
+        let text = FileContentExtractor::extract_docx_content(&docx).unwrap();
+
+        assert_eq!(text, "Hello\tDOCX");
+    }
+
+    #[test]
+    fn pdf_content_extractor_reads_literal_and_hex_strings() {
+        let pdf = br#"%PDF-1.4
+1 0 obj
+<< /Length 64 >>
+stream
+BT (Hello\040PDF) Tj <2054657874> Tj ET
+endstream
+endobj"#;
+
+        let text = FileContentExtractor::extract_pdf_content(pdf).unwrap();
+
+        assert!(text.contains("Hello PDF"));
+        assert!(text.contains("Text"));
     }
 }

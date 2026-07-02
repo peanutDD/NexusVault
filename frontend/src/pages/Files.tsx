@@ -30,6 +30,9 @@ export default function Files() {
     clearFileListCache();
     queryClient.invalidateQueries({ queryKey: ["files"] });
     queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY });
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
     setRefreshKey((k) => k + 1);
   }, [queryClient]);
 

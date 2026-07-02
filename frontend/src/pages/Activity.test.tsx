@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -350,19 +350,19 @@ describe("Activity page", () => {
       "shadow-none",
     );
     expect(screen.getByTestId("activity-source-trigger")).toHaveClass(
-      "settings-neu-inset-control",
+      "neu-inset",
       "min-h-[clamp(2.5rem,5.8vw,2.75rem)]",
-      "[background:var(--settings-form-input-bg)]",
+      "text-[var(--settings-form-input-text)]",
     );
     expect(screen.getByTestId("activity-date-from-trigger")).toHaveClass(
-      "settings-neu-inset-control",
+      "neu-inset",
       "min-h-[clamp(2.5rem,5.8vw,2.75rem)]",
-      "[background:var(--settings-form-input-bg)]",
+      "text-[var(--settings-form-input-text)]",
     );
 
     await user.click(screen.getByTestId("activity-source-trigger"));
     expect(screen.getByTestId("activity-source-menu")).toHaveClass(
-      "settings-neu-raised-card",
+      "neu-raised-sm",
     );
     await user.click(screen.getByRole("option", { name: "Files" }));
     await waitFor(() => {
@@ -376,7 +376,7 @@ describe("Activity page", () => {
 
     await user.click(screen.getByTestId("activity-date-from-trigger"));
     expect(screen.getByTestId("activity-date-from-popover")).toHaveClass(
-      "settings-neu-raised-card",
+      "neu-raised",
     );
     await user.click(screen.getByTestId("activity-date-from-today"));
     await waitFor(() => {
@@ -504,11 +504,21 @@ describe("Activity page", () => {
 
     await user.click(screen.getByTestId("activity-source-trigger"));
     await user.click(screen.getByRole("option", { name: "Worker" }));
-    await user.type(screen.getByLabelText("目标类型"), "file");
-    await user.type(screen.getByLabelText("文件夹 ID"), "folder-1");
-    await user.type(screen.getByLabelText("分享 ID"), "share-1");
-    await user.type(screen.getByLabelText("请求 ID"), "request-1");
-    await user.type(screen.getByLabelText("Token ID"), "token-1");
+    fireEvent.change(screen.getByLabelText("目标类型"), {
+      target: { value: "file" },
+    });
+    fireEvent.change(screen.getByLabelText("文件夹 ID"), {
+      target: { value: "folder-1" },
+    });
+    fireEvent.change(screen.getByLabelText("分享 ID"), {
+      target: { value: "share-1" },
+    });
+    fireEvent.change(screen.getByLabelText("请求 ID"), {
+      target: { value: "request-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Token ID"), {
+      target: { value: "token-1" },
+    });
 
     await waitFor(() => {
       expect(activityService.list).toHaveBeenLastCalledWith(

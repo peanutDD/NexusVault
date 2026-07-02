@@ -21,7 +21,6 @@ describe("mobile zoom prevention", () => {
   it("uses a global touch-action guard against double-tap zoom without blocking scroll", () => {
     const css = readFileSync(resolve(__dirname, "base.css"), "utf8");
 
-    expect(css).toContain("html,\n    body,\n    #root");
-    expect(css).toContain("touch-action: manipulation");
+    expect(css).toMatch(/html,\s*body,\s*#root\s*\{[^}]*touch-action:\s*manipulation;/s);
   });
 });

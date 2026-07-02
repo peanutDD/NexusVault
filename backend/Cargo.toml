@@ -76,7 +76,7 @@ aws-config = { version = "1.8", default-features = false, features = ["behavior-
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
-validator = { version = "0.20", features = ["derive"] }
+validator = "0.20"
 
 # Cache (bounded in-memory rate limit, etc.)
 moka = { version = "0.12.15", features = ["sync"] }
@@ -88,7 +88,7 @@ deadpool-redis = { version = "0.15", features = ["rt_tokio_1"] }
 fs2 = "0.4"
 httpdate = "1.0"
 percent-encoding = "2.3"
-quick-xml = "0.36.2"
+quick-xml = "0.41"
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "gzip", "brotli", "deflate", "rustls-tls"] }
 url = "2.5"
 urlencoding = "2.1"
@@ -102,10 +102,6 @@ async-trait = "0.1"
 zip = "2.2"
 
 # File content extraction for semantic search
-# PDF text extraction
-pdf-extract = "0.10"
-# Word document parsing (docx) - lightweight text extraction
-docx-lite = "0.1"
 # Text encoding detection
 encoding_rs = "0.8"
 tantivy = "0.26"

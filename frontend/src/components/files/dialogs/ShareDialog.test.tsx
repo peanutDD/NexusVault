@@ -46,12 +46,11 @@ describe("ShareDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("dialog", { name: "分享文件" })).toHaveClass(
-      "modal-dialog-tech",
-    );
-    expect(
-      screen.getByRole("dialog", { name: "分享文件" }).querySelector(".singleShareDialogShell"),
-    ).not.toBeNull();
+    const dialog = screen.getByRole("dialog", { name: "分享文件" });
+    const shell = dialog.querySelector(".singleShareDialogShell");
+
+    expect(shell).not.toBeNull();
+    expect(shell).toHaveClass("fileActionDialogShell", "singleShareDialogShell");
     expect(screen.getByTestId("single-share-file-panel")).toHaveClass(
       "singleShareDialogPanel",
     );

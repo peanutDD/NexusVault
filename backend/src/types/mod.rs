@@ -4,7 +4,9 @@
 //!
 //! 1. **只给 handlers 用**：Repository 层不感知这些类型
 //! 2. **完整 serde**：使用 `#[serde]` 控制序列化行为（如 `skip_serializing`）
-//! 3. **验证集成**：请求 DTO 可带 `#[derive(validator::Validate)]`
+//! 3. **验证集成**：请求 DTO 实现 `validator::Validate`
+
+mod validation;
 
 pub mod api_token;
 pub mod file;
