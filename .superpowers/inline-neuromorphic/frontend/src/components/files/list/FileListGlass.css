@@ -1,0 +1,411 @@
+@layer components {
+  .fileListSurfaceScope {
+    color: var(--color-text-primary);
+    min-width: 0;
+  }
+
+  .fileListToolbar {
+    position: relative;
+    z-index: 45;
+    overflow: visible;
+    border-radius: clamp(0.8rem, 1.8vw, 1rem);
+  }
+
+  .fileListToolbarScale75 {
+    width: 100%;
+    transform-origin: top center;
+  }
+
+  .toolbarActionBtn,
+  .paginationNeuButton,
+  .batchActionBtn {
+    border: 0;
+    border-radius: clamp(0.55rem, 1.3vw, 0.75rem);
+    color: var(--filelist-btn-text);
+  }
+
+  .toolbarActionBtn:disabled,
+  .paginationNeuButton:disabled,
+  .batchActionBtn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .loadMoreCyber {
+    color: var(--neu-accent-text-strong);
+  }
+
+  .paginationNeuButtonActive {
+    color: var(--neu-accent-text-strong);
+  }
+
+  .fileListSelectionShell {
+    overflow: visible;
+    border-radius: clamp(0.8rem, 1.8vw, 1rem);
+    padding: clamp(0.45rem, 1.15vw, 0.68rem);
+  }
+
+  .fileListSelectionUnifiedSurface {
+    gap: clamp(0.35rem, 0.85vw, 0.5rem);
+  }
+
+  .fileListSelectionSegment {
+    min-width: 0;
+    padding: clamp(0.25rem, 0.65vw, 0.4rem);
+  }
+
+  .fileListSelectionStatsRow {
+    min-height: clamp(1.8rem, 4vw, 2.15rem);
+  }
+
+  .fileListSelectionStatsLeft {
+    min-width: 0;
+  }
+
+  .fileListSelectionStatChip {
+    min-width: 0;
+    border-radius: 999rem;
+    padding: clamp(0.2rem, 0.55vw, 0.34rem) clamp(0.45rem, 1vw, 0.65rem);
+  }
+
+  .fileListCollectionShelf {
+    min-width: 0;
+    overflow: visible;
+    padding: clamp(0.18rem, 0.45vw, 0.3rem);
+  }
+
+  .fileListCollectionChipRail {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: clamp(0.25rem, 0.65vw, 0.4rem);
+    overflow: visible;
+  }
+
+  .fileListCollectionChip {
+    border: 0;
+    color: var(--color-text-muted);
+    transition:
+      box-shadow 160ms ease,
+      color 160ms ease;
+  }
+
+  .fileListCollectionChip:hover {
+    color: var(--color-text-primary);
+  }
+
+  .fileListCollectionChipActive,
+  .fileListCollectionChipActive:hover {
+    color: var(--neu-accent-text-strong);
+  }
+
+  .fileListCollectionChipCount {
+    display: inline-flex;
+    min-width: 1.2em;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fileListCollectionChipHint {
+    color: var(--color-text-muted);
+  }
+
+  .fileListCollectionMoreButton {
+    flex: 0 0 auto;
+  }
+
+  .fileListCollectionTagDot {
+    box-shadow: var(--neu-flat-shadow);
+  }
+
+  .batch-actions-bar {
+    min-width: 0;
+  }
+
+  .batchActionButtonsRow {
+    flex-wrap: wrap;
+    overflow: visible;
+    background: transparent;
+    padding-inline: clamp(0.18rem, 0.45vw, 0.3rem);
+  }
+
+  .filelist-check-control {
+    --filelist-check-radius: clamp(0.35rem, 0.8vw, 0.48rem);
+    width: clamp(1.2rem, 2.8vw, 1.5rem);
+    height: clamp(1.2rem, 2.8vw, 1.5rem);
+    border-radius: var(--filelist-check-radius);
+    background: var(--filelist-check-bg);
+    box-shadow: var(--filelist-check-shadow);
+    color: transparent;
+  }
+
+  .filelist-check-control svg {
+    box-shadow: none;
+  }
+
+  .filelist-check-control-checked,
+  .fileListAllFilesCheckboxSelected,
+  .fileListGroupSelectCheckboxSelected {
+    background: var(--filelist-check-bg-checked-on);
+    box-shadow: var(--filelist-check-shadow-checked);
+    color: var(--filelist-check-text-checked);
+  }
+
+  .filelist-check-control-unchecked,
+  .fileListAllFilesCheckboxUnchecked,
+  .fileListGroupSelectCheckboxUnchecked,
+  .fileListGroupSelectCheckboxMixed {
+    background: var(--filelist-check-bg);
+    box-shadow: var(--filelist-check-shadow);
+  }
+
+  .filelist-check-control:active {
+    box-shadow: var(--neu-pressed-shadow);
+  }
+
+  .fileCardSurface {
+    border: 0;
+    color: var(--file-card-text);
+  }
+
+  .fileCardSurface:hover,
+  .fileCardMenuOpen {
+    box-shadow: var(--neu-raised-shadow);
+  }
+
+  .fileCardSurface[data-mobile-file-dragging="true"],
+  .fileCardSurface[data-mobile-folder-dragging="true"] {
+    opacity: 0.8;
+  }
+
+  .fileCardActionMenu {
+    min-width: clamp(3rem, 18vw, 5rem);
+    padding-left: 0.2rem;
+    border-radius: clamp(0.35rem, 0.85vw, 0.5rem);
+    color: var(--file-card-menu-text);
+  }
+
+  .fileCardActionMenuItem {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    font-size: clamp(0.5rem, 0.8vw, 0.6rem);
+    /*min-height: clamp(1rem, 4vw, 2rem);*/
+    gap: clamp(0.35rem, 0.85vw, 0.5rem);
+    padding: clamp(0.2rem, 0.55vw, 0.32rem);
+  }
+
+  .fileCardActionMenuItem:hover {
+    color: var(--color-text-primary);
+  }
+
+  .fileCardActionMenuIcon {
+    width: clamp(0.5rem, 0.8vw, 0.6rem);
+    height: clamp(0.5rem, 0.8vw, 0.6rem);
+  }
+
+  .fileCardActionMenuDivider {
+    border-color: var(--color-border-soft);
+  }
+
+  .fileCardFlagBadge {
+    color: var(--neu-accent-text-strong);
+  }
+
+  .trashCardFrame {
+    container-type: inline-size;
+  }
+
+  .trashCardActions {
+    --trash-card-action-height: clamp(1.05rem, 9cqi, 1.42rem);
+    --trash-card-action-icon-size: clamp(0.54rem, 8cqi, 0.78rem);
+    --trash-card-action-radius: clamp(0.18rem, 2.8cqi, 0.34rem);
+    --trash-card-action-padding-inline: clamp(0.16rem, 2.4cqi, 0.28rem);
+    container-type: inline-size;
+  }
+
+  .trashCardActionButton {
+    block-size: var(--trash-card-action-height);
+    max-block-size: var(--trash-card-action-height);
+    min-block-size: var(--trash-card-action-height);
+    min-height: var(--trash-card-action-height);
+    border: 0;
+    border-radius: var(--trash-card-action-radius);
+    padding-block: 0;
+    padding-inline: var(--trash-card-action-padding-inline);
+    /*background: var(--neu-raised-bg);*/
+    background-image: none;
+    /*box-shadow: var(--neu-raised-sm-shadow);*/
+  }
+
+  .trashCardActionIcon {
+    width: var(--trash-card-action-icon-size);
+    height: var(--trash-card-action-icon-size);
+    flex: 0 0 var(--trash-card-action-icon-size);
+    stroke-width: 2.35;
+  }
+
+  .emptyStateSurface {
+    min-height: clamp(16rem, 42vh, 24rem);
+    border-radius: clamp(0.8rem, 1.8vw, 1rem);
+  }
+
+  .emptyStateIconShell {
+    color: var(--neu-accent-text);
+  }
+
+  .emptyStateTitle {
+    color: var(--color-text-primary);
+  }
+
+  .emptyStateDescription {
+    color: var(--color-text-muted);
+  }
+
+  .fileListSearchStatusSurface {
+    margin-bottom: var(--bar-gap);
+    border-radius: clamp(0.8rem, 1.8vw, 1rem);
+    padding: clamp(0.55rem, 1.3vw, 0.8rem);
+  }
+
+  .fileListSearchStatusShell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: clamp(0.5rem, 1.2vw, 0.75rem);
+    align-items: stretch;
+  }
+
+  .fileListSearchStatusWell,
+  .fileListSearchStatusRail {
+    min-width: 0;
+    border-radius: clamp(0.55rem, 1.3vw, 0.75rem);
+    padding: clamp(0.45rem, 1vw, 0.65rem);
+  }
+
+  .fileListSearchStatusTitle {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-ui-xs);
+    font-weight: 700;
+  }
+
+  .fileListSearchStatusDescription {
+    margin-top: clamp(0.12rem, 0.3vw, 0.2rem);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-ui-3xs);
+  }
+
+  .fileListSearchStatusCaption {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-ui-5xs);
+  }
+
+  .fileListSearchStatusChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(0.22rem, 0.55vw, 0.35rem);
+    margin-top: clamp(0.22rem, 0.55vw, 0.35rem);
+  }
+
+  .fileListSearchStatusChip {
+    border-radius: 999rem;
+    padding: clamp(0.14rem, 0.35vw, 0.22rem) clamp(0.4rem, 0.85vw, 0.55rem);
+    color: var(--neu-accent-text-strong);
+    font-size: var(--font-size-ui-6xs);
+  }
+
+  .trashConsoleToolbar,
+  .trashConsolePanel {
+    --trash-console-action-min-height: clamp(1rem, 3vw, 1.75rem);
+    --trash-console-action-font-size: clamp(0.72rem, 1.16vw, 0.96rem);
+    --trash-console-action-icon-size: clamp(0.95rem, 1.75vw, 1.2rem);
+    --trash-console-action-padding-block: clamp(0.34rem, 0.8vw, 0.52rem);
+    --trash-console-action-padding-inline: clamp(0.62rem, 1.35vw, 0.95rem);
+    border: 0;
+    border-radius: clamp(0.8rem, 1.8vw, 1rem);
+    background: var(--neu-raised-bg);
+    background-image: none;
+    box-shadow: var(--neu-raised-shadow);
+  }
+
+  .trashConsoleInner {
+    min-width: 0;
+  }
+
+  .trashConsoleSummaryRow {
+    align-items: center;
+  }
+
+  .trashConsoleSummaryChip {
+    min-height: clamp(1.45rem, 2.35vw, 1.9rem);
+    align-items: center;
+  }
+
+  .trashConsoleActions {
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .trashBatchActionsRow,
+  .trashBaseActionsRow {
+    align-items: center;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .trashBatchActionsRow {
+    justify-content: flex-start;
+  }
+
+  .trashBaseActionsRow {
+    justify-content: flex-end;
+  }
+
+  .trashConsoleButton {
+    min-height: var(--trash-console-action-min-height);
+    /*padding-block: var(--trash-console-action-padding-block);*/
+    padding-inline: var(--trash-console-action-padding-inline);
+    border: 0;
+    border-radius: clamp(0.72rem, 1.45vw, 0.9rem);
+    background: var(--neu-raised-bg);
+    background-image: none;
+    color: var(--filelist-btn-text);
+    font-size: var(--trash-console-action-font-size);
+    letter-spacing: 0;
+    line-height: 1.12;
+    box-shadow: var(--neu-raised-sm-shadow);
+  }
+
+  .trashConsoleButton > svg {
+    width: var(--trash-console-action-icon-size);
+    height: var(--trash-console-action-icon-size);
+    flex: 0 0 var(--trash-console-action-icon-size);
+  }
+
+  .trashConsoleButton > span {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 80rem) {
+    .fileListSearchStatusShell {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fileListSelectionStatsRow {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .fileListSelectionStatsLeft {
+      /*width: 100%;*/
+      /*flex-wrap: wrap;*/
+    }
+  }
+}

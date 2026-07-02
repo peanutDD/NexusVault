@@ -1,0 +1,290 @@
+import { useCallback } from "react";
+import type { DragEvent, ReactNode } from "react";
+import FileGrid from "../grid/FileGrid";
+import FolderGrid from "../grid/FolderGrid";
+import MixedGrid from "../grid/MixedGrid";
+import {
+  GroupSelectCheckbox,
+  GroupSelectCheckboxMixed,
+} from "./GroupSelectCheckbox";
+import FileListGroupHeader from "./FileListGroupHeader";
+import type { FileMetadata } from "../../../types/files";
+import type { Folder } from "../../../types/folders";
+
+interface GroupedFiles {
+  key: string;
+  files: FileMetadata[];
+  icon: ReactNode;
+  label: string;
+}
+
+interface TimeGroup {
+  key: string;
+  label: string;
+  files: FileMetadata[];
+  folders: Folder[];
+  items: Array<
+    { type: "file"; file: FileMetadata } | { type: "folder"; folder: Folder }
+  >;
+}
+
+interface FileListGroupedViewProps {
+  mode: "type" | "time";
+  groupedFiles: GroupedFiles[] | null;
+  timeGroupedItems: TimeGroup[] | null;
+  displayFolders: Folder[];
+  selectedFiles: Set<string>;
+  selectedFolders: Set<string>;
+  openFileMenuId: string | null;
+  openFolderMenuId: string | null;
+  onSelectFile: (fileId: string, selected: boolean) => void;
+  onSelectFolder: (folderId: string, selected: boolean) => void;
+  onOpenFolder: (folderId: string) => void;
+  onRenameFolder: (folder: Folder) => void;
+  onRenameFile: (file: FileMetadata) => void;
+  onDelete: (file: FileMetadata | Folder, type: "file" | "folder") => void;
+  onShowActivity?: (file: FileMetadata) => void;
+  onShowVersions?: (file: FileMetadata) => void;
+  onManageTags?: (file: FileMetadata) => void;
+  onToggleFavorite?: (file: FileMetadata) => void;
+  onTogglePinned?: (file: FileMetadata) => void;
+  onDownload: (file: FileMetadata) => void;
+  onFileDragStart: (fileId: string, e: DragEvent) => void;
+  onDropOnFolder: (
+    folderId: string,
+    fileIds: string[],
+    folderIds: string[],
+  ) => void;
+  onPreviewFile: (file: FileMetadata | null) => void;
+  onShareFile: (file: FileMetadata | null) => void;
+  onToggleFileMenu: (id: string) => void;
+  onToggleFolderMenu: (id: string) => void;
+  onCloseMenu: () => void;
+}
+
+export default function FileListGroupedView({
+  mode,
+  groupedFiles,
+  timeGroupedItems,
+  displayFolders,
+  selectedFiles,
+  selectedFolders,
+  openFileMenuId,
+  openFolderMenuId,
+  onSelectFile,
+  onSelectFolder,
+  onOpenFolder,
+  onRenameFolder,
+  onRenameFile,
+  onDelete,
+  onShowActivity,
+  onShowVersions,
+  onManageTags,
+  onToggleFavorite,
+  onTogglePinned,
+  onDownload,
+  onFileDragStart,
+  onDropOnFolder,
+  onPreviewFile,
+  onShareFile,
+  onToggleFileMenu,
+  onToggleFolderMenu,
+  onCloseMenu,
+}: FileListGroupedViewProps) {
+  const pinnedGroup =
+    mode === "type"
+      ? (groupedFiles ?? []).find((group) => group.key === "pinned")
+      : null;
+  const ordinaryFileGroups =
+    mode === "type"
+      ? (groupedFiles ?? []).filter((group) => group.key !== "pinned")
+      : groupedFiles;
+
+  const handleDeleteFolder = useCallback(
+    (folderId: string) => {
+      const folder = displayFolders.find((item) => item.id === folderId);
+      if (folder) onDelete(folder, "folder");
+    },
+    [displayFolders, onDelete],
+  );
+  const handleMobileFileDrop = useCallback(
+    (targetFolderId: string, sourceFileId: string) => {
+      onDropOnFolder(targetFolderId, [sourceFileId], []);
+    },
+    [onDropOnFolder],
+  );
+
+  if (mode === "type") {
+    return (
+      <div className="space-y-[clamp(1.25rem,3vw,1.5rem)]">
+        {pinnedGroup ? (
+          <div key={`group-${pinnedGroup.key}`}>
+            <FileListGroupHeader
+              label={pinnedGroup.label}
+              count={pinnedGroup.files.length}
+              checkbox={
+                <GroupSelectCheckbox
+                  itemIds={pinnedGroup.files.map((f) => f.id)}
+                  selectedIds={selectedFiles}
+                  onToggle={(ids, selected) =>
+                    ids.forEach((id) => onSelectFile(id, selected))
+                  }
+                />
+              }
+              icon={pinnedGroup.icon}
+            />
+            <FileGrid
+              files={pinnedGroup.files}
+              selectedFiles={selectedFiles}
+              onSelect={onSelectFile}
+              onPreview={onPreviewFile}
+              onShare={onShareFile}
+              onDownload={onDownload}
+              onRename={onRenameFile}
+              onDelete={onDelete}
+              onShowActivity={onShowActivity}
+              onShowVersions={onShowVersions}
+              onManageTags={onManageTags}
+              onToggleFavorite={onToggleFavorite}
+              onTogglePinned={onTogglePinned}
+              onDragStart={onFileDragStart}
+              onMobileFileDrop={handleMobileFileDrop}
+              openFileMenuId={openFileMenuId}
+              onToggleMenu={onToggleFileMenu}
+              onCloseMenu={onCloseMenu}
+            />
+          </div>
+        ) : null}
+        {displayFolders.length > 0 ? (
+          <div>
+            <FileListGroupHeader
+              label="FOLDERS"
+              count={displayFolders.length}
+              checkbox={
+                <GroupSelectCheckbox
+                  itemIds={displayFolders.map((f) => f.id)}
+                  selectedIds={selectedFolders}
+                  onToggle={(ids, selected) =>
+                    ids.forEach((id) => onSelectFolder(id, selected))
+                  }
+                />
+              }
+              icon={
+                <span className="neu-raised-sm inline-flex h-[clamp(1.5rem,3.5vw,1.75rem)] w-[clamp(1.5rem,3.5vw,1.75rem)] shrink-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.875rem,2vw,1rem)] bg-[var(--filelist-check-bg-checked-on)] text-[var(--color-text-primary)]">
+                  <i className="bi bi-folder2" aria-hidden />
+                </span>
+              }
+            />
+            <FolderGrid
+              folders={displayFolders}
+              selectedFolders={selectedFolders}
+              onSelect={onSelectFolder}
+              onOpen={onOpenFolder}
+              onRename={onRenameFolder}
+              onDelete={handleDeleteFolder}
+              onDrop={onDropOnFolder}
+              openFolderMenuId={openFolderMenuId}
+              onToggleMenu={onToggleFolderMenu}
+              onCloseMenu={onCloseMenu}
+            />
+          </div>
+        ) : null}
+        {(ordinaryFileGroups ?? []).map((group) => (
+          <div key={`group-${group.key}`}>
+            <FileListGroupHeader
+              label={group.label}
+              count={group.files.length}
+              checkbox={
+                <GroupSelectCheckbox
+                  itemIds={group.files.map((f) => f.id)}
+                  selectedIds={selectedFiles}
+                  onToggle={(ids, selected) =>
+                    ids.forEach((id) => onSelectFile(id, selected))
+                  }
+                />
+              }
+              icon={group.icon}
+            />
+            <FileGrid
+              files={group.files}
+              selectedFiles={selectedFiles}
+              onSelect={onSelectFile}
+              onPreview={onPreviewFile}
+              onShare={onShareFile}
+              onDownload={onDownload}
+              onRename={onRenameFile}
+              onDelete={onDelete}
+              onShowActivity={onShowActivity}
+              onShowVersions={onShowVersions}
+              onManageTags={onManageTags}
+              onToggleFavorite={onToggleFavorite}
+              onTogglePinned={onTogglePinned}
+              onDragStart={onFileDragStart}
+              onMobileFileDrop={handleMobileFileDrop}
+              openFileMenuId={openFileMenuId}
+              onToggleMenu={onToggleFileMenu}
+              onCloseMenu={onCloseMenu}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-[clamp(1.25rem,3vw,1.5rem)]">
+      {(timeGroupedItems ?? []).map((group) => (
+        <div key={`time-group-${group.key}`}>
+          <FileListGroupHeader
+            label={group.label}
+            count={group.files.length + group.folders.length}
+            checkbox={
+              <GroupSelectCheckboxMixed
+                fileIds={group.files.map((f) => f.id)}
+                folderIds={group.folders.map((f) => f.id)}
+                selectedFileIds={selectedFiles}
+                selectedFolderIds={selectedFolders}
+                onToggle={(fileIds, folderIds, selected) => {
+                  fileIds.forEach((id) => onSelectFile(id, selected));
+                  folderIds.forEach((id) => onSelectFolder(id, selected));
+                }}
+              />
+            }
+            icon={
+              <span className="neu-inset inline-flex h-[clamp(1.5rem,3.5vw,1.75rem)] w-[clamp(1.5rem,3.5vw,1.75rem)] shrink-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.875rem,2vw,1rem)] bg-[var(--filelist-check-bg-checked-on)] text-[var(--color-text-primary)]">
+                <i className="bi bi-calendar3" aria-hidden />
+              </span>
+            }
+          />
+          <MixedGrid
+            key={`time-group-mixed-${group.key}`}
+            items={group.items}
+            selectedFiles={selectedFiles}
+            selectedFolders={selectedFolders}
+            onSelectFile={onSelectFile}
+            onSelectFolder={onSelectFolder}
+            onOpenFolder={onOpenFolder}
+            onPreviewFile={onPreviewFile}
+            onShareFile={onShareFile}
+            onDownloadFile={onDownload}
+            onRenameFolder={onRenameFolder}
+            onRenameFile={onRenameFile}
+            onDelete={onDelete}
+            onShowActivity={onShowActivity}
+            onShowVersions={onShowVersions}
+            onManageTags={onManageTags}
+            onToggleFavorite={onToggleFavorite}
+            onTogglePinned={onTogglePinned}
+            onFileDragStart={onFileDragStart}
+            onDropOnFolder={onDropOnFolder}
+            openFileMenuId={openFileMenuId}
+            openFolderMenuId={openFolderMenuId}
+            onToggleFileMenu={onToggleFileMenu}
+            onToggleFolderMenu={onToggleFolderMenu}
+            onCloseMenu={onCloseMenu}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}

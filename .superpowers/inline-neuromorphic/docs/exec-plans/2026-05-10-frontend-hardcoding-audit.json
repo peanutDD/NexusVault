@@ -1,0 +1,27 @@
+{
+  "date": "2026-05-10",
+  "task": "frontend-hardcoding-audit",
+  "status": "implemented",
+  "intent": "Count and reduce frontend hardcoding while preserving layout and behavior.",
+  "categories": [
+    "deploy-url",
+    "raw-theme-color",
+    "inline-color-function",
+    "magic-timing"
+  ],
+  "allowedExceptions": [
+    "CSS token source definitions",
+    "SVG namespaces",
+    "example URLs",
+    "documented local dev fallback in config/env.ts"
+  ],
+  "verification": [
+    "npm run check:hardcoding",
+    "npx vitest run scripts/check-hardcoding.test.mjs",
+    "npm run check:fluid-sizing -- --scope=all",
+    "npm run check:fluid-sizing -- --scope=tailwind-visual",
+    "npm test",
+    "npm run lint",
+    "npm run build"
+  ]
+}

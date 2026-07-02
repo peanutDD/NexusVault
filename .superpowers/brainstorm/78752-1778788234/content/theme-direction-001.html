@@ -1,0 +1,37 @@
+
+<h2>选择新主题的质感方向</h2>
+<p class="subtitle">我把参考 CodePen 拆成三种可落地的主题语言。都保留黑底、霓虹青绿、发光玻璃，但强度不同。</p>
+
+<div class="cards">
+  <div class="card" data-choice="terminal-glass" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#030807;min-height:220px;position:relative;overflow:hidden;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(0,255,210,.18),0 0 40px rgba(0,255,210,.12);">
+      <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 46%, rgba(0,255,210,.18), transparent 28%), radial-gradient(circle at 50% 70%, rgba(0,255,170,.1), transparent 36%), linear-gradient(180deg,#020605,#050d0b);"></div>
+      <div style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:58%;height:96px;border-radius:14px;background:rgba(24,26,25,.78);border:1px solid rgba(0,255,210,.08);box-shadow:0 0 48px rgba(0,255,210,.22), inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;color:#25ffd4;font-weight:800;font-size:32px;text-shadow:0 0 12px rgba(0,255,210,.9);">ZOLA</div>
+      <div style="position:absolute;left:50%;top:72%;transform:translateX(-50%);border:1px solid #25ffd4;border-radius:7px;padding:8px 20px;color:#25ffd4;font-size:12px;box-shadow:0 0 16px rgba(0,255,210,.55);">Listening</div>
+    </div>
+    <div class="card-body"><h3>A. Terminal Glass</h3><p>最接近参考：黑曜底、青绿霓虹、发光面板。适合做第四个主题，视觉冲击最强。</p></div>
+  </div>
+
+  <div class="card" data-choice="vault-console" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#06100f;min-height:220px;position:relative;overflow:hidden;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(38,255,206,.22);">
+      <div style="position:absolute;inset:0;background:linear-gradient(rgba(39,255,203,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(39,255,203,.06) 1px,transparent 1px),radial-gradient(circle at 30% 20%,rgba(39,255,203,.2),transparent 35%);background-size:26px 26px,26px 26px,100% 100%;"></div>
+      <div style="position:absolute;inset:28px;border:1px solid rgba(39,255,203,.28);background:rgba(4,13,12,.72);border-radius:10px;box-shadow:0 0 24px rgba(39,255,203,.16),inset 0 1px 0 rgba(255,255,255,.05);"></div>
+      <div style="position:absolute;left:54px;right:54px;top:54px;height:28px;border-radius:6px;background:rgba(39,255,203,.12);border:1px solid rgba(39,255,203,.28);"></div>
+      <div style="position:absolute;left:54px;right:160px;top:104px;height:18px;border-radius:999px;background:#25ffd4;box-shadow:0 0 20px rgba(39,255,203,.7);"></div>
+      <div style="position:absolute;left:54px;right:92px;top:142px;height:14px;border-radius:999px;background:rgba(39,255,203,.22);"></div>
+    </div>
+    <div class="card-body"><h3>B. Vault Console</h3><p>更像高级文件管理器：保留网格、扫描线和青绿光，但更克制，信息密度更稳。</p></div>
+  </div>
+
+  <div class="card" data-choice="neo-mint" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#081614;min-height:220px;position:relative;overflow:hidden;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(105,255,210,.16);">
+      <div style="position:absolute;inset:0;background:radial-gradient(circle at 18% 15%,rgba(100,255,210,.22),transparent 38%),radial-gradient(circle at 82% 84%,rgba(64,180,255,.16),transparent 40%),linear-gradient(145deg,#06110f,#0a1916);"></div>
+      <div style="position:absolute;left:34px;right:34px;top:34px;bottom:34px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(178,255,232,.18);backdrop-filter:blur(18px);box-shadow:0 24px 70px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.12);"></div>
+      <div style="position:absolute;left:70px;top:70px;color:#b8ffe8;font-weight:750;font-size:26px;text-shadow:0 0 18px rgba(105,255,210,.55);">Mint OS</div>
+      <div style="position:absolute;left:70px;right:70px;bottom:70px;height:46px;border-radius:12px;background:linear-gradient(90deg,rgba(105,255,210,.24),rgba(58,180,255,.18));border:1px solid rgba(178,255,232,.18);"></div>
+    </div>
+    <div class="card-body"><h3>C. Neo Mint Glass</h3><p>更现代柔和：浅青薄玻璃、低对比发光。适合长期使用，但参考感最弱。</p></div>
+  </div>
+</div>
+
+<p class="subtitle">建议选 A 或 B：A 更像 CodePen，B 更适合作为文件管理产品的长期主题。</p>

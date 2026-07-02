@@ -1,0 +1,29 @@
+{
+  "date": "2026-04-30",
+  "scope": [
+    "Split frontend file service into domain services",
+    "Preserve frontend/src/services/files.ts as the compatibility facade",
+    "Extract FileList dialog rendering into a dedicated component"
+  ],
+  "assumptions": [
+    "Existing fileService imports should continue to work during this slice",
+    "Current component directories are the target structure and should be extended, not replaced",
+    "This slice prioritizes low-risk domain boundaries over deleting every large legacy file"
+  ],
+  "risks": [
+    "Object method this-binding can regress upload flow",
+    "File System Access API download fallback can regress if stream helpers change behavior",
+    "Domain services must not import the aggregate facade"
+  ],
+  "dependencies": [
+    "React 19",
+    "Vite",
+    "TypeScript",
+    "Vitest",
+    "Existing api, limitedApi, auth store, telemetry utilities"
+  ],
+  "verification": [
+    "frontend/src/services/files.test.ts",
+    "npm run build"
+  ]
+}

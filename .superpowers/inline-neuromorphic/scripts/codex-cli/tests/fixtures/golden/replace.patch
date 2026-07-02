@@ -1,0 +1,10 @@
+### File: src/lib.rs
+<<<<<<< SEARCH
+pub fn limit() -> usize {
+    usize::MAX
+}
+=======
+pub fn limit() -> usize {
+    8
+}
+>>>>>>> REPLACE

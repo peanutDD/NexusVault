@@ -1,0 +1,17 @@
+{
+  "task": "gemini-kickoff-rerun-reposts",
+  "date": "2026-05-05",
+  "goal": "Make reruns post a fresh /gemini review instead of waiting on stale failed requests.",
+  "assumptions": [
+    "Gemini requests can fail transiently with traffic warnings.",
+    "The watchdog bounds duplicate request risk."
+  ],
+  "risks": [
+    "Manual reruns can consume additional Gemini quota.",
+    "An unhealthy Gemini service still fails closed."
+  ],
+  "acceptance": [
+    "Every non-auto-fix kickoff run posts a fresh request.",
+    "Watchdog timing starts from the fresh request."
+  ]
+}

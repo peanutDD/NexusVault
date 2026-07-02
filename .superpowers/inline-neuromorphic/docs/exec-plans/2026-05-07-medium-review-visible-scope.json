@@ -1,0 +1,19 @@
+{
+  "date": "2026-05-07",
+  "task": "medium-review-visible-scope",
+  "goal": "Make the Gemini/Codex auto-review loop visibly treat Medium findings as actionable alongside literal Medium+ findings.",
+  "assumptions": [
+    "The Rust severity matcher already selects Critical, High, Medium+, and Medium by default.",
+    "The failing behavior is reviewer-facing workflow wording that narrows pending and clean states to Medium+.",
+    "Low findings remain excluded by default."
+  ],
+  "risks": [
+    "Changing wording must not alter tested state-machine decisions.",
+    "Docs can drift back to a Medium+-only interpretation."
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml --test workflow_state -- --nocapture",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml -- --nocapture",
+    "bash -n .github/scripts/codex-auto-fix-state.sh"
+  ]
+}

@@ -1,0 +1,1552 @@
+/* ==========================================================================
+   Base Layer — 全局重置、字体声明、流体字号
+   ========================================================================== */
+
+@layer base {
+  @font-face {
+    font-display: swap;
+    font-family: "bootstrap-icons";
+    src:
+      url("/fonts/bootstrap-icons.woff2") format("woff2"),
+      url("/fonts/bootstrap-icons.woff") format("woff");
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  html,
+  body,
+  #root {
+    touch-action: manipulation;
+  }
+
+  code {
+    font-family:
+      source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  }
+
+  /* 平滑滚动 */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* 全局流体字号基准（随视口连续变化，不是固定断点跳变） */
+  html {
+    font-size: clamp(0.875rem, 1.1vw + 0.5625rem, 1.25rem);
+  }
+
+  /* 深色模式支持 */
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* 焦点可见性改进 */
+  *:focus-visible {
+    outline: 0.125rem solid var(--color-focus-ring);
+    outline-offset: 0.125rem;
+  }
+
+  /* 移动端触摸优化 */
+  @media (hover: none) and (pointer: coarse) {
+    button,
+    a {
+      min-height: 1.25rem;
+      min-width: 1.25rem;
+    }
+  }
+
+  /* 字体工具类 */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-brand {
+    font-family: var(--font-brand);
+  }
+
+  .font-footer {
+    font-family: var(--font-footer);
+  }
+
+  .appSpinnerShell {
+    padding: clamp(0.3rem, 0.7vw, 0.4rem);
+  }
+
+  .appSpinnerRing {
+    display: none;
+  }
+
+  .appSpinnerIcon {
+    display: inline-flex;
+    color: var(--spinner-accent-color);
+  }
+
+  .appAlertMessage {
+    --app-alert-title: rgba(var(--rgb-white), 0.9);
+    --app-alert-text: rgba(var(--rgb-white), 0.78);
+    background: var(--neu-raised-bg);
+    background-image: none;
+    border: 0;
+    border-radius: clamp(0.85rem, 2vw, 1.1rem);
+    min-height: clamp(4rem, 8vw, 5rem);
+    padding: clamp(0.9rem, 2vw, 1.15rem) clamp(1rem, 2.4vw, 1.35rem);
+  }
+
+  .appAlertMessage--info {
+    --app-alert-title: rgba(var(--rgb-emerald-200), 0.96);
+    --app-alert-text: rgba(var(--rgb-emerald-400), 0.98);
+    /*background: rgb(20 83 45 / 0.3);*/
+  }
+
+  .appAlertMessage--error {
+    --app-alert-title: rgba(var(--rgb-red-200), 0.96);
+    --app-alert-text: rgba(var(--rgb-red-400), 0.98);
+    /*background: rgb(127 29 29 / 0.3);*/
+  }
+
+  .appAlertMessage--warning {
+    --app-alert-title: rgba(var(--rgb-amber-200), 0.96);
+    --app-alert-text: rgba(var(--rgb-amber-400), 0.98);
+    /*background: rgb(113 63 18 / 0.3);*/
+  }
+
+  .appAlertMessageContent {
+    gap: clamp(0.7rem, 1.6vw, 1rem);
+  }
+
+  .appAlertMessageIcon {
+    align-items: flex-start;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: var(--app-alert-text);
+    display: inline-flex;
+    padding-top: clamp(0.08rem, 0.2vw, 0.125rem);
+  }
+
+  .appAlertMessageIconSvg {
+    height: clamp(1.35rem, 2.6vw, 1.65rem);
+    width: clamp(1.35rem, 2.6vw, 1.65rem);
+    stroke-width: 2;
+  }
+
+  .appAlertMessageTitle {
+    color: var(--app-alert-title);
+    font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.15;
+  }
+
+  .appAlertMessageText {
+    color: var(--app-alert-text);
+    font-size: clamp(0.85rem, 1.6vw, 1rem);
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.35;
+    margin-top: clamp(0.15rem, 0.45vw, 0.25rem);
+  }
+
+  .appAlertMessageClose {
+    align-self: flex-start;
+    color: var(--app-alert-text);
+  }
+
+  .appAlertMessageClose:hover {
+    color: var(--app-alert-title);
+  }
+
+  .ocrStatusRefreshRow {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ocrRefreshStatusSlot {
+    container-type: inline-size;
+    min-inline-size: 0;
+  }
+
+  .ocrRefreshStatusSlot .ocrRefreshStatusButton {
+    font-size: clamp(0.52rem, 7.4cqi, 0.88rem);
+    white-space: nowrap;
+  }
+
+  .ocrRefreshStatusSlot .ocrRefreshStatusButton svg {
+    flex-shrink: 0;
+    height: clamp(0.5rem, 6.8cqi, 0.95rem);
+    width: clamp(0.5rem, 6.8cqi, 0.95rem);
+  }
+
+  .ocrRefreshStatusLabel {
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  :root,
+  :root[data-theme="dark"],
+  :root.dark {
+    --file-request-inbox-flat-bg: var(--neu-raised-bg);
+    --file-request-inbox-flat-muted-bg: var(--neu-inset-bg);
+    --file-request-inbox-flat-field-bg: var(--neu-inset-bg);
+    --file-request-inbox-detail-bg: var(--file-request-inbox-flat-bg);
+    --file-request-inbox-submission-bg: var(--file-request-inbox-flat-bg);
+    --file-request-inbox-summary-bg: var(--neu-inset-bg);
+    --file-request-inbox-meta-bg: var(--file-request-inbox-flat-muted-bg);
+    --file-request-inbox-tile-bg: var(--file-request-inbox-flat-bg);
+    --file-request-inbox-upload-row-bg: var(--file-request-inbox-flat-bg);
+    --file-request-inbox-file-bg: var(--neu-raised-bg);
+    --file-request-inbox-section-bg: var(--file-request-inbox-flat-muted-bg);
+    --file-request-inbox-publish-bg: var(--file-request-inbox-flat-muted-bg);
+    --file-request-inbox-review-bg: var(--file-request-inbox-flat-muted-bg);
+    --file-request-inbox-border: transparent;
+    --file-request-inbox-upload-border: transparent;
+    --file-request-inbox-eyebrow-text: rgba(156, 170, 194, 0.74);
+    --file-request-inbox-strong-text: rgba(247, 249, 255, 0.98);
+    --file-request-inbox-body-text: rgba(221, 227, 238, 0.88);
+    --file-request-inbox-muted-text: rgba(226, 231, 240, 0.82);
+    --file-request-inbox-flat-button-bg: var(--neu-raised-bg);
+    --file-request-inbox-flat-button-hover-bg: var(--neu-raised-bg);
+    --file-request-inbox-flat-button-text: rgba(247, 249, 255, 0.92);
+    --file-request-inbox-tile-shadow: none;
+    --file-request-inbox-upload-shadow: none;
+    --file-request-review-action-disabled-bg: var(--neu-inset-bg);
+    --file-request-review-action-disabled-text: rgba(
+      var(--rgb-slate-300),
+      0.78
+    );
+    --file-request-review-action-disabled-border: transparent;
+    --file-request-review-action-disabled-shadow: none;
+    --file-request-review-action-approve-disabled-bg: #a7f3d0;
+    --file-request-review-action-approve-disabled-text: #064e3b;
+    --file-request-review-action-reject-disabled-bg: rgb(var(--rgb-red-200));
+    --file-request-review-action-reject-disabled-text: rgb(var(--rgb-red-950));
+    --file-request-inbox-text-shadow: none;
+  }
+
+  :root[data-theme="light"],
+  :root.light {
+    --file-request-inbox-flat-bg: var(--neu-raised-bg);
+    --file-request-inbox-flat-muted-bg: var(--neu-inset-bg);
+    --file-request-inbox-flat-field-bg: var(--neu-inset-bg);
+    --file-request-inbox-detail-bg: var(--file-request-inbox-flat-bg);
+    --file-request-inbox-submission-bg: var(--file-request-inbox-flat-bg);
+    --file-request-inbox-summary-bg: var(--neu-inset-bg);
+    --file-request-inbox-meta-bg: var(--file-request-inbox-flat-muted-bg);
+    --file-request-inbox-tile-bg: var(--file-request-inbox-flat-bg);
+    --file-request-inbox-upload-row-bg: var(--file-request-inbox-flat-bg);
+    --file-request-inbox-file-bg: var(--neu-raised-bg);
+    --file-request-inbox-section-bg: var(--file-request-inbox-flat-muted-bg);
+    --file-request-inbox-publish-bg: var(--file-request-inbox-flat-muted-bg);
+    --file-request-inbox-review-bg: var(--file-request-inbox-flat-muted-bg);
+    --file-request-inbox-border: transparent;
+    --file-request-inbox-upload-border: transparent;
+    --file-request-inbox-eyebrow-text: rgba(var(--rgb-slate-600), 0.72);
+    --file-request-inbox-strong-text: rgba(var(--rgb-slate-900), 0.94);
+    --file-request-inbox-body-text: rgba(var(--rgb-slate-700), 0.86);
+    --file-request-inbox-muted-text: rgba(var(--rgb-slate-600), 0.74);
+    --file-request-inbox-flat-button-bg: var(--neu-raised-bg);
+    --file-request-inbox-flat-button-hover-bg: var(--neu-raised-bg);
+    --file-request-inbox-flat-button-text: rgba(var(--rgb-slate-900), 0.82);
+    --file-request-inbox-tile-shadow: none;
+    --file-request-inbox-upload-shadow: none;
+    --file-request-review-action-disabled-bg: var(--neu-inset-bg);
+    --file-request-review-action-disabled-text: rgba(
+      var(--rgb-slate-600),
+      0.74
+    );
+    --file-request-review-action-disabled-border: transparent;
+    --file-request-review-action-disabled-shadow: none;
+    --file-request-review-action-approve-disabled-bg: #a7f3d0;
+    --file-request-review-action-approve-disabled-text: #064e3b;
+    --file-request-review-action-reject-disabled-bg: rgb(var(--rgb-red-200));
+    --file-request-review-action-reject-disabled-text: rgb(var(--rgb-red-950));
+    --file-request-inbox-text-shadow: none;
+  }
+
+  .fileRequestInboxDetailPanel {
+    background: var(--file-request-inbox-detail-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-raised-shadow) !important;
+    filter: none !important;
+  }
+
+  .fileRequestInboxSubmissionCard {
+    background: var(--file-request-inbox-submission-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .fileRequestInboxSubmissionCard--inspector {
+    overflow: visible;
+  }
+
+  .fileRequestInboxSummaryStrip {
+    background: var(--file-request-inbox-summary-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .fileRequestInboxSummaryCell {
+    min-width: 0;
+  }
+
+  @media (min-width: 48rem) {
+    .fileRequestInboxSummaryCell + .fileRequestInboxSummaryCell {
+      border-inline-start: 1px solid var(--file-request-inbox-border);
+      padding-inline-start: clamp(0.5rem, 1.1vw, 0.62rem);
+    }
+  }
+
+  .fileRequestInboxMetaPanel {
+    background: var(--file-request-inbox-meta-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: none !important;
+  }
+
+  .fileRequestInboxTile {
+    background: var(--file-request-inbox-tile-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: none !important;
+  }
+
+  .fileRequestInboxUploadRow {
+    background: var(--file-request-inbox-upload-row-bg) !important;
+    border-color: var(--file-request-inbox-upload-border) !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    color: var(--file-request-inbox-body-text);
+  }
+
+  .fileRequestInboxFileItem {
+    background: var(--file-request-inbox-file-bg) !important;
+    border-color: var(--file-request-inbox-upload-border) !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .fileRequestInboxFileHeader,
+  .fileRequestInboxReviewGrid {
+    min-width: 0;
+    box-shadow: none !important;
+  }
+
+  .fileRequestInboxSectionPanel {
+    background: var(--file-request-inbox-section-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: none !important;
+  }
+
+  .fileRequestInboxPublishPanel {
+    background: var(--file-request-inbox-publish-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .fileRequestInboxReviewPanel {
+    background: var(--file-request-inbox-review-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .fileRequestInboxFlatInput {
+    background: var(--file-request-inbox-flat-field-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    text-shadow: none !important;
+  }
+
+  .fileRequestInboxFlatField {
+    background: var(--file-request-inbox-flat-field-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    text-shadow: none !important;
+  }
+
+  .fileRequestInboxFlatButton {
+    background: var(--file-request-inbox-flat-button-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    color: var(--file-request-inbox-flat-button-text) !important;
+    text-shadow: none !important;
+    transform: none !important;
+  }
+
+  .fileRequestInboxFlatButton:hover {
+    background: var(--file-request-inbox-flat-button-hover-bg) !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    transform: none !important;
+  }
+
+  .fileRequestInboxFlatButton:active {
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .fileRequestInboxFlatPopover,
+  .fileRequestInboxEmptyPanel {
+    background: var(--file-request-inbox-flat-muted-bg) !important;
+    border-color: var(--file-request-inbox-border) !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .fileRequestInboxEyebrow {
+    color: var(--file-request-inbox-eyebrow-text) !important;
+  }
+
+  .fileRequestInboxStrongText {
+    color: var(--file-request-inbox-strong-text) !important;
+  }
+
+  .fileRequestInboxBodyText {
+    color: var(--file-request-inbox-body-text) !important;
+  }
+
+  .fileRequestInboxMutedText {
+    color: var(--file-request-inbox-muted-text) !important;
+  }
+
+  .shareSubmissionFlatText {
+    text-shadow: none !important;
+  }
+
+  :root {
+    --file-request-public-page-bg: var(--neu-surface-bg);
+    --file-request-public-page-edge: var(--neu-surface-bg);
+    --file-request-public-raised-bg: var(--neu-raised-bg);
+    --file-request-public-inset-bg: var(--neu-inset-bg);
+    --file-request-public-card-shadow: var(--neu-raised-shadow);
+    --file-request-public-raised-shadow: var(--neu-raised-sm-shadow);
+    --file-request-public-inset-shadow: var(--neu-inset-shadow);
+    --file-request-public-primary-bg: #6366f1;
+    --file-request-public-primary-disabled-bg: #4f46e5;
+    --file-request-public-title: rgba(var(--rgb-white), 0.95);
+    --file-request-public-text: rgba(var(--rgb-white), 0.9);
+    --file-request-public-muted: rgba(var(--rgb-slate-300), 0.76);
+    --file-request-public-accent: #53c26f;
+    --file-request-public-field-ring: rgba(139, 92, 246, 0.34);
+  }
+
+  :root[data-theme="light"],
+  :root.light {
+    --file-request-public-title: rgba(var(--rgb-slate-900), 0.94);
+    --file-request-public-text: rgba(var(--rgb-slate-800), 0.9);
+    --file-request-public-muted: rgba(var(--rgb-slate-600), 0.74);
+  }
+
+  .fileRequestPublicShell {
+    background: var(--neu-surface-bg);
+    background-image: none;
+    color: var(--file-request-public-text);
+  }
+
+  .fileRequestPublicCard {
+    position: relative;
+    border: 0;
+    background: var(--file-request-public-raised-bg);
+    background-image: none;
+    box-shadow: var(--file-request-public-card-shadow);
+    color: var(--file-request-public-text);
+  }
+
+  .fileRequestPublicCard::before {
+    display: none;
+  }
+
+  .fileRequestPublicInset {
+    border: 0;
+    background: var(--file-request-public-inset-bg);
+    background-image: none;
+    box-shadow: var(--file-request-public-inset-shadow);
+    color: var(--file-request-public-muted);
+  }
+
+  .fileRequestPublicStat {
+    display: grid;
+    gap: clamp(0.18rem, 0.45vw, 0.26rem);
+    min-width: 0;
+  }
+
+  .fileRequestPublicStat span {
+    color: var(--file-request-public-muted);
+    font-size: clamp(0.62rem, 1.5vw, 0.72rem);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .fileRequestPublicStat strong {
+    color: var(--file-request-public-text);
+    font-weight: 800;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .fileRequestPublicLabel {
+    color: var(--file-request-public-title);
+    letter-spacing: 0.01em;
+  }
+
+  .fileRequestPublicField {
+    appearance: none;
+    border: 0;
+    background: var(--file-request-public-inset-bg);
+    background-image: none;
+    box-shadow: var(--file-request-public-inset-shadow);
+    color: var(--file-request-public-text);
+    outline: none;
+  }
+
+  .fileRequestPublicField:focus {
+    box-shadow:
+      var(--file-request-public-inset-shadow),
+      0 0 0 0.15rem var(--file-request-public-field-ring);
+  }
+
+  textarea.fileRequestPublicField {
+    min-height: clamp(5.7rem, 18vw, 7rem);
+  }
+
+  input[type="file"].fileRequestPublicField::file-selector-button {
+    margin-right: clamp(0.55rem, 1.35vw, 0.75rem);
+    border: 0;
+    border-radius: clamp(0.58rem, 1.3vw, 0.72rem);
+    background: var(--file-request-public-raised-bg);
+    background-image: none;
+    box-shadow: var(--file-request-public-raised-shadow);
+    color: var(--file-request-public-title);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 800;
+    padding: clamp(0.38rem, 0.9vw, 0.48rem) clamp(0.62rem, 1.45vw, 0.78rem);
+  }
+
+  .fileRequestPublicSubmit {
+    border: 0;
+    background: var(--file-request-public-primary-bg);
+    background-image: none;
+    box-shadow: var(--file-request-public-raised-shadow);
+    color: rgba(var(--rgb-white), 0.96);
+    text-shadow: 0 0.05em 0.12em rgba(25, 15, 45, 0.28);
+  }
+
+  .fileRequestPublicSubmit:not(:disabled):hover {
+    filter: brightness(1.04);
+    transform: translateY(-0.04rem);
+  }
+
+  .fileRequestPublicSubmit:not(:disabled):active {
+    box-shadow: var(--file-request-public-inset-shadow);
+    filter: brightness(0.98);
+    transform: translateY(0.04rem);
+  }
+
+  .fileRequestPublicSubmit:disabled {
+    opacity: 1;
+    background: var(--file-request-public-primary-disabled-bg);
+    background-image: none;
+    box-shadow: var(--file-request-public-inset-shadow);
+    color: rgba(var(--rgb-white), 0.66);
+    cursor: not-allowed;
+  }
+
+  :root,
+  :root[data-theme="dark"],
+  :root.dark {
+    --flat-reference-panel-bg: #e2e8f0;
+    --flat-reference-card-bg: #f8fafc;
+    --flat-reference-purple: #6366f1;
+    --flat-reference-green: #10b981;
+    --flat-reference-green-surface-bg: #10b981;
+    --flat-reference-green-surface-text: #ffffff;
+    --flat-reference-green-surface-muted: rgba(255, 255, 255, 0.82);
+    --flat-reference-green-surface-border: transparent;
+    --activity-filter-field-bg: rgba(236, 253, 245, 0.92);
+    --activity-filter-field-text: #064e3b;
+    --activity-filter-field-placeholder: rgba(4, 120, 87, 0.62);
+    --activity-filter-field-border: transparent;
+    --activity-filter-field-ring: rgba(236, 253, 245, 0.5);
+    --activity-filter-menu-bg: rgba(240, 253, 250, 0.98);
+    --activity-filter-menu-text: #064e3b;
+    --flat-reference-dark-panel-bg: #111827;
+    --flat-reference-dark-panel-text: #f8fafc;
+    --flat-reference-dark-panel-muted: #cbd5e1;
+    --flat-reference-dark-panel-border: transparent;
+    --codepen-neu-bg: #1f2937;
+    --codepen-neu-bg-secondary: #374151;
+    --codepen-neu-text: #f8fafc;
+    --codepen-neu-heading: #f8fafc;
+    --codepen-neu-muted: #cbd5e1;
+    --codepen-neu-border: transparent;
+    --share-center-action-tile-bg-dark: var(--neu-raised-bg);
+    --share-center-action-tile-bg: var(--share-center-action-tile-bg-dark);
+    --share-center-action-tile-border: transparent;
+    --share-center-action-tile-shadow: var(--neu-raised-sm-shadow);
+    --share-center-action-tile-pressed-shadow: var(--neu-pressed-shadow);
+    --share-center-action-tile-icon-filter: none;
+    --share-center-codepen-button-default-bg: var(--neu-raised-bg);
+    --share-center-codepen-button-primary-bg: #6366f1;
+    --share-center-codepen-button-success-bg: #10b981;
+    --share-center-codepen-button-danger-icon: #fca5a5;
+    --share-center-codepen-button-raised-shadow: var(--neu-raised-sm-shadow);
+    --share-center-codepen-button-pressed-shadow: var(--neu-pressed-shadow);
+    --share-tab-toggle-bg: #10b981;
+    --share-tab-toggle-off-bg: #1f2937;
+    --share-tab-toggle-text: #f8fafc;
+    --share-tab-toggle-muted: #cbd5e1;
+    --share-tab-toggle-shadow-dark: rgba(15, 23, 42, 0.36);
+    --share-tab-toggle-shadow-light: rgba(255, 255, 255, 0.08);
+    --flat-reference-amber: #f59e0b;
+    --flat-reference-red: #fca5a5;
+    --flat-reference-red-text: #7f1d1d;
+    --existing-token-action-edit-bg: #22c55e;
+    --existing-token-action-delete-bg: #ef4444;
+    --existing-token-action-text: #ffffff;
+    --flat-reference-ink: #0f172a;
+    --flat-reference-muted: #475569;
+    --flat-reference-border: transparent;
+    --flat-reference-white: #ffffff;
+    --filelist-check-bg-checked-on: #10b981;
+  }
+
+  :root[data-theme="light"],
+  :root.light {
+    --codepen-neu-bg: #e0e5ec;
+    --codepen-neu-bg-secondary: #d1d9e6;
+    --codepen-neu-text: #2d3748;
+    --codepen-neu-heading: #1a202c;
+    --codepen-neu-muted: #718096;
+    --codepen-neu-border: transparent;
+    --share-center-action-tile-bg-light: var(--neu-raised-bg);
+    --share-center-action-tile-bg: var(--share-center-action-tile-bg-light);
+    --share-center-action-tile-border: transparent;
+    --share-center-action-tile-shadow: var(--neu-raised-sm-shadow);
+    --share-center-action-tile-pressed-shadow: var(--neu-pressed-shadow);
+    --share-center-action-tile-icon-filter: none;
+    --share-center-codepen-button-danger-icon: #dc2626;
+    --share-tab-toggle-bg: #10b981;
+    --share-tab-toggle-off-bg: #d1d9e6;
+    --share-tab-toggle-text: #f8fafc;
+    --share-tab-toggle-muted: #2d3748;
+    --share-tab-toggle-shadow-dark: rgba(163, 177, 198, 0.58);
+    --share-tab-toggle-shadow-light: rgba(255, 255, 255, 0.7);
+    --activity-filter-field-bg: rgba(255, 255, 255, 0.88);
+    --activity-filter-field-text: #065f46;
+    --activity-filter-field-placeholder: rgba(6, 95, 70, 0.58);
+    --activity-filter-field-border: transparent;
+    --activity-filter-field-ring: rgba(255, 255, 255, 0.62);
+    --activity-filter-menu-bg: rgba(255, 255, 255, 0.96);
+    --activity-filter-menu-text: #065f46;
+    --filelist-check-bg-checked-on: #6366f1;
+  }
+
+  .shareCenterTabSwitcher {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .shareCenterToggleTabs {
+    --share-tab-toggle-gap: clamp(0.28rem, 0.78vw, 0.42rem);
+    --share-tab-toggle-pad: clamp(0.24rem, 0.7vw, 0.4rem);
+    background: var(--neu-inset-bg) !important;
+    border: 0 !important;
+    border-radius: 999rem;
+    box-shadow: var(--neu-pressed-shadow) !important;
+    display: grid !important;
+    gap: var(--share-tab-toggle-gap);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    isolation: isolate;
+    max-inline-size: 100%;
+    overflow: hidden;
+    padding: var(--share-tab-toggle-pad) !important;
+  }
+
+  .shareCenterToggleActivePill {
+    background: var(--neu-surface-bg-green);
+    border-radius: 999rem;
+    box-shadow:
+      clamp(0.12rem, 0.3vw, 0.18rem) clamp(0.12rem, 0.3vw, 0.18rem)
+        clamp(0.36rem, 0.82vw, 0.52rem) rgba(15, 23, 42, 0.2),
+      clamp(-0.1rem, -0.26vw, -0.06rem) clamp(-0.1rem, -0.26vw, -0.06rem)
+        clamp(0.32rem, 0.74vw, 0.48rem) rgba(255, 255, 255, 0.12);
+    inline-size: calc(
+      (
+          100% - var(--share-tab-toggle-pad) - var(--share-tab-toggle-pad) -
+            var(--share-tab-toggle-gap)
+        ) /
+        2
+    );
+    inset-block: var(--share-tab-toggle-pad);
+    inset-inline-start: var(--share-tab-toggle-pad);
+    pointer-events: none;
+    position: absolute;
+    transform: translateX(0);
+    transition:
+      transform 180ms ease,
+      filter 180ms ease;
+    z-index: 0;
+  }
+
+  .shareCenterToggleActivePill--shares {
+    transform: translateX(0);
+  }
+
+  .shareCenterToggleActivePill--requests {
+    transform: translateX(calc(100% + var(--share-tab-toggle-gap)));
+  }
+
+  .shareCenterToggleButton {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--share-tab-toggle-muted) !important;
+    font-weight: 500;
+    line-height: 1.12;
+    outline: none;
+    transition:
+      color 150ms ease,
+      filter 150ms ease;
+  }
+
+  .shareCenterToggleButton:hover {
+    filter: brightness(1.04);
+  }
+
+  .shareCenterToggleButton--active {
+    background-color: var(--neu-surface-bg-green) !important;
+    color: var(--share-tab-toggle-text) !important;
+    font-weight: 700;
+  }
+
+  .shareCenterToggleButton:focus-visible {
+    outline: 2px solid rgba(var(--neu-surface-bg-green), 0.88);
+    outline-offset: 2px;
+  }
+
+  .fileRequestReviewActionPill {
+    border-color: transparent !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    filter: none;
+    text-shadow: none !important;
+  }
+
+  .fileRequestReviewActionPill--preview {
+    background: var(--flat-reference-purple) !important;
+    color: var(--flat-reference-white) !important;
+  }
+
+  .fileRequestReviewActionPill--open {
+    background: var(--flat-reference-amber) !important;
+    color: var(--flat-reference-ink) !important;
+    text-shadow: none !important;
+  }
+
+  .fileRequestReviewActionPill--approve {
+    background: var(--flat-reference-green) !important;
+    color: var(--flat-reference-white) !important;
+  }
+
+  .fileRequestReviewActionPill--reject {
+    background: var(--flat-reference-red) !important;
+    color: var(--flat-reference-red-text) !important;
+  }
+
+  .fileRequestReviewActionPill:active {
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .fileRequestReviewActionPill:disabled {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--file-request-review-action-disabled-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-pressed-shadow) !important;
+    color: var(--file-request-review-action-disabled-text) !important;
+    cursor: not-allowed;
+    filter: none !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+    transform: none !important;
+  }
+
+  .fileRequestReviewActionPill--approve:disabled {
+    background: var(
+      --file-request-review-action-approve-disabled-bg
+    ) !important;
+    background-image: none !important;
+    border: 0 !important;
+    color: var(--file-request-review-action-approve-disabled-text) !important;
+  }
+
+  .fileRequestReviewActionPill--reject:disabled {
+    background: var(--file-request-review-action-reject-disabled-bg) !important;
+    background-image: none !important;
+    border: 0 !important;
+    color: var(--file-request-review-action-reject-disabled-text) !important;
+  }
+
+  .shareCenterCodepenFrame,
+  .shareCenterCodepenShell,
+  .shareCenterCodepenList,
+  .shareCenterNeuRaisedPanel,
+  .shareCenterNeuRaisedSurface,
+  .shareCenterNeuInsetSurface,
+  .shareCenterNeuPressedSurface,
+  .shareCenterNeuDataList,
+  .shareCenterNeuDataRow,
+  .shareCenterNeuFormInput,
+  .shareCenterNeuControl,
+  .shareCenterNeuActionButton,
+  .shareCenterCreatePillButton,
+  .shareCenterActionTile,
+  .shareCenterCodepenActionTile,
+  .shareCenterDarkActionTile,
+  .shareCenterFlatPanel,
+  .shareCenterFlatSurface,
+  .shareCenterFlatBadge,
+  .shareCenterFlatIconButton {
+    text-shadow: none !important;
+  }
+
+  .shareCenterCodepenFrame,
+  .shareCenterCodepenShell,
+  .shareCenterCodepenList,
+  .shareCenterNeuRaisedPanel,
+  .shareCenterNeuRaisedSurface,
+  .shareCenterNeuInsetSurface,
+  .shareCenterNeuPressedSurface,
+  .shareCenterNeuDataList,
+  .shareCenterNeuDataRow,
+  .shareCenterNeuFormInput,
+  .shareCenterNeuControl,
+  .shareCenterFlatPanel,
+  .shareCenterFlatSurface {
+    --settings-title: var(--codepen-neu-heading);
+    --settings-subtitle: var(--codepen-neu-muted);
+    --settings-panel-value: var(--codepen-neu-heading);
+    --settings-panel-muted: var(--codepen-neu-muted);
+    --settings-chip-text: var(--codepen-neu-muted);
+    background-image: none !important;
+    border-color: var(--codepen-neu-border) !important;
+    color: var(--codepen-neu-text);
+  }
+
+  .shareCenterCodepenFrame,
+  .shareCenterCodepenShell,
+  .shareCenterCodepenList,
+  .shareCenterNeuRaisedPanel,
+  .shareCenterNeuRaisedSurface,
+  .shareCenterNeuInsetSurface,
+  .shareCenterNeuPressedSurface,
+  .shareCenterNeuDataList,
+  .shareCenterNeuDataRow,
+  .shareCenterFlatPanel {
+    background: var(--codepen-neu-bg) !important;
+    color: var(--codepen-neu-text);
+  }
+
+  .shareCenterCodepenFrame,
+  .shareCenterCodepenList {
+    background: var(--neu-inset-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .shareCenterCodepenShell,
+  .shareCenterNeuRaisedPanel {
+    background: var(--neu-raised-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-raised-shadow) !important;
+  }
+
+  .shareCenterNeuRaisedSurface {
+    background: var(--neu-raised-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .shareCenterNeuInsetSurface,
+  .shareCenterNeuDataList,
+  .shareCenterNeuControl {
+    background: var(--neu-inset-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .shareCenterNeuDataList {
+    display: grid;
+    gap: clamp(0.48rem, 1.1vw, 0.62rem);
+  }
+
+  .shareCenterNeuDataRow {
+    background: var(--neu-raised-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .shareCenterNeuFormInput {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--neu-inset-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    outline: none;
+  }
+
+  .shareCenterNeuFormInput:focus {
+    border-color: color-mix(
+      in srgb,
+      var(--flat-reference-purple) 58%,
+      transparent
+    ) !important;
+    box-shadow:
+      var(--neu-inset-shadow),
+      0 0 0 clamp(0.1rem, 0.22vw, 0.14rem)
+        color-mix(in srgb, var(--flat-reference-purple) 24%, transparent) !important;
+  }
+
+  .shareCenterNeuActionButton {
+    border-color: transparent !important;
+    box-shadow: var(--neu-flat-shadow) !important;
+    text-shadow: none !important;
+  }
+
+  .shareCenterNeuActionButton:hover {
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .shareCenterNeuActionButton:active {
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .share-managed-row {
+    container-type: inline-size;
+  }
+
+  .shareCenterActionTile {
+    --share-center-action-tile-aspect-ratio: 2.6 / 1;
+    --share-center-action-tile-inline-size: 100%;
+    --share-center-action-tile-block-size: calc(
+      (
+          100cqi - var(--share-center-action-tile-gap) -
+            var(--share-center-action-tile-gap)
+        ) /
+        7.8
+    );
+    aspect-ratio: var(--share-center-action-tile-aspect-ratio);
+    block-size: var(--share-center-action-tile-block-size);
+    box-sizing: border-box;
+    border-radius: 999rem !important;
+    inline-size: var(--share-center-action-tile-inline-size);
+    min-block-size: 0 !important;
+    min-height: 0 !important;
+    min-inline-size: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+    padding-block: clamp(0.12em, 2.2cqi, 0.3em) !important;
+    padding-inline: clamp(0.42em, 5.2cqi, 0.95em) !important;
+  }
+
+  .shareCenterActionTile svg {
+    block-size: clamp(0.82em, 8.4cqi, 1.12em) !important;
+    height: clamp(0.82em, 8.4cqi, 1.12em) !important;
+    inline-size: clamp(0.82em, 8.4cqi, 1.12em) !important;
+    width: clamp(0.82em, 8.4cqi, 1.12em) !important;
+  }
+
+  .shareCenterActionTileGroup {
+    --share-center-action-tile-count: 3;
+    --share-center-action-tile-gap: clamp(0.28em, 1.9cqi, 0.62em);
+    align-items: center;
+    container-type: inline-size;
+    display: grid !important;
+    gap: var(--share-center-action-tile-gap) !important;
+    grid-template-columns: repeat(
+      var(--share-center-action-tile-count),
+      minmax(0, 1fr)
+    );
+    inline-size: min(100%, 48cqi, 12.75em) !important;
+    justify-self: end;
+    width: min(100%, 48cqi, 12.75em) !important;
+  }
+
+  .shareCenterClosePillButton {
+    border-radius: 999rem !important;
+    inline-size: fit-content !important;
+    max-inline-size: 100%;
+    min-block-size: 0 !important;
+    min-height: 0 !important;
+    min-inline-size: 0 !important;
+    min-width: 0 !important;
+    width: fit-content !important;
+  }
+
+  .shareCenterNeuPressedSurface {
+    background: var(--neu-inset-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .shareCenterFlatPanel {
+    box-shadow: none !important;
+  }
+
+  .shareCenterFlatSurface,
+  .shareCenterFlatSurface--active {
+    background: var(--codepen-neu-bg) !important;
+    box-shadow: none !important;
+  }
+
+  .shareCenterFlatBadge {
+    border-color: transparent !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .shareCenterShareDetailPanel,
+  .shareCenterRequestDetailPanel {
+    box-shadow: var(--neu-raised-shadow) !important;
+    text-shadow: none !important;
+  }
+
+  @media (min-width: 80rem) {
+    /*.shareCenterShareDetailPanel {
+            margin-block-start: clamp(3.35rem, 6.5vw, 4.5rem);
+        }
+
+        .shareCenterRequestDetailPanel {
+            margin-block-start: clamp(6.25rem, 12vw, 8.45rem);
+        }*/
+  }
+
+  .fileRequestCreateControl {
+    --file-request-create-control-height: clamp(2.75rem, 6vw, 3.15rem);
+    block-size: var(--file-request-create-control-height);
+    min-block-size: var(--file-request-create-control-height);
+    text-shadow: none !important;
+    transform: none !important;
+  }
+
+  .fileRequestCreateInput {
+    background: var(--neu-inset-bg) !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    color: var(--codepen-neu-text) !important;
+    letter-spacing: 0 !important;
+  }
+
+  .fileRequestCreateInput:focus {
+    border: 0 !important;
+    box-shadow:
+      var(--neu-inset-shadow),
+      0 0 0 clamp(0.1rem, 0.22vw, 0.14rem)
+        color-mix(in srgb, var(--flat-reference-purple) 24%, transparent) !important;
+  }
+
+  .fileRequestCreateButton,
+  .fileRequestCreateButton:hover,
+  .fileRequestCreateButton:active {
+    background: var(--flat-reference-purple) !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    color: var(--flat-reference-white) !important;
+    transform: none !important;
+  }
+
+  .fileRequestCreateButton:active {
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .shareCenterCreatePillButton,
+  .shareCenterCreatePillButton:hover,
+  .shareCenterCreatePillButton:active {
+    background: var(--share-tab-toggle-bg) !important;
+    background-image: none !important;
+    border-radius: 999rem !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    font-weight: 700;
+  }
+
+  .shareCenterCreatePillButton:active {
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .shareCenterFlatIconButton,
+  .ocrStatusFlatButton,
+  .activityFlatButton,
+  .activityFlatChip {
+    border-color: transparent !important;
+    background: var(--flat-reference-green-surface-bg) !important;
+  }
+
+  .shareCenterFlatIconButton--green,
+  .ocrStatusFlatButton--green,
+  .activityFlatRefreshButton {
+    background: var(--flat-reference-green) !important;
+    color: var(--flat-reference-white) !important;
+  }
+
+  .shareCenterFlatIconButton--red {
+    background: var(--flat-reference-red) !important;
+    color: var(--flat-reference-red-text) !important;
+  }
+
+  .shareCenterFlatIconButton,
+  .shareCenterFlatIconButton:hover,
+  .shareCenterFlatIconButton:active {
+    transform: none !important;
+  }
+
+  .shareCenterFlatIconButton:hover,
+  .shareCenterFlatIconButton:active {
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .shareCenterFlatIconButton:active {
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .shareCenterCodepenActionTile {
+    --share-center-codepen-button-bg: var(
+      --share-center-codepen-button-default-bg
+    );
+    --share-center-codepen-button-icon: var(--flat-reference-white);
+    background: var(--share-center-codepen-button-bg) !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    box-shadow: var(--share-center-codepen-button-raised-shadow) !important;
+    color: var(--share-center-codepen-button-icon) !important;
+    filter: none;
+    transform: translateY(0) !important;
+    transition:
+      transform 160ms ease,
+      filter 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .shareCenterCodepenActionTile--success {
+    --share-center-codepen-button-bg: var(
+      --share-center-codepen-button-success-bg
+    );
+  }
+
+  .shareCenterCodepenActionTile--primary {
+    --share-center-codepen-button-bg: var(
+      --share-center-codepen-button-primary-bg
+    );
+  }
+
+  .shareCenterCodepenActionTile--danger {
+    --share-center-codepen-button-bg: var(
+      --share-center-codepen-button-default-bg
+    );
+    --share-center-codepen-button-icon: var(
+      --share-center-codepen-button-danger-icon
+    );
+  }
+
+  .shareCenterCodepenActionTile:hover {
+    box-shadow: var(--share-center-codepen-button-raised-shadow) !important;
+    filter: brightness(1.04);
+    transform: translateY(clamp(-0.08rem, -0.18vw, -0.05rem)) !important;
+  }
+
+  .shareCenterCodepenActionTile:active {
+    box-shadow: var(--share-center-codepen-button-pressed-shadow) !important;
+    filter: brightness(0.98);
+    transform: translateY(clamp(0.04rem, 0.1vw, 0.07rem)) !important;
+  }
+
+  .shareCenterCodepenActionTile svg {
+    color: var(--share-center-codepen-button-icon) !important;
+    filter: var(--share-center-action-tile-icon-filter);
+    stroke: currentColor;
+  }
+
+  .shareCenterCodepenActionTile--danger svg {
+    color: var(--share-center-codepen-button-danger-icon) !important;
+  }
+
+  .shareCenterDarkActionTile,
+  .shareCenterDarkActionTile:hover,
+  .shareCenterDarkActionTile:active {
+    --share-center-dark-action-accent: var(--flat-reference-purple);
+    background: var(--share-center-action-tile-bg) !important;
+    border-color: var(--share-center-action-tile-border) !important;
+    box-shadow: var(--share-center-action-tile-shadow) !important;
+    color: var(--share-center-dark-action-accent) !important;
+  }
+
+  .shareCenterDarkActionTile--green {
+    --share-center-dark-action-accent: var(--flat-reference-green);
+  }
+
+  .shareCenterDarkActionTile--red {
+    --share-center-dark-action-accent: var(--flat-reference-red);
+  }
+
+  .shareCenterDarkActionTile:hover {
+    filter: brightness(1.04);
+  }
+
+  .shareCenterDarkActionTile:active {
+    box-shadow: var(--share-center-action-tile-pressed-shadow) !important;
+    filter: brightness(0.98);
+  }
+
+  .shareCenterDarkActionTile svg {
+    color: var(--share-center-dark-action-accent) !important;
+    filter: var(--share-center-action-tile-icon-filter);
+    stroke: currentColor;
+  }
+
+  .existingTokenInsetFrame,
+  .existingTokenInsetRow,
+  .existingTokenNeuButton,
+  .existingTokenFlatAction {
+    text-shadow: none !important;
+  }
+
+  .existingTokenInsetFrame {
+    --settings-panel-value: var(--codepen-neu-heading);
+    --settings-panel-muted: var(--codepen-neu-muted);
+    --settings-section-subtitle: var(--codepen-neu-muted);
+    background: var(--neu-inset-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    color: var(--settings-panel-value);
+  }
+
+  .existingTokenInsetRow {
+    --settings-panel-value: var(--codepen-neu-heading);
+    --settings-panel-muted: var(--codepen-neu-muted);
+    --settings-section-subtitle: var(--codepen-neu-muted);
+    background: var(--neu-inset-bg) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    color: var(--settings-panel-value);
+  }
+
+  .existingTokenFlatAction {
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    color: var(--existing-token-action-text) !important;
+    text-shadow: none !important;
+    transform: none !important;
+  }
+
+  .existingTokenFlatAction--edit {
+    background: var(--neu-surface-bg-green) !important;
+  }
+
+  .existingTokenFlatAction--delete {
+    background: var(--neu-surface-bg-red) !important;
+  }
+
+  .existingTokenFlatAction:hover,
+  .existingTokenFlatAction:active {
+    box-shadow: none !important;
+    filter: brightness(1.04);
+    transform: none !important;
+  }
+
+  .ocrStatusFlatTile,
+  .ocrStatusFlatButton {
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    text-shadow: none !important;
+  }
+
+  .ocrStatusFlatTile {
+    background: var(--flat-reference-green-surface-bg) !important;
+    border-color: var(--flat-reference-green-surface-border) !important;
+    color: var(--flat-reference-green-surface-text);
+  }
+
+  .ocrStatusFlatTile .ocrStatusTileLabel {
+    color: var(--flat-reference-green-surface-muted) !important;
+  }
+
+  .ocrStatusFlatTile .ocrStatusTileValue {
+    color: var(--flat-reference-green-surface-text) !important;
+  }
+
+  .ocrStatusFlatTile .ocrStatusTileDetail {
+    color: var(--flat-reference-green-surface-muted) !important;
+  }
+
+  .ocrStatusFlatButton,
+  .ocrStatusFlatButton:hover,
+  .ocrStatusFlatButton:active {
+    transform: none !important;
+  }
+
+  .ocrStatusTileDetail {
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .activityFlatPanel,
+  .activityRaisedSurface,
+  .activityInsetSurface,
+  .activityIdentityPanel,
+  .activityFlatChip,
+  .activityFlatButton {
+    text-shadow: none !important;
+  }
+
+  .activityFlatPanel,
+  .activityRaisedSurface,
+  .activityInsetSurface,
+  .activityIdentityPanel {
+    --settings-title: var(--settings-panel-value);
+    --settings-subtitle: var(--settings-panel-muted);
+    color: var(--settings-panel-value);
+    border-color: transparent !important;
+  }
+
+  .activityFlatPanel,
+  .activityRaisedSurface {
+    background: var(--neu-raised-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-raised-shadow) !important;
+  }
+
+  .activityInsetSurface,
+  .activityIdentityPanel {
+    background: var(--neu-inset-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .activityIdentityPanel {
+    border: 0 !important;
+  }
+
+  .activityFlatChip,
+  .activityFlatButton {
+    /*background: var(--neu-raised-bg) !important;*/
+    background-image: none !important;
+    box-shadow: var(--neu-flat-shadow) !important;
+    color: var(--settings-secondary-text) !important;
+  }
+
+  .activitySemanticBadge,
+  .activitySemanticBadge:hover,
+  .activitySemanticBadge:active {
+    border: 0 !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    text-shadow: none !important;
+    transform: none !important;
+  }
+
+  .activitySemanticBadge--success {
+    background: #10b981 !important;
+  }
+
+  .activitySemanticBadge--warning {
+    background: #eab308 !important;
+  }
+
+  .activitySemanticBadge--danger {
+    background: #ef4444 !important;
+  }
+
+  .activitySemanticBadge--info {
+    background: #3b82f6 !important;
+  }
+
+  .activitySemanticBadge--neutral {
+    background: #4b5563 !important;
+  }
+
+  .activityFlatChip:active,
+  .activityFlatButton:active {
+    box-shadow: var(--neu-pressed-shadow) !important;
+  }
+
+  .neuSelectFlatMenu {
+    background: var(--neu-inset-bg) !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    color: var(--settings-panel-value) !important;
+    text-shadow: none !important;
+  }
+
+  .neuSelectOption {
+    background: transparent !important;
+    background-image: none !important;
+    border: 0 !important;
+    /*box-shadow: none !important;*/
+    text-shadow: none !important;
+    transform: none !important;
+  }
+
+  .neuSelectOptionIdle {
+    color: var(--settings-panel-value) !important;
+  }
+
+  .neuSelectOptionHoverable:hover,
+  .neuSelectOptionHoverable:focus-visible {
+    background: color-mix(
+      in srgb,
+      var(--neu-raised-bg) 78%,
+      transparent 22%
+    ) !important;
+    color: var(--settings-action-text) !important;
+    filter: brightness(1.04);
+    outline: none;
+  }
+
+  .neuSelectOptionSelected,
+  .neuSelectOptionSelected:hover,
+  .neuSelectOptionSelected:focus-visible {
+    background: var(--neu-surface-bg-green) !important;
+    color: var(--flat-reference-white) !important;
+    filter: none;
+    box-shadow: var(--neu-raised-sm-shadow);
+  }
+
+  .activityFilterFieldsShell {
+    --settings-form-input-bg: var(--neu-inset-bg);
+    --settings-form-input-border: transparent;
+    --settings-form-input-border-focus: rgba(99, 102, 241, 0.22);
+    --settings-form-input-ring: rgba(99, 102, 241, 0.2);
+    --settings-form-input-shadow: var(--neu-inset-shadow);
+    --settings-form-input-shadow-focus: var(--neu-inset-shadow);
+    --settings-surface-bg: var(--neu-raised-bg);
+  }
+
+  .peer:checked + .settings-color-checkbox-indicator {
+    background: var(--neu-surface-bg-green) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-raised-shadow) !important;
+    color: transparent !important;
+  }
+
+  .activityFilterFieldsShell .settings-neu-inset-control {
+    /*background: var(--neu-inset-bg) !important;*/
+    border-color: transparent !important;
+    /*box-shadow: var(--neu-inset-shadow) !important;*/
+    text-shadow: none !important;
+  }
+
+  .activityFilterFieldsShell .settings-neu-raised-card {
+    background: var(--neu-raised-bg) !important;
+    box-shadow: var(--neu-raised-shadow) !important;
+    color: var(--settings-panel-value) !important;
+  }
+
+  .activityCodepenGhostButton,
+  .activityCodepenGhostButton:hover,
+  .activityCodepenGhostButton:active {
+    background: var(--neu-raised-bg) !important;
+    color: var(--settings-secondary-text) !important;
+    border-color: transparent !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .activityFlatButton,
+  .activityFlatButton:hover,
+  .activityFlatButton:active {
+    transform: none !important;
+  }
+
+  .activityFlatRefreshButton {
+    background: var(--flat-reference-green) !important;
+    background-image: none !important;
+    border-color: transparent !important;
+  }
+
+  .activityTimelineFluidAction {
+    flex: 1 1 auto;
+    inline-size: auto;
+    min-block-size: clamp(2.45rem, 5.8vw, 3.05rem);
+    max-inline-size: 100%;
+  }
+
+  .activityErrorStatePanel {
+    background: var(--neu-inset-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .activityErrorGuidanceGroup {
+    background: var(--neu-inset-bg) !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+    color: var(--settings-panel-value) !important;
+    text-shadow: none !important;
+  }
+
+  .activityErrorGuidanceItem {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--settings-panel-value) !important;
+    text-shadow: none !important;
+  }
+
+  .activityErrorStateIcon,
+  .activityErrorStateIssue {
+    background: var(--neu-raised-bg) !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: var(--neu-raised-shadow) !important;
+    color: var(--settings-panel-value) !important;
+    text-shadow: none !important;
+  }
+
+  .activityErrorStateIconDanger {
+    color: var(--color-danger-text) !important;
+  }
+
+  .neuDatePickerDay {
+    background: color-mix(
+      in srgb,
+      var(--neu-raised-bg) 88%,
+      var(--neu-shadow-light) 12%
+    ) !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .neuDatePickerDay:hover:not(:disabled) {
+    filter: brightness(1.04);
+  }
+
+  .neuDatePickerDaySelected {
+    background: var(--neu-inset-bg) !important;
+    box-shadow: var(--neu-pressed-shadow) !important;
+    color: var(--settings-action-text) !important;
+  }
+
+  .neuDatePickerDayToday {
+    background: var(--neu-surface-bg-green) !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    color: rgba(var(--rgb-white), 0.98) !important;
+  }
+
+  .neuDatePickerDayMuted {
+    color: var(--settings-panel-label) !important;
+    opacity: 0.58;
+  }
+
+  .neuDatePickerDayDisabled {
+    cursor: not-allowed !important;
+    filter: saturate(0.72);
+    opacity: 0.34;
+  }
+}

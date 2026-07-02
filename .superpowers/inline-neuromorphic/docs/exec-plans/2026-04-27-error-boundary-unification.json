@@ -1,0 +1,32 @@
+{
+  "task": "backend-error-boundary-unification",
+  "date": "2026-04-27",
+  "scope": [
+    "backend/src/services/auth.rs",
+    "backend/src/services/auth/error.rs",
+    "backend/src/services/file/chunked_upload.rs",
+    "backend/src/services/file/error.rs"
+  ],
+  "assumptions": [
+    "Startup binaries may continue using anyhow",
+    "Existing unstaged changes do not redefine auth or chunked upload contracts",
+    "A pattern-first migration is acceptable for this task"
+  ],
+  "risks": [
+    "HTTP status or user-facing message regressions during error remapping",
+    "Chunked upload flow has broader behavioral surface than CRUD handlers",
+    "Backend compile/test loop is comparatively slow"
+  ],
+  "dependencies": [
+    "thiserror",
+    "AppError as the HTTP/logging boundary",
+    "Current repository traits returning AppError"
+  ],
+  "steps": [
+    "Add unit tests for domain error to AppError mappings",
+    "Introduce AuthServiceError and FileServiceError",
+    "Convert auth and chunked upload services to return domain errors",
+    "Keep handlers on Result<T, AppError> through From conversions",
+    "Record permanent constraints and verify with cargo test/check"
+  ]
+}

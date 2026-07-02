@@ -1,0 +1,21 @@
+{
+  "task": "upload-review-followup",
+  "date": "2026-05-04",
+  "assumptions": [
+    "Upload APIs and persisted resume metadata keep their current shape.",
+    "S3 bucket names are valid bucket identifiers; object keys need percent-encoding.",
+    "Full-file Web Crypto SHA-256 is unsafe for large uploads because it requires a whole-file buffer.",
+    "One retry with the latest source is enough to handle codex-cli patch context drift without creating an unbounded loop."
+  ],
+  "risks": [
+    "Worker tests need to exercise the handler without a browser Worker runtime.",
+    "S3 copy source encoding must preserve slash separators in object keys.",
+    "codex-cli retry must remain bounded to one extra model call per issue."
+  ],
+  "steps": [
+    "Add failing tests for frontend bounded-memory hashing and S3 copy source encoding.",
+    "Implement chunked SHA-256 hashing for file paths and URL-encoded S3 copy source headers.",
+    "Add codex-cli apply-failure retry with an e2e regression test.",
+    "Run targeted frontend, backend, and codex-cli tests."
+  ]
+}

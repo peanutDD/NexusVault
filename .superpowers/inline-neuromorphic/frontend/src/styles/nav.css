@@ -1,0 +1,152 @@
+/* Shared navigation sizing and interaction rules. Surface depth comes only
+   from the global Neuromorphic primitives. */
+
+@layer components {
+  .nav-surface-shell {
+    background: var(--neu-raised-bg);
+    background-image: none;
+    border-color: transparent;
+    box-shadow: var(--neu-raised-shadow);
+  }
+
+  .nav-title-fluid {
+    font-size: var(--nav-title-font-size);
+    line-height: 1.05;
+  }
+
+  .nav-brand-title {
+    color: var(--filelist-check-bg-checked-on);
+    font-family: var(--font-brand-display);
+    font-feature-settings:
+      "ss01" 1,
+      "kern" 1;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-rendering: geometricPrecision;
+  }
+
+  .nav-ui-fluid {
+    font-size: var(--nav-ui-font-size);
+  }
+
+  .nav-panel {
+    gap: var(--nav-panel-gap);
+    padding: var(--nav-panel-padding);
+    border-radius: var(--nav-panel-radius, var(--nav-btn-radius));
+    background: var(--neu-raised-bg);
+    background-image: none;
+    border-color: transparent;
+    box-shadow: var(--neu-raised-shadow);
+  }
+
+  .nav-chip {
+    height: var(--nav-control-h);
+    padding-inline: var(--nav-chip-px);
+    gap: var(--nav-control-gap);
+    border-radius: var(--nav-btn-radius);
+    background: var(--neu-inset-bg);
+    background-image: none;
+    border-color: transparent;
+    box-shadow: var(--neu-inset-shadow);
+    white-space: nowrap;
+  }
+
+  .nav-btn {
+    height: var(--nav-control-h);
+    padding-inline: var(--nav-control-px);
+    gap: var(--nav-control-gap);
+    border-radius: var(--nav-btn-radius);
+    background: var(--neu-raised-bg);
+    background-image: none;
+    border-color: transparent;
+    box-shadow: var(--neu-raised-sm-shadow);
+    white-space: nowrap;
+  }
+
+  .nav-btn:hover {
+    color: var(--nav-btn-text);
+  }
+
+  .nav-btn:active {
+    background: var(--neu-inset-bg);
+    box-shadow: var(--neu-pressed-shadow);
+    transform: translateY(var(--nav-press-shift));
+  }
+
+  .nav-theme-tooltip {
+    position: relative;
+    overflow: visible;
+  }
+
+  .nav-theme-tooltip::before,
+  .nav-theme-tooltip::after {
+    position: absolute;
+    left: 50%;
+    z-index: 60;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 0ms linear,
+      transform var(--transition-fast, 150ms) ease;
+  }
+
+  .nav-theme-tooltip::before {
+    content: attr(data-tooltip);
+    top: calc(100% + var(--nav-tooltip-offset));
+    transform: translate(-50%, calc(var(--nav-tooltip-shift) * -1));
+    width: max-content;
+    max-width: var(--nav-tooltip-max-width);
+    padding: var(--nav-tooltip-padding-block) var(--nav-tooltip-padding-inline);
+    border-radius: var(--nav-btn-radius);
+    background: var(--neu-raised-bg);
+    background-image: none;
+    color: var(--color-text-primary);
+    box-shadow: var(--neu-raised-sm-shadow);
+    font-size: var(--nav-tooltip-font-size);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .nav-theme-tooltip::after {
+    content: "";
+    top: calc(100% + calc(var(--nav-tooltip-offset) * 0.5));
+    transform: translate(-50%, calc(var(--nav-tooltip-shift) * -1));
+    border: var(--nav-tooltip-arrow-size) solid transparent;
+    border-bottom-color: var(--neu-surface-bg);
+  }
+
+  .nav-theme-tooltip:hover::before,
+  .nav-theme-tooltip:focus-visible::before,
+  .nav-theme-tooltip:hover::after,
+  .nav-theme-tooltip:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+  }
+
+  .nav-iconbtn {
+    width: var(--nav-control-h);
+    height: var(--nav-control-h);
+    padding: 0;
+  }
+
+  .nav-icon {
+    width: var(--nav-icon-size);
+    height: var(--nav-icon-size);
+  }
+
+  .nav-dot {
+    width: var(--nav-dot-size);
+    height: var(--nav-dot-size);
+  }
+
+  @media (max-width: 640px) {
+    .nav-panel {
+      border-radius: 0;
+      box-shadow: none;
+    }
+  }
+}

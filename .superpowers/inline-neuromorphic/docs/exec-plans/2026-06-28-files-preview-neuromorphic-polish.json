@@ -1,0 +1,30 @@
+{
+  "date": "2026-06-28",
+  "task": "files-preview-neuromorphic-polish",
+  "intent": "Polish Files home and Preview neuromorphic UI, fix chip collapse event bug, unify controls, improve contrast, and redesign unsupported preview state.",
+  "assumptions": [
+    "React frontend under frontend/ is the target surface.",
+    "Supplied screenshots are authoritative when Chrome/CodePen access is unstable.",
+    "Existing dirty worktree changes are user-owned unless this task touches them.",
+    "CSS source-contract tests are acceptable for visual invariants."
+  ],
+  "risks": [
+    "File list components are shared across layouts.",
+    "Full suite has pre-existing failures unrelated to this task.",
+    "Contrast tokens can have broader visual impact if changed globally."
+  ],
+  "dependencies": [
+    "frontend/src/components/files/list",
+    "frontend/src/components/files/grid",
+    "frontend/src/components/files/preview",
+    "frontend/src/styles/preview.css",
+    "frontend/src/styles/tokens.css"
+  ],
+  "steps": [
+    "Add targeted tests for the requested UI/behavior changes.",
+    "Implement scoped fluid neuromorphic styles and event fixes.",
+    "Adjust semantic contrast tokens for Files/Filters/Preview only.",
+    "Run targeted verification and note any pre-existing failures.",
+    "Record permanent constraints and quality score notes."
+  ]
+}

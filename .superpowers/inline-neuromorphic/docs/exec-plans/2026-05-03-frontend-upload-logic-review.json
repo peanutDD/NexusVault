@@ -1,0 +1,32 @@
+{
+  "date": "2026-05-03",
+  "task": "frontend-upload-logic-review",
+  "goal": "Review and upgrade frontend upload logic for cancellation, validation, cleanup, and status reporting.",
+  "assumptions": [
+    "The active upload dialog controller is frontend/src/components/files/upload/useUploadDialogController.ts.",
+    "frontend/src/hooks/files/useFileUpload.ts is legacy or secondary because no current caller imports it.",
+    "The backend chunked upload abort endpoint is available."
+  ],
+  "risks": [
+    "Browser File.type can be empty for common files.",
+    "UI-only removal can leave hidden network uploads running.",
+    "Cancelling a running queue item can hang the upload batch if the queue Promise never settles.",
+    "Chunked upload failures can leak server-side sessions.",
+    "URL upload can read a very large remote body into browser memory before local validation runs."
+  ],
+  "dependencies": [
+    "Axios AbortSignal support",
+    "Existing UploadQueue cancellation support",
+    "Vitest jsdom test environment"
+  ],
+  "steps": [
+    "Inspect upload UI, upload service, queue, validation, and tests.",
+    "Add AbortSignal propagation through hashing and upload services.",
+    "Wire remove and clear actions to abort queued and running uploads.",
+    "Add MIME fallback validation and dangerous extension blocking.",
+    "Add URL upload size preflight before response.blob() and filename fallback from Content-Disposition.",
+    "Ensure queued and running upload cancellation settles the queue Promise.",
+    "Add regression tests and permanent constraints.",
+    "Run tests, lint, typecheck, and build."
+  ]
+}

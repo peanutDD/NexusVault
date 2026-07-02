@@ -1,0 +1,54 @@
+<style>
+  .coverage-shell{margin-top:26px;display:grid;grid-template-columns:1.05fr 1.45fr;gap:22px}
+  .panel{border-radius:22px;background:#2d3748;color:#f7fafc;padding:24px;box-shadow:9px 9px 18px #1a202c,-9px -9px 18px #4a5568}
+  .panel h3{margin:0 0 16px}.routes{display:grid;gap:10px}.route{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:13px;background:#2d3748;box-shadow:inset 4px 4px 8px #1a202c,inset -4px -4px 8px #4a5568;color:#cbd5e1}.route code{color:#fff;font-weight:700}.tick{width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.1)}
+  .families{display:grid;grid-template-columns:1fr 1fr;gap:14px}.family{min-height:116px;border-radius:16px;padding:16px;background:#2d3748;box-shadow:6px 6px 12px #1a202c,-6px -6px 12px #4a5568}.family h4{margin:0 0 8px;color:#fff}.family p{margin:0;color:#a0aec0;font-size:13px;line-height:1.45}.primitive{display:inline-flex;margin-top:12px;border-radius:999px;padding:5px 10px;background:#6366f1;color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  .guard{grid-column:1/-1;border-radius:18px;padding:18px 20px;background:#2d3748;box-shadow:inset 5px 5px 10px #1a202c,inset -5px -5px 10px #4a5568;color:#cbd5e1}.guard strong{color:#fff}.guard-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.guard-item{font-size:12px;color:#a0aec0}.guard-item b{color:#34d399}
+  @media(max-width:900px){.coverage-shell{grid-template-columns:1fr}.families{grid-template-columns:1fr}.guard-grid{grid-template-columns:1fr 1fr}}
+</style>
+
+<p class="label">设计确认 2 / 3</p>
+<h2>全页面与组件族覆盖矩阵</h2>
+<p class="subtitle">不是只替换几个 token：每个路由、每类共享组件、每种交互状态都必须归入 primitive，并由自动扫描阻止旧视觉回流。</p>
+
+<div class="coverage-shell">
+  <section class="panel">
+    <h3>10 个路由入口 · Light + Dark</h3>
+    <div class="routes">
+      <div class="route"><span class="tick"></span><code>/login</code> 登录</div>
+      <div class="route"><span class="tick"></span><code>/register</code> 注册</div>
+      <div class="route"><span class="tick"></span><code>/auth/callback/github</code> 回调</div>
+      <div class="route"><span class="tick"></span><code>/share/:token</code> 公共分享</div>
+      <div class="route"><span class="tick"></span><code>/request/:token</code> 文件请求</div>
+      <div class="route"><span class="tick"></span><code>/files</code> 文件中心</div>
+      <div class="route"><span class="tick"></span><code>/settings</code> 设置</div>
+      <div class="route"><span class="tick"></span><code>/activity</code> Audit Center</div>
+      <div class="route"><span class="tick"></span><code>/shares</code> Share Center</div>
+      <div class="route"><span class="tick"></span><code>/trash</code> 回收站</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>共享组件族映射</h3>
+    <div class="families">
+      <div class="family"><h4>页面壳 / 导航 / 底栏</h4><p>页面底板保持 flat；导航容器 raised；当前项 pressed。</p><span class="primitive">flat · raised · pressed</span></div>
+      <div class="family"><h4>卡片 / 列表 / 菜单</h4><p>内容卡 raised；列表槽和元数据区 inset；分隔线不模拟边框。</p><span class="primitive">raised · inset</span></div>
+      <div class="family"><h4>输入 / 选择 / 日期 / 搜索</h4><p>所有可编辑字段统一 inset；下拉菜单 raised；focus 仅保留可访问性轮廓。</p><span class="primitive">inset · raised</span></div>
+      <div class="family"><h4>按钮 / 标签 / 徽章</h4><p>普通按钮 raised、按下 pressed；状态 badge 使用语义纯色，不叠容器渐变。</p><span class="primitive">raised · pressed · semantic</span></div>
+      <div class="family"><h4>弹窗 / 抽屉 / 上传</h4><p>遮罩保持中性；弹窗 raised；内容槽、dropzone、进度轨道 inset。</p><span class="primitive">raised · inset</span></div>
+      <div class="family"><h4>预览 / 工具栏 / 分页</h4><p>预览舞台 flat 或 inset；悬浮工具栏 raised；页码选中 pressed。</p><span class="primitive">flat · inset · raised</span></div>
+      <div class="family"><h4>Loading / Empty / Error</h4><p>状态容器复用同一 surface，不再使用 glass、tech、scanline 或 glow。</p><span class="primitive">raised · inset · semantic</span></div>
+      <div class="family"><h4>响应式 / Tauri 平台层</h4><p>桌面、手机和 macOS 壳共享同一光源与 token，不新增平台专属阴影。</p><span class="primitive">same primitives</span></div>
+    </div>
+  </section>
+
+  <section class="guard">
+    <strong>永久遗漏防线</strong>
+    <div class="guard-grid">
+      <div class="guard-item"><b>CSS 扫描</b><br>拒绝旧 glass / tech / codepen / share 专属 surface</div>
+      <div class="guard-item"><b>边框扫描</b><br>普通 Neu surface 禁止可见 border 和 inset outline</div>
+      <div class="guard-item"><b>主题矩阵</b><br>每个页面 desktop/mobile × light/dark 截图</div>
+      <div class="guard-item"><b>交互矩阵</b><br>default / hover / active / focus / disabled 全状态</div>
+    </div>
+  </section>
+</div>

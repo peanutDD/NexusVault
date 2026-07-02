@@ -1,0 +1,52 @@
+{
+  "date": "2026-05-05",
+  "title": "Light Tech Chrome Nav Footer",
+  "style": "Premium Tech Chrome",
+  "implementationSurface": "Token-first visual layer with nav background rendering fix",
+  "scope": {
+    "included": [
+      "light-mode nav visual tokens",
+      "light-mode footer visual tokens",
+      "light-mode macOS titlebar override",
+      "NavBar background shorthand needed for gradient token rendering",
+      "light-mode screenshot evidence"
+    ],
+    "excluded": [
+      "DOM structure changes",
+      "layout, spacing, sizing, routing, props, store, or persistence changes",
+      "new theme mode",
+      "animation-heavy overlay"
+    ]
+  },
+  "assumptions": [
+    "The request targets the existing light mode theme.",
+    "Color, gradient, shadow, border, opacity, and glow changes are allowed.",
+    "Navigation and footer dimensions remain unchanged."
+  ],
+  "risks": [
+    "Dark chrome surfaces can reduce contrast if text tokens are left in the old light palette.",
+    "macOS platform overrides can flatten the nav back to plain white.",
+    "Gradient nav tokens require the CSS background shorthand rather than background-color."
+  ],
+  "dependencies": [
+    "frontend/src/styles/tokens.css",
+    "frontend/src/styles/nav.css",
+    "frontend/src/styles/platform.css",
+    "frontend/src/components/layout/NavBar.tsx",
+    "frontend/src/styles/lightThemeTokens.test.ts"
+  ],
+  "verification": [
+    "npm run test -- src/styles/lightThemeTokens.test.ts",
+    "npm run check:tokens:strict:layout",
+    "npm run check:fluid-sizing -- --scope=all",
+    "npm run lint",
+    "git diff --check",
+    "npm run build"
+  ],
+  "screenshots": [
+    "docs/exec-plans/2026-05-05-light-daylight-nebula-files-desktop.png",
+    "docs/exec-plans/2026-05-05-light-daylight-nebula-files-mobile.png",
+    "docs/exec-plans/2026-05-05-light-daylight-nebula-settings-desktop.png",
+    "docs/exec-plans/2026-05-05-light-daylight-nebula-settings-mobile.png"
+  ]
+}

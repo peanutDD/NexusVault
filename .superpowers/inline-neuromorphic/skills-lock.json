@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "youtube": {
+      "source": "openclaw/skills",
+      "sourceType": "github",
+      "computedHash": "6ab36d0f0306143096d0c47efddebfc0687a06063002c6c7946729f4868eb211"
+    }
+  }
+}

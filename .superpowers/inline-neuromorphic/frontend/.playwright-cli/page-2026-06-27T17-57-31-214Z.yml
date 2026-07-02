@@ -1,0 +1,4 @@
+- generic [ref=e3]:
+  - status "加载中" [ref=e4]:
+    - img [ref=e6]
+  - generic [ref=e8]: Loading...

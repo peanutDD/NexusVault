@@ -1,0 +1,38 @@
+<style>
+  .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:28px 0 24px}.step{position:relative;border-radius:18px;padding:18px;background:#2d3748;color:#f7fafc;box-shadow:7px 7px 14px #1a202c,-7px -7px 14px #4a5568;min-height:170px}.step:not(:last-child)::after{content:'→';position:absolute;right:-14px;top:48%;z-index:3;color:#818cf8;font-weight:900}.num{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#6366f1;color:#fff;font-weight:800;margin-bottom:14px}.step h3{font-size:15px;margin:0 0 8px}.step p{font-size:12px;line-height:1.5;color:#a0aec0;margin:0}.rails{display:grid;grid-template-columns:1.15fr 1fr;gap:20px}.rail{border-radius:20px;padding:22px;background:#2d3748;color:#f7fafc;box-shadow:inset 6px 6px 12px #1a202c,inset -6px -6px 12px #4a5568}.rail h3{margin:0 0 14px}.check{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:start}.check b{color:#34d399}.check span{color:#cbd5e1;font-size:13px;line-height:1.45}.score{display:flex;align-items:center;gap:16px;margin-top:18px}.score strong{font-size:34px;color:#6ee7b7}.score small{color:#a0aec0}.frozen{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.pill{border-radius:999px;padding:7px 11px;background:#2d3748;box-shadow:4px 4px 8px #1a202c,-4px -4px 8px #4a5568;color:#cbd5e1;font-size:12px}
+  @media(max-width:1050px){.flow{grid-template-columns:1fr 1fr}.step:not(:last-child)::after{display:none}.rails{grid-template-columns:1fr}}@media(max-width:650px){.flow{grid-template-columns:1fr}}
+</style>
+
+<p class="label">设计确认 3 / 3</p>
+<h2>分阶段实施与零遗漏验收</h2>
+<p class="subtitle">全项目目标不缩水，但拆成可回退的小批次；每一批先 RED test，再改实现，再做浏览器证据。</p>
+
+<div class="flow">
+  <div class="step"><span class="num">1</span><h3>Primitive 基线</h3><p>建立唯一 token 与四类 surface；新增禁止渐变、可见边框、旧 surface alias 的静态测试。</p></div>
+  <div class="step"><span class="num">2</span><h3>共享外壳</h3><p>页面背景、导航、底栏、通用按钮、表单、反馈和 Auth 先统一，形成全站基准。</p></div>
+  <div class="step"><span class="num">3</span><h3>文件工作流</h3><p>Files、卡片列表、筛选、上传、预览、菜单与全部文件弹窗逐项迁移。</p></div>
+  <div class="step"><span class="num">4</span><h3>业务页面</h3><p>Settings、Shares、Share、Activity、Trash、File Request 及其空/错/加载状态迁移。</p></div>
+  <div class="step"><span class="num">5</span><h3>全矩阵验收</h3><p>10 路由 × 2 主题 × 2 视口；补交互态截图、视频、console 和 LLM Judge 质量分。</p></div>
+</div>
+
+<div class="rails">
+  <section class="rail">
+    <h3>不允许改变</h3>
+    <div class="frozen">
+      <span class="pill">API contracts</span><span class="pill">React data flow</span><span class="pill">routes</span><span class="pill">auth</span><span class="pill">pagination</span><span class="pill">upload</span><span class="pill">filters</span><span class="pill">keyboard / focus</span>
+    </div>
+    <div class="score"><strong>0</strong><small>允许的业务行为回归<br>视觉重构不触碰服务层</small></div>
+  </section>
+
+  <section class="rail">
+    <h3>完成门禁</h3>
+    <div class="check">
+      <b>✓</b><span>所有 Neuromorphic 普通表面 computed border 为透明或 0</span>
+      <b>✓</b><span>raised / inset 背景为主题纯色，不含 radial/linear/glass overlay</span>
+      <b>✓</b><span>光源方向、阴影距离和模糊半径全站一致</span>
+      <b>✓</b><span>build + test + lint + typecheck + fluid sizing 全通过</span>
+      <b>✓</b><span>浏览器无相关 error/warn，截图差异由人工与 LLM 双重审核</span>
+      <b>✓</b><span>质量分 ≥ 95，证据和永久约束写入 docs</span>
+    </div>
+  </section>
+</div>

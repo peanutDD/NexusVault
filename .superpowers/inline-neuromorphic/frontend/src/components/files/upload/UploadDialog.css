@@ -1,0 +1,169 @@
+.uploadDialogNeuBackdrop {
+  --upload-dialog-nav-offset: calc(clamp(4.75rem, 7.6vw, 6.25rem) + env(safe-area-inset-top));
+  --upload-dialog-viewport-gap: clamp(1rem, 4vw, 1.5rem);
+  --upload-dialog-vertical-gap: calc(
+    var(--upload-dialog-viewport-gap) +
+      (var(--upload-dialog-viewport-gap) + env(safe-area-inset-bottom))
+  );
+  --upload-dialog-horizontal-gap: calc(
+    (var(--upload-dialog-viewport-gap) + env(safe-area-inset-left)) +
+      (var(--upload-dialog-viewport-gap) + env(safe-area-inset-right))
+  );
+  box-sizing: border-box;
+  height: auto;
+  padding-top: var(--upload-dialog-viewport-gap);
+  padding-right: calc(var(--upload-dialog-viewport-gap) + env(safe-area-inset-right));
+  padding-bottom: calc(var(--upload-dialog-viewport-gap) + env(safe-area-inset-bottom));
+  padding-left: calc(var(--upload-dialog-viewport-gap) + env(safe-area-inset-left));
+  overflow: hidden;
+  background: var(--upload-dialog-backdrop-bg, rgba(0, 0, 0, 0.4));
+}
+
+.uploadDialogNeuSurface {
+  width: 100%;
+  max-width: min(42rem, calc(100dvw - var(--upload-dialog-horizontal-gap)));
+  max-height: calc(100dvh - var(--upload-dialog-nav-offset) - var(--upload-dialog-vertical-gap));
+  background: var(--neu-raised-bg);
+  color: var(--upload-text);
+  box-shadow: var(--neu-raised-shadow);
+}
+
+.uploadDialogNeuHeader,
+.uploadDialogNeuFooter {
+  background: transparent;
+}
+
+.uploadDialogNeuBody {
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+.uploadDialogNeuEyebrow,
+.uploadDialogNeuSignal,
+.uploadStatLabel {
+  color: var(--upload-text-muted);
+  font-family: var(--font-brand);
+  font-size: var(--font-size-ui-5xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.uploadDialogNeuTitle {
+  color: var(--upload-text);
+}
+
+.uploadDialogNeuIconBtn,
+.uploadDialogNeuPrimaryBtn,
+.uploadDialogNeuSecondaryBtn,
+.uploadDialogUrlUploadBtn,
+.uploadDialogSelectFilesBtn {
+  border: 0;
+  background: var(--neu-surface-bg-green);
+  box-shadow: var(--neu-raised-sm-shadow);
+}
+
+.uploadDialogNeuPrimaryBtn {
+  color: var(--color-text-primary);
+}
+
+.uploadDialogNeuSecondaryBtn {
+  color: var(--btn-secondary-text);
+}
+
+.uploadDialogNeuPrimaryBtn:disabled,
+.uploadDialogNeuSecondaryBtn:disabled,
+.uploadDialogUrlUploadBtn:disabled {
+  box-shadow: var(--neu-raised-sm-shadow);
+}
+
+.uploadDialogNeuDropzone {
+  border: 0;
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+}
+
+.uploadDialogNeuDropzoneActive {
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-pressed-shadow);
+}
+
+.uploadDropzoneCore {
+  position: relative;
+  background: var(--neu-raised-bg);
+  box-shadow: var(--neu-raised-sm-shadow);
+  color: var(--upload-accent);
+}
+
+.uploadDropzoneCoreBack {
+  position: absolute;
+  color: var(--color-text-muted);
+  transform: translate(-0.18rem, 0.16rem);
+}
+
+.uploadDropzoneCoreFront {
+  position: relative;
+  color: var(--upload-accent);
+}
+
+.uploadUrlPanel {
+  border-radius: clamp(0.6rem, 1.4vw, 0.75rem);
+  padding: clamp(0.58rem, 1.35vw, 0.75rem);
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+}
+
+.uploadUrlControls {
+  position: relative;
+  z-index: 2;
+}
+
+.uploadDialogNeuInput {
+  caret-color: var(--upload-accent);
+  color: var(--upload-input-text);
+  cursor: text;
+  user-select: text;
+}
+
+.uploadDialogNeuInputActive {
+  box-shadow: var(--neu-pressed-shadow);
+}
+
+.uploadStatsPanel {
+  color: var(--upload-stat-text);
+}
+
+.uploadStatRow {
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+}
+
+.uploadStatValue {
+  color: var(--neu-primary);
+}
+
+.uploadWarning,
+.uploadDialogWarning {
+  background: var(--neu-inset-bg);
+  box-shadow: var(--neu-inset-shadow);
+}
+
+.uploadDialogNeuList {
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+@media (max-width: 40rem) {
+  .uploadUrlControls {
+    flex-direction: column;
+  }
+
+  .uploadUrlInput,
+  .uploadDialogUrlUploadBtn {
+    width: 100%;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .uploadUrlInput {
+    font-size: max(1rem, clamp(0.75rem, 1.8vw, 0.875rem));
+    pointer-events: auto;
+  }
+}

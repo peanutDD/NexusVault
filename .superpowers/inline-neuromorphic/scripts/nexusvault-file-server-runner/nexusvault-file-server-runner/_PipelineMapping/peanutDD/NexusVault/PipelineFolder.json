@@ -1,0 +1,12 @@
+﻿{
+  "repositoryName": "peanutDD/NexusVault",
+  "pipelineDirectory": "NexusVault",
+  "workspaceDirectory": "NexusVault/NexusVault",
+  "repositories": {
+    "peanutDD/NexusVault": {
+      "repositoryPath": "NexusVault/NexusVault",
+      "lastRunOn": "07/02/2026 22:04:10 +08:00"
+    }
+  },
+  "lastRunOn": "07/02/2026 22:11:48 +08:00"
+}

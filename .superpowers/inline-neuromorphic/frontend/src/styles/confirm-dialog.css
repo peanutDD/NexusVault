@@ -1,0 +1,123 @@
+@layer components {
+  .confirm-dialog-groove {
+    position: relative;
+  }
+
+  .fileActionDialogShell,
+  .singleShareDialogShell {
+    border-color: transparent !important;
+    background: var(--neu-raised-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-raised-shadow) !important;
+  }
+
+  .fileActionDialogShell::before,
+  .fileActionDialogShell::after,
+  .singleShareDialogShell::before,
+  .singleShareDialogShell::after {
+    content: none !important;
+  }
+
+  .fileActionDialogShell [aria-label="关闭"],
+  .singleShareDialogShell [aria-label="关闭"] {
+    border-radius: clamp(0.55rem, 1.25vw, 0.7rem) !important;
+    background: var(--neu-raised-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .fileActionDialogInsetList,
+  .singleShareDialogPanel,
+  .singleShareDialogInset,
+  .singleShareDialogField {
+    border-color: transparent !important;
+    background: var(--neu-inset-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .fileActionDialogRaisedRow {
+    border-color: transparent !important;
+    background: var(--neu-raised-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+  }
+
+  .fileActionDialogInsetRow {
+    border-color: transparent !important;
+    background: var(--neu-inset-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-inset-shadow) !important;
+  }
+
+  .fileActionDialogEmptyState {
+    display: block;
+    width: 100%;
+    margin: 0;
+    color: var(--dialog-panel-text);
+    text-shadow: none;
+  }
+
+  .fileActionDialogEventTitle {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: clamp(0.34rem, 0.85vw, 0.46rem);
+    border: 0;
+    color: var(--color-text-primary) !important;
+    background: transparent;
+    box-shadow: none;
+    padding: 0 !important;
+    text-shadow: none;
+  }
+
+  .fileActionDialogEventTitle::before {
+    content: "\2713";
+    flex: 0 0 auto;
+    display: inline-flex;
+    width: clamp(1.05rem, 2.25vw, 1.22rem);
+    height: clamp(1.05rem, 2.25vw, 1.22rem);
+    align-items: center;
+    justify-content: center;
+    border-radius: 999rem;
+    background: var(--neu-inset-bg);
+    box-shadow: var(--neu-inset-shadow);
+    color: var(--neu-accent-text-strong);
+    font-size: clamp(0.62rem, 1.35vw, 0.72rem);
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .fileActionDialogEventFilename,
+  .fileActionDialogEventTime {
+    color: var(--color-text-secondary);
+    line-height: 1.42;
+    text-shadow: none;
+  }
+
+  .singleShareDialogPanel {
+    border-radius: clamp(0.7rem, 1.6vw, 0.75rem);
+    padding: clamp(0.585rem, 1.35vw, 0.75rem);
+  }
+
+  .singleShareDialogLabel {
+    color: var(--color-text-secondary);
+    font-weight: 600;
+  }
+
+  .singleShareDialogAction,
+  .singleShareDialogPrimary {
+    border-color: transparent !important;
+    background: var(--neu-raised-bg) !important;
+    background-image: none !important;
+    box-shadow: var(--neu-raised-sm-shadow) !important;
+    color: var(--color-text-primary) !important;
+    text-shadow: none;
+  }
+
+  .singleShareDialogAction:active:not(:disabled),
+  .singleShareDialogPrimary:active:not(:disabled) {
+    box-shadow: var(--neu-pressed-shadow) !important;
+    transform: translateY(0.0625rem);
+  }
+}

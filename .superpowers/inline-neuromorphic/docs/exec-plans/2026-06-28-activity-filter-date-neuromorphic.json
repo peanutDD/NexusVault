@@ -1,0 +1,42 @@
+{
+  "date": "2026-06-28",
+  "task": "activity-filter-date-neuromorphic",
+  "scope": [
+    "frontend/src/pages/Activity.tsx",
+    "frontend/src/components/common/NeuDatePicker.tsx",
+    "frontend/src/pages/Activity.test.tsx",
+    "frontend/src/components/common/NeuDatePicker.test.tsx",
+    "frontend/src/styles/base.css",
+    "docs/constraints",
+    "docs/quality-score.md"
+  ],
+  "assumptions": [
+    "The target project is /Users/tyone/github/upload-download-util/.superpowers/inline-neuromorphic.",
+    "Today is 2026-06-28 in Asia/Shanghai.",
+    "Activity ID filters are expected to use file-, folder-, share-, request-, and token- prefixes.",
+    "Existing activity pagination, authentication, cache restoration, and timeline rendering remain unchanged.",
+    "The CodePen reference provides the Neuromorphic visual language but should not introduce external runtime dependencies."
+  ],
+  "risks": [
+    "The working tree already contains unrelated user changes.",
+    "NeuDatePicker is shared and must preserve portal and viewport behavior.",
+    "Invalid-filter guarding must not block valid empty filters or prefixed IDs.",
+    "All visible sizing must remain fluid and avoid fixed visual dimensions."
+  ],
+  "dependencies": [
+    "React/Vite frontend tests and build scripts",
+    "Existing NeuSelect and NeuDatePicker components",
+    "Existing Neuromorphic primitive CSS tokens",
+    "Chrome plugin browser validation"
+  ],
+  "steps": [
+    "Inspect related files and constraints",
+    "Write focused tests first",
+    "Implement dropdown filters",
+    "Implement filter validation and request guarding",
+    "Implement date picker today/future styling",
+    "Implement detailed Neuromorphic error state",
+    "Run focused tests and validation",
+    "Update constraints and quality score"
+  ]
+}

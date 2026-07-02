@@ -1,0 +1,286 @@
+<style>
+  .cosmic-board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  .cosmic-card {
+    border: 1px solid rgba(222, 214, 255, 0.2);
+    border-radius: 18px;
+    overflow: hidden;
+    background: rgba(13, 10, 32, 0.88);
+    box-shadow: 0 28px 70px rgba(5, 3, 18, 0.42);
+    cursor: pointer;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .cosmic-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(236, 222, 255, 0.55);
+    box-shadow: 0 34px 90px rgba(49, 20, 110, 0.46);
+  }
+
+  .cosmic-preview {
+    min-height: 340px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cosmic-preview::before,
+  .cosmic-preview::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .cosmic-preview::after {
+    opacity: 0.72;
+    background-image:
+      radial-gradient(circle at 18% 22%, rgba(255,255,255,0.95) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 72% 18%, rgba(255,255,255,0.7) 0 1px, transparent 1.4px),
+      radial-gradient(circle at 86% 62%, rgba(255,255,255,0.78) 0 1px, transparent 1.35px),
+      radial-gradient(circle at 32% 72%, rgba(255,255,255,0.5) 0 1px, transparent 1.4px);
+    background-size: 88px 88px, 132px 132px, 110px 110px, 156px 156px;
+  }
+
+  .option-a .cosmic-preview {
+    background:
+      radial-gradient(80% 56% at 50% 0%, rgba(148, 115, 255, 0.32), transparent 60%),
+      radial-gradient(68% 45% at 88% 72%, rgba(34, 211, 238, 0.12), transparent 68%),
+      linear-gradient(180deg, #15112f 0%, #090713 100%);
+  }
+
+  .option-b .cosmic-preview {
+    background:
+      radial-gradient(72% 52% at 28% 8%, rgba(197, 146, 255, 0.42), transparent 62%),
+      radial-gradient(58% 44% at 78% 34%, rgba(45, 212, 191, 0.22), transparent 70%),
+      radial-gradient(58% 50% at 50% 96%, rgba(236, 72, 153, 0.16), transparent 68%),
+      linear-gradient(145deg, #180d39 0%, #0b0820 48%, #060511 100%);
+  }
+
+  .option-c .cosmic-preview {
+    background:
+      radial-gradient(78% 56% at 20% 12%, rgba(244, 114, 182, 0.36), transparent 64%),
+      radial-gradient(72% 52% at 80% 20%, rgba(125, 92, 255, 0.44), transparent 66%),
+      radial-gradient(70% 48% at 48% 78%, rgba(56, 189, 248, 0.2), transparent 70%),
+      linear-gradient(160deg, #211047 0%, #10082a 52%, #090414 100%);
+  }
+
+  .mock-shell {
+    position: relative;
+    z-index: 1;
+    border-radius: 14px;
+    border: 1px solid rgba(236, 232, 255, 0.18);
+    background: rgba(10, 8, 25, 0.56);
+    backdrop-filter: blur(18px);
+    overflow: hidden;
+  }
+
+  .mock-top {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    border-bottom: 1px solid rgba(236, 232, 255, 0.14);
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  .mock-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .mock-dots i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(232, 225, 255, 0.55);
+  }
+
+  .mock-pill {
+    width: 72px;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(192, 132, 252, 0.75), rgba(34, 211, 238, 0.58));
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.48);
+  }
+
+  .mock-body {
+    display: grid;
+    grid-template-columns: 0.72fr 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .mock-panel {
+    min-height: 238px;
+    border-radius: 12px;
+    border: 1px solid rgba(236, 232, 255, 0.13);
+    background: rgba(255, 255, 255, 0.055);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  .mock-panel.left {
+    padding: 12px;
+  }
+
+  .mock-line {
+    height: 9px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+    background: rgba(241, 245, 249, 0.52);
+  }
+
+  .mock-line.short { width: 48%; }
+  .mock-line.med { width: 68%; }
+  .mock-line.long { width: 86%; }
+
+  .mock-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .mock-file {
+    min-height: 72px;
+    border-radius: 10px;
+    border: 1px solid rgba(236, 232, 255, 0.14);
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+      rgba(11, 9, 28, 0.54);
+  }
+
+  .cosmic-body {
+    padding: 1rem;
+  }
+
+  .cosmic-body h3 {
+    margin: 0 0 0.35rem;
+    color: #f6f1ff;
+  }
+
+  .cosmic-body p {
+    margin: 0;
+    color: rgba(237, 233, 254, 0.72);
+    line-height: 1.45;
+  }
+
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.85rem;
+  }
+
+  .tag-row span {
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.14);
+    padding: 0.2rem 0.5rem;
+    color: rgba(248, 250, 252, 0.76);
+    font-size: 0.74rem;
+  }
+
+  @media (max-width: 980px) {
+    .cosmic-board {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<h2>Purple 模式：宇宙星辰方向选择</h2>
+<p class="subtitle">布局、组件层级和尺寸不变；只重设 purple 主题的色彩 token、星尘背景、玻璃表面和光效强度。你更想让它偏哪一种？</p>
+
+<div class="cosmic-board">
+  <div class="cosmic-card option-a" data-choice="a" onclick="toggleSelect(this)">
+    <div class="cosmic-preview">
+      <div class="mock-shell">
+        <div class="mock-top">
+          <div class="mock-dots"><i></i><i></i><i></i></div>
+          <div class="mock-pill"></div>
+        </div>
+        <div class="mock-body">
+          <div class="mock-panel left">
+            <div class="mock-line long"></div>
+            <div class="mock-line med"></div>
+            <div class="mock-line short"></div>
+          </div>
+          <div class="mock-panel mock-grid">
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cosmic-body">
+      <h3>A. Deep Observatory</h3>
+      <p>更克制、更暗，像在深空观测台里操作文件；星点细，发光少，适合长时间使用。</p>
+      <div class="tag-row"><span>低干扰</span><span>高级暗紫</span><span>最稳</span></div>
+    </div>
+  </div>
+
+  <div class="cosmic-card option-b" data-choice="b" onclick="toggleSelect(this)">
+    <div class="cosmic-preview">
+      <div class="mock-shell">
+        <div class="mock-top">
+          <div class="mock-dots"><i></i><i></i><i></i></div>
+          <div class="mock-pill"></div>
+        </div>
+        <div class="mock-body">
+          <div class="mock-panel left">
+            <div class="mock-line long"></div>
+            <div class="mock-line med"></div>
+            <div class="mock-line short"></div>
+          </div>
+          <div class="mock-panel mock-grid">
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cosmic-body">
+      <h3>B. Galactic Control Glass</h3>
+      <p>推荐方向：暗紫星域 + 青色星轨 + 少量玫红星云，高级、清晰，有“宇宙控制台”感。</p>
+      <div class="tag-row"><span>推荐</span><span>星轨玻璃</span><span>辨识度强</span></div>
+    </div>
+  </div>
+
+  <div class="cosmic-card option-c" data-choice="c" onclick="toggleSelect(this)">
+    <div class="cosmic-preview">
+      <div class="mock-shell">
+        <div class="mock-top">
+          <div class="mock-dots"><i></i><i></i><i></i></div>
+          <div class="mock-pill"></div>
+        </div>
+        <div class="mock-body">
+          <div class="mock-panel left">
+            <div class="mock-line long"></div>
+            <div class="mock-line med"></div>
+            <div class="mock-line short"></div>
+          </div>
+          <div class="mock-panel mock-grid">
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+            <div class="mock-file"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cosmic-body">
+      <h3>C. Nebula Bloom</h3>
+      <p>更梦幻、更亮，紫粉星云更明显；第一眼更惊艳，但对文件管理工具来说会更有存在感。</p>
+      <div class="tag-row"><span>更华丽</span><span>紫粉星云</span><span>视觉更强</span></div>
+    </div>
+  </div>
+</div>

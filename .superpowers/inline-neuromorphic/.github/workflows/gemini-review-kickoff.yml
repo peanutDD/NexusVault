@@ -1,0 +1,46 @@
+name: Gemini Review Kickoff
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: gemini-review-kickoff-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  gemini-kickoff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 仓库
+        uses: actions/checkout@v4
+
+      - name: 自动触发 Gemini Review（首轮/更新）
+        env:
+          GH_TOKEN: ${{ secrets.GEMINI_REVIEW_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          GEMINI_REVIEW_TIMEOUT_SECONDS: 600
+          GEMINI_REVIEW_POLL_INTERVAL_SECONDS: 15
+          GEMINI_REVIEW_REQUIRED: true
+        run: |
+          set -euo pipefail
+
+          LAST_COMMIT_MESSAGE="$(gh api "repos/${GH_REPO}/commits/${PR_SHA}" --jq '.commit.message')"
+
+          if [[ "$LAST_COMMIT_MESSAGE" == "🤖 codex auto-fix:"* ]]; then
+            echo "Skip: codex-auto-fix workflow owns the next Gemini request for this commit."
+            exit 0
+          fi
+
+          REQUESTED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "Requesting Gemini review for ${PR_SHA} at ${REQUESTED_AT}"
+          gh pr comment "${PR_NUMBER}" --body "/gemini review"
+
+          REVIEW_REQUESTED_AT="${REQUESTED_AT}" bash .github/scripts/gemini-review-watchdog.sh watch

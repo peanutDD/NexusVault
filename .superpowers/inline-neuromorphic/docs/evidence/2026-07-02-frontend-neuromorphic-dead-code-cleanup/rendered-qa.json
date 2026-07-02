@@ -1,0 +1,110 @@
+[
+  {
+    "theme": "dark",
+    "url": "http://127.0.0.1:5173/login",
+    "screenshot": "/Users/tyone/github/upload-download-util/.superpowers/inline-neuromorphic/docs/evidence/2026-07-02-frontend-neuromorphic-dead-code-cleanup/login-dark.png",
+    "consoleMessages": [],
+    "probe": {
+      "theme": "dark",
+      "bodyBackground": "rgba(0, 0, 0, 0)",
+      "bodyBackgroundImage": "none",
+      "card": {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "backgroundImage": "none",
+        "boxShadow": "none",
+        "borderWidth": "0px"
+      },
+      "inputs": [
+        {
+          "backgroundColor": "rgb(45, 55, 72)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(26, 32, 44) 4px 4px 8px 0px inset, rgb(74, 85, 104) -4px -4px 8px 0px inset",
+          "borderWidth": "0px"
+        },
+        {
+          "backgroundColor": "rgb(45, 55, 72)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(26, 32, 44) 4px 4px 8px 0px inset, rgb(74, 85, 104) -4px -4px 8px 0px inset",
+          "borderWidth": "0px"
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Sign in",
+          "backgroundColor": "oklch(0.585 0.233 277.117)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(26, 32, 44) 4px 4px 8px 0px, rgb(74, 85, 104) -4px -4px 8px 0px",
+          "borderWidth": "0px"
+        },
+        {
+          "text": "Sign in with GitHub",
+          "backgroundColor": "rgb(45, 55, 72)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(26, 32, 44) 4px 4px 8px 0px, rgb(74, 85, 104) -4px -4px 8px 0px",
+          "borderWidth": "0px"
+        },
+        {
+          "text": "Sign in with Google (coming soon)",
+          "backgroundColor": "rgb(45, 55, 72)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(26, 32, 44) 4px 4px 8px 0px, rgb(74, 85, 104) -4px -4px 8px 0px",
+          "borderWidth": "0px"
+        }
+      ]
+    }
+  },
+  {
+    "theme": "light",
+    "url": "http://127.0.0.1:5173/login",
+    "screenshot": "/Users/tyone/github/upload-download-util/.superpowers/inline-neuromorphic/docs/evidence/2026-07-02-frontend-neuromorphic-dead-code-cleanup/login-light.png",
+    "consoleMessages": [],
+    "probe": {
+      "theme": "light",
+      "bodyBackground": "rgba(0, 0, 0, 0)",
+      "bodyBackgroundImage": "none",
+      "card": {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "backgroundImage": "none",
+        "boxShadow": "none",
+        "borderWidth": "0px"
+      },
+      "inputs": [
+        {
+          "backgroundColor": "rgb(224, 229, 236)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(190, 195, 201) 4px 4px 8px 0px inset, rgb(255, 255, 255) -4px -4px 8px 0px inset",
+          "borderWidth": "0px"
+        },
+        {
+          "backgroundColor": "rgb(224, 229, 236)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(190, 195, 201) 4px 4px 8px 0px inset, rgb(255, 255, 255) -4px -4px 8px 0px inset",
+          "borderWidth": "0px"
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Sign in",
+          "backgroundColor": "oklch(0.585 0.233 277.117)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(190, 195, 201) 4px 4px 8px 0px, rgb(255, 255, 255) -4px -4px 8px 0px",
+          "borderWidth": "0px"
+        },
+        {
+          "text": "Sign in with GitHub",
+          "backgroundColor": "rgb(224, 229, 236)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(190, 195, 201) 4px 4px 8px 0px, rgb(255, 255, 255) -4px -4px 8px 0px",
+          "borderWidth": "0px"
+        },
+        {
+          "text": "Sign in with Google (coming soon)",
+          "backgroundColor": "rgb(224, 229, 236)",
+          "backgroundImage": "none",
+          "boxShadow": "rgb(190, 195, 201) 4px 4px 8px 0px, rgb(255, 255, 255) -4px -4px 8px 0px",
+          "borderWidth": "0px"
+        }
+      ]
+    }
+  }
+]

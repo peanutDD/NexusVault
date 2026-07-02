@@ -1,0 +1,4 @@
+pub fn enqueue() {
+    schedule();
+    schedule();
+}

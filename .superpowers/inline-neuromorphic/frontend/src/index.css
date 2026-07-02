@@ -1,0 +1,28 @@
+/* ==========================================================================
+   index.css — 主入口文件（重构后）
+   说明：按 Tailwind @layer 组织，按功能域拆分导入
+   ========================================================================== */
+
+/* 1️⃣ Tailwind CSS 核心（v4） */
+@import "tailwindcss";
+
+/* 2️⃣ Design Tokens（主题变量系统） */
+@import "./styles/tokens.css";
+@import "./styles/neuromorphic.css";
+
+/* 3️⃣ Base Layer — 全局重置、字体、流体字号 */
+@import "./styles/base.css";
+
+/* 4️⃣ Components Layer — Bootstrap Icons、动画、预览样式 */
+@import "./styles/icons.css";
+@import "./styles/animations.css";
+@import "./styles/hljs.css";
+@import "./styles/nav.css";
+@import "./styles/cta.css";
+@import "./styles/preview.css";
+@import "./styles/confirm-dialog.css";
+@import "./styles/devtools.css";
+@import "./styles/platform.css";
+
+/* 5️⃣ Utilities Layer — 虚拟列表、焦点、触摸优化等 */
+@import "./styles/misc.css";

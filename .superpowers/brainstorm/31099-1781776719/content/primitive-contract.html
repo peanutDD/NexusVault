@@ -1,0 +1,47 @@
+<style>
+  .theme-pair{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
+  .theme-board{border-radius:24px;padding:28px;min-height:470px}
+  .theme-board.dark{--base:#2d3748;--dark:#1a202c;--light:#4a5568;--text:#f7fafc;--muted:#a0aec0;background:var(--base);color:var(--text)}
+  .theme-board.light{--base:#e0e5ec;--dark:#bec3c9;--light:#fff;--text:#2d3748;--muted:#718096;background:var(--base);color:var(--text)}
+  .theme-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}.theme-title h3{margin:0}.swatch{width:28px;height:28px;border-radius:50%;background:var(--base);box-shadow:5px 5px 10px var(--dark),-5px -5px 10px var(--light)}
+  .surfaces{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .surface{min-height:126px;border:0;border-radius:18px;background:var(--base);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text)}
+  .surface strong{font-size:15px}.surface small{color:var(--muted)}
+  .surface.raised{box-shadow:8px 8px 16px var(--dark),-8px -8px 16px var(--light)}
+  .surface.inset{box-shadow:inset 6px 6px 12px var(--dark),inset -6px -6px 12px var(--light)}
+  .surface.pressed{box-shadow:inset 3px 3px 7px var(--dark),inset -3px -3px 7px var(--light)}
+  .surface.flat{box-shadow:none}
+  .accent-row{display:flex;gap:12px;margin-top:26px;align-items:center;flex-wrap:wrap}.badge{border:0;border-radius:999px;padding:10px 16px;background:#6366f1;color:#fff;font-weight:750;box-shadow:5px 5px 11px var(--dark),-5px -5px 11px var(--light)}
+  .rule{color:var(--muted);font-size:13px}.contract{margin-top:24px;padding:18px 20px;border-radius:16px;background:rgba(99,102,241,.1);color:#c7d2fe}.light .contract{color:#4338ca}
+  @media(max-width:900px){.theme-pair{grid-template-columns:1fr}.surfaces{gap:18px}}
+</style>
+
+<p class="label">设计确认 1 / 3</p>
+<h2>全局 Surface Primitive</h2>
+<p class="subtitle">光源固定在左上角；同一主题中的背景和组件使用同一底色，立体感只由双向阴影形成。</p>
+
+<div class="theme-pair">
+  <section class="theme-board dark">
+    <div class="theme-title"><h3>Dark · CodePen graphite</h3><span class="swatch"></span></div>
+    <div class="surfaces">
+      <div class="surface raised"><strong>RAISED</strong><small>卡片 / 按钮 / 菜单</small></div>
+      <div class="surface inset"><strong>INSET</strong><small>输入框 / 列表槽 / 轨道</small></div>
+      <div class="surface pressed"><strong>PRESSED</strong><small>按下 / 选中状态</small></div>
+      <div class="surface flat"><strong>FLAT</strong><small>页面底板 / 语义容器</small></div>
+    </div>
+    <div class="accent-row"><span class="badge">Primary action</span><span class="rule">语义色不参与普通表面填充</span></div>
+    <div class="contract">透明边框 · 无渐变 · 无玻璃层 · 无伪元素高光</div>
+  </section>
+
+  <section class="theme-board light">
+    <div class="theme-title"><h3>Light · CodePen cloud</h3><span class="swatch"></span></div>
+    <div class="surfaces">
+      <div class="surface raised"><strong>RAISED</strong><small>卡片 / 按钮 / 菜单</small></div>
+      <div class="surface inset"><strong>INSET</strong><small>输入框 / 列表槽 / 轨道</small></div>
+      <div class="surface pressed"><strong>PRESSED</strong><small>按下 / 选中状态</small></div>
+      <div class="surface flat"><strong>FLAT</strong><small>页面底板 / 语义容器</small></div>
+    </div>
+    <div class="accent-row"><span class="badge">Primary action</span><span class="rule">语义色不参与普通表面填充</span></div>
+    <div class="contract">透明边框 · 无渐变 · 无玻璃层 · 无伪元素高光</div>
+  </section>
+</div>

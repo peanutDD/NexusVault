@@ -1,0 +1,40 @@
+{
+  "date": "2026-06-30",
+  "task": "auth-shapewave-filelist-fireworks-restore",
+  "intent": "Restore the historical login/register ShapeWave background and Files page fireworks background without changing layout or foreground behavior.",
+  "assumptions": [
+    "Use historical components from frontend baseline 0a1f8c3.",
+    "Restore only FileListPortfolioFireworksBackground for the Files page, not old FileList ShapeWave or light canvas layers.",
+    "All restored backgrounds remain decorative, aria-hidden, pointer-events-none, and behind foreground content."
+  ],
+  "risks": [
+    "A restored shared canvas could reintroduce unused list ShapeWave tokens.",
+    "Auth foreground controls could be covered if z-index or pointer events are wrong.",
+    "The dirty worktree contains unrelated failing contract tests."
+  ],
+  "steps": [
+    "Write failing tests for the missing backgrounds.",
+    "Restore the historical background components.",
+    "Mount AuthShapeWaveBackground in Login and Register behind existing content.",
+    "Mount FileListPortfolioFireworksBackground through FileListBackgroundLayer.",
+    "Restore scoped auth ShapeWave tokens.",
+    "Update obsolete removal tests to protect decorative behavior.",
+    "Verify with focused tests, lint, fluid sizing, build, and a login render probe."
+  ],
+  "verification": {
+    "passed": [
+      "npm --prefix frontend run test -- AuthShapeWavePages AuthShapeWaveBackground FileListBackgroundLayer FileListPortfolioFireworksBackground AuthNeuromorphic lightThemeTokens",
+      "npm --prefix frontend run test -- WebDavAccessSection -t \"formats HTTP result chips\"",
+      "npm --prefix frontend run lint -- --quiet",
+      "npm --prefix frontend run check:fluid-sizing",
+      "npm --prefix frontend run build",
+      "System Chrome Playwright login probe"
+    ],
+    "known_unrelated_failures": [
+      "npm --prefix frontend run test: 31 existing unrelated failures",
+      "npm --prefix frontend run check:tokens: existing hardcoded Tailwind palette findings",
+      "npm --prefix frontend run check:neuromorphic: existing settings checkbox surface residue",
+      "npm --prefix frontend run check:hardcoding: existing raw color/deploy URL findings"
+    ]
+  }
+}

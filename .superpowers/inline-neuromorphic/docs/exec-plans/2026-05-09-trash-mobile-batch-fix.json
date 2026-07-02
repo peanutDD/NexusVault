@@ -1,0 +1,32 @@
+{
+  "date": "2026-05-09",
+  "task": "trash-mobile-batch-fix",
+  "intent": "Make Trash cards match home file-card styling on mobile and verify batch restore/permanent delete routes at source and runtime.",
+  "assumptions": [
+    "Normal delete remains a soft delete through deleted_at.",
+    "Batch trash API routes remain POST /api/files/trash/batch-restore and POST /api/files/trash/batch-permanent.",
+    "Runtime 404 was caused by a stale backend process, not missing source routes."
+  ],
+  "risks": [
+    "Trash-specific card decorations can drift from homepage card styling.",
+    "Mobile console summary and action rows can regress independently because desktop keeps content-sized behavior while mobile intentionally stretches the summary row.",
+    "PostgreSQL integration tests share a database and must avoid concurrent cleanup races."
+  ],
+  "dependencies": [
+    "frontend/src/pages/Trash.tsx",
+    "frontend/src/components/files/list/FileListGlass.css",
+    "backend/src/api/files.rs",
+    "backend/src/handlers/files/trash.rs"
+  ],
+  "verification": [
+    "npm test -- Trash.test.tsx",
+    "npm run lint",
+    "npm run build",
+    "cargo fmt --check",
+    "cargo clippy --all-targets --all-features -- -D warnings",
+    "cargo test --test handler_files_trash_tests",
+    "cargo test --test service_file_tests test_file_service_delete_file_soft_deletes_into_trash",
+    "cargo test --test service_file_tests test_file_service_batch_restore_reports_partial_failures",
+    "cargo test --test service_file_tests test_file_service_batch_permanently_delete_files_removes_deleted_records"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "date": "2026-07-02",
+  "task": "frontend-neuromorphic-dead-code-cleanup",
+  "intent": "Remove proven-dead frontend visual code while preserving behavior, layout, and responsive sizing.",
+  "assumptions": [
+    "The active worktree is codex/project-wide-codepen-neuromorphic.",
+    "Backend and unrelated dirty worktree changes are out of scope.",
+    "Files are removable only when production references and meaningful test references are absent.",
+    "Active semantic tokens used by Share, Upload, and other pages remain in place."
+  ],
+  "risks": [
+    "Static reachability can miss dynamic imports.",
+    "Token cleanup can affect active pages when names are shared.",
+    "Decorative but active components are not dead code."
+  ],
+  "dependencies": [
+    "frontend/src/components/common",
+    "frontend/src/components/settings",
+    "frontend/src/components/files/list",
+    "frontend/src/styles/icons.css",
+    "frontend/src/styles/tokens.css",
+    "frontend/scripts/check-fluid-sizing.mjs"
+  ],
+  "steps": [
+    "Scan imports and active source references.",
+    "Delete confirmed orphan components/assets and orphan tests.",
+    "Remove CSS glyphs and tokens tied exclusively to deleted components.",
+    "Run TypeScript, focused tests, neuromorphic scan, fluid sizing, lint, and build.",
+    "Record the cleanup in constraints and quality score."
+  ]
+}

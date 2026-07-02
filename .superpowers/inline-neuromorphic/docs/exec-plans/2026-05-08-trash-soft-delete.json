@@ -1,0 +1,19 @@
+{
+  "date": "2026-05-08",
+  "task": "trash-soft-delete",
+  "scope": "file-only trash with 30-day cleanup",
+  "assumptions": [
+    "Folder deletion remains physical in this version",
+    "Trashed files count toward quota until permanent deletion",
+    "Restore fails when an active same-name file already exists"
+  ],
+  "verification": [
+    "cd backend && cargo fmt --all -- --check",
+    "cd backend && cargo clippy --all-targets --all-features -- -D warnings",
+    "cd backend && RUST_TEST_THREADS=1 cargo test",
+    "cd frontend && npm run lint",
+    "cd frontend && npx tsc -b --noEmit",
+    "cd frontend && npm run test",
+    "cd frontend && npm run build"
+  ]
+}

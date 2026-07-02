@@ -1,0 +1,127 @@
+/* ==========================================================================
+   Bootstrap Icons — 子集 glyph content 定义
+   仅包含项目实际使用的图标，避免引入完整 CSS
+   ========================================================================== */
+
+@layer components {
+  .bi::before,
+  [class^="bi-"]::before,
+  [class*=" bi-"]::before {
+    display: inline-block;
+    font-family: bootstrap-icons !important;
+    font-style: normal;
+    font-weight: normal !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    vertical-align: -0.125em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .bi-folder2::before {
+    content: "\f3d9";
+  }
+  .bi-calendar3::before {
+    content: "\f214";
+  }
+  .bi-folder-fill::before {
+    content: "\f3d1";
+  }
+  .bi-folder2-open::before {
+    content: "\f3d8";
+  }
+  .bi-markdown::before {
+    content: "\f481";
+  }
+  .bi-folder-plus::before {
+    content: "\f3d3";
+  }
+  .bi-cloud-upload::before {
+    content: "\f2c0";
+  }
+  .bi-collection::before {
+    content: "\f2cc";
+  }
+  .bi-folder::before {
+    content: "\f3d7";
+  }
+  .bi-image::before {
+    content: "\f42a";
+  }
+  .bi-file-earmark-play::before {
+    content: "\F37B";
+  }
+  .bi-music-note-beamed::before {
+    content: "\f49e";
+  }
+  .bi-filetype-gif::before {
+    content: "\f747";
+  }
+  .bi-filetype-pdf::before {
+    content: "\f756";
+  }
+  .bi-file-text::before {
+    content: "\f3b9";
+  }
+  .bi-file-zip::before {
+    content: "\f3bf";
+  }
+  .bi-filetype-doc::before {
+    content: "\F744";
+  }
+  .bi-grid-3x3-gap::before {
+    content: "\f3f9";
+  }
+  .bi-sort-down::before {
+    content: "\f575";
+  }
+  .bi-sort-up::before {
+    content: "\f57b";
+  }
+  .bi-sort-alpha-down::before {
+    content: "\f571";
+  }
+  .bi-sort-alpha-up::before {
+    content: "\f573";
+  }
+  .bi-sort-numeric-down::before {
+    content: "\f577";
+  }
+  .bi-sort-numeric-up::before {
+    content: "\f579";
+  }
+  .bi-x-lg::before {
+    content: "\f659";
+  }
+  .bi-x::before {
+    content: "\F62A";
+  }
+  .bi-file-earmark-image-fill::before {
+    content: "\f36c";
+  }
+  .bi-camera-video-fill::before {
+    content: "\f21c";
+  }
+  .bi-file-earmark-music-fill::before {
+    content: "\f376";
+  }
+  .bi-file-pdf-fill::before {
+    content: "\f63f";
+  }
+  .bi-file-text-fill::before {
+    content: "\f3b8";
+  }
+  .bi-file-zip-fill::before {
+    content: "\f3be";
+  }
+  .bi-file-spreadsheet-fill::before {
+    content: "\f3b6";
+  }
+  .bi-file-earmark-fill::before {
+    content: "\f369";
+  }
+  .bi-check2::before {
+    content: "\f272";
+  }
+}

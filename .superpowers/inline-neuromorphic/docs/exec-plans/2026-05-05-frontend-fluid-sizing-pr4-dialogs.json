@@ -1,0 +1,27 @@
+{
+  "task": "frontend-fluid-sizing-pr4-dialogs",
+  "date": "2026-05-05",
+  "intent": "Extend fluid sizing governance to confirm and folder dialogs, then convert fixed visible dimensions there to responsive sizing.",
+  "assumptions": [
+    "PR4 covers common dialog components, file dialogs, FileListDialogs, and confirm-dialog.css.",
+    "Hairline borders and grid lines remain built-in exceptions.",
+    "CreateFolderDialog.css is included even though it is not currently imported."
+  ],
+  "risks": [
+    "Dialog glass visual effects depend on layered shadows, grids, and backdrop blur.",
+    "This phase must not change dialog behavior, props, service calls, or destructive action semantics.",
+    "Browser verification opens dialogs only and does not confirm destructive actions."
+  ],
+  "dependencies": [
+    "check-fluid-sizing.mjs",
+    "Vitest",
+    "In-app browser"
+  ],
+  "steps": [
+    "Add a failing test for --scope=dialogs.",
+    "Implement dialogs scope in the sizing checker.",
+    "Convert confirm and folder dialog fixed visible dimensions to rem/clamp semantic variables.",
+    "Convert batch move fixed small text size to rem.",
+    "Run dialogs sizing check, tests, lint, build, and browser visual verification."
+  ]
+}

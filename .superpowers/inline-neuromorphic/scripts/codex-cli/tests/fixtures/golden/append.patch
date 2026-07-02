@@ -1,0 +1,6 @@
+### File: src/lib.rs
+<<<<<<< SEARCH
+=======
+
+pub fn cleanup_metrics() {}
+>>>>>>> REPLACE

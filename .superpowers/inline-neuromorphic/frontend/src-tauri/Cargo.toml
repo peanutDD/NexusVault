@@ -1,0 +1,36 @@
+[package]
+name = "app"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.10.3", features = [] }
+tauri-plugin-log = "2"
+reqwest = { version = "0.12", features = ["json"] }
+thiserror = "2.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+uuid = { version = "1", features = ["v4"] }
+
+[profile.release]
+panic = "abort" # 移除 panic 时的栈展开信息，减小体积
+codegen-units = 1 # 降低并行编译单元数，允许 LLVM 进行全局优化（牺牲编译速度换运行速度）
+lto = true # 启用链接时优化（Link Time Optimization），深度优化跨 crate 代码
+opt-level = "z" # 优先优化体积（也可以设为 "s" 或 3）
+strip = true # 自动移除符号表（无需手动 strip）

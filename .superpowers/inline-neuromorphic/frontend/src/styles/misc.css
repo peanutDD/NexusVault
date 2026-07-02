@@ -1,0 +1,60 @@
+/* ==========================================================================
+   misc.css — 杂项工具类（虚拟列表、焦点、触摸优化）
+   ========================================================================== */
+
+@layer utilities {
+    /* 虚拟列表行：由 React 虚拟化控制渲染范围，行自身不能 paint-contain 卡片阴影 */
+    .virtualized-row {
+        background: transparent;
+        overflow: visible;
+    }
+
+    /* 存储进度条 */
+    .storage-progress-fill {
+        width: var(--storage-progress-pct, 0%);
+    }
+
+    /* 深色模式支持 */
+    .dark {
+        color-scheme: dark;
+    }
+
+    /* 文件列表/预览的元信息：最大不超过 14px（可随窗口变小继续变小） */
+    .file-meta-14px {
+        font-size: clamp(0px, 1.1vw, 14px);
+        line-height: 1.25;
+    }
+
+    .tsqd-parent-container {
+        height: 100% !important;
+        max-height: 100% !important;
+        overflow: hidden !important;
+        contain: layout paint size;
+        font-size: clamp(10px, calc(14px * var(--tsqd-scale, 1)), 14px);
+    }
+    .tsqd-parent-container > * {
+        min-height: 100% !important;
+        max-height: 100% !important;
+    }
+
+    @media (max-width: 640px) {
+        .tsqd-parent-container {
+            font-size: clamp(12px, 3.2vw, 14px);
+        }
+    }
+
+    /* 焦点可见性改进 */
+    *:focus-visible {
+        outline: 0.125rem solid var(--color-focus-ring);
+        outline-offset: 0.125rem;
+    }
+
+    /* 移动端触摸优化 */
+    @media (hover: none) and (pointer: coarse) {
+        button,
+        a {
+            min-height: 1.25rem;
+            min-width: 1.25rem;
+        }
+    }
+}

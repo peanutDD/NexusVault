@@ -1,0 +1,50 @@
+/* ==========================================================================
+   platform.css — macOS 原生窗口效果支持
+   ========================================================================== */
+
+@layer components {
+    /* macOS 原生窗口效果支持 */
+    .platform-macos body {
+        background: transparent;
+    }
+
+    .platform-macos {
+        --filelist-page-bg: var(--neu-surface-bg) !important;
+        --surface-page-gradient: var(--neu-surface-bg) !important;
+        --macos-titlebar-bg: var(--neu-raised-bg) !important;
+        --nav-surface-bg: var(--neu-raised-bg) !important;
+        --nav-surface-blur: 0px !important;
+    }
+
+    .platform-macos:is(.neuromorphic-style, .neuromorphic-style, .dark.neuromorphic-style) {
+        --filelist-page-bg: var(--neu-surface-bg) !important;
+        --surface-page-gradient: var(--neu-surface-bg) !important;
+        --surface-page-gradient-dark: var(--surface-page-gradient) !important;
+        --macos-titlebar-bg: var(--neu-raised-bg) !important;
+        --nav-surface-bg: var(--neu-raised-bg) !important;
+        --nav-surface-blur: 0px !important;
+        --nav-top-glow: transparent !important;
+        --nav-bottom-line: transparent !important;
+        --nav-side-ambience: transparent !important;
+    }
+
+    .platform-macos.dark {
+        --filelist-page-bg: var(--neu-surface-bg) !important;
+        --surface-page-gradient: var(--neu-surface-bg) !important;
+        --surface-page-gradient-dark: var(--surface-page-gradient) !important;
+        --macos-titlebar-bg: rgb(var(--rgb-slate-950)) !important;
+        --nav-surface-bg: var(--macos-titlebar-bg) !important;
+    }
+
+    .platform-macos.dark.neuromorphic-style {
+        --filelist-page-bg: var(--neu-surface-bg) !important;
+        --surface-page-gradient: var(--neu-surface-bg) !important;
+        --surface-page-gradient-dark: var(--surface-page-gradient) !important;
+        --macos-titlebar-bg: var(--neu-raised-bg) !important;
+        --nav-surface-bg: var(--neu-raised-bg) !important;
+        --nav-surface-blur: 0px !important;
+        --nav-top-glow: transparent !important;
+        --nav-bottom-line: transparent !important;
+        --nav-side-ambience: transparent !important;
+    }
+}

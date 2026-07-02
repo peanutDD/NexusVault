@@ -1,0 +1,41 @@
+<style>
+  .neu-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:28px}
+  .neu-card{cursor:pointer;border-radius:20px;padding:20px;background:#303b4d;box-shadow:9px 9px 18px #1f2734,-9px -9px 18px #414f66;transition:.18s ease;color:#eef2f8;min-height:360px}
+  .neu-card:hover{transform:translateY(-2px)}
+  .neu-card.selected{outline:3px solid #6366f1;outline-offset:4px}
+  .neu-stage{height:168px;border-radius:16px;background:#303b4d;display:grid;place-items:center;margin-bottom:18px}
+  .raised{width:74%;height:54px;border-radius:999px;background:#303b4d;box-shadow:8px 8px 16px #202936,-8px -8px 16px #405064;display:flex;align-items:center;justify-content:center;font-weight:750}
+  .inset{width:78%;height:58px;border-radius:16px;background:#303b4d;box-shadow:inset 6px 6px 12px #202936,inset -6px -6px 12px #405064;display:flex;align-items:center;padding:0 20px;color:#aeb9ca}
+  .residue{border:1px solid rgba(148,163,184,.45);background:linear-gradient(145deg,#344154,#293345)}
+  .stack{position:relative;width:82%;height:100px}.stack span{position:absolute;inset:0;border-radius:16px;background:#303b4d;box-shadow:8px 8px 16px #202936,-8px -8px 16px #405064}.stack span:nth-child(2){transform:translate(8px,8px);border:1px solid rgba(148,163,184,.4)}
+  .tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#aeb9ca}.tag i{width:8px;height:8px;border-radius:50%;background:#34d399}
+  .neu-card h3{margin:14px 0 8px;font-size:19px}.neu-card p{color:#b8c2d1;line-height:1.55;font-size:14px}.recommended{color:#6ee7b7;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+  @media(max-width:900px){.neu-grid{grid-template-columns:1fr}.neu-card{min-height:auto}}
+</style>
+
+<p class="label">全项目 Neuromorphic 统一路径</p>
+<h2>哪一种改造方式能真正清掉旧设计？</h2>
+<p class="subtitle">点击选择。重点观察边框、渐变叠层和阴影是否只由一套表面系统控制。</p>
+
+<div class="neu-grid">
+  <div class="neu-card option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="neu-stage"><div style="width:100%;display:grid;gap:18px;place-items:center"><div class="raised">RAISED</div><div class="inset">Inset field</div></div></div>
+    <span class="recommended">推荐</span>
+    <h3>A. 全局 Primitive 单一真源</h3>
+    <p>重建 raised / inset / pressed / flat 四类基础表面，所有页面 token 只映射到它们；再删除页面级旧边框、glass、tech 和重复阴影。</p>
+  </div>
+
+  <div class="neu-card option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="neu-stage"><div class="stack"><span></span><span></span></div></div>
+    <div class="tag"><i></i>逐页替换</div>
+    <h3>B. 每个页面独立重写</h3>
+    <p>逐页达到参考效果，但会继续产生多套近似 token；代码量大，页面之间更容易再次出现光源方向与边框不一致。</p>
+  </div>
+
+  <div class="neu-card option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="neu-stage"><div class="inset residue">旧样式 + 强制覆盖</div></div>
+    <div class="tag"><i style="background:#f59e0b"></i>兼容覆盖</div>
+    <h3>C. 追加全局 !important 补丁</h3>
+    <p>改动最少、见效最快，但旧边框和背景仍留在级联中，正是当前出现“看起来不纯净”的根因，不适合作为最终方案。</p>
+  </div>
+</div>

@@ -1,0 +1,19 @@
+{
+  "date": "2026-05-08",
+  "task": "codex-cli one-to-one review status",
+  "goal": "Make every codex-cli auto-review PR comment map each Gemini Medium/Medium+ issue to a resolved, pending, or blocked status.",
+  "assumptions": [
+    "codex-cli processes one Gemini Review per invocation",
+    "workflow labels orchestrate multiple review rounds",
+    "PR comments and stdout JSON should use the same issue-level status data"
+  ],
+  "risks": [
+    "A clean summary can hide older pending items if issue-level status is omitted",
+    "Security-blocked generated fixes must not be marked as resolved"
+  ],
+  "verification": [
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml auto_fix_local_reports_unfixed_same_file_issue_independently --test e2e_auto_fix",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml review_status_block_lists_one_to_one_medium_status_table --lib",
+    "cargo test --manifest-path scripts/codex-cli/Cargo.toml"
+  ]
+}

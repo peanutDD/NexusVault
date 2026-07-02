@@ -1,0 +1,187 @@
+- generic [ref=e2]:
+  - generic [ref=e9]:
+    - link "跳转到主内容" [ref=e10] [cursor=pointer]:
+      - /url: "#main-content"
+    - navigation [ref=e11]:
+      - generic [ref=e13]:
+        - generic [ref=e15]:
+          - button "Home" [ref=e16] [cursor=pointer]:
+            - img "Logo" [ref=e17]
+          - heading "Audit Center" [level=1] [ref=e679]
+        - generic [ref=e681]:
+          - generic "visual-user" [ref=e682]:
+            - generic [ref=e684]: visual-user
+          - button "Activity" [ref=e685]:
+            - img [ref=e686]
+            - generic [ref=e689]: Activity
+          - button "Settings" [ref=e690]:
+            - img [ref=e691]
+            - generic [ref=e694]: Settings
+          - button "Trash" [ref=e695]:
+            - img [ref=e696]
+            - generic [ref=e699]: Trash
+          - 'button "Switch theme: current Dark, click to switch to Light" [ref=e700]':
+            - img [ref=e701]
+            - generic [ref=e703]: Dark
+          - button "Logout" [ref=e704]:
+            - img [ref=e705]
+            - generic [ref=e708]: Logout
+    - main [ref=e709]:
+      - generic [ref=e711]:
+        - generic [ref=e713]:
+          - generic [ref=e714]:
+            - button "返回上一级" [ref=e715]:
+              - img [ref=e716]
+              - text: 返回上一级
+            - heading "Audit Center" [level=2] [ref=e718]
+            - paragraph [ref=e719]: 用统一的时间线查看文件、分享和检索动作，不改任何调试链路，只把界面收束成完整的Neuromorphic 控制台。
+            - generic [ref=e720]:
+              - generic [ref=e721]: Live timeline
+              - generic [ref=e722]: 1 events
+              - generic [ref=e723]: 0 filters
+          - generic [ref=e725]:
+            - generic [ref=e726]: Personal scope
+            - generic [ref=e727]: visual-user
+            - generic [ref=e728]: 只展示当前登录用户的活动轨迹
+        - generic [ref=e729]:
+          - complementary [ref=e730]:
+            - generic [ref=e731]:
+              - generic [ref=e732]:
+                - img [ref=e733]
+                - generic [ref=e736]: 筛选轨道
+              - paragraph [ref=e737]: 来源、动作、文件 ID 和时间范围会直接重刷个人审计流。
+              - generic [ref=e738]:
+                - generic [ref=e739]: Source
+                - generic [ref=e740]: Type
+                - generic [ref=e741]: Range
+            - generic [ref=e742]:
+              - generic [ref=e743]:
+                - text: 来源
+                - button "来源" [ref=e745]:
+                  - generic [ref=e746]: 全部来源
+                  - img
+              - generic [ref=e747]:
+                - text: 动作
+                - generic [ref=e748]:
+                  - button "动作" [expanded] [active] [ref=e749]:
+                    - generic [ref=e750]: 全部动作
+                    - img
+                  - listbox "动作选项" [ref=e930]:
+                    - generic [ref=e931]:
+                      - option "全部动作" [selected] [ref=e932]:
+                        - img [ref=e934]
+                        - generic [ref=e936]: 全部动作
+                      - option "file.uploaded" [ref=e937]:
+                        - generic [ref=e939]: file.uploaded
+                      - option "file.downloaded" [ref=e940]:
+                        - generic [ref=e942]: file.downloaded
+                      - option "file.previewed" [ref=e943]:
+                        - generic [ref=e945]: file.previewed
+                      - option "file.deleted" [ref=e946]:
+                        - generic [ref=e948]: file.deleted
+                      - option "file.restored" [ref=e949]:
+                        - generic [ref=e951]: file.restored
+                      - option "folder.created" [ref=e952]:
+                        - generic [ref=e954]: folder.created
+                      - option "folder.renamed" [ref=e955]:
+                        - generic [ref=e957]: folder.renamed
+                      - option "share.created" [ref=e958]:
+                        - generic [ref=e960]: share.created
+                      - option "share.accessed" [ref=e961]:
+                        - generic [ref=e963]: share.accessed
+                      - option "file_request.created" [ref=e964]:
+                        - generic [ref=e966]: file_request.created
+                      - option "file_request.submitted" [ref=e967]:
+                        - generic [ref=e969]: file_request.submitted
+                      - option "file_request.approved" [ref=e970]:
+                        - generic [ref=e972]: file_request.approved
+                      - option "token.created" [ref=e973]:
+                        - generic [ref=e975]: token.created
+                      - option "token.deleted" [ref=e976]:
+                        - generic [ref=e978]: token.deleted
+                      - option "webdav.request" [ref=e979]:
+                        - generic [ref=e981]: webdav.request
+                      - option "fulltext.indexed" [ref=e982]:
+                        - generic [ref=e984]: fulltext.indexed
+              - generic [ref=e751]:
+                - text: 目标类型
+                - button "目标类型" [ref=e753]:
+                  - generic [ref=e754]: 全部目标类型
+                  - img
+              - generic [ref=e755]:
+                - text: 文件 ID
+                - textbox "文件 ID" [ref=e756]:
+                  - /placeholder: file-...
+              - generic [ref=e757]:
+                - text: 文件夹 ID
+                - textbox "文件夹 ID" [ref=e758]:
+                  - /placeholder: folder-...
+              - generic [ref=e759]:
+                - text: 分享 ID
+                - textbox "分享 ID" [ref=e760]:
+                  - /placeholder: share-...
+              - generic [ref=e761]:
+                - text: 请求 ID
+                - textbox "请求 ID" [ref=e762]:
+                  - /placeholder: request-...
+              - generic [ref=e763]:
+                - text: Token ID
+                - textbox "Token ID" [ref=e764]:
+                  - /placeholder: token-...
+              - generic [ref=e765]:
+                - text: 开始日期
+                - button "开始日期" [ref=e767]:
+                  - generic [ref=e768]:
+                    - img [ref=e769]
+                    - generic [ref=e771]: 选择日期
+                  - img
+              - generic [ref=e772]:
+                - text: 结束日期
+                - button "结束日期" [ref=e774]:
+                  - generic [ref=e775]:
+                    - img [ref=e776]
+                    - generic [ref=e778]: 选择日期
+                  - img
+            - button "清除筛选" [ref=e779]
+          - generic [ref=e780]:
+            - generic [ref=e782]:
+              - generic [ref=e783]:
+                - paragraph [ref=e784]: Activity timeline
+                - paragraph [ref=e785]: 按时间倒序显示最新动作，保留现有鉴权、筛选和分页逻辑。
+              - generic [ref=e787]: 1 visible
+            - list [ref=e789]:
+              - listitem [ref=e790]:
+                - generic [ref=e791]:
+                  - generic [ref=e792]:
+                    - generic [ref=e793]: Files
+                    - paragraph [ref=e794]: file.uploaded
+                  - generic [ref=e795]:
+                    - img [ref=e796]
+                    - text: "200"
+                - generic [ref=e799]:
+                  - paragraph [ref=e800]: demo-report.pdf
+                  - paragraph [ref=e801]: file
+                - generic [ref=e802]:
+                  - generic [ref=e804]:
+                    - generic [ref=e805]:
+                      - generic [ref=e806]:
+                        - img [ref=e807]
+                        - text: file
+                      - generic [ref=e810]: file-demo
+                    - generic [ref=e811]:
+                      - generic [ref=e812]:
+                        - img [ref=e813]
+                        - text: folder
+                      - generic [ref=e815]: folder-demo
+                  - time [ref=e816]:
+                    - img [ref=e817]
+                    - text: 6月4日 18:00
+            - button "刷新" [ref=e820]
+    - contentinfo [ref=e822]:
+      - generic [ref=e824]:
+        - paragraph [ref=e825]: NexusVault
+        - paragraph [ref=e826]: © 2026 WEIZHANG. All rights reserved. Unauthorized copying, reproduction or commercial use is prohibited.
+  - generic [ref=e831]:
+    - img [ref=e833]
+    - button "Open Tanstack query devtools" [ref=e881] [cursor=pointer]:
+      - img [ref=e882]

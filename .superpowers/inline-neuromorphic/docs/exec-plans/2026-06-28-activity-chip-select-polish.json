@@ -1,0 +1,40 @@
+{
+  "date": "2026-06-28",
+  "task": "activity-chip-select-polish",
+  "scope": [
+    "frontend/src/components/files/list/FileListCollectionChips.tsx",
+    "frontend/src/components/files/list/FileListSelectionBar.tsx",
+    "frontend/src/components/files/list/FileListContent.tsx",
+    "frontend/src/components/files/list/FileListGlass.css",
+    "frontend/src/components/files/list/FileListSelectionBar.test.tsx",
+    "frontend/src/components/common/NeuSelect.tsx",
+    "frontend/src/components/common/dialog/BaseDialog.tsx",
+    "frontend/src/components/common/dialog/ConfirmDialog.tsx",
+    "frontend/src/components/common/dialog/Modal.tsx",
+    "frontend/src/pages/Activity.tsx",
+    "frontend/src/pages/Activity.test.tsx",
+    "frontend/src/styles/base.css",
+    "docs/quality-score.md"
+  ],
+  "assumptions": [
+    "The target checkout is already an isolated git worktree.",
+    "Existing Activity validation and date-boundary request logic remain unchanged.",
+    "Error reload and clear-filter actions should reuse the refresh button visual language."
+  ],
+  "risks": [
+    "NeuSelect is shared across the frontend.",
+    "Collection chip measurement nodes must stay non-interactive.",
+    "Unrelated dirty worktree changes may affect broad validation."
+  ],
+  "dependencies": [
+    "Vitest focused frontend tests",
+    "Existing Neuromorphic primitive CSS",
+    "Rendered browser validation"
+  ],
+  "steps": [
+    "write failing tests",
+    "implement scoped UI fixes",
+    "run focused and practical validation",
+    "update quality score"
+  ]
+}

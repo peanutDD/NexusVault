@@ -1,0 +1,6 @@
+### File: src/lib.rs
+<<<<<<< SEARCH
+let timeout = 30;
+=======
+let timeout = 10;
+>>>>>>> REPLACE

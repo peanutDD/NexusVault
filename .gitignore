@@ -1,0 +1,10 @@
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+.superpowers/inline-neuromorphic/.git_backup/
+.superpowers/inline-neuromorphic/scripts/nexusvault-file-server-runner/externals/
+.superpowers/inline-neuromorphic/frontend/.vite/
+.superpowers/inline-neuromorphic/.playwright-cli/
+.superpowers/inline-neuromorphic/frontend/output/

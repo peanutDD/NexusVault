@@ -1,0 +1,23 @@
+{
+  "date": "2026-07-01",
+  "task": "backend-startup-warning-cleanup",
+  "target": "/Users/tyone/github/upload-download-util/.superpowers/inline-neuromorphic/backend",
+  "assumptions": [
+    "The inline-neuromorphic backend is the runtime target.",
+    "Startup warning floods are caused by stale database file rows whose local storage objects are missing."
+  ],
+  "risks": [
+    "Maintenance cleanup deletes database rows for files whose storage objects are missing.",
+    "Large local databases may need more than one maintenance batch to clear every stale row."
+  ],
+  "verification": [
+    "cargo fmt --manifest-path Cargo.toml -- --check",
+    "cargo test --manifest-path Cargo.toml --test maintenance_tests -- --nocapture",
+    "cargo test --manifest-path Cargo.toml --test handler_webdav_tests api_file_list_omits_missing_local_storage_records -- --nocapture",
+    "cargo clippy --manifest-path Cargo.toml --all-targets -- -D warnings",
+    "exact plain cargo run stayed running on port 3000",
+    "/health and /readyz returned healthy database/storage checks",
+    "runtime log polling after startup produced no new warning or error output",
+    "git diff --check"
+  ]
+}

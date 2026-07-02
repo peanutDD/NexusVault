@@ -1,0 +1,75 @@
+<h2>Settings optimization direction</h2>
+<p class="subtitle">Choose the safest scope for improving the Settings page without breaking profile, storage, theme, password, or API token flows.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. Conservative polish</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Back | Settings Center | KPI chips</div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:14px;margin-top:14px">
+            <div class="mock-sidebar">Quick nav<br>Account<br>Storage<br>Appearance<br>Security<br>Tokens</div>
+            <div class="mock-content">
+              <div class="placeholder">Unified card headers</div>
+              <div class="placeholder">Cleaner form rows</div>
+              <div class="placeholder">Safer empty/loading/error states</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Conservative polish</h3>
+      <p>Keep the existing information architecture and APIs. Improve spacing, mobile wrapping, semantic tokens, focus/error styling, and minor affordances.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. Workflow refinement</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Settings Center | Health summary | Active section</div>
+          <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;margin-top:14px">
+            <div class="mock-sidebar">Status-aware quick nav<br>Profile changed<br>Storage high<br>Token count</div>
+            <div class="mock-content">
+              <div class="placeholder">Unsaved-change hints</div>
+              <div class="placeholder">Better token management layout</div>
+              <div class="placeholder">Password strength feedback</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Workflow refinement</h3>
+      <p>Add light state-aware behavior on top of polish: active quick nav, clearer changed/unchanged form states, stronger token list scanning, password guidance.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. Larger settings hub</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Account | Billing | Data | Security | Developer</div>
+          <div class="mock-content" style="margin-top:14px">
+            <div class="placeholder">New settings taxonomy</div>
+            <div class="placeholder">New data management area</div>
+            <div class="placeholder">More API token policies</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Larger settings hub</h3>
+      <p>Reorganize settings more deeply and introduce new sections. Most useful long-term, but highest risk for a “do not break function” request.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Recommendation</h3>
+  <p>I recommend A plus a few safe pieces of B: polish the current page, add active/accessible navigation only if it can be covered by tests, and avoid new backend-dependent features.</p>
+</div>

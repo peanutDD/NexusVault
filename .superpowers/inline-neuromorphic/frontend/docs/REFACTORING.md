@@ -1,0 +1,446 @@
+# 前端重构计划与实施记录
+
+## 2026-04-20 最新实施记录（主题治理 / 入口拆分 / 工程清理）
+
+### 1. 主题治理：从组件硬编码颜色迁移到语义化 Token
+
+本轮调整的核心目标是解决“三主题已经存在，但大量页面仍按单一主题写死颜色”的问题。
+
+#### 已实施内容
+
+1. 在 `tokens.css` 中补充上传和预览相关语义变量，减少组件内直接写死 `bg-*`、`text-*`：
+   - `--upload-surface-bg`
+   - `--upload-text`
+   - `--upload-text-muted`
+   - `--upload-drop-*`
+   - `--upload-item-*`
+   - `--preview-text-primary`
+   - `--preview-text-muted`
+   - `--preview-icon`
+   - `--preview-divider`
+
+2. 上传弹窗相关组件逐步改为依赖 Token：
+   - `UploadDialog.tsx`
+   - `UploadFileItem.tsx`
+
+3. 文件预览页相关组件逐步改为依赖 Token：
+   - `FilePreview.tsx`
+   - `FilePreviewContent.tsx`
+
+4. 列表页的局部主题问题做了同步修正：
+   - `FileListBatchActions.tsx`
+   - `FileListContent.tsx`
+
+#### 结果
+
+- 浅色模式优先表现为“白底 + 深色文字”
+- 深色与紫色主题不再依赖组件内散落的条件样式
+- 后续调色优先改 `tokens.css`，而不是逐个改页面
+
+#### 后续要求
+
+- 新增组件时，优先使用语义变量，不直接写死品牌色或主题底色
+- 只有在视觉特效、临时态、第三方组件覆盖时才允许局部硬编码，并需说明原因
+
+---
+
+### 2. 入口治理：`App.tsx` 拆分为 Provider / Router / Bootstrap
+
+重构前，`App.tsx` 同时包含：
+
+- React Query 配置
+- React Query Devtools 漂浮按钮与拖拽逻辑
+- 认证守卫
+- 路由定义
+- 懒加载 fallback
+
+这导致入口文件职责过重，不利于继续扩展。
+
+#### 已实施拆分
+
+1. `App.tsx`
+   - 仅保留应用装配
+   - 当前装配链路：
+     - `QueryProvider`
+     - `BrowserCompatibilityWarning`
+     - `ErrorBoundary`
+     - `AuthProvider`
+     - `AppRouter`
+
+2. `providers/QueryProvider.tsx`
+   - 管理 `QueryClient`
+   - 管理 React Query Devtools 面板、悬浮按钮、拖拽与位置持久化
+
+3. `providers/AuthProvider.tsx`
+   - 管理 hydration 状态聚合
+   - 提供 `RequireAuth` 作为受保护路由守卫
+
+4. `router/AppRouter.tsx`
+   - 承载所有页面路由
+   - 统一懒加载 fallback
+
+#### 结果
+
+- `App.tsx` 降为装配层
+- Query、Auth、Router 职责清晰
+- 后续新增 Provider 或调整路由时，不会继续膨胀入口文件
+
+---
+
+### 3. 启动流程治理：`main.tsx` Bootstrap 化
+
+重构前，`main.tsx` 中混杂了启动渲染、Sentry 初始化、API 预连接、全局错误监听等逻辑。
+
+#### 已实施拆分
+
+新增 `src/bootstrap/`：
+
+- `sentry.ts`
+  - 生产环境按需初始化 Sentry
+- `preconnect.ts`
+  - 对跨域 API 做 `preconnect`
+- `errorTracking.ts`
+  - 注册 `window.error` 与 `unhandledrejection`
+
+#### 当前 `main.tsx` 职责
+
+- 引入样式
+- 调用 bootstrap 初始化
+- 渲染 `App`
+- 保留 vitals 按需加载
+
+#### 建议
+
+- 下一步可继续把 vitals 独立到 `bootstrap/vitals.ts`
+- 若未来恢复 PWA，也建议独立为 `bootstrap/pwa.ts`
+
+---
+
+### 4. ESLint 工程治理：忽略生成目录
+
+之前执行 `npm run lint` 时，`src-tauri/target` 等生成目录被 ESLint 扫描，导致大量 Parsing Error，掩盖真实代码问题。
+
+#### 已实施内容
+
+在 `frontend/eslint.config.js` 中补充忽略：
+
+- `dist`
+- `coverage`
+- `src-tauri/target`
+- `src-tauri/gen`
+- `.vite`
+
+#### 当前效果
+
+- 生成目录报错已被清除
+- `lint` 输出已收敛为真实业务代码问题
+
+#### 当前仍存在的存量问题
+
+- `src/components/files/preview/FilePreviewContent.tsx`
+  - `react-hooks/set-state-in-effect`
+- `src/components/files/useFileList.ts`
+  - `react-hooks/refs`
+
+这些问题属于后续治理项，不是本次目录拆分引入的问题。
+
+## 2026-03-01 最新约定（状态层/表单/请求）
+
+1. **状态分层**：
+   - **server-state**（文件列表、文件夹内容、分页/加载态等）统一交给 TanStack React Query。
+   - **Zustand** 只保留纯客户端状态（如 auth/theme/hydration）。
+2. **Settings 表单统一**：Settings 页的账户/密码/API Token 表单统一使用 React Hook Form + Zod。
+3. **请求统一**：OAuth 回调页统一走 `authService`，避免在页面内直接 `fetch` 以及绕开 axios 统一拦截器行为。
+
+## 重构目标
+
+1. **高效优雅**：代码简洁、逻辑清晰
+2. **减少冗余**：消除重复代码、统一类型定义
+3. **模块解耦**：组件、hooks、services 职责单一
+4. **高度模块化**：按业务领域和功能分组
+5. **结构分层清晰**：目录组织合理、易于导航
+6. **代码文件夹细致精准**：每个目录有明确的职责边界
+
+---
+
+## 重构前问题分析
+
+### 1. 代码冗余
+
+- ESC 关闭对话框逻辑在 8 个组件中重复
+- 文件夹名称验证逻辑在 2 个组件中重复
+- 文件/文件夹选择框 UI 在 2 个组件中重复
+
+### 2. 组件职责过重
+
+- `useFileList.ts`：877 行，混合了过滤、选择、分组、加载等逻辑
+- `UploadDialog.tsx`：616 行，混合了拖拽、URL 上传、队列管理
+- legacy Zustand stores：曾承担列表/选择/对话框等状态，但与 server-state 重复，已移除（server-state 交由 React Query）
+
+### 3. 类型重复
+
+- `User` 类型：`types/index.ts` 和 `services/auth.ts` 重复
+- `Folder` 类型：`types/index.ts` 和 `services/folders.ts` 重复且字段不一致
+- `StorageUsage` 类型：3 处重复
+
+### 4. 目录结构混乱
+
+- hooks 未按业务领域组织
+- utils 15 个文件未分类，职责边界不清
+- services 文件过大未拆分
+- components 扁平结构，缺少功能分组
+
+---
+
+## 重构后目录结构
+
+```
+src/
+├── components/
+│   ├── common/                         # 通用 UI 组件
+│   │   ├── dialog/                     # 对话框组件
+│   │   │   ├── BaseDialog.tsx          # 基础对话框（ESC、聚焦、背景点击）
+│   │   │   ├── ConfirmDialog.tsx       # 确认对话框
+│   │   │   ├── Modal.tsx               # 通用模态框
+│   │   │   └── index.ts
+│   │   ├── form/                       # 表单组件
+│   │   │   ├── FormField.tsx           # 表单字段
+│   │   │   ├── SelectionCheckbox.tsx   # 文件/文件夹选择框
+│   │   │   └── index.ts
+│   │   ├── feedback/                   # 反馈组件
+│   │   │   ├── ErrorMessage.tsx        # 错误消息
+│   │   │   ├── Skeleton.tsx            # 骨架屏
+│   │   │   ├── Spinner.tsx             # 加载指示器
+│   │   │   └── index.ts
+│   │   └── (Button, DropdownMenu, ThemeToggle 等)
+│   │
+│   ├── files/                          # 文件管理组件
+│   │   ├── dialogs/                    # 文件相关对话框
+│   │   │   ├── CreateFolderDialog.tsx
+│   │   │   ├── RenameFolderDialog.tsx
+│   │   │   ├── ShareDialog.tsx
+│   │   │   ├── BatchShareDialog.tsx
+│   │   │   ├── BatchMoveDialog.tsx
+│   │   │   └── index.ts
+│   │   ├── upload/                     # 上传相关
+│   │   │   ├── UploadDialog.tsx        # 上传对话框主容器
+│   │   │   ├── UploadFileItem.tsx      # 单个上传项
+│   │   │   ├── UploadDropzone.tsx      # 拖拽区域
+│   │   │   ├── UrlUploadForm.tsx       # URL 上传表单
+│   │   │   └── index.ts
+│   │   ├── grid/                       # 网格视图
+│   │   │   ├── FileCard.tsx            # 文件卡片
+│   │   │   ├── FolderCard.tsx          # 文件夹卡片
+│   │   │   ├── FileGrid.tsx            # 文件网格
+│   │   │   ├── FolderGrid.tsx          # 文件夹网格
+│   │   │   ├── VirtualizedFileGrid.tsx # 虚拟化文件网格
+│   │   │   └── index.ts
+│   │   ├── preview/                    # 预览相关（模块化）
+│   │   │   ├── FilePreview.tsx         # 主入口
+│   │   │   ├── FilePreviewContent.tsx  # 主内容区
+│   │   │   ├── FilePreviewToolbar.tsx  # 右侧控制面板
+│   │   │   ├── FilePreviewIcons.tsx    # 图标
+│   │   │   ├── hooks/                  # useFilePreviewData/Navigation/Effects
+│   │   │   ├── LazyThumbnail.tsx       # 懒加载缩略图
+│   │   │   └── index.ts
+│   │   ├── list/                       # 列表容器
+│   │   │   ├── FileList.tsx            # 文件列表主组件
+│   │   │   ├── FileListContent.tsx     # 列表内容
+│   │   │   ├── FileListHeader.tsx      # 列表头部
+│   │   │   ├── FileListFilters.tsx     # 过滤器
+│   │   │   ├── FileListBatchActions.tsx # 批量操作
+│   │   │   ├── FileListPagination.tsx  # 分页
+│   │   │   ├── FileListContext.tsx     # 列表上下文
+│   │   │   └── index.ts
+│   │   └── (FolderBreadcrumb, InfiniteScrollSentinel 等)
+│   │
+│   ├── auth/                           # 认证组件
+│   ├── layout/                         # 布局组件
+│   └── settings/                       # 设置组件
+│
+├── hooks/
+│   ├── common/                         # 通用 hooks
+│   │   ├── useDialog.ts                # 对话框逻辑（ESC、聚焦、背景点击）
+│   │   ├── useAsyncOperation.ts        # 异步操作（loading/error/execute）
+│   │   └── index.ts
+│   ├── files/                          # 文件业务 hooks
+│   │   ├── useFileFilters.ts           # 过滤排序逻辑
+│   │   ├── useFileSelection.ts         # 选择逻辑
+│   │   ├── useFileGrouping.ts          # 分组逻辑
+│   │   ├── useFileUpload.ts            # 上传逻辑
+│   │   └── index.ts
+│   └── folders/                        # 文件夹业务 hooks
+│       ├── useFolderValidation.ts      # 文件夹名称验证
+│       └── index.ts
+│
+├── services/
+│   ├── api/                            # API 基础设施
+│   │   └── index.ts                    # 重导出 api 实例
+│   ├── files/                          # 文件服务
+│   │   └── index.ts                    # 重导出 fileService
+│   ├── api.ts                          # Axios 实例、拦截器
+│   ├── files.ts                        # 文件 API
+│   ├── folders.ts                      # 文件夹 API
+│   ├── shares.ts                       # 分享 API
+│   ├── auth.ts                         # 认证 API
+│   └── index.ts
+│
+├── store/
+│   ├── authStore.ts
+│   ├── themeStore.ts
+│   ├── hydrationStore.ts
+│   └── index.ts
+│
+├── types/
+│   ├── api.ts                          # API 通用类型
+│   ├── auth.ts                         # 认证类型
+│   ├── files.ts                        # 文件类型
+│   ├── folders.ts                      # 文件夹类型
+│   ├── browser.ts                      # 浏览器类型
+│   └── index.ts                        # 统一导出
+│
+├── utils/
+│   ├── format/                         # 格式化工具
+│   │   └── index.ts
+│   ├── request/                        # 请求工具
+│   │   └── index.ts
+│   ├── file/                           # 文件工具
+│   │   └── index.ts
+│   ├── browser/                        # 浏览器工具
+│   │   └── index.ts
+│   ├── cache/                          # 缓存工具
+│   │   └── index.ts
+│   ├── cn.ts                           # 类名工具
+│   ├── error.ts                        # 错误处理
+│   ├── format.ts                       # 格式化函数
+│   └── index.ts
+│
+└── constants/
+    └── index.ts
+```
+
+---
+
+## 重构步骤
+
+### 阶段一：统一类型定义 ✅
+
+1. 创建 `types/api.ts`、`types/auth.ts`、`types/files.ts`、`types/folders.ts`、`types/browser.ts`
+2. 删除 `services/auth.ts` 中重复的 `User` 类型
+3. 删除 `services/folders.ts` 中重复的 `Folder` 类型
+4. 删除 `pages/Settings.tsx` 和 `StorageUsageSection.tsx` 中重复的 `StorageUsage` 类型
+5. 更新所有文件的导入路径
+
+### 阶段二：抽取公共 Hooks ✅
+
+1. 创建 `hooks/common/useDialog.ts`
+   - 统一 ESC 关闭、输入框聚焦、背景点击关闭
+   - 替换 8 处重复代码
+2. 创建 `hooks/common/useAsyncOperation.ts`
+   - 统一 loading + error + execute 模式
+3. 创建 `hooks/folders/useFolderValidation.ts`
+   - 统一文件夹名称验证逻辑
+
+### 阶段三：重构对话框组件 ✅
+
+1. 创建 `components/common/dialog/BaseDialog.tsx`
+   - 集成 useDialog hook
+   - 统一对话框骨架
+2. 创建 `components/common/form/SelectionCheckbox.tsx`
+   - 统一 FileCard/FolderCard 的选择框
+3. 重构 `CreateFolderDialog`、`RenameFolderDialog` 使用新 hooks
+
+### 阶段四：拆分 useFileList ✅
+
+将 877 行的 `useFileList.ts` 拆分为：
+
+- `hooks/files/useFileFilters.ts` - 过滤排序逻辑
+- `hooks/files/useFileSelection.ts` - 选择逻辑
+- `hooks/files/useFileGrouping.ts` - 分组逻辑（含 Web Worker 集成）
+
+### 阶段五：移除 legacy fileStore/listStore ✅
+
+删除 `fileStore.ts` / `store/files/*Store.ts` 等未引用且承载 server-state 的 Zustand stores；文件列表与文件夹内容改由 React Query hooks 管理（并通过 invalidate/refetch 驱动刷新）。
+
+### 阶段六：组织 services ✅
+
+创建 `services/api/` 和 `services/files/` 目录结构，添加 index.ts 统一导出。
+
+### 阶段七：重组 components 目录 ✅
+
+1. `files` 组件按功能分组：`dialogs/`、`upload/`、`grid/`、`preview/`、`list/`
+2. `common` 组件按类型分组：`dialog/`、`form/`、`feedback/`
+
+### 阶段八：拆分 UploadDialog ✅
+
+从 616 行拆分为：
+
+- `UploadDialog.tsx` - 主容器
+- `UploadDropzone.tsx` - 拖拽区域
+- `UrlUploadForm.tsx` - URL 上传表单
+- `useFileUpload.ts` - 上传逻辑 hook
+
+### 阶段九：优化 FileListContent ✅
+
+创建 `FileListContext.tsx`，为未来减少 props 传递提供基础。
+
+### 阶段十：清理和收尾 ✅
+
+1. 创建顶层 `hooks/index.ts`、`utils/index.ts`、`store/index.ts` 统一导出
+2. 创建 utils 子目录：`format/`、`request/`、`file/`、`browser/`、`cache/`
+3. 物理移动所有组件文件到对应子目录
+4. 更新所有导入路径
+5. 构建验证通过
+
+---
+
+## 重构成果
+
+### 代码质量提升
+
+- **类型定义零重复**：所有类型集中在 `types/` 目录
+- **逻辑复用**：通过 `useDialog`、`useFolderValidation` 等 hooks 消除重复代码
+- **职责单一**：每个组件和 hook 专注于单一职责
+
+### 目录结构清晰
+
+- **按业务领域分组**：`files/`、`auth/`、`settings/` 等
+- **按功能类型分组**：`dialogs/`、`upload/`、`grid/`、`preview/`、`list/`
+- **统一导出**：每个目录都有 `index.ts` 便于导入
+
+### 可维护性提升
+
+- **新功能定位快**：清晰的目录结构便于找到相关代码
+- **修改影响小**：模块解耦后，修改不会波及无关代码
+- **测试友好**：小而专注的模块更易于单元测试
+
+---
+
+## 导入路径示例
+
+```typescript
+// 从 types 导入
+import type { FileMetadata, Folder } from '@/types';
+
+// 从 hooks 导入
+import { useDialog } from '@/hooks/common';
+import { useFileFilters, useFileSelection } from '@/hooks/files';
+
+// 从 components 导入
+import { ErrorMessage, Spinner } from '@/components/common/feedback';
+import { FileList } from '@/components/files/list';
+import { UploadDialog } from '@/components/files/upload';
+
+// 从 store 导入
+import { useAuthStore } from '@/store/authStore';
+```
+
+---
+
+## 后续优化建议
+
+1. **配置路径别名**：在 `tsconfig.json` 中配置 `@/` 别名简化导入
+2. **添加 barrel exports**：完善 `index.ts` 导出，支持 tree-shaking
+3. **代码注释**：为公共 hooks 和组件添加 JSDoc 注释
+4. **单元测试**：为拆分后的 hooks 添加单元测试
+5. **性能监控**：持续关注 bundle size 变化

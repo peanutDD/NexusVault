@@ -1,0 +1,28 @@
+{
+  "date": "2026-06-30",
+  "task": "light-theme-global-adaptation",
+  "intent": "Adapt light mode contrast across the frontend without changing dark mode, layout, or business behavior.",
+  "assumptions": [
+    "The active target is .superpowers/inline-neuromorphic.",
+    "The bug is primarily token/CSS drift rather than component behavior.",
+    "Dark mode must keep its current theme contract.",
+    "The existing dirty worktree contains unrelated changes and must not be reverted."
+  ],
+  "risks": [
+    "The later CodePen Neuromorphic light token section overrides earlier light values.",
+    "Component CSS can bypass tokens through hardcoded colors.",
+    "Existing full frontend tests have unrelated failures."
+  ],
+  "steps": [
+    "Add RED tests for light contrast tokens and CSS consumption paths.",
+    "Update only light-mode token overrides and light-specific variable hooks.",
+    "Route Upload modal backdrop through a theme variable while preserving the previous default for non-light themes.",
+    "Run focused tests, lint, build, and browser screenshots when possible.",
+    "Add a permanent constraint and update quality score."
+  ],
+  "nonGoals": [
+    "No DOM or layout changes.",
+    "No dark theme retuning.",
+    "No business behavior changes."
+  ]
+}

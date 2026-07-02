@@ -1,0 +1,47 @@
+{
+  "date": "2026-05-04",
+  "task": "upload-completeness-hardening",
+  "goal": "Implement P0-P3 upload completeness hardening for ownership, test isolation, resumable chunked upload integrity, streaming instant-copy, metrics, and hook consolidation.",
+  "assumptions": [
+    "The active upload UI controller is frontend/src/components/files/upload/useUploadDialogController.ts.",
+    "frontend/src/hooks/files/useFileUpload.ts is unused by current application code.",
+    "upload_sessions.uploaded_parts is the backend source of truth for chunked resume state.",
+    "Retryable transport failures should preserve chunked sessions for resume; cancellation and validation failures should clear local resume state and abort server sessions.",
+    "folder_id is user-owned and must be validated before writing or completing files into a folder."
+  ],
+  "risks": [
+    "Shared PostgreSQL integration tests can delete each other's users or sessions when run in parallel.",
+    "A stale local resume record can attach a browser upload to the wrong backend session.",
+    "Accepting short or wrong chunks can create corrupted session state.",
+    "Instant upload cross-user copy can read large files into memory if implemented with get_file plus save_file.",
+    "Removing the unused hook without moving tests can reduce coverage of the live upload dialog."
+  ],
+  "dependencies": [
+    "FoldersRepo ownership lookup",
+    "UploadSessionsRepo status and progress persistence",
+    "sha256FileHex and sha256BlobHex frontend helpers",
+    "serial_test for shared database integration test isolation",
+    "record_file_operation metrics helper"
+  ],
+  "steps": [
+    "Add failing ownership and chunk-integrity tests.",
+    "Implement shared folder ownership validation.",
+    "Isolate upload handler integration tests with serial_test.",
+    "Persist and validate frontend chunked resume records.",
+    "Send X-Part-SHA256 for every chunk and validate chunk checksum and byte length in the backend.",
+    "Move instant upload cross-user copy into the storage abstraction.",
+    "Record chunked complete metrics.",
+    "Delete unused useFileUpload and move coverage to useUploadDialogController.",
+    "Update permanent constraints, testing strategy, changelog, and quality score.",
+    "Run targeted backend and frontend verification."
+  ],
+  "verification": [
+    "cargo fmt --all --check",
+    "cargo check",
+    "cargo test --test handler_files_upload_tests -- --nocapture",
+    "cargo test --test service_file_tests test_file_service_chunked_upload -- --nocapture",
+    "cargo test invalid_chunk_size_maps_to_validation_error -- --nocapture",
+    "npm test -- fileUploadService.test.ts useUploadDialogController.test.tsx uploadValidation.test.ts",
+    "npm exec tsc -b"
+  ]
+}

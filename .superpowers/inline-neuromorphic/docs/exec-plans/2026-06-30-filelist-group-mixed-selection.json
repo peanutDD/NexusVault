@@ -1,0 +1,26 @@
+{
+  "date": "2026-06-30",
+  "task": "filelist-group-mixed-selection",
+  "intent": "Fix the Files UI bug where selecting one file or folder makes the group selection control look fully selected.",
+  "assumptions": [
+    "The issue is visual state drift in group checkbox styling, not backend data or selection mutation.",
+    "The mixed state means partial selection and must be visually distinct from checked.",
+    "Existing layout, grouping, sorting, card behavior, and batch selection behavior must remain unchanged.",
+    "The active worktree already contains unrelated dirty changes that must not be reverted."
+  ],
+  "risks": [
+    "Group checkboxes are shared by type, pinned, folder, and time groups.",
+    "Existing full frontend tests may have unrelated failures from the dirty worktree."
+  ],
+  "steps": [
+    "Trace group selection state from item click to group checkbox class.",
+    "Add a RED regression test proving mixed is not allowed inside the checked fill CSS rule.",
+    "Move fileListGroupSelectCheckboxMixed out of the checked rule and into the neutral group-control treatment.",
+    "Run focused FileList tests, lint, build, and browser validation when practical.",
+    "Add a permanent constraint and update docs/quality-score.md."
+  ],
+  "nonGoals": [
+    "No layout, sizing, sort, grouping, or data-fetching changes.",
+    "No new selection model or card interaction behavior."
+  ]
+}
