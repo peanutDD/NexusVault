@@ -1,0 +1,376 @@
+# Instincts generated from https://github.com/peanutDD/NexusVault
+# Generated: 2026-07-02T11:36:43.886Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: NexusVault-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/peanutDD/NexusVault
+---
+
+# NexusVault Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: fix
+
+## Evidence
+
+- 1 commits analyzed
+- Detected conventional commit pattern
+- Examples: fix: enforce strict Gemini review loop
+
+---
+id: NexusVault-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/peanutDD/NexusVault
+---
+
+# NexusVault Commit Length
+
+## Action
+
+Keep commit messages concise (~38 characters)
+
+## Evidence
+
+- Average commit message length: 38 chars
+- Based on 1 commits
+
+---
+id: NexusVault-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/peanutDD/NexusVault
+---
+
+# NexusVault Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: NexusVault-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/peanutDD/NexusVault
+---
+
+# NexusVault Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: NexusVault-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/peanutDD/NexusVault
+---
+
+# NexusVault Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: NexusVault-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/peanutDD/NexusVault
+---
+
+# NexusVault Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.ts
+
+## Evidence
+
+- File pattern: *.test.ts
+- Consistent across test files
+
+---
+id: NexusVault-test-types
+trigger: "when planning tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/peanutDD/NexusVault
+---
+
+# NexusVault Test Types
+
+## Action
+
+Write unit, e2e tests to match project standards
+
+## Evidence
+
+- Test types detected: unit, e2e
+- Coverage config: no
+
+---
+id: nexusvault-instinct-file-naming
+trigger: "When creating a new file"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct File Naming
+
+## Action
+
+Name the file using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.files
+
+---
+id: nexusvault-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Function Naming
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions
+
+---
+id: nexusvault-instinct-class-naming
+trigger: "When defining a new class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Class Naming
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes
+
+---
+id: nexusvault-instinct-constant-naming
+trigger: "When defining a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Constant Naming
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants
+
+---
+id: nexusvault-instinct-import-style
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Import Style
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in importStyle
+
+---
+id: nexusvault-instinct-export-style
+trigger: "When exporting functions or classes"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle
+
+---
+id: nexusvault-instinct-test-file-pattern
+trigger: "When creating a test file"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Test File Pattern
+
+## Action
+
+Name the file with the pattern *.test.ts
+
+## Evidence
+
+- Pattern in testing.filePattern
+
+---
+id: nexusvault-instinct-test-types
+trigger: "When writing tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Test Types
+
+## Action
+
+Include both unit and e2e test types
+
+## Evidence
+
+- Pattern in testing.testTypes
+
+---
+id: nexusvault-instinct-commit-format
+trigger: "When making a git commit"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Commit Format
+
+## Action
+
+Use the conventional commit format with a 'fix' prefix for bug fixes
+
+## Evidence
+
+- Seen in commit: 'fix: enforce strict Gemini review loop'
+- Pattern in commits.prefixes
+
+---
+id: nexusvault-instinct-commit-length
+trigger: "When writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Commit Length
+
+## Action
+
+Keep the commit message around 38 characters on average
+
+## Evidence
+
+- Pattern in commits.averageLength
+
+---
+id: nexusvault-instinct-github-workflow-codex-auto-fix
+trigger: "When automating code fixes via CI"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Github Workflow Codex Auto Fix
+
+## Action
+
+Use the workflow defined in .github/workflows/codex-auto-fix.yml
+
+## Evidence
+
+- Pattern in architecture.configFiles: .github/workflows/codex-auto-fix.yml
+
+---
+id: nexusvault-instinct-github-workflow-gemini-review
+trigger: "When initiating a Gemini review process"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: peanutDD/NexusVault
+---
+
+# Nexusvault Instinct Github Workflow Gemini Review
+
+## Action
+
+Use the workflow defined in .github/workflows/gemini-review-kickoff.yml
+
+## Evidence
+
+- Pattern in architecture.configFiles: .github/workflows/gemini-review-kickoff.yml
+
