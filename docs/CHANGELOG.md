@@ -267,21 +267,6 @@ Jaeger UI 访问地址：http://localhost:16686
 
 ### 🤖 AI 自动修复
 
-#### 🤖 Codex Auto-Fix (PR #3, round 1) — ts=1783001801
-
-- 安全扫描：发现潜在风险
-- 质量评分：0 / 100
-- 变更文件：
-  - `docs/CHANGELOG.md`
-  - `scripts/codex-cli/tests/workflow_state.rs`
-
-#### 🤖 Codex Auto-Fix (PR #3, round 1) — ts=1783001687
-
-- 安全扫描：发现潜在风险
-- 质量评分：8 / 100
-- 变更文件：
-  - `scripts/codex-cli/tests/workflow_state.rs`
-
 #### 🤖 Codex Auto-Fix (PR #32, round 1) — ts=1778722807
 
 - 安全扫描：发现潜在风险

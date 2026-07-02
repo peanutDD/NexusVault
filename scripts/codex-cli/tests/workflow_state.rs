@@ -1,453 +1,535 @@
-name: Codex Auto Fix (本地 Runner)
+use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+use std::process::Command;
 
-on:
-  issue_comment:
-    types: [created]
-  pull_request_review:
-    types: [submitted]
+#[test]
+fn pending_without_fix_blocks_instead_of_claiming_clean() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-1"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "false"),
+        ("PENDING_COUNT", "2"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
+    ]);
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  statuses: read
+    assert_eq!(output["action"], "needs_human");
+    assert_eq!(output["request_review"], "false");
+    assert_eq!(output["ready_to_merge"], "false");
+    assert_eq!(output["human_block"], "true");
+}
 
-env:
-  MAX_ROUNDS: 2
-  USE_REVIEW_JSON: true
-  CODEX_JOB_TIMEOUT_MINUTES: 55
-  CODEX_PR_AUTO_FIX_STEP_TIMEOUT_MINUTES: 45
-  CODEX_AGENT_TIMEOUT_SECONDS: 360
-  CODEX_AUTO_FIX_BUDGET_SECONDS: 2400
-  CODEX_AUTO_FIX_RESERVE_SECONDS: 180
-  CODEX_PR_TARBALL_BUDGET_SECONDS: 120
-  CODEX_AUTO_FIX_STRICT: false
-  CODEX_AUTO_FIX_DIRECT_FULL_FILE: true
-  CODEX_AGENT_MODEL: gpt-5.5
-  CODEX_AUTO_FIX_VERIFY_COMMANDS: |
-    set -euo pipefail
-    if git status --short -- frontend/ | grep -q .; then
-      (
-        cd frontend
-        npm ci --ignore-scripts
-        npm run lint
-        npx --no-install tsc -b --noEmit
-      )
-    fi
-    if git status --short -- backend/ | grep -q .; then
-      (
-        cd backend
-        cargo fmt --all -- --check
-        cargo clippy --all-targets --all-features -- -D warnings
-      )
-    fi
+#[test]
+fn relaxed_pending_without_fix_clears_review_state() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-1"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "false"),
+        ("PENDING_COUNT", "2"),
+        ("CODEX_AUTO_FIX_STRICT", "false"),
+    ]);
 
-concurrency:
-  group: codex-auto-fix-pr-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: false
+    assert_eq!(output["action"], "relaxed_clear");
+    assert_eq!(output["next_round"], "gemini-review-round-max");
+    assert_eq!(output["request_review"], "false");
+    assert_eq!(output["ready_to_merge"], "true");
+    assert_eq!(output["human_block"], "false");
+    assert_eq!(output["state_label"], "gemini-review-clean");
+}
 
-jobs:
-  codex-fix:
-    if: >
-      (
-        github.event_name == 'issue_comment'
-        && github.event.issue.pull_request
-        && github.event.comment.user.login == 'gemini-code-assist[bot]'
-        && (
-          contains(github.event.comment.body, '## Gemini Code Assist Review')
-          || contains(github.event.comment.body, '## Code Review')
-        )
-      )
-      || (
-        github.event_name == 'pull_request_review'
-        && github.event.review.user.login == 'gemini-code-assist[bot]'
-      )
-    runs-on: [self-hosted, file-server]
-    timeout-minutes: 55
-    env:
-      PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
-      REVIEW_ID: ${{ github.event.review.id || '' }}
+#[test]
+fn relaxed_push_blocked_clears_review_state() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-1"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "true"),
+        ("PENDING_COUNT", "3"),
+        ("CODEX_AUTO_FIX_STRICT", "false"),
+    ]);
 
-    steps:
-      - name: Checkout trusted automation source
-        run: |
-          set -euo pipefail
+    assert_eq!(output["action"], "relaxed_clear");
+    assert_eq!(output["request_review"], "false");
+    assert_eq!(output["ready_to_merge"], "true");
+    assert_eq!(output["human_block"], "false");
+    assert_eq!(output["state_label"], "gemini-review-clean");
+}
 
-          BASE_SHA="$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json baseRefOid -q '.baseRefOid')"
-          trusted_source="${RUNNER_TEMP:-/tmp}/codex-trusted-source-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          archive="${RUNNER_TEMP:-/tmp}/codex-trusted-source-${BASE_SHA}.tar.gz"
-          tmp_archive="${archive}.tmp"
-          api_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${BASE_SHA}"
+#[test]
+fn clean_first_round_requests_second_review() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-1"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "false"),
+        ("PENDING_COUNT", "0"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
+    ]);
 
-          rm -rf "${trusted_source}" "${archive}" "${tmp_archive}"
-          mkdir -p "${trusted_source}"
+    assert_eq!(output["action"], "advance");
+    assert_eq!(output["next_round"], "gemini-review-round-2");
+    assert_eq!(output["request_review"], "true");
+    assert_eq!(output["ready_to_merge"], "false");
+}
 
-          curl --fail --location --silent --show-error \
-            --http1.1 \
-            --retry 2 \
-            --retry-all-errors \
-            --connect-timeout 10 \
-            --max-time 60 \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${api_url}" \
-            --output "${tmp_archive}"
+#[test]
+fn clean_second_round_marks_round_max_ready() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-2"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "false"),
+        ("PENDING_COUNT", "0"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
+    ]);
 
-          tar -tzf "${tmp_archive}" >/dev/null
-          mv "${tmp_archive}" "${archive}"
-          tar -xzf "${archive}" -C "${trusted_source}" --strip-components=1
+    assert_eq!(output["action"], "complete");
+    assert_eq!(output["next_round"], "gemini-review-round-max");
+    assert_eq!(output["request_review"], "false");
+    assert_eq!(output["ready_to_merge"], "true");
+}
 
-          test -f "${trusted_source}/scripts/codex-cli/Cargo.toml"
-          test -f "${trusted_source}/.github/scripts/codex-auto-fix-state.sh"
+#[test]
+fn pushed_partial_fix_continues_to_second_review_but_not_ready() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-1"),
+        ("FIXED", "true"),
+        ("PUSH_BLOCKED", "false"),
+        ("PENDING_COUNT", "1"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
+    ]);
 
-          echo "CODEX_TRUSTED_SOURCE=${trusted_source}" >> "${GITHUB_ENV}"
-          echo "CODEX_AUTO_FIX_MANIFEST=${trusted_source}/scripts/codex-cli/Cargo.toml" >> "${GITHUB_ENV}"
-          echo "Trusted automation source pinned to base commit ${BASE_SHA}."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    assert_eq!(output["action"], "advance_with_pending");
+    assert_eq!(output["next_round"], "gemini-review-round-2");
+    assert_eq!(output["request_review"], "true");
+    assert_eq!(output["ready_to_merge"], "false");
+}
 
-      - name: Resilient checkout PR branch
-        run: |
-          set -euo pipefail
+#[test]
+fn fail_closed_security_blocks_loop() {
+    let output = plan(&[
+        ("CURRENT_ROUND", "gemini-review-round-1"),
+        ("FIXED", "false"),
+        ("PUSH_BLOCKED", "true"),
+        ("PENDING_COUNT", "0"),
+        ("CODEX_AUTO_FIX_STRICT", "true"),
+    ]);
 
-          HEAD_REF="$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json headRefName -q '.headRefName')"
-          HEAD_SHA="$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json headRefOid -q '.headRefOid')"
-          echo "PR head: ${HEAD_REF}@${HEAD_SHA}"
-          bootstrap_started_at="$(date +%s)"
+    assert_eq!(output["action"], "push_blocked");
+    assert_eq!(output["request_review"], "false");
+    assert_eq!(output["human_block"], "true");
+}
 
-          log_bootstrap() {
-            local status="$1"
-            local now
-            now="$(date +%s)"
-            shift
-            echo "bootstrap_status=${status} elapsed=$((now - bootstrap_started_at))s $*"
-          }
+#[test]
+fn codex_auto_fix_concurrency_serializes_without_canceling_active_runs() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
+    let jobs_index = workflow
+        .find("jobs:")
+        .expect("codex auto-fix workflow should define jobs");
+    let top_level = &workflow[..jobs_index];
+    let jobs = &workflow[jobs_index..];
 
-          archive_is_valid() {
-            tar -tzf "$1" >/dev/null 2>&1
-          }
+    assert!(
+        top_level.contains("\nconcurrency:\n"),
+        "workflow-level concurrency is required to serialize same-PR review runs before they contend for the self-hosted runner"
+    );
+    assert!(
+        top_level.contains("codex-auto-fix-pr-")
+            && top_level.contains("github.event.issue.number")
+            && top_level.contains("github.event.pull_request.number"),
+        "workflow-level concurrency must use the PR number, not github.ref/actor, so unrelated PRs do not stale-block each other"
+    );
+    assert!(
+        !top_level.contains("github.ref }}-${{ github.actor"),
+        "github.ref/actor concurrency can serialize unrelated issue_comment review runs on the default branch"
+    );
+    assert!(
+        top_level.contains("  cancel-in-progress: false"),
+        "a newer Gemini review should wait for the active codex-fix run so it can finish state advancement and publish"
+    );
+    assert!(
+        !jobs.contains("    concurrency:\n"),
+        "job-level concurrency starts too late on self-hosted runners and can still leave newer runs waiting"
+    );
+}
 
-          download_pr_head_archive() {
-            local archive="$1"
-            local tmp_archive="${archive}.tmp"
-            local api_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${HEAD_SHA}"
-            local tarball_budget="${CODEX_PR_TARBALL_BUDGET_SECONDS:-120}"
-            local tarball_deadline=$(( $(date +%s) + tarball_budget ))
-            local attempt=1
+#[test]
+fn codex_auto_fix_serial_runner_has_timeouts() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-            rm -f "${archive}" "${tmp_archive}"
-            while [[ "$(date +%s)" -lt "${tarball_deadline}" ]]; do
-              local remaining=$((tarball_deadline - $(date +%s)))
-              if [[ "${remaining}" -lt 15 ]]; then
-                break
-              fi
+    assert!(
+        workflow.contains("    timeout-minutes: 55"),
+        "codex-fix job should have a hard timeout so one stale run cannot block the PR queue forever"
+    );
+    assert!(
+        workflow.contains("        timeout-minutes: 45\n        if: steps.round.outputs.current_round != 'gemini-review-round-max'"),
+        "the pr-auto-fix step should time out before the job timeout and release the concurrency group"
+    );
+    assert!(
+        workflow.contains("CODEX_AGENT_TIMEOUT_SECONDS: 360"),
+        "the local Codex child process should have a bounded timeout below the step timeout"
+    );
+    assert!(
+        workflow.contains("CODEX_AGENT_MODEL: gpt-5.5"),
+        "auto-fix should force the intended GPT-5.5 model instead of inheriting an interactive Codex profile"
+    );
+    assert!(
+        workflow.contains("name: Auto-fix queue guard diagnostics")
+            && workflow.contains("codex_queue_group=codex-auto-fix-${PR_NUMBER}"),
+        "codex-fix should print queue guard diagnostics so stale-run waits are explainable"
+    );
+}
 
-              log_bootstrap downloading "attempt=${attempt} remaining=${remaining}s path=curl-http1.1"
-              if curl --fail --location --silent --show-error \
-                --http1.1 \
-                --retry 1 \
-                --retry-all-errors \
-                --connect-timeout 10 \
-                --max-time 45 \
-                -H "Authorization: Bearer ${GH_TOKEN}" \
-                -H "Accept: application/vnd.github+json" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "${api_url}" \
-                --output "${tmp_archive}" \
-                && archive_is_valid "${tmp_archive}"; then
-                mv "${tmp_archive}" "${archive}"
-                return 0
-              fi
+#[test]
+fn codex_auto_fix_targets_self_hosted_file_server_runner() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-              local bytes=0
-              if [[ -f "${tmp_archive}" ]]; then
-                bytes="$(wc -c < "${tmp_archive}" | tr -d ' ')"
-              fi
-              rm -f "${tmp_archive}"
-              echo "::warning::PR tarball download failed for ${HEAD_SHA}, attempt ${attempt}, bytes=${bytes}, remaining=${remaining}s"
-              sleep 5
-              attempt=$((attempt + 1))
-            done
+    assert!(
+        workflow.contains("    runs-on: [self-hosted, file-server]"),
+        "codex-fix must explicitly target self-hosted runners with the file-server label"
+    );
+    assert!(
+        !workflow.contains("    runs-on: file-server\n"),
+        "single-label runs-on can leave matching self-hosted runners unclear in the Actions UI"
+    );
+}
 
-            echo "bootstrap_status=blocked reason=tarball_budget_exhausted"
-            log_bootstrap blocked "tarball budget exhausted after ${tarball_budget}s"
+#[test]
+fn codex_auto_fix_runs_doctor_before_long_auto_fix_step() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-            return 1
-          }
+    let doctor_index = workflow
+        .find("doctor --json")
+        .expect("workflow should run codex-auto-fix doctor before pr-auto-fix");
+    let auto_fix_index = workflow
+        .find("pr-auto-fix \\")
+        .expect("workflow should run pr-auto-fix");
 
-          workspace="${GITHUB_WORKSPACE}"
-          seed="${CODEX_LOCAL_REPO_SEED}"
-          mirror="${CODEX_LOCAL_BARE_MIRROR:-}"
-          mkdir -p "${workspace}"
+    assert!(
+        doctor_index < auto_fix_index,
+        "doctor should fail fast before the expensive auto-fix command starts"
+    );
+    assert!(
+        workflow.contains("select(.name == \"agent.command\" and .status == \"warning\")"),
+        "workflow should stop when CODEX_AGENT_COMMAND is missing or recursively points to codex-auto-fix"
+    );
+}
 
-          is_bare_mirror() {
-            [[ -n "$1" ]] && [[ -d "$1" ]] && git -C "$1" rev-parse --is-bare-repository >/dev/null 2>&1
-          }
+#[test]
+fn codex_auto_fix_passes_review_json_to_auto_fix() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-          sync_local_bare_mirror() {
-            if ! is_bare_mirror "${mirror}"; then
-              log_bootstrap local "bare mirror unavailable at ${mirror}; using seed/tarball fallback"
-              return 0
-            fi
+    let extract_index = workflow
+        .find("name: 提取 Gemini Review 完整内容")
+        .expect("workflow should extract the complete Gemini review first");
+    let json_index = workflow
+        .find("name: Convert review markdown to JSON primary input")
+        .expect("workflow should convert extracted review markdown to primary JSON input");
+    let auto_fix_index = workflow
+        .find("name: 调用 codex-auto-fix pr-auto-fix")
+        .expect("workflow should run codex-auto-fix after JSON validation");
 
-            log_bootstrap local "refreshing bare mirror ${mirror}"
-            git -C "${mirror}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
-            git -C "${mirror}" \
-              -c http.lowSpeedLimit=1024 \
-              -c http.lowSpeedTime=30 \
-              fetch --prune origin \
-              "+refs/heads/*:refs/heads/*" \
-              "+refs/pull/*/head:refs/pull/*/head" || true
-          }
+    assert!(
+        extract_index < json_index && json_index < auto_fix_index,
+        "review extraction should feed JSON validation before auto-fix runs"
+    );
+    assert!(
+        workflow.contains("printf '%s\\n' \"$REVIEW_TEXT\" > /tmp/review.md"),
+        "workflow should persist the exact extracted review body for JSON conversion"
+    );
+    assert!(
+        workflow.contains("review-to-json")
+            && workflow.contains("--input /tmp/review.md")
+            && workflow.contains("--output /tmp/review.json"),
+        "workflow should call codex-auto-fix review-to-json on the extracted markdown"
+    );
+    assert!(
+        workflow.contains("REVIEW_JSON_PATH=/tmp/review.json"),
+        "workflow should expose the JSON path for downstream observability"
+    );
+    assert!(
+        workflow.contains("--review-json \"$REVIEW_JSON_PATH\""),
+        "workflow should drive pr-auto-fix from the validated JSON input"
+    );
+}
 
-          sync_local_bare_mirror
+#[test]
+fn codex_auto_fix_has_coherent_runtime_budget() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-          if [[ -d "${workspace}/.git" ]]; then
-            git -C "${workspace}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
-          elif is_bare_mirror "${mirror}"; then
-            log_bootstrap local "cloning bare mirror ${mirror}"
-            git clone --no-hardlinks "${mirror}" "${workspace}"
-            git -C "${workspace}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
-          elif [[ -d "${seed}/.git" ]]; then
-            git clone --no-hardlinks "${seed}" "${workspace}"
-            git -C "${workspace}" remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
-          else
-            echo "::error::Cannot find local checkout seed at ${seed}"
-            exit 1
-          fi
+    assert!(
+        workflow.contains("timeout-minutes: 55"),
+        "codex-fix job should leave enough room for checkout, JSON conversion, auto-fix, and state advancement"
+    );
+    assert!(
+        workflow.contains("timeout-minutes: 45"),
+        "pr-auto-fix step should not be killed at the old 30 minute boundary"
+    );
+    assert!(
+        workflow.contains("CODEX_AGENT_TIMEOUT_SECONDS: 360"),
+        "each model call should be bounded so one slow audit cannot consume the whole step"
+    );
+    assert!(
+        workflow.contains("CODEX_AUTO_FIX_BUDGET_SECONDS: 2400"),
+        "the CLI should receive a budget lower than the step timeout so it can return JSON before Actions kills it"
+    );
+    assert!(
+        workflow.contains("CODEX_AUTO_FIX_STRICT: false"),
+        "review automation should run in relaxed mode so recoverable patch/audit failures do not interrupt GPT-5.5 repair"
+    );
+    assert!(
+        workflow.contains("CODEX_AUTO_FIX_DIRECT_FULL_FILE: true"),
+        "relaxed review automation should write complete files directly instead of blocking on patch context mismatch"
+    );
+    assert!(
+        workflow.contains("CODEX_AGENT_MODEL: ${{ env.CODEX_AGENT_MODEL }}"),
+        "codex-fix should pass the model override into codex-cli"
+    );
+    assert!(
+        workflow.contains("steps.round.outputs.current_round == 'gemini-review-round-max' && env.CODEX_AUTO_FIX_STRICT == 'true'"),
+        "relaxed review automation must not skip new Gemini review events just because an old round-max label is present"
+    );
+    assert!(
+        workflow.contains("WAIT_FOR_GEMINI_REVIEW: false"),
+        "relaxed review automation should clear state immediately instead of waiting for another Gemini review"
+    );
+    assert!(
+        workflow.contains("codex_auto_fix_budget_seconds=${CODEX_AUTO_FIX_BUDGET_SECONDS}"),
+        "queue diagnostics should print the effective CLI budget"
+    );
+}
 
-          cd "${workspace}"
-          git config --global --add safe.directory "${workspace}" || true
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+#[test]
+fn codex_auto_fix_runs_frontend_pre_push_validation() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-          hydrate_from_local_sources() {
-            if is_bare_mirror "${mirror}"; then
-              log_bootstrap local "hydrating from bare mirror ${mirror}"
-              git fetch --no-tags "${mirror}" \
-                "+refs/heads/*:refs/remotes/local-mirror/*" \
-                "+refs/pull/*:refs/remotes/local-pr/*" || true
-            fi
+    assert!(
+        workflow.contains("CODEX_AUTO_FIX_VERIFY_COMMANDS:"),
+        "codex-fix must define pre-push verification so generated patches are checked before publish"
+    );
+    assert!(
+        workflow.contains("git status --short -- frontend/")
+            && workflow.contains("set -euo pipefail")
+            && workflow.contains("npm ci --ignore-scripts")
+            && workflow.contains("npm run lint")
+            && workflow.contains("npx --no-install tsc -b --noEmit"),
+        "frontend auto-fix changes must run fail-fast install, lint, and typecheck before commit/push without compiling native install scripts"
+    );
+}
 
-            if [[ -d "${seed}/.git" ]]; then
-              log_bootstrap local "hydrating from seed ${seed}"
-              git fetch --no-tags "${seed}" \
-                "+refs/heads/*:refs/remotes/local-seed/*" \
-                "+refs/pull/*:refs/remotes/local-seed-pr/*" || true
-            fi
-          }
+#[test]
+fn codex_auto_fix_runs_backend_pre_push_format_validation() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-          exact_head=false
-          hydrate_from_local_sources
-          if git cat-file -e "${HEAD_SHA}^{commit}" 2>/dev/null; then
-            git checkout -B "${HEAD_REF}" "${HEAD_SHA}"
-            git reset --hard "${HEAD_SHA}"
-            git clean -ffdx
-            exact_head=true
-          else
-            archive="${RUNNER_TEMP:-/tmp}/codex-pr-head-${HEAD_SHA}.tar.gz"
-            extract_dir="${RUNNER_TEMP:-/tmp}/codex-pr-head-${HEAD_SHA}"
-            rm -rf "${extract_dir}"
-            mkdir -p "${extract_dir}"
+    assert!(
+        workflow.contains("git status --short -- backend/")
+            && workflow.contains("cd backend")
+            && workflow.contains("cargo fmt --all -- --check")
+            && workflow.contains("cargo clippy --all-targets --all-features -- -D warnings"),
+        "backend auto-fix changes must run cargo fmt and clippy before commit/push because GitHub API publish does not trigger CI"
+    );
+}
 
-            if download_pr_head_archive "${archive}"; then
-              tar -xzf "${archive}" -C "${extract_dir}" --strip-components=1
-              rsync -a --delete --exclude ".git" "${extract_dir}/" "${workspace}/"
-              git checkout -B "${HEAD_REF}"
-              git add -A
-              if ! git diff --cached --quiet; then
-                git commit -m "bootstrap PR head ${HEAD_SHA}"
-              fi
-              exact_head=true
-            fi
-          fi
+#[test]
+fn codex_auto_fix_supports_markdown_rollback_switch() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-          if [[ "${exact_head}" != "true" ]]; then
-            echo "bootstrap_status=blocked reason=exact_head_unverified"
-            log_bootstrap blocked "Cannot verify exact PR head ${HEAD_SHA}; refusing to run auto-fix on a stale local seed."
-            gh pr comment "${PR_NUMBER}" \
-              --body "**Codex checkout/bootstrap blocked.** Cannot verify exact PR head \`${HEAD_SHA}\` from local mirror/seed or the bounded GitHub tarball fallback, so auto-fix stopped before review execution. Re-run after the local mirror catches up or GitHub tarball streaming recovers." || true
-            echo "::error::Cannot verify exact PR head ${HEAD_SHA}; refusing to run auto-fix on a stale local seed."
-            exit 1
-          fi
+    assert!(
+        workflow.contains("USE_REVIEW_JSON: true"),
+        "workflow should default to JSON review input"
+    );
+    assert!(
+        workflow.contains("env.USE_REVIEW_JSON == 'true'"),
+        "JSON conversion should be skipped when USE_REVIEW_JSON=false"
+    );
+    assert!(
+        workflow.contains("if [[ \"${USE_REVIEW_JSON}\" == \"true\" ]]"),
+        "auto-fix step should branch on the rollback switch"
+    );
+    assert!(
+        workflow.contains("--review-json \"$REVIEW_JSON_PATH\""),
+        "JSON branch should pass the validated review JSON"
+    );
+    assert!(
+        workflow.contains("--gemini-review \"$REVIEW_BODY\""),
+        "Markdown rollback branch should preserve the previous input path"
+    );
+    assert!(
+        workflow.contains("gemini-review-needs-human"),
+        "JSON conversion failures should route to the human fallback label/comment"
+    );
+}
 
-          echo "CODEX_PUBLISH_VIA_GH_API=true" >> "${GITHUB_ENV}"
-          echo "Checked out PR branch ${HEAD_REF} with resilient local/API bootstrap."
-        env:
-          CODEX_LOCAL_BARE_MIRROR: /Users/tyone/github/upload-download-util.git
-          CODEX_LOCAL_REPO_SEED: /Users/tyone/github/upload-download-util
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#[test]
+fn codex_auto_fix_bootstraps_pr_head_without_git_https_checkout() {
+    let workflow = fs::read_to_string(codex_auto_fix_workflow())
+        .expect("codex auto-fix workflow should be readable");
 
-      - name: 获取当前轮次标签
-        id: round
-        run: |
-          LABELS=$(gh pr view "${PR_NUMBER}" --json labels -q '.labels[].name')
+    assert!(
+        !workflow.contains("uses: actions/checkout@v4"),
+        "self-hosted auto-fix should not depend on actions/checkout Git HTTPS fetch as the first step"
+    );
+    assert!(
+        workflow.contains("CODEX_LOCAL_REPO_SEED"),
+        "workflow should seed the workspace from a local repository before contacting GitHub"
+    );
+    assert!(
+        workflow.contains("CODEX_LOCAL_BARE_MIRROR"),
+        "workflow should prefer a maintained local bare mirror before falling back to network tarballs"
+    );
+    assert!(
+        workflow.contains("sync_local_bare_mirror"),
+        "workflow should maintain the local bare mirror instead of assuming another process refreshed it"
+    );
+    assert!(
+        workflow.contains("http.lowSpeedTime=30"),
+        "local mirror refresh should bound stalled Git transfers before falling back"
+    );
+    assert!(
+        workflow.contains("hydrate_from_local_sources"),
+        "workflow should try to hydrate missing PR head commits from local sources before GitHub tarballs"
+    );
+    assert!(
+        workflow.contains("headRefOid") && workflow.contains("headRefName"),
+        "workflow should resolve the exact PR head branch and SHA through the GitHub API"
+    );
+    assert!(
+        workflow.contains("tarball/${HEAD_SHA}"),
+        "workflow should use the GitHub API tarball path instead of Git smart HTTP fetch when needed"
+    );
+    assert!(
+        workflow.contains("download_pr_head_archive")
+            && workflow.contains("CODEX_PR_TARBALL_BUDGET_SECONDS")
+            && workflow.contains("tarball_deadline"),
+        "workflow should retry transient PR tarball stream failures inside a hard total budget before failing closed"
+    );
+    assert!(
+        workflow.contains("curl")
+            && workflow.contains("--http1.1")
+            && workflow.contains("--retry-all-errors"),
+        "workflow should fall back to HTTP/1.1 curl retries when gh api streaming is cancelled"
+    );
+    assert!(
+        workflow.contains("--max-time 45"),
+        "each tarball network attempt should be bounded so bootstrap cannot burn the review budget"
+    );
+    assert!(
+        workflow.contains("bootstrap_status=blocked"),
+        "workflow should expose checkout/bootstrap blocked status instead of making failures look like review failures"
+    );
+    assert!(
+        workflow.contains("Codex checkout/bootstrap blocked"),
+        "workflow should post a clear PR comment when exact PR head bootstrap is blocked"
+    );
+    assert!(
+        workflow.contains("Cannot verify exact PR head"),
+        "workflow should fail closed instead of auto-fixing a stale local seed"
+    );
+    assert!(
+        workflow.contains("CODEX_PUBLISH_VIA_GH_API=true"),
+        "synthetic local checkout should force codex-cli to publish via GitHub API rather than git push"
+    );
+}
 
-          ROUND_LABEL="gemini-review-round-1"
-          for label in $LABELS; do
-            if [[ "$label" == gemini-review-round-* ]]; then
-              ROUND_LABEL="$label"
-              break
-            fi
-          done
-          echo "current_round=$ROUND_LABEL" >> "$GITHUB_OUTPUT"
-          echo "Current detected round: $ROUND_LABEL"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#[test]
+fn gemini_kickoff_only_skips_actual_auto_fix_commit_subjects() {
+    let workflow = fs::read_to_string(gemini_kickoff_workflow())
+        .expect("gemini kickoff workflow should be readable");
 
-      - name: 轮次上限保护（Round-Max 则停止）
-        if: steps.round.outputs.current_round == 'gemini-review-round-max' && env.CODEX_AUTO_FIX_STRICT == 'true'
-        run: |
-          echo "已达到最大轮次（2 轮并已完成），停止自动化修复"
-          gh pr comment "${PR_NUMBER}" \
-            --body "🤖 **Codex 自动修复已完成 2 轮任务。** 建议人工进行最终 Review。如需再次触发自动修复，请手动将 PR 标签重置为 gemini-review-round-1 并回复 /gemini review。"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    assert!(
+        !workflow.contains("*codex auto-fix*"),
+        "Gemini kickoff must not skip any human commit that merely mentions codex auto-fix"
+    );
+    assert!(
+        workflow.contains("\"$LAST_COMMIT_MESSAGE\" == \"🤖 codex auto-fix:\"*"),
+        "Gemini kickoff should only skip the exact auto-fix bot commit subject prefix"
+    );
+    assert!(
+        workflow.contains("GEMINI_REVIEW_REQUIRED: false"),
+        "Gemini kickoff should request review without making missing Gemini responses a blocking check in relaxed mode"
+    );
+}
 
-      - name: 提取 Gemini Review 完整内容
-        id: gemini
-        if: steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          EVENT_NAME: ${{ github.event_name }}
-          RAW_COMMENT_BODY: ${{ github.event.comment.body || github.event.review.body || '' }}
-        run: |
-          REVIEW_TEXT="$RAW_COMMENT_BODY"
+#[test]
+fn state_script_names_medium_and_medium_plus_as_pending_scope() {
+    let script =
+        fs::read_to_string(workflow_script()).expect("workflow state script should be readable");
 
-          if [[ "$EVENT_NAME" == "pull_request_review" && -n "${REVIEW_ID}" ]]; then
-            INLINE_COMMENTS="$(
-              gh api "repos/${GH_REPO}/pulls/${PR_NUMBER}/comments" --paginate --jq "
-                .[]
-                | select(.pull_request_review_id == ${REVIEW_ID})
-                | \"### \" + .path + \":\" + ((.line // .original_line // 0) | tostring) + \"\n\" + .body
-              "
-            )"
+    assert!(
+        script.contains("pending Medium/Medium+/High/Critical review items"),
+        "pending label description should not imply Medium findings are ignored"
+    );
+    assert!(
+        script.contains("no pending Medium/Medium+/High/Critical findings"),
+        "clean label description should cover both Medium and Medium+"
+    );
+    assert!(
+        script.contains("Gemini Review 的 Medium/Medium+/High/Critical 问题"),
+        "needs-human comment should tell reviewers Medium findings are actionable"
+    );
+    assert!(
+        script.contains("Medium/Medium+/High/Critical 未自动修复说明"),
+        "pending comments should cover both Medium and Medium+ findings"
+    );
+    assert!(
+        script.contains("问题清单见上方 Codex 分析评论"),
+        "state comments should always tell reviewers where the automatic issue list is"
+    );
+    assert!(
+        script.contains("Medium/Medium+/High/Critical 对应状态"),
+        "state comments should point humans to the automatic one-to-one status table"
+    );
+    assert!(
+        !script.contains("medium+ review items"),
+        "state labels must not narrow the loop to Medium+ only"
+    );
+}
 
-            if [[ -n "$INLINE_COMMENTS" ]]; then
-              REVIEW_TEXT="${REVIEW_TEXT}"$'\n\n'"## Inline Review Comments"$'\n'"${INLINE_COMMENTS}"
-            fi
-          fi
+fn plan(envs: &[(&str, &str)]) -> HashMap<String, String> {
+    let script = workflow_script();
+    let output = Command::new("bash")
+        .arg(script)
+        .arg("plan")
+        .env("MAX_ROUNDS", "2")
+        .envs(envs.iter().copied())
+        .output()
+        .expect("workflow state script should run");
 
-          printf '%s\n' "$REVIEW_TEXT" > /tmp/review.md
+    assert!(
+        output.status.success(),
+        "status={:?}\nstdout={}\nstderr={}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 
-          DELIM="REVIEW_BODY_$(date +%s%N)_${RANDOM}"
-          echo "REVIEW_BODY<<${DELIM}" >> "$GITHUB_ENV"
-          echo "$REVIEW_TEXT" >> "$GITHUB_ENV"
-          echo "${DELIM}" >> "$GITHUB_ENV"
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| line.split_once('='))
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .collect()
+}
 
-      - name: Convert review markdown to JSON primary input
-        if: (steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true') && env.USE_REVIEW_JSON == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
+fn workflow_script() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(".github/scripts/codex-auto-fix-state.sh")
+}
 
-          if ! cargo run --manifest-path "${CODEX_AUTO_FIX_MANIFEST}" --bin codex-auto-fix -- \
-            review-to-json \
-            --input /tmp/review.md \
-            --output /tmp/review.json; then
-            gh label create "gemini-review-needs-human" \
-              --color "b60205" \
-              --description "Automated review loop requires human decision" || true
-            gh pr edit "${PR_NUMBER}" --add-label "gemini-review-needs-human"
-            gh pr comment "${PR_NUMBER}" \
-              --body "🤖 **Codex 自动修复暂停**：Review JSON 转换失败，已切换为人工兜底。若需临时回滚到 Markdown 输入，请设置 `USE_REVIEW_JSON=false` 后重跑 workflow。"
-            exit 1
-          fi
+fn codex_auto_fix_workflow() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(".github/workflows/codex-auto-fix.yml")
+}
 
-          jq -e '.issues and (.issues | type == "array")' /tmp/review.json >/dev/null
-          echo "REVIEW_JSON_PATH=/tmp/review.json" >> "$GITHUB_ENV"
-          echo "review_issue_count=$(jq '.issues | length' /tmp/review.json)"
-
-      - name: Auto-fix queue guard diagnostics
-        if: steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true'
-        run: |
-          echo "codex_queue_group=codex-auto-fix-${PR_NUMBER}"
-          echo "codex_job_timeout_minutes=${CODEX_JOB_TIMEOUT_MINUTES}"
-          echo "codex_pr_auto_fix_step_timeout_minutes=${CODEX_PR_AUTO_FIX_STEP_TIMEOUT_MINUTES}"
-          echo "codex_agent_timeout_seconds=${CODEX_AGENT_TIMEOUT_SECONDS}"
-          echo "codex_auto_fix_budget_seconds=${CODEX_AUTO_FIX_BUDGET_SECONDS}"
-          echo "codex_auto_fix_reserve_seconds=${CODEX_AUTO_FIX_RESERVE_SECONDS}"
-          echo "A newer Gemini review for the same PR waits for the active codex-fix run instead of canceling it mid-publish."
-
-      - name: 调用 codex-auto-fix pr-auto-fix
-        timeout-minutes: 45
-        if: steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true'
-        id: codex
-        env:
-          CODEX_SKILL_PACK_ROOT: ${{ env.CODEX_TRUSTED_SOURCE }}/scripts/codex-cli
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CODEX_AGENT_COMMAND_SECRET: ${{ secrets.CODEX_AGENT_COMMAND }}
-          CODEX_AGENT_COMMAND_VAR: ${{ vars.CODEX_AGENT_COMMAND }}
-          CODEX_AGENT_TIMEOUT_SECONDS: ${{ env.CODEX_AGENT_TIMEOUT_SECONDS }}
-          CODEX_AGENT_MODEL: ${{ env.CODEX_AGENT_MODEL }}
-          CODEX_AUTO_FIX_BUDGET_SECONDS: ${{ env.CODEX_AUTO_FIX_BUDGET_SECONDS }}
-          CODEX_AUTO_FIX_RESERVE_SECONDS: ${{ env.CODEX_AUTO_FIX_RESERVE_SECONDS }}
-          CODEX_AUTO_FIX_VERIFY_COMMANDS: ${{ env.CODEX_AUTO_FIX_VERIFY_COMMANDS }}
-        run: |
-          set -euo pipefail
-
-          if [[ -n "${CODEX_AGENT_COMMAND_SECRET:-}" ]]; then
-            export CODEX_AGENT_COMMAND="${CODEX_AGENT_COMMAND_SECRET}"
-          elif [[ -n "${CODEX_AGENT_COMMAND_VAR:-}" ]]; then
-            export CODEX_AGENT_COMMAND="${CODEX_AGENT_COMMAND_VAR}"
-          fi
-
-          if [[ -z "${CODEX_AGENT_COMMAND:-}" ]]; then
-            echo "::error::CODEX_AGENT_COMMAND is not configured. Set repository secret or variable CODEX_AGENT_COMMAND to the real local Codex executor, not codex-auto-fix."
-            exit 1
-          fi
-
-          DOCTOR_JSON="$(cargo run --manifest-path "${CODEX_AUTO_FIX_MANIFEST}" --bin codex-auto-fix -- doctor --json)"
-          echo "$DOCTOR_JSON" | jq -r '.checks[] | "[\(.status)] \(.name): \(.message)"'
-          if echo "$DOCTOR_JSON" | jq -e '.checks[] | select(.name == "agent.command" and .status == "warning")' >/dev/null; then
-            echo "::error::CODEX_AGENT_COMMAND is not safe for auto-fix. It is missing or recursively points to codex-auto-fix; set it to the real Codex CLI executor."
-            exit 1
-          fi
-
-          REVIEW_ARGS=()
-          if [[ "${USE_REVIEW_JSON}" == "true" ]]; then
-            REVIEW_ARGS=(--review-json "$REVIEW_JSON_PATH")
-          else
-            REVIEW_ARGS=(--gemini-review "$REVIEW_BODY")
-          fi
-
-          RESULT=$(cargo run --manifest-path "${CODEX_AUTO_FIX_MANIFEST}" --bin codex-auto-fix -- pr-auto-fix \
-            --pr-number "${PR_NUMBER}" \
-            "${REVIEW_ARGS[@]}" \
-            --max-rounds ${{ env.MAX_ROUNDS }} \
-            --yes)
-
-          echo "skill_result<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$RESULT" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
-          FIXED=$(echo "$RESULT" | jq -r '.fixed')
-          PUSH_BLOCKED=$(echo "$RESULT" | jq -r '.push_blocked // false')
-          PENDING_COUNT=$(echo "$RESULT" | jq -r '.pending_count // (.pending_explanations | length)')
-          HAS_PENDING=$(echo "$RESULT" | jq -r '.has_pending // ((.pending_explanations | length) > 0)')
-          REVIEW_CLEAN=$(echo "$RESULT" | jq -r '.review_clean // false')
-          echo "fixed=$FIXED" >> "$GITHUB_OUTPUT"
-          echo "push_blocked=$PUSH_BLOCKED" >> "$GITHUB_OUTPUT"
-          echo "pending_count=$PENDING_COUNT" >> "$GITHUB_OUTPUT"
-          echo "has_pending=$HAS_PENDING" >> "$GITHUB_OUTPUT"
-          echo "review_clean=$REVIEW_CLEAN" >> "$GITHUB_OUTPUT"
-
-      - name: 推进 Review 状态机
-        if: steps.round.outputs.current_round != 'gemini-review-round-max' || env.CODEX_AUTO_FIX_STRICT != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GEMINI_REVIEW_TOKEN || secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          CURRENT_ROUND: ${{ steps.round.outputs.current_round }}
-          FIXED: ${{ steps.codex.outputs.fixed }}
-          PUSH_BLOCKED: ${{ steps.codex.outputs.push_blocked }}
-          PENDING_COUNT: ${{ steps.codex.outputs.pending_count }}
-          MAX_ROUNDS: ${{ env.MAX_ROUNDS }}
-          WAIT_FOR_GEMINI_REVIEW: false
-          GEMINI_REVIEW_TIMEOUT_SECONDS: 600
-          GEMINI_REVIEW_POLL_INTERVAL_SECONDS: 15
-        run: |
-          export PR_SHA="$(git rev-parse HEAD)"
-          bash "${CODEX_TRUSTED_SOURCE}/.github/scripts/codex-auto-fix-state.sh" apply
+fn gemini_kickoff_workflow() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(".github/workflows/gemini-review-kickoff.yml")
+}
