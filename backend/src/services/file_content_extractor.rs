@@ -7,7 +7,11 @@ use std::{
     path::Path,
 };
 
-use quick_xml::{events::Event, reader::Reader};
+use flate2::read::{DeflateDecoder, ZlibDecoder};
+use quick_xml::{
+    events::{BytesRef, Event},
+    reader::Reader,
+};
 use zip::ZipArchive;
 
 use crate::utils::AppError;
@@ -85,7 +89,11 @@ impl FileContentExtractor {
 
     /// 提取 PDF 内容
     fn extract_pdf_content(data: &[u8]) -> Result<String, AppError> {
-        Ok(extract_pdf_literals(data).join("\n"))
+        let mut chunks = extract_pdf_literals(data);
+        for stream in extract_pdf_flate_streams(data) {
+            chunks.extend(extract_pdf_literals(&stream));
+        }
+        Ok(chunks.join("\n"))
     }
 
     /// 提取 DOCX 内容
@@ -224,6 +232,9 @@ fn extract_docx_document_text(xml: &str) -> Result<String, AppError> {
                         .map_err(|e| AppError::File(format!("DOCX CDATA 解码失败: {}", e)))?,
                 );
             }
+            Event::GeneralRef(event) if in_text > 0 => {
+                text.push_str(&decode_xml_general_ref(&event)?);
+            }
             Event::End(event) => match xml_local_name(event.local_name().as_ref()).as_str() {
                 "t" => in_text = in_text.saturating_sub(1),
                 "p" if !text.ends_with('\n') => text.push('\n'),
@@ -235,6 +246,35 @@ fn extract_docx_document_text(xml: &str) -> Result<String, AppError> {
     }
 
     Ok(text.trim().to_string())
+}
+
+fn decode_xml_general_ref(reference: &BytesRef<'_>) -> Result<String, AppError> {
+    let value = reference
+        .decode()
+        .map_err(|e| AppError::File(format!("DOCX entity 解码失败: {}", e)))?;
+
+    let resolved = match value.as_ref() {
+        "amp" => "&".to_string(),
+        "lt" => "<".to_string(),
+        "gt" => ">".to_string(),
+        "quot" => "\"".to_string(),
+        "apos" => "'".to_string(),
+        value if value.starts_with("#x") || value.starts_with("#X") => {
+            let code = u32::from_str_radix(&value[2..], 16)
+                .ok()
+                .and_then(char::from_u32);
+            code.map(|ch| ch.to_string())
+                .unwrap_or_else(|| format!("&{};", value))
+        }
+        value if value.starts_with('#') => {
+            let code = value[1..].parse::<u32>().ok().and_then(char::from_u32);
+            code.map(|ch| ch.to_string())
+                .unwrap_or_else(|| format!("&{};", value))
+        }
+        value => format!("&{};", value),
+    };
+
+    Ok(resolved)
 }
 
 fn xml_local_name(name: &[u8]) -> String {
@@ -268,6 +308,102 @@ fn extract_pdf_literals(data: &[u8]) -> Vec<String> {
     }
 
     chunks
+}
+
+fn extract_pdf_flate_streams(data: &[u8]) -> Vec<Vec<u8>> {
+    let mut decoded_streams = Vec::new();
+    let mut index = 0usize;
+
+    while let Some(stream_keyword) = find_pdf_keyword(data, b"stream", index) {
+        let stream_start = pdf_stream_data_start(data, stream_keyword + b"stream".len());
+        let Some(endstream_keyword) = find_pdf_keyword(data, b"endstream", stream_start) else {
+            break;
+        };
+        index = endstream_keyword + b"endstream".len();
+
+        if !pdf_stream_has_flate_filter(data, stream_keyword) {
+            continue;
+        }
+
+        let stream_end = pdf_stream_data_end(data, endstream_keyword);
+        if let Some(decoded) = decode_pdf_flate_stream(&data[stream_start..stream_end]) {
+            decoded_streams.push(decoded);
+        }
+    }
+
+    decoded_streams
+}
+
+fn pdf_stream_has_flate_filter(data: &[u8], stream_keyword: usize) -> bool {
+    let Some(dict_start) = rfind_bytes(&data[..stream_keyword], b"<<") else {
+        return false;
+    };
+    let Some(dict_end) = rfind_bytes(&data[..stream_keyword], b">>") else {
+        return false;
+    };
+    dict_start < dict_end
+        && data[dict_start..dict_end]
+            .windows(b"/FlateDecode".len())
+            .any(|window| window == b"/FlateDecode")
+}
+
+fn pdf_stream_data_start(data: &[u8], mut index: usize) -> usize {
+    while matches!(data.get(index), Some(b' ' | b'\t')) {
+        index += 1;
+    }
+
+    match (data.get(index), data.get(index + 1)) {
+        (Some(b'\r'), Some(b'\n')) => index + 2,
+        (Some(b'\r' | b'\n'), _) => index + 1,
+        _ => index,
+    }
+}
+
+fn pdf_stream_data_end(data: &[u8], mut index: usize) -> usize {
+    while index > 0 && matches!(data.get(index - 1), Some(b'\r' | b'\n')) {
+        index -= 1;
+    }
+    index
+}
+
+fn decode_pdf_flate_stream(stream: &[u8]) -> Option<Vec<u8>> {
+    let mut decoded = Vec::new();
+    if ZlibDecoder::new(stream).read_to_end(&mut decoded).is_ok() {
+        return Some(decoded);
+    }
+
+    let mut decoded = Vec::new();
+    if DeflateDecoder::new(stream)
+        .read_to_end(&mut decoded)
+        .is_ok()
+    {
+        return Some(decoded);
+    }
+
+    None
+}
+
+fn find_pdf_keyword(data: &[u8], keyword: &[u8], mut from: usize) -> Option<usize> {
+    while from + keyword.len() <= data.len() {
+        if data[from..].starts_with(keyword)
+            && data
+                .get(from.wrapping_sub(1))
+                .map_or(true, |byte| !byte.is_ascii_alphabetic())
+            && data
+                .get(from + keyword.len())
+                .map_or(true, |byte| !byte.is_ascii_alphabetic())
+        {
+            return Some(from);
+        }
+        from += 1;
+    }
+
+    None
+}
+
+fn rfind_bytes(data: &[u8], needle: &[u8]) -> Option<usize> {
+    data.windows(needle.len())
+        .rposition(|window| window == needle)
 }
 
 fn push_pdf_text_chunk(chunks: &mut Vec<String>, value: String) {
@@ -404,6 +540,28 @@ mod tests {
     }
 
     #[test]
+    fn docx_content_extractor_preserves_xml_entity_references() {
+        use std::io::Write;
+        use zip::{write::SimpleFileOptions, ZipWriter};
+
+        let cursor = Cursor::new(Vec::new());
+        let mut writer = ZipWriter::new(cursor);
+        writer
+            .start_file("word/document.xml", SimpleFileOptions::default())
+            .unwrap();
+        writer
+            .write_all(
+                br#"<w:document xmlns:w="word"><w:body><w:p><w:r><w:t>R&amp;D &lt;Lab&gt; &#x21; &#33;</w:t></w:r></w:p></w:body></w:document>"#,
+            )
+            .unwrap();
+        let docx = writer.finish().unwrap().into_inner();
+
+        let text = FileContentExtractor::extract_docx_content(&docx).unwrap();
+
+        assert_eq!(text, "R&D <Lab> ! !");
+    }
+
+    #[test]
     fn pdf_content_extractor_reads_literal_and_hex_strings() {
         let pdf = br#"%PDF-1.4
 1 0 obj
@@ -417,5 +575,28 @@ endobj"#;
 
         assert!(text.contains("Hello PDF"));
         assert!(text.contains("Text"));
+    }
+
+    #[test]
+    fn pdf_content_extractor_reads_flate_decoded_stream_text() {
+        use flate2::{write::ZlibEncoder, Compression};
+        use std::io::Write;
+
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder
+            .write_all(b"BT (Compressed PDF Text) Tj ET")
+            .unwrap();
+        let compressed = encoder.finish().unwrap();
+        let mut pdf = format!(
+            "%PDF-1.4\n1 0 obj\n<< /Length {} /Filter /FlateDecode >>\nstream\n",
+            compressed.len()
+        )
+        .into_bytes();
+        pdf.extend_from_slice(&compressed);
+        pdf.extend_from_slice(b"\nendstream\nendobj\n%%EOF");
+
+        let text = FileContentExtractor::extract_pdf_content(&pdf).unwrap();
+
+        assert!(text.contains("Compressed PDF Text"));
     }
 }

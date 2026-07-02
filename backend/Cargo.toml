@@ -104,6 +104,7 @@ zip = "2.2"
 # File content extraction for semantic search
 # Text encoding detection
 encoding_rs = "0.8"
+flate2 = "1.1"
 tantivy = "0.26"
 
 # Random token generation
