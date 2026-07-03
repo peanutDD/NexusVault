@@ -1,85 +1,148 @@
-# Rust
-/target/
-target/
-**/*.rs.bk
-Cargo.lock
+# upload-download-util project ignore policy
+# Keep source, docs, CI, config templates, evidence, and lockfiles in Git.
+# Ignore local state, secrets, dependencies, build outputs, and generated data.
 
-# Node
-node_modules/
-**/node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-dist/
-**/dist/
-dist-ssr/
-*.local
-
-# Environment
-.env
-.env.local
-.env.*.local
-**/.env
-**/.env.local
-**/.env.*.local
-
-# IDE
-.vscode/
+# OS and editor state
+.DS_Store
+**/.DS_Store
+Thumbs.db
+Desktop.ini
 .idea/
+.vscode/
+.cursor/
 *.swp
 *.swo
 *~
-.cursor/
-
-# OS
-.DS_Store
-Thumbs.db
-**/.DS_Store
-
-# Uploads
-uploads/
-**/uploads/
-backend/uploads/
-frontend/uploads/
-
-# GIF files（本地转换输入，体积大，不提交）
-frontend/files/gif-files/
-**/gif-files/
 
 # Logs
 *.log
 logs/
-**/*.log
+**/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
 
-# Database
+# Environment files and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+!.env.sample
+!**/.env.sample
+!.env.template
+!**/.env.template
+!.env.production.example
+!**/.env.production.example
+!frontend/.env.production
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# JavaScript/TypeScript build outputs and tool caches
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+build/
+**/build/
+out/
+**/out/
+output/
+**/output/
+.vite/
+**/.vite/
+.cache/
+**/.cache/
+.turbo/
+**/.turbo/
+.parcel-cache/
+**/.parcel-cache/
+.eslintcache
+*.tsbuildinfo
+
+# Rust build artifacts
+target/
+**/target/
+**/*.rs.bk
+# Cargo.lock is intentionally kept for this application/CLI repository.
+
+# Test, coverage, and browser automation output
+coverage/
+**/coverage/
+*.gcov
+*.gcda
+*.gcno
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+**/.playwright-cli/*.log
+**/.playwright-cli/console-*.log
+
+# Local app/runtime data
+uploads/
+**/uploads/
+**/frontend/files/gif-files/
 *.db
 *.sqlite
+*.sqlite3
 *.dump
+*.sql.gz
 
-# Build artifacts
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+.tmp/
+**/.tmp/
+.corust-tmp/
+**/.corust-tmp/
+
+# Native and packaged binaries
 *.o
+*.a
 *.so
 *.dylib
 *.dll
 *.exe
+*.dSYM/
 
-# Coverage
-coverage/
-*.gcov
-*.gcda
-*.gcno
+# Mobile, Tauri, and Android local artifacts
+**/.gradle/
+**/local.properties
+**/captures/
+**/*.apk
+**/*.aab
+**/*.ipa
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
-.corust-tmp/
-**/.corust-tmp/
-.superpowers/
-
-# GitHub Actions Runner
+# GitHub Actions runner local installation
 actions-runner/
+**/actions-runner/
+scripts/nexusvault-file-server-runner/.credentials*
+scripts/nexusvault-file-server-runner/.runner
+scripts/nexusvault-file-server-runner/.path
+scripts/nexusvault-file-server-runner/_diag/
+scripts/nexusvault-file-server-runner/_work/
+scripts/nexusvault-file-server-runner/bin/
+scripts/nexusvault-file-server-runner/externals/
 
-# Mobile client
-/mobile/
+# Agent and local workspace state
+/.agents/
+/.git_backup/
+/.vercel/
+/.superset/
