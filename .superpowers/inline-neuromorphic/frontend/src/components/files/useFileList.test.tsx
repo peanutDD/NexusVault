@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { AxiosError } from "axios";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,20 +32,6 @@ vi.mock("../../hooks/files/useFiles", () => ({
 
 vi.mock("../../hooks/folders/useFolders", () => ({
   useFolderContents: (...args: unknown[]) => mockUseFolderContents(...args),
-}));
-
-vi.mock("../../hooks/files/useFileSelection", () => ({
-  useFileSelection: () => ({
-    selectedFiles: new Set(),
-    selectedFolders: new Set(),
-    selectedFileIds: [] as string[],
-    selectedFolderIds: [] as string[],
-    allFilesSelected: false,
-    toggleSelectAll: vi.fn(),
-    clearSelection: vi.fn(),
-    setSelectedFiles: vi.fn(),
-    setSelectedFolders: vi.fn(),
-  }),
 }));
 
 vi.mock("../../hooks/files/useFileUI", () => ({
@@ -198,5 +184,118 @@ describe("useFileList query error handling", () => {
 
     expect(result.current.clearError).toBeUndefined();
     expect(mockClearError).not.toHaveBeenCalled();
+  });
+
+  it("selects only files and folders visible in the filtered current folder scope", () => {
+    const visibleFile = {
+      id: "file-visible",
+      filename: "photo-3.jpg",
+      original_filename: "photo-3.jpg",
+      file_size: 1024,
+      mime_type: "image/jpeg",
+      category: "image",
+      folder_id: "folder-t",
+      created_at: "2026-07-03T00:00:00.000Z",
+      deleted_at: null,
+    };
+    mockUseFiles.mockReturnValue({
+      data: {
+        pages: [
+          {
+            files: [visibleFile],
+            total: 1,
+            page: 1,
+            limit: 50,
+          },
+        ],
+      },
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockUseFolderContents.mockReturnValue({
+      data: {
+        folders: [
+          {
+            id: "folder-hidden",
+            name: "does-not-match-search",
+            parent_id: "folder-t",
+            created_at: "2026-07-03T00:00:00.000Z",
+            updated_at: "2026-07-03T00:00:00.000Z",
+          },
+        ],
+        path: [],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+      },
+    });
+
+    const { result } = renderHook(() => useFileList(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    expect(result.current.displayFolders).toEqual([]);
+
+    act(() => {
+      result.current.toggleSelectAll();
+    });
+
+    expect(result.current.selectedFileIds).toEqual(["file-visible"]);
+    expect(result.current.selectedFolderIds).toEqual([]);
+  });
+
+  it("derives total pages from the shared file-list page size", () => {
+    mockUseFiles.mockReturnValue({
+      data: {
+        pages: [
+          {
+            files: [],
+            total: 80,
+            page: 1,
+            limit: 30,
+          },
+        ],
+      },
+      fetchNextPage: vi.fn(),
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockUseFolderContents.mockReturnValue({
+      data: { folders: [], path: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+      },
+    });
+
+    const { result } = renderHook(() => useFileList(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    expect(result.current.totalPages).toBe(3);
   });
 });

@@ -419,6 +419,169 @@ async fn fulltext_api_uses_filename_fallback_for_single_character_queries() {
 
 #[tokio::test]
 #[serial(fulltext_search_db)]
+async fn fulltext_filename_fallback_reports_total_and_honors_page_and_sort() {
+    common::init_test_env();
+    let pool = common::create_test_pool().await;
+    common::cleanup_test_data(&pool).await;
+
+    let index_dir = tempfile::tempdir().unwrap();
+    let (app, _state) = build_fulltext_app(&pool, index_dir.path(), true).await;
+    let (user_id, token) =
+        common::app::login_and_get_token(&pool, "fulltext_fallback_page_sort").await;
+    let alpha = common::create_test_file(&pool, user_id, "r-alpha.txt").await;
+    let bravo = common::create_test_file(&pool, user_id, "r-bravo.txt").await;
+    let charlie = common::create_test_file(&pool, user_id, "r-charlie.txt").await;
+    let _miss = common::create_test_file(&pool, user_id, "plain.txt").await;
+
+    let json = search_fulltext_path(
+        app,
+        &token,
+        "/api/v1/files/search/fulltext?q=r&limit=2&page=2&sort_by=filename&sort_order=asc",
+    )
+    .await;
+
+    assert_eq!(json["count"], 3);
+    assert_eq!(json["search"]["count"], 3);
+    assert_eq!(json["search"]["index_status"], "fallback");
+    assert_eq!(json["files"].as_array().unwrap().len(), 1);
+    assert_eq!(json["files"][0]["file"]["id"], charlie.to_string());
+    assert_ne!(json["files"][0]["file"]["id"], alpha.to_string());
+    assert_ne!(json["files"][0]["file"]["id"], bravo.to_string());
+}
+
+#[tokio::test]
+#[serial(fulltext_search_db)]
+async fn fulltext_filename_fallback_collection_counts_match_filtered_total() {
+    common::init_test_env();
+    let pool = common::create_test_pool().await;
+    common::cleanup_test_data(&pool).await;
+
+    let index_dir = tempfile::tempdir().unwrap();
+    let (app, _state) = build_fulltext_app(&pool, index_dir.path(), true).await;
+    let (user_id, token) =
+        common::app::login_and_get_token(&pool, "fulltext_fallback_collection_total").await;
+
+    for idx in 0..5 {
+        let file_id = common::create_test_file(&pool, user_id, &format!("r-video-{idx}.mp4")).await;
+        sqlx::query("UPDATE files SET mime_type = 'video/mp4' WHERE id = $1")
+            .bind(file_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    for idx in 0..3 {
+        let file_id = common::create_test_file(&pool, user_id, &format!("r-image-{idx}.jpg")).await;
+        sqlx::query("UPDATE files SET mime_type = 'image/jpeg' WHERE id = $1")
+            .bind(file_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    let json = search_fulltext_path(
+        app,
+        &token,
+        "/api/v1/files/search/fulltext?q=r&limit=2&collection=videos&sort_by=type&sort_order=asc",
+    )
+    .await;
+
+    assert_eq!(json["count"], 5);
+    assert_eq!(json["search"]["count"], 5);
+    assert_eq!(json["search"]["index_status"], "fallback");
+    assert_eq!(json["files"].as_array().unwrap().len(), 2);
+    assert!(json["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|item| item["file"]["mime_type"]
+            .as_str()
+            .unwrap()
+            .starts_with("video/")));
+}
+
+#[tokio::test]
+#[serial(fulltext_search_db)]
+async fn fulltext_api_scopes_root_folder_searches_to_root_files() {
+    common::init_test_env();
+    let pool = common::create_test_pool().await;
+    common::cleanup_test_data(&pool).await;
+
+    let index_dir = tempfile::tempdir().unwrap();
+    let (app, _state) = build_fulltext_app(&pool, index_dir.path(), true).await;
+    let (user_id, token) = common::app::login_and_get_token(&pool, "fulltext_root_scope").await;
+    let folder_id = common::create_test_folder(&pool, user_id, "nested", None).await;
+    let root_hit = common::create_test_file(&pool, user_id, "root-3.png").await;
+    let nested_hit = common::create_test_file(&pool, user_id, "nested-3.png").await;
+
+    sqlx::query("UPDATE files SET folder_id = $1 WHERE id = $2")
+        .bind(folder_id)
+        .bind(nested_hit)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let json = search_fulltext_path(
+        app,
+        &token,
+        "/api/v1/files/search/fulltext?q=3&folder_id=root",
+    )
+    .await;
+
+    assert_eq!(json["count"], 1);
+    assert_eq!(json["search"]["index_status"], "fallback");
+    assert_eq!(json["files"][0]["file"]["id"], root_hit.to_string());
+}
+
+#[tokio::test]
+#[serial(fulltext_search_db)]
+async fn fulltext_api_falls_back_when_folder_filtered_index_hits_are_empty() {
+    common::init_test_env();
+    let pool = common::create_test_pool().await;
+    common::cleanup_test_data(&pool).await;
+
+    let index_dir = tempfile::tempdir().unwrap();
+    let (app, state) = build_fulltext_app(&pool, index_dir.path(), true).await;
+    let (user_id, token) =
+        common::app::login_and_get_token(&pool, "fulltext_folder_empty_index").await;
+    let folder_id = common::create_test_folder(&pool, user_id, "nested", None).await;
+    let root_index_hit = common::create_test_file(&pool, user_id, "root-only.md").await;
+    let folder_hit = common::create_test_file(&pool, user_id, "folder-scope-token.md").await;
+
+    sqlx::query("UPDATE files SET folder_id = $1 WHERE id = $2")
+        .bind(folder_id)
+        .bind(folder_hit)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    state
+        .search_index
+        .upsert_document(SearchDocument {
+            file_id: root_index_hit,
+            user_id,
+            filename: "root-only.md".into(),
+            path: "/root-only.md".into(),
+            extracted_text: "folder-scope-token".into(),
+            ocr_text: String::new(),
+            category: String::new(),
+            mime_type: "text/markdown".into(),
+        })
+        .unwrap();
+
+    let json = search_fulltext_path(
+        app,
+        &token,
+        &format!("/api/v1/files/search/fulltext?q=folder-scope-token&folder_id={folder_id}"),
+    )
+    .await;
+
+    assert_eq!(json["count"], 1);
+    assert_eq!(json["search"]["index_status"], "fallback");
+    assert_eq!(json["files"][0]["file"]["id"], folder_hit.to_string());
+}
+
+#[tokio::test]
+#[serial(fulltext_search_db)]
 async fn fulltext_api_uses_filename_fallback_for_two_digit_queries() {
     common::init_test_env();
     let pool = common::create_test_pool().await;

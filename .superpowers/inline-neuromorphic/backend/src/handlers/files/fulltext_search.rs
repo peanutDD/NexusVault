@@ -24,16 +24,31 @@ pub struct FulltextSearchQuery {
     pub q: String,
     #[serde(default = "default_limit")]
     pub limit: usize,
-    pub folder_id: Option<Uuid>,
+    pub page: Option<u32>,
+    pub folder_id: Option<String>,
     pub mime_type: Option<String>,
     pub tag_id: Option<Uuid>,
     pub collection: Option<String>,
+    pub sort_by: Option<String>,
+    pub sort_order: Option<String>,
 }
 
 #[derive(Clone, Copy)]
 struct FulltextFilters<'a> {
+    folder_id: Option<Option<Uuid>>,
     tag_id: Option<Uuid>,
     collection: Option<&'a str>,
+}
+
+struct SearchHitPage {
+    hits: Vec<SearchHit>,
+    total: Option<usize>,
+}
+
+impl SearchHitPage {
+    fn from_hits(hits: Vec<SearchHit>) -> Self {
+        Self { hits, total: None }
+    }
 }
 
 fn default_limit() -> usize {
@@ -48,6 +63,22 @@ fn should_bypass_fulltext_search(query: &str) -> bool {
         return true;
     }
     char_count < 3 && !query.chars().any(char::is_alphabetic)
+}
+
+fn parse_folder_id_filter(raw: Option<&str>) -> Result<Option<Option<Uuid>>, AppError> {
+    match raw {
+        None => Ok(None),
+        Some(value) => {
+            let value = value.trim();
+            if value.is_empty() || value.eq_ignore_ascii_case("null") || value == "root" {
+                Ok(Some(None))
+            } else {
+                Uuid::parse_str(value)
+                    .map(|id| Some(Some(id)))
+                    .map_err(|_| AppError::Validation("无效的 folder_id".to_string()))
+            }
+        }
+    }
 }
 
 pub async fn fulltext_search_handler(
@@ -68,33 +99,30 @@ pub async fn fulltext_search_handler(
         return Err(AppError::File("全文搜索功能未启用".to_string()));
     }
 
-    let folder_prefix = params.folder_id.map(|id| format!("/{id}/"));
+    let folder_id_filter = parse_folder_id_filter(params.folder_id.as_deref())?;
     let filters = FulltextFilters {
+        folder_id: folder_id_filter,
         tag_id: params.tag_id,
         collection: params.collection.as_deref(),
     };
     let mut index_status = "ready";
-    let hits = if should_bypass_fulltext_search(query) {
+    let mut hit_page = if should_bypass_fulltext_search(query) {
         index_status = "fallback";
-        fallback_search(
-            &state,
-            user_id,
-            query,
-            params.limit,
-            params.folder_id,
-            params.mime_type.as_deref(),
-            filters,
-        )
-        .await?
+        fallback_search(&state, user_id, query, &params, folder_id_filter, filters).await?
     } else {
-        let hits = match state.search_index.search(
+        let index_limit = if folder_id_filter.is_some() {
+            params.limit.saturating_mul(10).clamp(params.limit, 500)
+        } else {
+            params.limit
+        };
+        let hit_page = match state.search_index.search(
             user_id,
             query,
-            params.limit,
-            folder_prefix.as_deref(),
+            index_limit,
+            None,
             params.mime_type.as_deref(),
         ) {
-            Ok(hits) => hits,
+            Ok(hits) => SearchHitPage::from_hits(hits),
             Err(error) => {
                 tracing::warn!(
                     query = %query,
@@ -103,36 +131,26 @@ pub async fn fulltext_search_handler(
                     "fulltext search failed, falling back to filename search"
                 );
                 index_status = "fallback";
-                fallback_search(
-                    &state,
-                    user_id,
-                    query,
-                    params.limit,
-                    params.folder_id,
-                    params.mime_type.as_deref(),
-                    filters,
-                )
-                .await?
+                fallback_search(&state, user_id, query, &params, folder_id_filter, filters).await?
             }
         };
-        if hits.is_empty() {
+        if hit_page.hits.is_empty() {
             index_status = "fallback";
-            fallback_search(
-                &state,
-                user_id,
-                query,
-                params.limit,
-                params.folder_id,
-                params.mime_type.as_deref(),
-                filters,
-            )
-            .await?
+            fallback_search(&state, user_id, query, &params, folder_id_filter, filters).await?
         } else {
-            hits
+            hit_page
         }
     };
 
-    let mut files = materialize_hits(&state, user_id, hits, filters).await?;
+    let mut files =
+        materialize_hits(&state, user_id, std::mem::take(&mut hit_page.hits), filters).await?;
+    if files.is_empty() && folder_id_filter.is_some() && index_status == "ready" {
+        index_status = "fallback";
+        hit_page =
+            fallback_search(&state, user_id, query, &params, folder_id_filter, filters).await?;
+        files =
+            materialize_hits(&state, user_id, std::mem::take(&mut hit_page.hits), filters).await?;
+    }
     if parse_collection_filters(filters.collection).contains(&"recent") {
         files.sort_by(|a, b| {
             b["file"]["last_opened_at"]
@@ -140,15 +158,17 @@ pub async fn fulltext_search_handler(
                 .cmp(&a["file"]["last_opened_at"].as_str())
         });
     }
+    files.truncate(params.limit);
+    let total_count = hit_page.total.unwrap_or(files.len());
     let ocr = ocr_readiness(&state);
 
     Ok(json_response(json!({
         "query": query,
-        "count": files.len(),
+        "count": total_count,
         "index_status": index_status,
         "search": {
             "index_status": index_status,
-            "count": files.len(),
+            "count": total_count,
             "ocr": ocr,
         },
         "files": files,
@@ -231,6 +251,12 @@ async fn matches_fulltext_filters(
     file: &crate::models::file::File,
     filters: FulltextFilters<'_>,
 ) -> Result<bool, AppError> {
+    if let Some(folder_id) = filters.folder_id {
+        if file.folder_id != folder_id {
+            return Ok(false);
+        }
+    }
+
     if let Some(tag_id) = filters.tag_id {
         let assigned: Option<i32> = sqlx::query_scalar(
             "SELECT 1 FROM file_tag_assignments
@@ -303,23 +329,27 @@ async fn fallback_search(
     state: &AppState,
     user_id: Uuid,
     query: &str,
-    limit: usize,
-    folder_id: Option<Uuid>,
-    mime_type: Option<&str>,
+    params: &FulltextSearchQuery,
+    folder_id: Option<Option<Uuid>>,
     filters: FulltextFilters<'_>,
-) -> Result<Vec<SearchHit>, AppError> {
-    let (files, _, _) = state
+) -> Result<SearchHitPage, AppError> {
+    let (files, total, _) = state
         .file_service
         .list_files(
             user_id,
             FileListQuery {
-                page: Some(1),
-                limit: Some(limit as u32),
+                page: params.page.or(Some(1)),
+                limit: Some(params.limit as u32),
                 search: Some(query.to_string()),
-                mime_type: mime_type.map(ToOwned::to_owned),
-                folder_id: folder_id.map(|id| id.to_string()),
+                mime_type: params.mime_type.clone(),
+                folder_id: folder_id.map(|id| {
+                    id.map(|value| value.to_string())
+                        .unwrap_or_else(|| "root".to_string())
+                }),
                 tag_id: filters.tag_id,
                 collection: filters.collection.map(ToOwned::to_owned),
+                sort_by: params.sort_by.clone(),
+                sort_order: params.sort_order.clone(),
                 ..FileListQuery::default()
             },
         )
@@ -335,11 +365,14 @@ async fn fallback_search(
             snippet: file.original_filename.chars().take(160).collect(),
             match_source: "filename".to_string(),
         });
-        if hits.len() >= limit {
+        if hits.len() >= params.limit {
             break;
         }
     }
-    Ok(hits)
+    Ok(SearchHitPage {
+        hits,
+        total: total.map(|value| value as usize),
+    })
 }
 
 #[allow(dead_code)]

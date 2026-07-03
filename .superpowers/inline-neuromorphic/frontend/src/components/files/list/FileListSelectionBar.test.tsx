@@ -202,6 +202,25 @@ describe("FileListSelectionBar", () => {
     expect(screen.getByLabelText("当前文件夹")).toBeInTheDocument();
   });
 
+  it("loads counts in the root folder scope instead of account-wide counts", async () => {
+    vi.mocked(tagsService.list).mockResolvedValue([]);
+
+    renderSelectionBar({
+      currentFolderId: null,
+      searchQuery: "111",
+      mimeType: "image/",
+    });
+
+    await waitFor(() => {
+      expect(fileListService.getCollectionCounts).toHaveBeenCalledWith({
+        folder_id: "root",
+        search: "111",
+        mime_type: "image/",
+      });
+    });
+    expect(screen.getByLabelText("All Files")).toBeInTheDocument();
+  });
+
   it("refetches counts after file metadata invalidates the collection query", async () => {
     vi.mocked(tagsService.list).mockResolvedValue([]);
     vi.mocked(fileListService.getCollectionCounts)

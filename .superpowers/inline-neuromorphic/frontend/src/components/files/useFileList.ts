@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { FileMetadata } from '../../types/files';
 import { FILE_COLLECTION_COUNTS_QUERY_KEY } from '../../services/fileListService';
-import { MIME_FILTER_FOLDERS } from '../../constants';
+import { FILE_LIST, MIME_FILTER_FOLDERS } from '../../constants';
 import { getErrorMessage } from '../../utils/error';
 import { useFileFilters } from '../../hooks/files/useFileFilters';
 import { useFileSelection } from '../../hooks/files/useFileSelection';
@@ -149,18 +149,6 @@ export function useFileList() {
   const folderPath = useMemo(() => folderContents?.path ?? [], [folderContents]);
 
   const {
-    selectedFiles,
-    selectedFolders,
-    selectedFileIds,
-    selectedFolderIds,
-    allFilesSelected,
-    toggleSelectAll,
-    clearSelection,
-    setSelectedFiles,
-    setSelectedFolders,
-  } = useFileSelection(files, folders);
-
-  const {
     previewFile,
     setPreviewFile,
     shareFile,
@@ -224,6 +212,51 @@ export function useFileList() {
     [isGroupByTime, displayFilesForTime, displayFiles]
   );
 
+  const displayFolders = useMemo(() => {
+    if (activeCollection || activeTagId) return [];
+    if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
+    const q = debouncedSearch?.trim().toLowerCase();
+    const filtered = q ? folders.filter((f) => f.name.toLowerCase().includes(q)) : folders;
+    if (filtered.length <= 1) return filtered;
+
+    const compareName = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    const getTime = (v: string) => {
+      const t = Date.parse(v);
+      return Number.isFinite(t) ? t : 0;
+    };
+
+    const list = [...filtered];
+    if (sortBy === 'time_group' || sortBy.startsWith('created_at_')) {
+      const dir = sortBy.endsWith('_asc') ? 1 : -1;
+      list.sort((a, b) => {
+        const r = getTime(a.created_at) - getTime(b.created_at);
+        if (r !== 0) return r * dir;
+        return compareName(a.name, b.name);
+      });
+      return list;
+    }
+    if (sortBy.startsWith('filename_')) {
+      const dir = sortBy.endsWith('_asc') ? 1 : -1;
+      list.sort((a, b) => compareName(a.name, b.name) * dir);
+      return list;
+    }
+    list.sort((a, b) => compareName(a.name, b.name));
+    return list;
+  }, [activeCollection, activeTagId, mimeType, folders, debouncedSearch, sortBy]);
+
+  const {
+    selectedFiles,
+    selectedFolders,
+    selectedFileIds,
+    selectedFolderIds,
+    allFilesSelected,
+    toggleSelectAll,
+    clearSelection,
+    setSelectedFiles,
+    setSelectedFolders,
+  } = useFileSelection(finalDisplayFiles, displayFolders);
+
   const finalDisplayFileIndexById = useMemo(() => {
     if (previewFile === null) return new Map<string, number>();
     const m = new Map<string, number>();
@@ -261,39 +294,6 @@ export function useFileList() {
     refetchFiles,
     refetchFolders,
   });
-
-  const displayFolders = useMemo(() => {
-    if (activeCollection || activeTagId) return [];
-    if (mimeType !== '' && mimeType !== MIME_FILTER_FOLDERS) return [];
-    const q = debouncedSearch?.trim().toLowerCase();
-    const filtered = q ? folders.filter((f) => f.name.toLowerCase().includes(q)) : folders;
-    if (filtered.length <= 1) return filtered;
-
-    const compareName = (a: string, b: string) =>
-      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-    const getTime = (v: string) => {
-      const t = Date.parse(v);
-      return Number.isFinite(t) ? t : 0;
-    };
-
-    const list = [...filtered];
-    if (sortBy === 'time_group' || sortBy.startsWith('created_at_')) {
-      const dir = sortBy.endsWith('_asc') ? 1 : -1;
-      list.sort((a, b) => {
-        const r = getTime(a.created_at) - getTime(b.created_at);
-        if (r !== 0) return r * dir;
-        return compareName(a.name, b.name);
-      });
-      return list;
-    }
-    if (sortBy.startsWith('filename_')) {
-      const dir = sortBy.endsWith('_asc') ? 1 : -1;
-      list.sort((a, b) => compareName(a.name, b.name) * dir);
-      return list;
-    }
-    list.sort((a, b) => compareName(a.name, b.name));
-    return list;
-  }, [activeCollection, activeTagId, mimeType, folders, debouncedSearch, sortBy]);
 
   const { timeGroupedItems } = useTimeGroupingMixed(sortedFiles, displayFolders, isGroupByTime);
 
@@ -435,7 +435,7 @@ export function useFileList() {
     displayFolders: optimisticDelete.folders,
     displayFiles: finalDisplayFiles,
     displayFileIndexById: finalDisplayFileIndexById,
-    totalPages: Math.ceil(totalItems / 50),
+    totalPages: Math.ceil(totalItems / FILE_LIST.LIMIT),
     page: 1,
     hasMore,
     loadingMore,
