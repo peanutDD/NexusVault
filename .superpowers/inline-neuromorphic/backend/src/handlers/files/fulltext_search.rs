@@ -70,7 +70,10 @@ fn parse_folder_id_filter(raw: Option<&str>) -> Result<Option<Option<Uuid>>, App
         None => Ok(None),
         Some(value) => {
             let value = value.trim();
-            if value.is_empty() || value.eq_ignore_ascii_case("null") || value == "root" {
+            if value.is_empty()
+                || value.eq_ignore_ascii_case("null")
+                || value.eq_ignore_ascii_case("root")
+            {
                 Ok(Some(None))
             } else {
                 Uuid::parse_str(value)
@@ -144,12 +147,23 @@ pub async fn fulltext_search_handler(
 
     let mut files =
         materialize_hits(&state, user_id, std::mem::take(&mut hit_page.hits), filters).await?;
-    if files.is_empty() && folder_id_filter.is_some() && index_status == "ready" {
-        index_status = "fallback";
-        hit_page =
+    if folder_id_filter.is_some() && index_status == "ready" && files.len() < params.limit {
+        let mut fallback_hit_page =
             fallback_search(&state, user_id, query, &params, folder_id_filter, filters).await?;
-        files =
-            materialize_hits(&state, user_id, std::mem::take(&mut hit_page.hits), filters).await?;
+        let fallback_total = fallback_hit_page.total;
+        let fallback_files = materialize_hits(
+            &state,
+            user_id,
+            std::mem::take(&mut fallback_hit_page.hits),
+            filters,
+        )
+        .await?;
+        let fallback_count = fallback_total.unwrap_or(fallback_files.len());
+        if files.is_empty() || fallback_count > files.len() || fallback_files.len() > files.len() {
+            index_status = "fallback";
+            hit_page = fallback_hit_page;
+            files = fallback_files;
+        }
     }
     if parse_collection_filters(filters.collection).contains(&"recent") {
         files.sort_by(|a, b| {
@@ -158,8 +172,8 @@ pub async fn fulltext_search_handler(
                 .cmp(&a["file"]["last_opened_at"].as_str())
         });
     }
-    files.truncate(params.limit);
     let total_count = hit_page.total.unwrap_or(files.len());
+    files.truncate(params.limit);
     let ocr = ocr_readiness(&state);
 
     Ok(json_response(json!({
@@ -225,11 +239,14 @@ async fn materialize_hits(
     filters: FulltextFilters<'_>,
 ) -> Result<Vec<serde_json::Value>, AppError> {
     let mut files = Vec::with_capacity(hits.len());
-    for hit in hits {
-        let file = match state.file_service.get_file(hit.file_id, user_id).await {
-            Ok(file) => file,
-            Err(AppError::NotFound) => continue,
-            Err(error) => return Err(error),
+    let hit_file_ids = hits.iter().map(|hit| hit.file_id).collect::<Vec<_>>();
+    let hit_files = state
+        .file_service
+        .get_file_entities_by_ids(user_id, &hit_file_ids)
+        .await?;
+    for (hit, file) in hits.into_iter().zip(hit_files) {
+        let Some(file) = file else {
+            continue;
         };
         if !matches_fulltext_filters(state, user_id, &file, filters).await? {
             continue;

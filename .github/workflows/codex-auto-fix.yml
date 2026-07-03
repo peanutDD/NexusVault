@@ -1,0 +1,73 @@
+name: Codex Auto Fix
+
+on:
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: codex-auto-fix-pr-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  codex-fix:
+    if: >
+      (
+        github.event_name == 'issue_comment'
+        && github.event.issue.pull_request
+        && (
+          contains(github.event.comment.body, '<!-- nexusvault-codex-review -->')
+          || contains(github.event.comment.body, '/codex fix')
+        )
+      )
+      || (
+        github.event_name == 'pull_request_review'
+        && contains(github.event.review.body, '<!-- nexusvault-codex-review -->')
+      )
+    runs-on: file-server
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+      REVIEW_BODY: ${{ github.event.comment.body || github.event.review.body || '' }}
+      CODEX_AGENT_MODEL: gpt-5.5
+      CODEX_AGENT_COMMAND_SECRET: ${{ secrets.CODEX_AGENT_COMMAND }}
+      CODEX_AGENT_COMMAND_VAR: ${{ vars.CODEX_AGENT_COMMAND }}
+      CODEX_AUTO_FIX_VERIFY_COMMANDS: |
+        set -euo pipefail
+        scripts/codex-review-model-cli/bin/codex-review-model targeted-checks --changed-only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Codex auto-fix with targeted checks
+        working-directory: .superpowers/inline-neuromorphic
+        run: |
+          set -euo pipefail
+          if [[ -n "${CODEX_AGENT_COMMAND_SECRET:-}" ]]; then
+            export CODEX_AGENT_COMMAND="${CODEX_AGENT_COMMAND_SECRET}"
+          elif [[ -n "${CODEX_AGENT_COMMAND_VAR:-}" ]]; then
+            export CODEX_AGENT_COMMAND="${CODEX_AGENT_COMMAND_VAR}"
+          fi
+          if [[ -z "${CODEX_AGENT_COMMAND:-}" ]]; then
+            STATUS=blocked SUMMARY="CODEX_AGENT_COMMAND is not configured; auto-fix did not run." \
+              DETAILS="Set CODEX_AGENT_COMMAND as a repository secret or variable, then rerun /codex fix." \
+              BODY_FILE= GH_REPO="${GH_REPO}" PR_NUMBER="${PR_NUMBER}" \
+              bash ../../.github/scripts/review-status-comment.sh
+            exit 1
+          fi
+          printf '%s\n' "${REVIEW_BODY}" > /tmp/codex-review.md
+          cargo run --manifest-path scripts/codex-cli/Cargo.toml --bin codex-auto-fix -- \
+            pr-auto-fix \
+            --pr-number "${PR_NUMBER}" \
+            --gemini-review "$(cat /tmp/codex-review.md)" \
+            --max-rounds 2 \
+            --yes

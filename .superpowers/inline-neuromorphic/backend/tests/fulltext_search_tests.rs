@@ -523,13 +523,61 @@ async fn fulltext_api_scopes_root_folder_searches_to_root_files() {
     let json = search_fulltext_path(
         app,
         &token,
-        "/api/v1/files/search/fulltext?q=3&folder_id=root",
+        "/api/v1/files/search/fulltext?q=3&folder_id=ROOT",
     )
     .await;
 
     assert_eq!(json["count"], 1);
     assert_eq!(json["search"]["index_status"], "fallback");
     assert_eq!(json["files"][0]["file"]["id"], root_hit.to_string());
+}
+
+#[tokio::test]
+#[serial(fulltext_search_db)]
+async fn fulltext_api_reports_untruncated_index_count_for_scoped_searches() {
+    common::init_test_env();
+    let pool = common::create_test_pool().await;
+    common::cleanup_test_data(&pool).await;
+
+    let index_dir = tempfile::tempdir().unwrap();
+    let (app, state) = build_fulltext_app(&pool, index_dir.path(), false).await;
+    let (user_id, token) =
+        common::app::login_and_get_token(&pool, "fulltext_scoped_total_count").await;
+
+    let mut file_ids = Vec::new();
+    for idx in 0..3 {
+        let filename = format!("limit-total-token-{idx}.md");
+        let file_id = common::create_test_file(&pool, user_id, &filename).await;
+        file_ids.push((file_id, filename));
+    }
+
+    for (file_id, filename) in file_ids {
+        state
+            .search_index
+            .upsert_document(SearchDocument {
+                file_id,
+                user_id,
+                filename: filename.clone(),
+                path: format!("/{filename}"),
+                extracted_text: "limit-total-token indexed content".into(),
+                ocr_text: String::new(),
+                category: String::new(),
+                mime_type: "text/markdown".into(),
+            })
+            .unwrap();
+    }
+
+    let json = search_fulltext_path(
+        app,
+        &token,
+        "/api/v1/files/search/fulltext?q=limit-total-token&folder_id=root&limit=2",
+    )
+    .await;
+
+    assert_eq!(json["search"]["index_status"], "ready");
+    assert_eq!(json["count"], 3);
+    assert_eq!(json["search"]["count"], 3);
+    assert_eq!(json["files"].as_array().unwrap().len(), 2);
 }
 
 #[tokio::test]
@@ -578,6 +626,85 @@ async fn fulltext_api_falls_back_when_folder_filtered_index_hits_are_empty() {
     assert_eq!(json["count"], 1);
     assert_eq!(json["search"]["index_status"], "fallback");
     assert_eq!(json["files"][0]["file"]["id"], folder_hit.to_string());
+}
+
+#[tokio::test]
+#[serial(fulltext_search_db)]
+async fn fulltext_api_falls_back_when_folder_filtered_index_hits_are_underfilled() {
+    common::init_test_env();
+    let pool = common::create_test_pool().await;
+    common::cleanup_test_data(&pool).await;
+
+    let index_dir = tempfile::tempdir().unwrap();
+    let (app, state) = build_fulltext_app(&pool, index_dir.path(), true).await;
+    let (user_id, token) =
+        common::app::login_and_get_token(&pool, "fulltext_folder_underfilled_index").await;
+    let folder_id = common::create_test_folder(&pool, user_id, "nested", None).await;
+
+    let mut folder_files = Vec::new();
+    for idx in 0..3 {
+        let filename = format!("folder-underfill-token-{idx}.md");
+        let file_id = common::create_test_file(&pool, user_id, &filename).await;
+        sqlx::query("UPDATE files SET folder_id = $1 WHERE id = $2")
+            .bind(folder_id)
+            .bind(file_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        folder_files.push((file_id, filename));
+    }
+
+    let (indexed_folder_hit, indexed_filename) = folder_files[0].clone();
+    state
+        .search_index
+        .upsert_document(SearchDocument {
+            file_id: indexed_folder_hit,
+            user_id,
+            filename: indexed_filename.clone(),
+            path: format!("/{indexed_filename}"),
+            extracted_text: "folder-underfill-token indexed folder content".into(),
+            ocr_text: String::new(),
+            category: String::new(),
+            mime_type: "text/markdown".into(),
+        })
+        .unwrap();
+
+    for idx in 0..6 {
+        let filename = format!("off-scope-underfill-{idx}.md");
+        let file_id = common::create_test_file(&pool, user_id, &filename).await;
+        state
+            .search_index
+            .upsert_document(SearchDocument {
+                file_id,
+                user_id,
+                filename,
+                path: format!("/off-scope-underfill-{idx}.md"),
+                extracted_text: "folder-underfill-token indexed root content".into(),
+                ocr_text: String::new(),
+                category: String::new(),
+                mime_type: "text/markdown".into(),
+            })
+            .unwrap();
+    }
+
+    let json = search_fulltext_path(
+        app,
+        &token,
+        &format!(
+            "/api/v1/files/search/fulltext?q=folder-underfill-token&folder_id={folder_id}&limit=2"
+        ),
+    )
+    .await;
+
+    assert_eq!(json["search"]["index_status"], "fallback");
+    assert_eq!(json["count"], 3);
+    assert_eq!(json["search"]["count"], 3);
+    assert_eq!(json["files"].as_array().unwrap().len(), 2);
+    assert!(json["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|item| item["file"]["folder_id"].as_str().unwrap() == folder_id.to_string()));
 }
 
 #[tokio::test]
