@@ -45,6 +45,11 @@ const fileMetadataBatch = new BatchRequestManager<FileMetadata | null, 'metadata
 
 const LIST_QUERY_TIMEOUT_CONFIG = { timeout: REQUEST.LIST_QUERY_TIMEOUT_MS } as const;
 
+function encodeFolderScope(folderId: FileListQuery['folder_id'] | undefined) {
+  if (folderId === undefined) return undefined;
+  return folderId === null ? 'root' : folderId;
+}
+
 export const fileListService = {
   async getFilesByIds(ids: string[]): Promise<(FileMetadata | null)[]> {
     return fetchFilesByIds(ids);
@@ -60,10 +65,13 @@ export const fileListService = {
       const params = buildQueryParams({
         q: fulltextQuery,
         limit: query?.limit,
-        folder_id: query?.folder_id || undefined,
+        page: query?.page,
+        folder_id: encodeFolderScope(query?.folder_id),
         mime_type: query?.mime_type,
         tag_id: query?.tag_id,
         collection: query?.collection,
+        sort_by: query?.sort_by,
+        sort_order: query?.sort_order,
       });
       const response = await limitedApi.get<FulltextSearchResponse>(
         `/api/files/search/fulltext?${params.toString()}`,
@@ -120,7 +128,7 @@ export const fileListService = {
 
   async getCollectionCounts(query?: FileCollectionCountsQuery): Promise<FileCollectionCounts> {
     const params = buildQueryParams({
-      folder_id: query?.folder_id,
+      folder_id: encodeFolderScope(query?.folder_id),
       search: query?.search?.trim() || undefined,
       mime_type: query?.mime_type,
     });
