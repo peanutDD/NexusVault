@@ -37,6 +37,8 @@ findings before merge.
 - `cargo clippy --all-targets --all-features -- -D warnings`
 - `git diff --check`
 - After push: `gh run list`, `gh pr checks 5`, and one PR status comment.
+- Frontend full Vitest is report-only in root CI until legacy preview contract
+  failures are cleaned up; lint, typecheck, and build remain blocking.
 
 ## Rollback
 
