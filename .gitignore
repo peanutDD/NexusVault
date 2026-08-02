@@ -118,7 +118,15 @@ uploads/
 **/*.ipa
 
 # GitHub Actions runner local installation
-
+actions-runner/
+**/actions-runner/
+.superpowers/inline-neuromorphic/scripts/nexusvault-file-server-runner/.credentials*
+.superpowers/inline-neuromorphic/scripts/nexusvault-file-server-runner/.runner
+.superpowers/inline-neuromorphic/scripts/nexusvault-file-server-runner/.path
+.superpowers/inline-neuromorphic/scripts/nexusvault-file-server-runner/_diag/
+.superpowers/inline-neuromorphic/scripts/nexusvault-file-server-runner/_work/
+.superpowers/inline-neuromorphic/scripts/nexusvault-file-server-runner/bin/
+.superpowers/inline-neuromorphic/scripts/nexusvault-file-server-runner/externals/
 
 # Agent and local workspace state
 .superpowers/brainstorm/
