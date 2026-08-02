@@ -146,7 +146,9 @@ export default function BatchMoveDialog({
       setSuccess(`已将 ${resultParts.join("、")} 移动至「${folderName}」`);
 
       if (failedFiles > 0) {
-        setError(toShortBatchError(`已移${movedFiles}个，冲突${failedFiles}个`));
+        setError(
+          toShortBatchError(`已移${movedFiles}个，冲突${failedFiles}个`),
+        );
         setErrorDetails(conflictDetails);
         onPartialMoved?.();
       } else {
@@ -177,7 +179,10 @@ export default function BatchMoveDialog({
   };
 
   const message = (
-    <div className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]" data-oid="cv5xfoz">
+    <div
+      className="space-y-[clamp(0.585rem,1.35vw,0.75rem)]"
+      data-oid="cv5xfoz"
+    >
       {error && (
         <ErrorMessage
           message={error}
@@ -200,7 +205,10 @@ export default function BatchMoveDialog({
           >
             冲突文件
           </p>
-          <ul className="mt-[clamp(0.2925rem,0.675vw,0.375rem)] space-y-[clamp(0.195rem,0.45vw,0.25rem)]" data-oid="x6xjivh">
+          <ul
+            className="mt-[clamp(0.2925rem,0.675vw,0.375rem)] space-y-[clamp(0.195rem,0.45vw,0.25rem)]"
+            data-oid="x6xjivh"
+          >
             {errorDetails.map((item, index) => (
               <li
                 key={`${item}-${index}`}
@@ -238,7 +246,10 @@ export default function BatchMoveDialog({
           className="mt-[clamp(0.0975rem,0.3vw,0.125rem)] font-brand text-[clamp(0.75rem,1.8vw,0.875rem)] font-normal tracking-wide text-[var(--dialog-panel-text)]"
           data-oid="i6ui2fa"
         >
-          <span className="font-semibold text-[var(--dialog-panel-accent)]" data-oid="nvwq_d3">
+          <span
+            className="font-semibold text-[var(--dialog-panel-accent)]"
+            data-oid="nvwq_d3"
+          >
             {selectionText}
           </span>
         </p>
@@ -263,7 +274,10 @@ export default function BatchMoveDialog({
               data-oid="9zciazk"
             />
 
-            <span className="ml-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)]" data-oid="wv0_6ud">
+            <span
+              className="ml-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)]"
+              data-oid="wv0_6ud"
+            >
               加载中…
             </span>
           </div>
@@ -310,20 +324,20 @@ export default function BatchMoveDialog({
                 className={cn(
                   "flex w-full items-center gap-[clamp(0.4875rem,1.125vw,0.625rem)] rounded-[clamp(0.36rem,0.85vw,0.44rem)] px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-left text-[clamp(0.68rem,1.6vw,0.75rem)] text-[var(--dialog-list-item-text)] transition-[box-shadow,color]",
                   targetFolderId === folder.id
-                    ? "neu-pressed text-[var(--dialog-list-item-selected-text)]"
-                    : "hover:text-[var(--dialog-list-item-selected-text)]",
+                    ? "neu-pressed text-[var(--dialog-list-item-selected-icon)]"
+                    : "hover:text-[var(--dialog-list-item-selected-icon)]",
                 )}
                 data-oid="63yc..k"
               >
                 {targetFolderId === folder.id ? (
                   <i
-                    className="bi bi-folder2-open h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-selected-icon)]"
+                    className="bi bi-folder2-open flex items-center h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-selected-icon)]"
                     aria-hidden
                     data-oid="yyfkb5t"
                   />
                 ) : (
                   <i
-                    className="bi bi-folder2 h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-icon)]"
+                    className="bi bi-folder2 flex items-center h-[clamp(0.6825rem,1.575vw,0.875rem)] w-[clamp(0.6825rem,1.575vw,0.875rem)] shrink-0 text-[var(--dialog-list-item-icon)]"
                     aria-hidden
                     data-oid="a6a42ln"
                   />
@@ -359,7 +373,12 @@ export default function BatchMoveDialog({
       open
       appearance="glass"
       variant="info"
-      icon={<FolderSymlink className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]" data-oid="g7_mx0g" />}
+      icon={
+        <FolderSymlink
+          className="h-[clamp(1rem,2.25vw,1.25rem)] w-[clamp(1rem,2.25vw,1.25rem)]"
+          data-oid="g7_mx0g"
+        />
+      }
       iconBgClass="neu-inset"
       iconColorClass="text-[var(--dialog-accent-blue-text)]"
       title="批量移动"

@@ -65,7 +65,7 @@
   .fileListSelectionStatChip {
     min-width: 0;
     border-radius: 999rem;
-    padding: clamp(0.2rem, 0.55vw, 0.34rem) clamp(0.45rem, 1vw, 0.65rem);
+    padding: clamp(0.2rem, 0.55vw, 0.3rem) clamp(0.45rem, 1vw, 0.65rem);
   }
 
   .fileListCollectionShelf {
@@ -110,7 +110,7 @@
   }
 
   .fileListCollectionChipHint {
-    color: var(--color-text-muted);
+    /*color: var(--color-text-muted);*/
   }
 
   .fileListCollectionMoreButton {

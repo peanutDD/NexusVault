@@ -332,7 +332,7 @@ const FileCard = memo(
         <div className="p-[clamp(0.6rem,1.4vw,0.75rem)]" data-oid="-e0ub1-">
           {/* 缩略图区域 */}
           <div
-            className="neu-inset relative mb-[clamp(0.6rem,1.4vw,0.75rem)] aspect-square cursor-pointer overflow-hidden rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
+            className="neu-pressed relative mb-[clamp(0.6rem,1.4vw,0.75rem)] aspect-square cursor-pointer overflow-hidden rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
             onClick={(e) => {
               if (suppressNextPreviewRef.current) {
                 suppressNextPreviewRef.current = false;
@@ -377,7 +377,7 @@ const FileCard = memo(
 
             {/* 悬浮预览按钮 */}
             <div
-              className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100"
+              className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--neu-surface-bg)]/80 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100"
               data-oid="i4m.6k2"
             >
               <button

@@ -109,7 +109,7 @@ export default function ErrorMessage({
         "appAlertMessage",
         "neu-raised",
         `appAlertMessage--${type}`,
-        "relative w-full min-w-0 overflow-hidden",
+        "relative w-full min-w-0 overflow-hidden mb-[clamp(0.585rem,1.35vw,0.75rem)]",
         "animate-fade-in transition-all duration-200",
         className,
       )}

@@ -1,41 +1,61 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ComponentProps } from "react";
-import { describe, expect, it, vi } from "vitest";
+import type { ComponentProps, ReactElement } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FileMetadata } from "../../../types/files";
 import type { SortOption } from "../../../hooks/files/useFileFilters";
 import { tagsService } from "../../../services/tags";
+import { FILE_COLLECTION_COUNTS_QUERY_KEY } from "../../../services/fileListService";
 import { appQueryClient } from "../../../providers/queryClient";
 import FileListContent from "./FileListContent";
 
 vi.mock("./FileListVirtualScroller", () => ({
-  default: ({
-    files,
-    onToggleFavorite,
-    onTogglePinned,
-  }: {
-    files: FileMetadata[];
-    onToggleFavorite: (file: FileMetadata) => void;
-    onTogglePinned: (file: FileMetadata) => void;
-  }) => (
-    <div data-testid="virtual-scroller">
-      {files.map((item) => (
-        <div key={item.id}>
-          <span>{item.id}</span>
-          <span>{item.is_pinned ? "Pinned now" : "Not pinned"}</span>
-          <span>{item.is_favorite ? "Favorite now" : "Not favorite"}</span>
-          <button type="button" onClick={() => onTogglePinned(item)}>
-            Toggle pinned
-          </button>
-          <button type="button" onClick={() => onToggleFavorite(item)}>
-            Toggle favorite
-          </button>
-        </div>
-      ))}
-    </div>
-  ),
+	  default: ({
+	    mixedItems,
+	    files,
+	    onPreviewFile,
+	    onShowVersions,
+	    onToggleFavorite,
+	    onTogglePinned,
+	  }: {
+	    mixedItems?: Array<{ type: "file"; file: FileMetadata } | { type: "folder" }>;
+	    files: FileMetadata[];
+	    onPreviewFile: (file: FileMetadata) => void;
+	    onShowVersions?: (file: FileMetadata) => void;
+	    onToggleFavorite: (file: FileMetadata) => void;
+	    onTogglePinned: (file: FileMetadata) => void;
+	  }) => {
+    const visualFiles =
+      mixedItems && mixedItems.length > 0
+        ? mixedItems.flatMap((item) => (item.type === "file" ? [item.file] : []))
+        : files;
+    return (
+      <div data-testid="virtual-scroller">
+        {visualFiles.map((item) => (
+          <div key={item.id}>
+            <span data-testid="visual-file-id">{item.id}</span>
+            <span>{item.is_pinned ? "Pinned now" : "Not pinned"}</span>
+            <span>{item.is_favorite ? "Favorite now" : "Not favorite"}</span>
+	            <button type="button" onClick={() => onPreviewFile(item)}>
+	              Preview {item.id}
+	            </button>
+	            <button type="button" onClick={() => onShowVersions?.(item)}>
+	              Show versions {item.id}
+	            </button>
+	            <button type="button" onClick={() => onTogglePinned(item)}>
+	              Toggle pinned
+	            </button>
+            <button type="button" onClick={() => onToggleFavorite(item)}>
+              Toggle favorite
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  },
 }));
 
 vi.mock("./FileListSelectionBar", () => ({
@@ -49,6 +69,7 @@ vi.mock("./FileListGroupedView", () => ({
     timeGroupedItems,
     onToggleFavorite,
     onTogglePinned,
+    onPreviewFile,
   }: {
     mode: "type" | "time";
     groupedFiles: Array<{ key: string; label: string; files: FileMetadata[] }> | null;
@@ -62,6 +83,7 @@ vi.mock("./FileListGroupedView", () => ({
       | null;
     onToggleFavorite: (file: FileMetadata) => void;
     onTogglePinned: (file: FileMetadata) => void;
+    onPreviewFile: (file: FileMetadata) => void;
   }) => (
     <div data-testid={`grouped-view-${mode}`}>
       {groupedFiles?.map((group) => (
@@ -69,9 +91,12 @@ vi.mock("./FileListGroupedView", () => ({
           <h2>{group.label}</h2>
           {group.files.map((item) => (
             <div key={item.id}>
-              <span>{item.id}</span>
+              <span data-testid="grouped-file-id">{item.id}</span>
               <span>{item.is_pinned ? "Pinned now" : "Not pinned"}</span>
               <span>{item.is_favorite ? "Favorite now" : "Not favorite"}</span>
+              <button type="button" onClick={() => onPreviewFile(item)}>
+                Preview {item.id}
+              </button>
               <button type="button" onClick={() => onTogglePinned(item)}>
                 Toggle pinned
               </button>
@@ -88,8 +113,11 @@ vi.mock("./FileListGroupedView", () => ({
           {group.items.map((item) =>
             item.type === "file" ? (
               <div key={item.file.id}>
-                <span>{item.file.id}</span>
+                <span data-testid="grouped-file-id">{item.file.id}</span>
                 <span>{item.file.is_pinned ? "Pinned now" : "Not pinned"}</span>
+                <button type="button" onClick={() => onPreviewFile(item.file)}>
+                  Preview {item.file.id}
+                </button>
               </div>
             ) : null,
           )}
@@ -105,6 +133,36 @@ vi.mock("./FileListPagination", () => ({
 
 vi.mock("../InfiniteScrollSentinel", () => ({
   default: () => <div data-testid="sentinel" />,
+}));
+
+vi.mock("../dialogs/VersionHistoryDialog", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="Version history">
+      <button type="button" onClick={onClose}>
+        Close version history
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("../dialogs/FileActivityDialog", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="File activity">
+      <button type="button" onClick={onClose}>
+        Close file activity
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("../dialogs/ManageTagsDialog", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="Manage tags">
+      <button type="button" onClick={onClose}>
+        Close manage tags
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("../../../services/tags", () => ({
@@ -124,11 +182,27 @@ const file: FileMetadata = {
   created_at: "2026-05-03T08:00:00.000Z",
 };
 
+function makeFile(id: string, originalFilename: string, overrides: Partial<FileMetadata> = {}): FileMetadata {
+  return {
+    ...file,
+    id,
+    filename: originalFilename,
+    original_filename: originalFilename,
+    ...overrides,
+  };
+}
+
+function renderWithAppQueryClient(ui: ReactElement) {
+  return render(
+    <QueryClientProvider client={appQueryClient}>{ui}</QueryClientProvider>,
+  );
+}
+
 function renderContent(
   sortBy: SortOption,
   searchProps: Partial<ComponentProps<typeof FileListContent>> = {},
 ) {
-  return render(
+  return renderWithAppQueryClient(
     <FileListContent
       files={[file]}
       selectedFiles={new Set()}
@@ -172,7 +246,7 @@ function renderContent(
 }
 
 function renderEmptyFolder() {
-  return render(
+  return renderWithAppQueryClient(
     <FileListContent
       files={[]}
       selectedFiles={new Set()}
@@ -215,7 +289,7 @@ function renderEmptyFolder() {
 }
 
 function renderFilteredEmptyFolder() {
-  return render(
+  return renderWithAppQueryClient(
     <FileListContent
       files={[]}
       selectedFiles={new Set()}
@@ -260,6 +334,122 @@ function renderFilteredEmptyFolder() {
 }
 
 describe("FileListContent", () => {
+  beforeEach(() => {
+    appQueryClient.clear();
+    vi.clearAllMocks();
+  });
+
+  it("opens previews with the visible search-result order instead of the backend hit order", async () => {
+    const user = userEvent.setup();
+    const setPreviewFile = vi.fn();
+    const zeta = makeFile("file-z", "zeta.jpg");
+    const alpha = makeFile("file-a", "alpha.jpg");
+    const middle = makeFile("file-m", "middle.jpg");
+
+    renderContent("filename_asc", {
+      files: [zeta, alpha, middle],
+      searchQuery: "image",
+      setPreviewFile,
+    });
+
+    expect(screen.getAllByTestId("visual-file-id").map((item) => item.textContent)).toEqual([
+      "file-a",
+      "file-m",
+      "file-z",
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Preview file-m" }));
+
+    expect(setPreviewFile).toHaveBeenCalledTimes(1);
+    const [, previewFiles] = setPreviewFile.mock.calls[0]!;
+    expect(previewFiles.map((item: FileMetadata) => item.id)).toEqual([
+      "file-a",
+      "file-m",
+      "file-z",
+    ]);
+  });
+
+  it("uses a deterministic final tie-break for files with identical visible sort values", async () => {
+    const user = userEvent.setup();
+    const setPreviewFile = vi.fn();
+    const shared = {
+      original_filename: "same-name.jpg",
+      filename: "same-name.jpg",
+      created_at: "2026-05-03T08:00:00.000Z",
+    };
+    const lowId = makeFile("00000000-0000-0000-0000-000000000001", "same-name.jpg", shared);
+    const highId = makeFile("ffffffff-ffff-ffff-ffff-ffffffffffff", "same-name.jpg", shared);
+
+    renderContent("created_at_desc", {
+      files: [lowId, highId],
+      setPreviewFile,
+    });
+
+    expect(screen.getAllByTestId("visual-file-id").map((item) => item.textContent)).toEqual([
+      "ffffffff-ffff-ffff-ffff-ffffffffffff",
+      "00000000-0000-0000-0000-000000000001",
+    ]);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Preview ffffffff-ffff-ffff-ffff-ffffffffffff",
+      }),
+    );
+
+    const [, previewFiles] = setPreviewFile.mock.calls[0]!;
+    expect(previewFiles.map((item: FileMetadata) => item.id)).toEqual([
+      "ffffffff-ffff-ffff-ffff-ffffffffffff",
+      "00000000-0000-0000-0000-000000000001",
+    ]);
+  });
+
+  it("opens previews with pinned files before the regular plain-list files", async () => {
+    const user = userEvent.setup();
+    const setPreviewFile = vi.fn();
+    const regular = makeFile("regular-file", "regular-file.jpg");
+    const pinned = makeFile("pinned-file", "pinned-file.jpg", { is_pinned: true });
+
+    renderContent("created_at_desc", {
+      files: [regular, pinned],
+      activeCollection: "",
+      setPreviewFile,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Preview regular-file" }));
+
+    const [, previewFiles] = setPreviewFile.mock.calls[0]!;
+    expect(previewFiles.map((item: FileMetadata) => item.id)).toEqual([
+      "pinned-file",
+      "regular-file",
+    ]);
+  });
+
+  it("reports internal file action dialogs so the page footer can stay hidden", async () => {
+    const user = userEvent.setup();
+    const onActionDialogOpenChange = vi.fn();
+
+    renderContent("created_at_desc", {
+      onActionDialogOpenChange,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Show versions file-1" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Version history" }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(onActionDialogOpenChange).toHaveBeenLastCalledWith(true);
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "Close version history" }),
+    );
+
+    await waitFor(() => {
+      expect(onActionDialogOpenChange).toHaveBeenLastCalledWith(false);
+    });
+  });
+
   it.each<SortOption>([
     "created_at_desc",
     "created_at_asc",
@@ -501,7 +691,7 @@ describe("FileListContent", () => {
     });
   });
 
-  it("invalidates smart collection counts after toggling favorite or pinned flags", async () => {
+  it("keeps optimistically patched smart collection counts cached after toggling file flags", async () => {
     const user = userEvent.setup();
     const invalidateSpy = vi.spyOn(appQueryClient, "invalidateQueries");
     vi.mocked(tagsService.updateFlags).mockResolvedValue(undefined);
@@ -511,11 +701,57 @@ describe("FileListContent", () => {
     await user.click(screen.getByRole("button", { name: "Toggle favorite" }));
 
     await waitFor(() => {
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["file-collection-counts"],
-      });
+      expect(tagsService.updateFlags).toHaveBeenCalledTimes(2);
+    });
+    expect(invalidateSpy).not.toHaveBeenCalledWith({
+      queryKey: ["file-collection-counts"],
     });
     invalidateSpy.mockRestore();
+  });
+
+  it("optimistically updates smart collection counts after toggling favorite or pinned flags", async () => {
+    const user = userEvent.setup();
+    const countQuery = [
+      ...FILE_COLLECTION_COUNTS_QUERY_KEY,
+      { folder_id: "root", search: undefined, mime_type: undefined },
+    ] as const;
+    const otherFolderCountQuery = [
+      ...FILE_COLLECTION_COUNTS_QUERY_KEY,
+      { folder_id: "folder-other", search: "", mime_type: "" },
+    ] as const;
+    const pinned = {
+      ...makeFile("file-1", "file-1.jpg", { is_pinned: true }),
+      folder_id: undefined,
+    } as unknown as FileMetadata;
+    vi.mocked(tagsService.updateFlags).mockResolvedValue(undefined);
+    appQueryClient.setQueryData(countQuery, {
+      collections: { favorites: 0, pinned: 2 },
+      tags: {},
+    });
+    appQueryClient.setQueryData(otherFolderCountQuery, {
+      collections: { favorites: 5, pinned: 8 },
+      tags: {},
+    });
+
+    renderContent("created_at_desc", { files: [pinned] });
+
+    await user.click(screen.getByRole("button", { name: "Toggle pinned" }));
+
+    expect(appQueryClient.getQueryData(countQuery)).toMatchObject({
+      collections: { favorites: 0, pinned: 1 },
+    });
+    expect(appQueryClient.getQueryData(otherFolderCountQuery)).toMatchObject({
+      collections: { favorites: 5, pinned: 8 },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Toggle favorite" }));
+
+    expect(appQueryClient.getQueryData(countQuery)).toMatchObject({
+      collections: { favorites: 1, pinned: 1 },
+    });
+    expect(appQueryClient.getQueryData(otherFolderCountQuery)).toMatchObject({
+      collections: { favorites: 5, pinned: 8 },
+    });
   });
 
   it("maps the empty state to neuromorphic raised and inset primitives", () => {

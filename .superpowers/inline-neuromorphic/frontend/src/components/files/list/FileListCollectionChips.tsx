@@ -38,7 +38,7 @@ const COLLECTIONS = [
   ["pinned", "置顶", "置顶的文件"],
   ["recent", "最近", "最近 7 天内打开或下载过的文件，按打开时间从近到远排序"],
   ["untagged", "未标记", "没有任何标签的文件"],
-  ["large", "大文件", "大文件：100MB+，实际阈值为 100 MiB"],
+  ["large", "文件", "文件：100MB+，实际阈值为 100 MiB"],
   [
     "duplicates",
     "重复",
@@ -197,7 +197,7 @@ export default function FileListCollectionChips({
     <>
       <span className="min-w-0 truncate">{label}</span>
       {extra && (
-        <span className="fileListCollectionChipHint shrink-0">{extra}</span>
+        <span className="fileListCollectionChipHint shrink-0">({extra})</span>
       )}
       {count !== undefined && (
         <span
@@ -327,7 +327,7 @@ export default function FileListCollectionChips({
           "gap-[clamp(0.18rem,0.55vw,0.28rem)]",
         )}
       >
-        <span className="fileListCollectionTagDot bg-[var(--filelist-check-bg-checked-on)] h-[clamp(0.42rem,0.9vw,0.52rem)] w-[clamp(0.42rem,0.9vw,0.52rem)] shrink-0 rounded-full" />
+        <span className="fileListCollectionTagDot bg-[var(--filelist-check-bg-tag-dot)] h-[clamp(0.42rem,0.9vw,0.52rem)] w-[clamp(0.42rem,0.9vw,0.52rem)] shrink-0 rounded-full" />
         {renderLabel(item.label, item.count)}
       </button>
     );
@@ -400,7 +400,7 @@ export default function FileListCollectionChips({
         className={cn(
           "fileListCollectionChipRail flex min-w-0 items-center gap-[clamp(0.32rem,0.8vw,0.46rem)]",
           collectionsExpanded
-            ? "flex-wrap overflow-visible neu-inset p-[clamp(0.24rem,0.65vw,0.4rem)] rounded-[clamp(0.46rem,1vw,0.62rem)]"
+            ? "flex-wrap overflow-visible neu-pressed p-[clamp(0.24rem,0.65vw,0.4rem)] rounded-[clamp(0.46rem,1vw,0.62rem)]"
             : "h-[clamp(1.83rem,3.9vw,2.22rem)] flex-nowrap overflow-hidden",
         )}
         data-testid="file-list-collections"

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Save, Trash2 } from "lucide-react";
 import Modal from "../../common/dialog/Modal";
 import ErrorMessage from "../../common/feedback/ErrorMessage";
 import { FILE_COLLECTION_COUNTS_QUERY_KEY } from "../../../services/fileListService";
 import { tagsService } from "../../../services/tags";
-import type { FileMetadata } from "../../../types/files";
+import type { FileMetadata, FileTag } from "../../../types/files";
 import { getErrorMessage } from "../../../utils/error";
 
 interface ManageTagsDialogProps {
@@ -18,8 +19,24 @@ export default function ManageTagsDialog({ file, onClose }: ManageTagsDialogProp
     () => new Set((file.tags ?? []).map((tag) => tag.id)),
   );
   const [newTag, setNewTag] = useState("");
+  const [tagDrafts, setTagDrafts] = useState<Record<string, string>>({});
+  const [deletedTagIds, setDeletedTagIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [error, setError] = useState<string | null>(null);
   const tags = useQuery({ queryKey: ["tags"], queryFn: tagsService.list });
+  const visibleTags = useMemo(
+    () => (tags.data ?? []).filter((tag) => !deletedTagIds.has(tag.id)),
+    [deletedTagIds, tags.data],
+  );
+
+  const invalidateTagBackedState = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["tags"] }),
+      queryClient.invalidateQueries({ queryKey: ["files"] }),
+      queryClient.invalidateQueries({ queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY }),
+    ]);
+  };
 
   const save = async () => {
     try {
@@ -44,6 +61,32 @@ export default function ManageTagsDialog({ file, onClose }: ManageTagsDialogProp
       await queryClient.invalidateQueries({ queryKey: ["tags"] });
     } catch (err) {
       setError(getErrorMessage(err, "创建标签失败"));
+    }
+  };
+
+  const updateTag = async (tag: FileTag) => {
+    const name = (tagDrafts[tag.id] ?? tag.name).trim();
+    if (!name) return;
+    try {
+      await tagsService.update(tag.id, { name, color: tag.color });
+      await invalidateTagBackedState();
+    } catch (err) {
+      setError(getErrorMessage(err, "更新标签失败"));
+    }
+  };
+
+  const removeTag = async (tag: FileTag) => {
+    try {
+      await tagsService.remove(tag.id);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(tag.id);
+        return next;
+      });
+      setDeletedTagIds((prev) => new Set([...prev, tag.id]));
+      await invalidateTagBackedState();
+    } catch (err) {
+      setError(getErrorMessage(err, "删除标签失败"));
     }
   };
 
@@ -73,25 +116,62 @@ export default function ManageTagsDialog({ file, onClose }: ManageTagsDialogProp
           data-testid="manage-tags-list"
           className="neu-inset fileActionDialogInsetList max-h-[18rem] overflow-auto rounded-[clamp(0.5rem,1.1vw,0.625rem)] p-[clamp(0.58rem,1.35vw,0.75rem)]"
         >
-          {(tags.data ?? []).map((tag) => (
-            <label key={tag.id} className="mb-[clamp(0.39rem,0.9vw,0.5rem)] flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-panel-text)]">
+          {visibleTags.map((tag) => (
+            <div
+              key={tag.id}
+              className="mb-[clamp(0.39rem,0.9vw,0.5rem)] grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-panel-text)]"
+            >
+              <label className="flex items-center gap-[clamp(0.39rem,0.9vw,0.5rem)]">
+                <input
+                  type="checkbox"
+                  aria-label={`将文件归类到标签 ${tag.name}`}
+                  checked={selected.has(tag.id)}
+                  onChange={(event) => {
+                    setSelected((prev) => {
+                      const next = new Set(prev);
+                      if (event.target.checked) next.add(tag.id);
+                      else next.delete(tag.id);
+                      return next;
+                    });
+                  }}
+                />
+                <span
+                  className="h-[0.7rem] w-[0.7rem] rounded-full"
+                  style={{ backgroundColor: tag.color }}
+                />
+              </label>
               <input
-                type="checkbox"
-                checked={selected.has(tag.id)}
-                onChange={(event) => {
-                  setSelected((prev) => {
-                    const next = new Set(prev);
-                    if (event.target.checked) next.add(tag.id);
-                    else next.delete(tag.id);
-                    return next;
-                  });
-                }}
+                aria-label={`重命名标签 ${tag.name}`}
+                value={tagDrafts[tag.id] ?? tag.name}
+                onChange={(event) =>
+                  setTagDrafts((current) => ({
+                    ...current,
+                    [tag.id]: event.target.value,
+                  }))
+                }
+                className="neu-inset singleShareDialogField min-w-0 rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.4875rem,1.125vw,0.625rem)] py-[clamp(0.2925rem,0.675vw,0.375rem)] text-[var(--dialog-field-text)]"
               />
-              <span className="h-[0.7rem] w-[0.7rem] rounded-full" style={{ backgroundColor: tag.color }} />
-              {tag.name}
-            </label>
+              <button
+                type="button"
+                aria-label={`保存标签 ${tag.name}`}
+                title={`保存标签 ${tag.name}`}
+                onClick={() => updateTag(tag)}
+                className="neu-raised-sm singleShareDialogAction inline-flex h-[clamp(1.7rem,3.8vw,2.1rem)] w-[clamp(1.7rem,3.8vw,2.1rem)] items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 text-[var(--dialog-action-text)] active:shadow-[var(--neu-pressed-shadow)]"
+              >
+                <Save className="h-[clamp(0.82rem,1.8vw,1rem)] w-[clamp(0.82rem,1.8vw,1rem)]" />
+              </button>
+              <button
+                type="button"
+                aria-label={`删除标签 ${tag.name}`}
+                title={`删除标签 ${tag.name}`}
+                onClick={() => removeTag(tag)}
+                className="neu-raised-sm singleShareDialogAction inline-flex h-[clamp(1.7rem,3.8vw,2.1rem)] w-[clamp(1.7rem,3.8vw,2.1rem)] items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 text-[var(--dialog-accent-rose-text)] active:shadow-[var(--neu-pressed-shadow)]"
+              >
+                <Trash2 className="h-[clamp(0.82rem,1.8vw,1rem)] w-[clamp(0.82rem,1.8vw,1rem)]" />
+              </button>
+            </div>
           ))}
-          {!tags.data?.length && <p className="text-[var(--dialog-label-text)]">暂无标签。</p>}
+          {!visibleTags.length && <p className="text-[var(--dialog-label-text)]">暂无标签。</p>}
         </div>
         <button type="button" onClick={save} className="neu-raised-sm singleShareDialogPrimary w-full rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--dialog-primary-btn-text)] active:shadow-[var(--neu-pressed-shadow)]">
           保存

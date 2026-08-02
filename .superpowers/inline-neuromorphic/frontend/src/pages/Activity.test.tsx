@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Activity from "./Activity";
 import { activityService, type ActivityEvent } from "../services/activity";
 import { useAuthStore } from "../store/authStore";
@@ -118,6 +118,10 @@ beforeEach(() => {
     events: [buildActivityEvent(1, { metadata: { filename: "brief.md" } })],
     next_cursor: "cursor-2",
   });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("Activity page", () => {
@@ -464,6 +468,39 @@ describe("Activity page", () => {
         expect.objectContaining({ cursor: "cursor-2" }),
       );
     });
+  });
+
+  it("prevents the end date picker from selecting a date before the start date", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 6, 10, 12));
+
+    renderActivity();
+
+    await waitFor(() => {
+      expect(activityService.list).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 10 }),
+      );
+    });
+
+    fireEvent.click(screen.getByTestId("activity-date-from-trigger"));
+    fireEvent.click(await screen.findByTestId("activity-date-from-day-2026-07-10"));
+
+    fireEvent.click(screen.getByTestId("activity-date-to-trigger"));
+    const earlierEndDate = await screen.findByTestId(
+      "activity-date-to-day-2026-07-02",
+    );
+
+    expect(earlierEndDate).toBeDisabled();
+
+    fireEvent.click(earlierEndDate);
+    expect(screen.getByTestId("activity-date-to-trigger")).toHaveTextContent(
+      "选择日期",
+    );
+
+    fireEvent.click(screen.getByTestId("activity-date-to-day-2026-07-10"));
+    expect(screen.getByTestId("activity-date-to-trigger")).toHaveTextContent(
+      "2026年07月10日",
+    );
   });
 
   it("lets the timeline and cards grow with content instead of clipping to a fixed viewport", async () => {

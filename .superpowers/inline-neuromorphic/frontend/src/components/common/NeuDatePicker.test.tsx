@@ -253,6 +253,38 @@ describe("NeuDatePicker", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("disables dates outside the provided minimum and maximum boundaries", async () => {
+    const onChange = vi.fn();
+
+    render(
+      <NeuDatePicker
+        ariaLabel="结束日期"
+        minDate="2026-07-10"
+        maxDate="2026-07-12"
+        onChange={onChange}
+        testIdPrefix="date-picker"
+        today={new Date(2026, 6, 12, 12)}
+        value=""
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("date-picker-trigger"));
+
+    const beforeMinimum = await screen.findByTestId("date-picker-day-2026-07-02");
+    const minimum = screen.getByTestId("date-picker-day-2026-07-10");
+    const afterMaximum = screen.getByTestId("date-picker-day-2026-07-13");
+
+    expect(beforeMinimum).toBeDisabled();
+    expect(minimum).not.toBeDisabled();
+    expect(afterMaximum).toBeDisabled();
+
+    fireEvent.click(beforeMinimum);
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.click(minimum);
+    expect(onChange).toHaveBeenCalledWith("2026-07-10");
+  });
+
   it("keeps ordinary date cells separated without raised glow shadows", async () => {
     render(
       <NeuDatePicker

@@ -170,6 +170,7 @@ export function useFileList() {
     error,
     setError,
     clearError,
+    previewFiles = [],
   } = useFileUI();
 
   const queryErrorMessage = useMemo(() => {
@@ -376,7 +377,7 @@ export function useFileList() {
     (collection: string) => {
       setSearchParams(
         (prev) => toggleCollectionParam(prev, collection),
-        { replace: false },
+        { replace: true },
       );
       setSelectedFiles(new Set());
       setSelectedFolders(new Set());
@@ -388,7 +389,7 @@ export function useFileList() {
     (tagId: string) => {
       setSearchParams(
         (prev) => toggleTagParam(prev, tagId),
-        { replace: false },
+        { replace: true },
       );
       setSelectedFiles(new Set());
       setSelectedFolders(new Set());
@@ -400,7 +401,7 @@ export function useFileList() {
     () => {
       setSearchParams(
         (prev) => clearSmartFilterParams(prev),
-        { replace: false },
+        { replace: true },
       );
       setSelectedFiles(new Set());
       setSelectedFolders(new Set());
@@ -482,6 +483,7 @@ export function useFileList() {
     clearSelection,
     addFolderToList,
     previewFile,
+    previewFiles,
     setPreviewFile,
     shareFile,
     setShareFile,

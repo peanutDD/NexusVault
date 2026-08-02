@@ -158,7 +158,7 @@ export default function OcrStatusSection() {
           </button>
         </div>
         <div className="mt-[clamp(0.78rem,1.8vw,1rem)] grid gap-[clamp(0.585rem,1.35vw,0.75rem)] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <div className="neu-inset rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
+          <div className="neu-pressed rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
             <p className="font-brand text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-kpi-label)]">
               Backend runtime default
             </p>
@@ -172,7 +172,7 @@ export default function OcrStatusSection() {
               packages.
             </p>
           </div>
-          <div className="neu-inset rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
+          <div className="neu-pressed rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
             <p className="font-brand text-[length:var(--settings-text-xs)] font-semibold tracking-wide text-[var(--settings-kpi-label)]">
               Local dependencies
             </p>
@@ -190,7 +190,7 @@ export default function OcrStatusSection() {
         </div>
         <pre
           data-testid="ocr-env-block"
-          className="neu-inset mt-[clamp(0.78rem,1.8vw,1rem)] max-w-full overflow-x-auto rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-panel-value)]"
+          className="neu-pressed mt-[clamp(0.78rem,1.8vw,1rem)] max-w-full overflow-x-auto rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)] text-[length:var(--settings-text-xs)] text-[var(--settings-panel-value)]"
         >
           <code>{ocrEnvConfig}</code>
         </pre>

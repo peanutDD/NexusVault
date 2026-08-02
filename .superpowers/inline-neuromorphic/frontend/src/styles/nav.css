@@ -44,10 +44,10 @@
     padding-inline: var(--nav-chip-px);
     gap: var(--nav-control-gap);
     border-radius: var(--nav-btn-radius);
-    background: var(--neu-inset-bg);
+    /*background: var(--neu-inset-bg);*/
     background-image: none;
     border-color: transparent;
-    box-shadow: var(--neu-inset-shadow);
+    /*box-shadow: var(--neu-inset-shadow);*/
     white-space: nowrap;
   }
 

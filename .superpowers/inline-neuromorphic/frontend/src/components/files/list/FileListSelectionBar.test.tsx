@@ -283,6 +283,52 @@ describe("FileListSelectionBar", () => {
     expect(onResetFilters).toHaveBeenCalledOnce();
   });
 
+  it("routes every visible screenshot chip through Files filter callbacks", async () => {
+    const user = userEvent.setup();
+    const onCollectionChange = vi.fn();
+    const onResetFilters = vi.fn();
+    const onTagChange = vi.fn();
+    vi.mocked(tagsService.list).mockResolvedValue([
+      { id: "tag-3", name: "3", color: "#6366f1" },
+      { id: "tag-s", name: "s", color: "#6366f1" },
+    ]);
+
+    renderSelectionBar({
+      onCollectionChange,
+      onResetFilters,
+      onTagChange,
+    });
+
+    const collectionChips = [
+      ["收藏", "favorites"],
+      ["置顶", "pinned"],
+      ["最近", "recent"],
+      ["未标记", "untagged"],
+      ["文件", "large"],
+      ["重复", "duplicates"],
+      ["图片", "images"],
+      ["PDF", "pdfs"],
+      ["视频", "videos"],
+    ] as const;
+
+    for (const [label] of collectionChips) {
+      await user.click(screen.getByRole("button", { name: label }));
+    }
+    await user.click(await screen.findByRole("button", { name: "标签：3" }));
+    await user.click(await screen.findByRole("button", { name: "标签：s" }));
+    await user.click(screen.getByRole("button", { name: "重置筛选" }));
+    await user.click(screen.getByRole("button", { name: "全部" }));
+
+    expect(onCollectionChange.mock.calls.map(([value]) => value)).toEqual(
+      collectionChips.map(([, value]) => value),
+    );
+    expect(onTagChange.mock.calls.map(([value]) => value)).toEqual([
+      "tag-3",
+      "tag-s",
+    ]);
+    expect(onResetFilters).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps the expanded collection rail open when clicking a chip", async () => {
     const user = userEvent.setup();
     const rectSpy = vi

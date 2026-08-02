@@ -15,6 +15,8 @@ interface UseDialogOptions {
   closeOnBackdrop?: boolean;
   /** 聚焦延迟（毫秒），默认 100 */
   focusDelay?: number;
+  /** 是否锁定背景页面滚动，默认 true */
+  lockScroll?: boolean;
 }
 
 interface UseDialogReturn {
@@ -22,6 +24,43 @@ interface UseDialogReturn {
   handleBackdropClick: (e: React.MouseEvent) => void;
   /** 用于对话框容器的 ref，防止背景点击穿透 */
   dialogRef: React.RefObject<HTMLDivElement | null>;
+}
+
+let scrollLockDepth = 0;
+let scrollLockSnapshot: {
+  bodyOverflow: string;
+  rootOverflow: string;
+} | null = null;
+
+function lockDocumentScroll() {
+  if (typeof document === 'undefined') return () => undefined;
+
+  const body = document.body;
+  const root = document.documentElement;
+
+  if (scrollLockDepth === 0) {
+    scrollLockSnapshot = {
+      bodyOverflow: body.style.overflow,
+      rootOverflow: root.style.overflow,
+    };
+    body.style.overflow = 'hidden';
+    root.style.overflow = 'hidden';
+  }
+
+  scrollLockDepth += 1;
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    scrollLockDepth = Math.max(0, scrollLockDepth - 1);
+
+    if (scrollLockDepth === 0 && scrollLockSnapshot) {
+      body.style.overflow = scrollLockSnapshot.bodyOverflow;
+      root.style.overflow = scrollLockSnapshot.rootOverflow;
+      scrollLockSnapshot = null;
+    }
+  };
 }
 
 /**
@@ -37,10 +76,16 @@ export function useDialog(options: UseDialogOptions): UseDialogReturn {
     closeOnEscape = true,
     closeOnBackdrop = true,
     focusDelay = 100,
+    lockScroll = true,
   } = options;
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open || !lockScroll) return undefined;
+    return lockDocumentScroll();
+  }, [open, lockScroll]);
 
   // ESC 关闭
   useEffect(() => {

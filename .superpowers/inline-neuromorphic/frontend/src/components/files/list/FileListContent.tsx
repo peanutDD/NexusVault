@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import FileListPagination from "./FileListPagination";
 import FileListVirtualScroller from "./FileListVirtualScroller";
 import FileListSelectionBar from "./FileListSelectionBar";
@@ -10,6 +11,8 @@ import { FILE_LIST } from "../../../constants";
 import InfiniteScrollSentinel from "../InfiniteScrollSentinel";
 import { EmptyState } from "../../common/EmptyState";
 import type {
+  FileCollectionCounts,
+  FileCollectionCountsQuery,
   FileListResponse,
   FileMetadata,
   FulltextSearchMetadata,
@@ -18,7 +21,6 @@ import type { Folder } from "../../../types/folders";
 import type { SortOption } from "../../../hooks/files/useFileFilters";
 import { tagsService } from "../../../services/tags";
 import { FILE_COLLECTION_COUNTS_QUERY_KEY } from "../../../services/fileListService";
-import { appQueryClient } from "../../../providers/queryClient";
 import VersionHistoryDialog from "../dialogs/VersionHistoryDialog";
 import ManageTagsDialog from "../dialogs/ManageTagsDialog";
 import FileActivityDialog from "../dialogs/FileActivityDialog";
@@ -33,6 +35,7 @@ interface MenuState {
 }
 
 type FileFlagPatch = Partial<Pick<FileMetadata, "is_favorite" | "is_pinned">>;
+type CountedFlagCollection = "favorites" | "pinned";
 
 type FilesInfiniteQueryData = {
   pages: FileListResponse[];
@@ -70,6 +73,127 @@ function isPinnedCollectionActive(activeCollection = "") {
     .map((item) => item.trim())
     .filter(Boolean)
     .includes(PINNED_COLLECTION_KEY);
+}
+
+function getCountScopeFromQueryKey(
+  queryKey: readonly unknown[],
+): FileCollectionCountsQuery | undefined {
+  const scope = queryKey[FILE_COLLECTION_COUNTS_QUERY_KEY.length];
+  return scope && typeof scope === "object"
+    ? (scope as FileCollectionCountsQuery)
+    : undefined;
+}
+
+function buildCollectionCountQueryKey(scope: FileCollectionCountsQuery) {
+  return [...FILE_COLLECTION_COUNTS_QUERY_KEY, scope] as const;
+}
+
+function isSameCountScope(
+  left: FileCollectionCountsQuery | undefined,
+  right: FileCollectionCountsQuery | undefined,
+) {
+  if (!left || !right) return false;
+  return (
+    left.folder_id === right.folder_id &&
+    (left.search ?? "") === (right.search ?? "") &&
+    (left.mime_type ?? "") === (right.mime_type ?? "")
+  );
+}
+
+function fileMatchesCountScope(
+  file: FileMetadata,
+  scope: FileCollectionCountsQuery | undefined,
+) {
+  if (!scope) return true;
+
+  if (scope.folder_id !== undefined) {
+    const rawFolderId = scope.folder_id;
+    const isRootScope =
+      rawFolderId === null ||
+      String(rawFolderId).trim() === "" ||
+      String(rawFolderId).trim().toLowerCase() === "root" ||
+      String(rawFolderId).trim().toLowerCase() === "null";
+    if (isRootScope) {
+      if (file.folder_id !== null) return false;
+    } else if (file.folder_id !== String(rawFolderId)) {
+      return false;
+    }
+  }
+
+  const search = scope.search?.trim().toLowerCase();
+  if (
+    search &&
+    !file.original_filename.toLowerCase().includes(search) &&
+    !file.filename.toLowerCase().includes(search)
+  ) {
+    return false;
+  }
+
+  const mimeType = scope.mime_type?.trim().toLowerCase();
+  const fileMimeType = file.mime_type.toLowerCase();
+  if (mimeType) {
+    if (mimeType.endsWith("/")) {
+      if (!fileMimeType.startsWith(mimeType)) return false;
+    } else if (fileMimeType !== mimeType) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function patchCollectionCountData(
+  data: FileCollectionCounts | undefined,
+  collection: CountedFlagCollection,
+  delta: number,
+): FileCollectionCounts | undefined {
+  const current = data?.collections[collection];
+  if (!data || current === undefined || delta === 0) return data;
+  const next = Math.max(0, current + delta);
+  if (next === current) return data;
+  return {
+    ...data,
+    collections: {
+      ...data.collections,
+      [collection]: next,
+    },
+  };
+}
+
+function patchCollectionCountQueries(
+  queryClient: QueryClient,
+  file: FileMetadata,
+  collection: CountedFlagCollection,
+  wasActive: boolean,
+  nextActive: boolean,
+  currentCountQuery: FileCollectionCountsQuery,
+) {
+  const previous = queryClient.getQueriesData<FileCollectionCounts>({
+    queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY,
+  });
+  const delta = Number(nextActive) - Number(wasActive);
+  if (delta === 0) return previous;
+
+  queryClient.setQueryData<FileCollectionCounts>(
+    buildCollectionCountQueryKey(currentCountQuery),
+    (data) => patchCollectionCountData(data, collection, delta),
+  );
+
+  previous.forEach(([queryKey, data]) => {
+    const scope = getCountScopeFromQueryKey(queryKey);
+    if (isSameCountScope(scope, currentCountQuery)) {
+      return;
+    }
+    if (!fileMatchesCountScope(file, scope)) {
+      return;
+    }
+    const patched = patchCollectionCountData(data, collection, delta);
+    if (patched !== data) {
+      queryClient.setQueryData(queryKey, patched);
+    }
+  });
+
+  return previous;
 }
 
 interface FileListContentProps {
@@ -133,7 +257,10 @@ interface FileListContentProps {
     fileIds: string[],
     folderIds: string[],
   ) => void;
-  setPreviewFile: (file: FileMetadata | null) => void;
+  setPreviewFile: (
+    file: FileMetadata | null,
+    filesForPreview?: FileMetadata[],
+  ) => void;
   setShareFile: (file: FileMetadata | null) => void;
   batchDownloading: boolean;
   activeCollection?: string;
@@ -141,6 +268,8 @@ interface FileListContentProps {
   onCollectionChange?: (value: string) => void;
   onResetFilters?: () => void;
   onTagChange?: (value: string) => void;
+  onActionDialogOpenChange?: (open: boolean) => void;
+  onTagDialogOpenChange?: (open: boolean) => void;
 }
 
 const FileListContent: React.FC<FileListContentProps> = ({
@@ -189,7 +318,10 @@ const FileListContent: React.FC<FileListContentProps> = ({
   onCollectionChange,
   onResetFilters,
   onTagChange,
+  onActionDialogOpenChange,
+  onTagDialogOpenChange,
 }) => {
+  const queryClient = useQueryClient();
   const [flagPatches, setFlagPatches] = useState<Record<string, FileFlagPatch>>(
     {},
   );
@@ -200,6 +332,14 @@ const FileListContent: React.FC<FileListContentProps> = ({
       window.innerWidth < MOBILE_WIDTH_THRESHOLD,
   );
   const isPlainSort = sortBy !== "type_group" && sortBy !== "time_group";
+  const countQuery = useMemo(
+    () => ({
+      folder_id: currentFolderId ?? "root",
+      search: searchQuery,
+      mime_type: mimeType,
+    }),
+    [currentFolderId, searchQuery, mimeType],
+  );
   const visibleFiles = useMemo(
     () => files.map((file) => patchFileFlags(file, flagPatches)),
     [files, flagPatches],
@@ -292,6 +432,8 @@ const FileListContent: React.FC<FileListContentProps> = ({
       item.type === "folder" ? item.folder.name : item.file.original_filename;
     const getSize = (item: (typeof items)[number]) =>
       item.type === "folder" ? 0 : item.file.file_size;
+    const getId = (item: (typeof items)[number]) =>
+      item.type === "folder" ? item.folder.id : item.file.id;
 
     const getTime = (v: string) => {
       const t = Date.parse(v);
@@ -299,16 +441,14 @@ const FileListContent: React.FC<FileListContentProps> = ({
     };
 
     const cmp = (a: (typeof items)[number], b: (typeof items)[number]) => {
+      const dir = sortBy.endsWith("_asc") ? 1 : -1;
       if (sortBy.startsWith("filename_")) {
-        const dir = sortBy.endsWith("_asc") ? 1 : -1;
         const r = compareName(getName(a), getName(b));
         if (r !== 0) return r * dir;
       } else if (sortBy.startsWith("created_at_")) {
-        const dir = sortBy.endsWith("_asc") ? 1 : -1;
         const r = getTime(getCreatedAt(a)) - getTime(getCreatedAt(b));
         if (r !== 0) return r * dir;
       } else if (sortBy.startsWith("file_size_")) {
-        const dir = sortBy.endsWith("_asc") ? 1 : -1;
         const r = getSize(a) - getSize(b);
         if (r !== 0) return r * dir;
       }
@@ -316,11 +456,40 @@ const FileListContent: React.FC<FileListContentProps> = ({
       const tie = compareName(getName(a), getName(b));
       if (tie !== 0) return tie;
       if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
-      return 0;
+      return getId(a).localeCompare(getId(b)) * dir;
     };
 
     return items.sort(cmp);
   }, [displayFolders, plainScrollerFiles, sortBy, isPlainSort]);
+  const visualPreviewFiles = useMemo(() => {
+    if (isGroupByType && visibleGroupedFiles) {
+      return visibleGroupedFiles.flatMap((group) => group.files);
+    }
+
+    if (isGroupByTime && timeGroupedItems) {
+      return [
+        ...pinnedStandaloneFiles,
+        ...(visibleTimeGroupedItems?.flatMap((group) =>
+          group.items.flatMap((item) =>
+            item.type === "file" ? [item.file] : [],
+          ),
+        ) ?? []),
+      ];
+    }
+
+    return [
+      ...pinnedStandaloneFiles,
+      ...mixedItems.flatMap((item) => (item.type === "file" ? [item.file] : [])),
+    ];
+  }, [
+    isGroupByType,
+    isGroupByTime,
+    mixedItems,
+    pinnedStandaloneFiles,
+    timeGroupedItems,
+    visibleGroupedFiles,
+    visibleTimeGroupedItems,
+  ]);
 
   const itemCountForVirtual = isPlainSort
     ? mixedItems.length
@@ -339,6 +508,20 @@ const FileListContent: React.FC<FileListContentProps> = ({
     setOpenMenu(null);
   }, []);
 
+  const handlePreviewFile = useCallback(
+    (file: FileMetadata | null) => {
+      if (!file) {
+        setPreviewFile(null);
+        return;
+      }
+      setPreviewFile(
+        file,
+        visualPreviewFiles.length > 0 ? visualPreviewFiles : [file],
+      );
+    },
+    [setPreviewFile, visualPreviewFiles],
+  );
+
   const toggleFileMenu = useCallback((id: string) => {
     setOpenMenu((prev) =>
       prev?.type === "file" && prev.id === id ? null : { type: "file", id },
@@ -353,67 +536,83 @@ const FileListContent: React.FC<FileListContentProps> = ({
 
   const toggleFavorite = useCallback(async (file: FileMetadata) => {
     const patch = { is_favorite: !file.is_favorite };
-    const previous = appQueryClient.getQueriesData<FilesInfiniteQueryData>({
+    const previousFiles = queryClient.getQueriesData<FilesInfiniteQueryData>({
       queryKey: ["files"],
     });
+    const previousCounts = patchCollectionCountQueries(
+      queryClient,
+      file,
+      "favorites",
+      Boolean(file.is_favorite),
+      patch.is_favorite,
+      countQuery,
+    );
     setFlagPatches((current) => ({
       ...current,
       [file.id]: { ...current[file.id], ...patch },
     }));
-    appQueryClient.setQueriesData<FilesInfiniteQueryData>(
+    queryClient.setQueriesData<FilesInfiniteQueryData>(
       { queryKey: ["files"] },
       (data) => patchFilesQueryData(data, file.id, patch),
     );
     try {
       await tagsService.updateFlags(file.id, patch);
     } catch (error) {
-      previous.forEach(([key, data]) => appQueryClient.setQueryData(key, data));
+      previousFiles.forEach(([key, data]) =>
+        queryClient.setQueryData(key, data),
+      );
+      previousCounts.forEach(([key, data]) =>
+        queryClient.setQueryData(key, data),
+      );
       setFlagPatches((current) => ({
         ...current,
         [file.id]: { ...current[file.id], is_favorite: file.is_favorite },
       }));
       throw error;
     } finally {
-      await Promise.all([
-        appQueryClient.invalidateQueries({ queryKey: ["files"] }),
-        appQueryClient.invalidateQueries({
-          queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY,
-        }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ["files"] });
     }
-  }, []);
+  }, [countQuery, queryClient]);
 
   const togglePinned = useCallback(async (file: FileMetadata) => {
     const patch = { is_pinned: !file.is_pinned };
-    const previous = appQueryClient.getQueriesData<FilesInfiniteQueryData>({
+    const previousFiles = queryClient.getQueriesData<FilesInfiniteQueryData>({
       queryKey: ["files"],
     });
+    const previousCounts = patchCollectionCountQueries(
+      queryClient,
+      file,
+      "pinned",
+      Boolean(file.is_pinned),
+      patch.is_pinned,
+      countQuery,
+    );
     setFlagPatches((current) => ({
       ...current,
       [file.id]: { ...current[file.id], ...patch },
     }));
-    appQueryClient.setQueriesData<FilesInfiniteQueryData>(
+    queryClient.setQueriesData<FilesInfiniteQueryData>(
       { queryKey: ["files"] },
       (data) => patchFilesQueryData(data, file.id, patch),
     );
     try {
       await tagsService.updateFlags(file.id, patch);
     } catch (error) {
-      previous.forEach(([key, data]) => appQueryClient.setQueryData(key, data));
+      previousFiles.forEach(([key, data]) =>
+        queryClient.setQueryData(key, data),
+      );
+      previousCounts.forEach(([key, data]) =>
+        queryClient.setQueryData(key, data),
+      );
       setFlagPatches((current) => ({
         ...current,
         [file.id]: { ...current[file.id], is_pinned: file.is_pinned },
       }));
       throw error;
     } finally {
-      await Promise.all([
-        appQueryClient.invalidateQueries({ queryKey: ["files"] }),
-        appQueryClient.invalidateQueries({
-          queryKey: FILE_COLLECTION_COUNTS_QUERY_KEY,
-        }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ["files"] });
     }
-  }, []);
+  }, [countQuery, queryClient]);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -425,6 +624,22 @@ const FileListContent: React.FC<FileListContentProps> = ({
       queueMicrotask(() => setOpenMenu(null));
     }
   }, [openMenu, visibleFiles, displayFolders]);
+
+  useEffect(() => {
+    onTagDialogOpenChange?.(Boolean(tagFile));
+    return () => {
+      onTagDialogOpenChange?.(false);
+    };
+  }, [onTagDialogOpenChange, tagFile]);
+
+  const internalActionDialogOpen = Boolean(versionFile || activityFile || tagFile);
+
+  useEffect(() => {
+    onActionDialogOpenChange?.(internalActionDialogOpen);
+    return () => {
+      onActionDialogOpenChange?.(false);
+    };
+  }, [internalActionDialogOpen, onActionDialogOpenChange]);
 
   const showBatchActions = selectedFiles.size + selectedFolders.size > 0;
   const totalText = `total:${displayFolders.length > 0 ? `${displayFolders.length} folders · ` : ""}${visibleFiles.length} files`;
@@ -594,7 +809,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
               onTogglePinned={togglePinned}
               onFileDragStart={handleFileDragStart}
               onDropOnFolder={handleDropOnFolder}
-              onPreviewFile={setPreviewFile}
+              onPreviewFile={handlePreviewFile}
               onShareFile={setShareFile}
               onToggleFileMenu={toggleFileMenu}
               onToggleFolderMenu={toggleFolderMenu}
@@ -626,7 +841,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   onTogglePinned={togglePinned}
                   onFileDragStart={handleFileDragStart}
                   onDropOnFolder={handleDropOnFolder}
-                  onPreviewFile={setPreviewFile}
+                  onPreviewFile={handlePreviewFile}
                   onShareFile={setShareFile}
                   onToggleFileMenu={toggleFileMenu}
                   onToggleFolderMenu={toggleFolderMenu}
@@ -657,7 +872,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   onTogglePinned={togglePinned}
                   onFileDragStart={handleFileDragStart}
                   onDropOnFolder={handleDropOnFolder}
-                  onPreviewFile={setPreviewFile}
+                  onPreviewFile={handlePreviewFile}
                   onShareFile={setShareFile}
                   onToggleFileMenu={toggleFileMenu}
                   onToggleFolderMenu={toggleFolderMenu}
@@ -691,7 +906,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   onTogglePinned={togglePinned}
                   onFileDragStart={handleFileDragStart}
                   onDropOnFolder={handleDropOnFolder}
-                  onPreviewFile={setPreviewFile}
+                  onPreviewFile={handlePreviewFile}
                   onShareFile={setShareFile}
                   onToggleFileMenu={toggleFileMenu}
                   onToggleFolderMenu={toggleFolderMenu}
@@ -713,7 +928,7 @@ const FileListContent: React.FC<FileListContentProps> = ({
                   onSelectFile={handleSelectFile}
                   onSelectFolder={handleSelectFolder}
                   onOpenFolder={handleOpenFolder}
-                  onPreviewFile={setPreviewFile}
+                  onPreviewFile={handlePreviewFile}
                   onShareFile={setShareFile}
                   onDownloadFile={handleDownload}
                   onRenameFolder={handleRenameFolder}

@@ -7,14 +7,34 @@ import Files from "./Files";
 import { useAuthStore } from "../store/authStore";
 
 vi.mock("../components/files/list/FileList", () => ({
-  default: ({ onOpenUpload }: { onOpenUpload: () => void }) => (
-    <div data-testid="file-list">
-      <button type="button" onClick={onOpenUpload}>
-        Open upload
+	  default: ({
+	    onOpenUpload,
+	    onActionDialogOpenChange,
+	    onTagDialogOpenChange,
+	  }: {
+	    onOpenUpload: () => void;
+	    onActionDialogOpenChange?: (open: boolean) => void;
+	    onTagDialogOpenChange?: (open: boolean) => void;
+	  }) => (
+	    <div data-testid="file-list">
+	      <button type="button" onClick={onOpenUpload}>
+	        Open upload
       </button>
-    </div>
-  ),
-}));
+      <button type="button" onClick={() => onTagDialogOpenChange?.(true)}>
+        Open tag manager
+      </button>
+	      <button type="button" onClick={() => onTagDialogOpenChange?.(false)}>
+	        Close tag manager
+	      </button>
+	      <button type="button" onClick={() => onActionDialogOpenChange?.(true)}>
+	        Open file action dialog
+	      </button>
+	      <button type="button" onClick={() => onActionDialogOpenChange?.(false)}>
+	        Close file action dialog
+	      </button>
+	    </div>
+	  ),
+	}));
 
 vi.mock("../components/layout/PageLayout", () => ({
   default: ({
@@ -111,6 +131,60 @@ describe("Files page", () => {
     expect(screen.getByTestId("page-layout")).toHaveAttribute(
       "data-hide-footer",
       "true",
+    );
+  });
+
+  it("hides the page footer while the tag manager dialog is open", async () => {
+    renderFiles();
+
+    expect(screen.getByTestId("page-layout")).toHaveAttribute(
+      "data-hide-footer",
+      "false",
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open tag manager" }),
+    );
+
+    expect(screen.getByTestId("page-layout")).toHaveAttribute(
+      "data-hide-footer",
+      "true",
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Close tag manager" }),
+    );
+
+    expect(screen.getByTestId("page-layout")).toHaveAttribute(
+      "data-hide-footer",
+      "false",
+    );
+  });
+
+  it("hides the page footer while a file action dialog is open", async () => {
+    renderFiles();
+
+    expect(screen.getByTestId("page-layout")).toHaveAttribute(
+      "data-hide-footer",
+      "false",
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open file action dialog" }),
+    );
+
+    expect(screen.getByTestId("page-layout")).toHaveAttribute(
+      "data-hide-footer",
+      "true",
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Close file action dialog" }),
+    );
+
+    expect(screen.getByTestId("page-layout")).toHaveAttribute(
+      "data-hide-footer",
+      "false",
     );
   });
 

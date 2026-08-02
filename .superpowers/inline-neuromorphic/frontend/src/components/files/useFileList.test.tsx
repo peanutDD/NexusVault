@@ -9,6 +9,7 @@ import { useFileList } from "./useFileList";
 const mockUseFiles = vi.fn();
 const mockUseFolderContents = vi.fn();
 const mockClearError = vi.fn();
+const mockSetSearchParams = vi.hoisted(() => vi.fn());
 
 vi.mock("../../hooks/files/useFileFilters", () => ({
   useFileFilters: () => ({
@@ -78,7 +79,7 @@ vi.mock("../../hooks/files/useFileActions", () => ({
 
 vi.mock("./useFileListScope", () => ({
   useFileListScope: () => ({
-    setSearchParams: vi.fn(),
+    setSearchParams: mockSetSearchParams,
     currentFolderId: null,
     activeCollection: "",
     activeTagId: "",
@@ -133,11 +134,54 @@ function createWrapper(queryClient: QueryClient) {
   };
 }
 
+function mockSuccessfulQueries() {
+  mockUseFiles.mockReturnValue({
+    data: {
+      pages: [
+        {
+          files: [],
+          total: 0,
+          page: 1,
+          limit: 50,
+        },
+      ],
+    },
+    fetchNextPage: vi.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  });
+  mockUseFolderContents.mockReturnValue({
+    data: { folders: [], path: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  });
+}
+
+function renderUseFileListHook() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+    },
+  });
+
+  return renderHook(() => useFileList(), {
+    wrapper: createWrapper(queryClient),
+  });
+}
+
 describe("useFileList query error handling", () => {
   beforeEach(() => {
     mockUseFiles.mockReset();
     mockUseFolderContents.mockReset();
     mockClearError.mockReset();
+    mockSetSearchParams.mockReset();
     useAuthStore.setState({
       user: {
         id: "user-1",
@@ -298,4 +342,71 @@ describe("useFileList query error handling", () => {
 
     expect(result.current.totalPages).toBe(3);
   });
+
+  it.each([
+    ["收藏", "favorites"],
+    ["置顶", "pinned"],
+    ["最近", "recent"],
+    ["未标记", "untagged"],
+    ["文件 (100MB+)", "large"],
+    ["重复", "duplicates"],
+    ["图片", "images"],
+    ["PDF", "pdfs"],
+    ["视频", "videos"],
+  ])(
+    "replaces the current history entry when the %s chip updates the URL",
+    (_label, collection) => {
+      mockSuccessfulQueries();
+
+      const { result } = renderUseFileListHook();
+
+      act(() => {
+        result.current.handleCollectionChange(collection);
+      });
+
+      expect(mockSetSearchParams).toHaveBeenCalledWith(
+        expect.any(Function),
+        { replace: true },
+      );
+    },
+  );
+
+  it.each([
+    ["标签：3", "tag-3"],
+    ["标签：s", "tag-s"],
+  ])(
+    "replaces the current history entry when the %s chip updates the URL",
+    (_label, tagId) => {
+      mockSuccessfulQueries();
+
+      const { result } = renderUseFileListHook();
+
+      act(() => {
+        result.current.handleTagChange(tagId);
+      });
+
+      expect(mockSetSearchParams).toHaveBeenCalledWith(
+        expect.any(Function),
+        { replace: true },
+      );
+    },
+  );
+
+  it.each(["重置", "全部"])(
+    "replaces the current history entry when the %s chip resets smart filters",
+    () => {
+      mockSuccessfulQueries();
+
+      const { result } = renderUseFileListHook();
+
+      act(() => {
+        result.current.handleResetFilters();
+      });
+
+      expect(mockSetSearchParams).toHaveBeenCalledWith(
+        expect.any(Function),
+        { replace: true },
+      );
+    },
+  );
 });

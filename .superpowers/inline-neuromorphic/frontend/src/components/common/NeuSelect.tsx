@@ -16,10 +16,10 @@ interface NeuSelectProps {
 }
 
 const triggerClassName =
-  "neu-inset settings-neu-inset-control relative flex w-full min-w-0 min-h-[clamp(2.5rem,5.8vw,2.75rem)] items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.7rem,1.6vw,0.75rem)] px-[clamp(0.78rem,1.8vw,1rem)] pr-[clamp(2.55rem,6vw,2.9rem)] py-[clamp(0.68rem,1.5vw,0.75rem)] text-left text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-form-input-text)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]";
+  "neu-pressed settings-neu-inset-control relative flex w-full min-w-0 min-h-[clamp(2.5rem,5.8vw,2.75rem)] items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.7rem,1.6vw,0.75rem)] px-[clamp(0.78rem,1.8vw,1rem)] pr-[clamp(2.55rem,6vw,2.9rem)] py-[clamp(0.68rem,1.5vw,0.75rem)] text-left text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-form-input-text)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]";
 
 const menuClassName =
-  "neu-inset settings-neu-inset-panel neuSelectFlatMenu absolute left-0 right-0 top-[calc(100%+clamp(0.48rem,1.35vw,0.62rem))] z-40 max-h-[min(60dvh,clamp(16rem,42vw,22rem))] overflow-y-auto overscroll-contain rounded-[clamp(0.82rem,1.9vw,1rem)] p-[clamp(0.22rem,0.65vw,0.34rem)]";
+  "neu-pressed settings-neu-inset-panel neuSelectFlatMenu absolute left-0 right-0 top-[calc(100%+clamp(0.48rem,1.35vw,0.62rem))] z-40 max-h-[min(60dvh,clamp(16rem,42vw,22rem))] overflow-y-auto overscroll-contain rounded-[clamp(0.82rem,1.9vw,1rem)] p-[clamp(0.22rem,0.65vw,0.34rem)]";
 
 export function NeuSelect({
   ariaLabel,
@@ -106,7 +106,9 @@ export function NeuSelect({
                   }}
                 >
                   <span className="flex h-[clamp(0.88rem,2.2vw,1rem)] w-[clamp(0.88rem,2.2vw,1rem)] items-center justify-center">
-                    {selected && <Check className="h-[clamp(0.8rem,2vw,0.94rem)] w-[clamp(0.8rem,2vw,0.94rem)]" />}
+                    {selected && (
+                      <Check className="h-[clamp(0.8rem,2vw,0.94rem)] w-[clamp(0.8rem,2vw,0.94rem)]" />
+                    )}
                   </span>
                   <span className="truncate">{option.label}</span>
                 </button>

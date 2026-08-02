@@ -9,7 +9,7 @@ export function settingsLabelClass(className?: string) {
 
 export function settingsInputClass(hasError?: boolean, className?: string) {
   return cn(
-    "neu-inset settings-neu-inset-control w-full min-w-0 rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.75rem)]",
+    "neu-pressed settings-neu-inset-control w-full min-w-0 rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.75rem)]",
     "transition-[box-shadow,color] duration-200",
     "text-[var(--settings-form-input-text)] placeholder:text-[var(--settings-form-placeholder)]",
     "focus:outline-none focus:ring-2 focus:ring-[var(--neu-surface-bg-green)] focus:shadow-[var(--neu-pressed-shadow)]",
@@ -65,7 +65,7 @@ export function settingsSecondaryButtonClass(className?: string) {
 
 export function settingsPanelClass(className?: string) {
   return cn(
-    "neu-inset settings-neu-inset-panel rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)] transition-[box-shadow,filter] duration-200",
+    "neu-pressed settings-neu-inset-panel rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)] transition-[box-shadow,filter] duration-200",
     className,
   );
 }

@@ -7,11 +7,11 @@ import { cn } from "../../utils/cn";
 
 // 输入框样式
 export const AUTH_INPUT_CLASSES = cn(
-  "neu-inset",
+  "neu-pressed",
   "w-full px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)]",
   "text-[var(--auth-input-text)]",
   "placeholder:text-[var(--auth-input-placeholder)]",
-  "focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]",
+  "focus:outline-none focus:ring-2 focus:ring-[var(--neu-surface-bg-green)]",
   "transition-all duration-200",
 );
 
@@ -34,7 +34,7 @@ export const AUTH_ERROR_BOX_CLASSES = cn(
 export const AUTH_BUTTON_CLASSES = cn(
   "neu-raised-sm",
   "font-brand w-full py-[clamp(0.585rem,1.35vw,0.75rem)] px-[clamp(0.78rem,1.8vw,1rem)] rounded-[clamp(0.6rem,1.4vw,0.75rem)] font-semibold tracking-wide",
-  "bg-indigo-500 text-[var(--auth-button-text)] hover:bg-indigo-600",
+  "bg-[var(--neu-surface-bg-green)] text-[var(--auth-button-text)] hover:bg-[var(--neu-surface-bg-green-hover)]",
   "active:shadow-[var(--neu-pressed-shadow)]",
   "focus:outline-none focus:ring-2 focus:ring-[var(--auth-button-ring)]",
   "focus:ring-offset-2 focus:ring-offset-[var(--auth-button-ring-offset)]",

@@ -303,7 +303,7 @@ const FolderCard = memo(function FolderCard({
       <div className="p-[clamp(0.6rem,1.4vw,0.75rem)]" data-oid="tw-paus">
         {/* 文件夹图标：使用和视频文件相同的主色（text-purple-400），但缩小尺寸避免过于抢眼 */}
         <div
-          className="neu-inset relative mb-[clamp(0.6rem,1.4vw,0.75rem)] flex aspect-square items-center justify-center rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
+          className="neu-pressed relative mb-[clamp(0.6rem,1.4vw,0.75rem)] flex aspect-square items-center justify-center rounded-[clamp(0.2rem,0.6vw,0.25rem)]"
           draggable={nativeDragEnabled}
           onDragStart={handleDragStart}
           data-oid="69zytmi"

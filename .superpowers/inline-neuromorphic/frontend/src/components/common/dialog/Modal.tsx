@@ -38,7 +38,7 @@ export default function Modal({
   variant = "default",
   loading = false,
   panelClassName,
-  placement = "nav-safe-start",
+  placement = "nav-safe-center",
 }: ModalProps) {
   // 使用 useDialog hook 统一处理 ESC 关闭
   const { handleBackdropClick } = useDialog({
@@ -52,7 +52,7 @@ export default function Modal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[100] flex bg-black/40 animate-fade-in",
+        "fixed inset-0 overflow-hidden z-[100] flex bg-[var(--neu-surface-bg)]/80 animate-fade-in",
         navSafePaddingClass,
         placementClasses[placement],
       )}
