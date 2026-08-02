@@ -113,10 +113,10 @@ function PreviewLabel() {
       data-oid="bpc3euq"
     >
       <div
-        className="text-[clamp(0.7rem,1.8vw,1.1rem)] font-semibold uppercase tracking-[0.35em] text-[var(--preview-label-text-solid)] drop-shadow-[var(--preview-label-text-shadow)]"
+        className="text-[clamp(0.7rem,1.8vw,1.1rem)] font-semibold tracking-[0.35em] text-[var(--preview-label-text-solid)] drop-shadow-[var(--preview-label-text-shadow)]"
         data-oid="o306q7e"
       >
-        SSTV
+        Preview
       </div>
       {/*<div
         className="mt-[clamp(0.1rem,0.4vw,0.25rem)] h-[clamp(0.12rem,0.3vw,0.18rem)] w-[clamp(2.8rem,7vw,4.6rem)] rounded-full bg-indigo-500 shadow-none"

@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 3,
+  "agentName": "codex-runner",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus9.actions.githubusercontent.com/XEz7ct1IOKT30wF6JdX8qNm0MGRrN1Qbh33MpCbYz5ivcxwcKq/",
+  "gitHubUrl": "https://github.com/peanutDD/NexusVault",
+  "workFolder": "nexusvault-file-server-runner",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}

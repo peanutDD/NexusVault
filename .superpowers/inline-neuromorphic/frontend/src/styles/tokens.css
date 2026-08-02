@@ -45,7 +45,7 @@
   --rgb-emerald-950: 6, 78, 59;
   --rgb-emerald-200: 167, 243, 208;
   --rgb-malachite-500: 59, 7, 100;
-  --rgb-mantis-500: 93, 187, 99;
+  --rgb-mantis-500: 16, 185, 129;
   --rgb-pistachio-400: 147, 197, 114;
   --rgb-green-600: 60, 176, 67;
   --rgb-lime-500: 49, 214, 51;
@@ -464,7 +464,7 @@
   --control-error-text: rgba(var(--rgb-rose-400), 0.92);
 
   /* Focus — 极小值，1px 级别保持固定 */
-  --color-focus-ring: rgba(var(--rgb-malachite-500), 0.62);
+  --color-focus-ring: rgba(var--neu-surface-bg-green, 0.62);
   --focus-outline-width: 0.125rem;
   --focus-outline-offset: 0.125rem;
 
@@ -770,7 +770,7 @@
     0 0 0 0.0625rem rgba(var(--rgb-white), 0.03);
   --settings-form-input-text: rgba(var(--rgb-slate-100), 0.95);
   --settings-form-placeholder: rgba(var(--rgb-slate-500), 0.9);
-  --settings-form-input-ring: rgba(var(--rgb-emerald-300), 0.25);
+  --settings-form-input-ring: rgba(var(--neu-surface-bg-green), 0.25);
   --settings-form-input-border-focus: rgba(var(--rgb-emerald-300), 0.3);
   --settings-form-helper: rgba(var(--rgb-slate-400), 0.9);
   --settings-form-error: rgba(var(--rgb-rose-300), 0.9);
@@ -1323,7 +1323,7 @@
     rgba(var(--rgb-cyan-400), 1),
     rgba(var(--rgb-purple-500), 1)
   );
-  --preview-label-text-solid: rgba(var(--rgb-emerald-300), 0.99);
+  --preview-label-text-solid: rgba(var(--neu-surface-bg-green), 0.99);
   --preview-label-text-shadow: 0 0 0.625rem rgba(var(--rgb-purple-500), 0.65);
   --preview-label-bar: linear-gradient(
     90deg,
@@ -1692,7 +1692,7 @@
   --control-hint-text: rgba(var(--rgb-slate-400), 0.7);
   --control-error-text: rgba(var(--rgb-rose-400), 0.92);
 
-  --color-focus-ring: rgba(var(--rgb-purple-500), 0.62);
+  --color-focus-ring: rgba(var(--neu-surface-bg-green), 0.62);
 
   --surface-page-gradient:
     radial-gradient(
@@ -3596,8 +3596,11 @@
 
   color-scheme: light;
 
-  --neu-surface-bg: #e0e5ec;
-  --neu-surface-bg-green: #10b981;
+  --neu-surface-bg: #e0e5ee;
+  --neu-surface-text: #2d3748;
+  --neu-surface-bg-green-hover: #10b981;
+  --neu-surface-bg-green: #1d9f74;
+  --neu-surface-bg-yellow: #f7c94a;
   --neu-surface-bg-red: #ef4444;
   --neu-bg-primary: var(--neu-surface-bg);
   --neu-bg-secondary: var(--neu-surface-bg);
@@ -4042,7 +4045,7 @@
   --settings-form-placeholder: rgba(var(--rgb-slate-600), 0.72);
   --settings-form-helper: rgba(var(--rgb-slate-600), 0.68);
   --settings-form-error: rgba(var(--rgb-red-500), 0.9);
-  --settings-form-input-ring: rgba(99, 102, 241, 0.26);
+  --settings-form-input-ring: rgba(var(--neu-surface-bg-green), 0.26);
   --settings-form-input-shadow: var(--neu-inset-shadow);
   --settings-form-input-shadow-focus: var(--neu-inset-shadow);
   --settings-secondary-bg: var(--neu-raised-bg);
@@ -4282,16 +4285,19 @@
   color-scheme: dark;
 
   --neu-surface-bg: #2d3748;
-  --neu-surface-bg-green: #10b981;
+  --neu-surface-text: #f8fafc;
+  --neu-surface-bg-green-hover: #10b981;
+  --neu-surface-bg-green: #1d9f74;
   --neu-surface-bg-red: #ef4444;
+  --neu-surface-bg-yellow: #f7c94a;
   --neu-bg-primary: var(--neu-surface-bg);
   --neu-bg-secondary: var(--neu-surface-bg);
   --neu-shadow-dark: #1a202c;
   --neu-shadow-light: #4a5568;
-  --neu-primary: #6366f1;
+  --neu-primary: #10b981;
   --neu-primary-dark: #4f46e5;
   --neu-accent-text: #c084fc;
-  --neu-accent-text-strong: #d8b4fe;
+  --neu-accent-text-strong: var(--neu-surface-bg-green);
   --neu-raised-bg: var(--neu-surface-bg);
   --neu-inset-bg: var(--neu-surface-bg);
   --neu-raised-shadow:
@@ -4315,7 +4321,7 @@
   --color-border-soft: rgba(var(--rgb-white), 0.08);
   --color-border-medium: rgba(var(--rgb-white), 0.12);
   --color-border-strong: rgba(var(--rgb-white), 0.16);
-  --color-focus-ring: var(--neu-primary);
+  --color-focus-ring: var(--neu-surface-bg-green);
   --spinner-track-color: transparent;
   --spinner-accent-color: var(--neu-accent-text);
   --notice-info: var(--neu-accent-text);
@@ -4621,7 +4627,7 @@
   --settings-chip-bg-hover: var(--neu-raised-bg);
   --settings-chip-border: transparent;
   --settings-chip-border-hover: transparent;
-  --settings-chip-icon: var(--neu-accent-text);
+  --settings-chip-icon: var(--neu-surface-bg-green);
   --settings-chip-text: rgba(var(--rgb-slate-300), 0.88);
   --share-badge-green-bg: #10b981;
   --share-badge-green-text: rgba(var(--rgb-white), 0.96);
@@ -4638,7 +4644,7 @@
   --settings-form-input-text: rgba(var(--rgb-white), 0.92);
   --settings-form-placeholder: rgba(var(--rgb-slate-400), 0.72);
   --settings-form-helper: rgba(var(--rgb-slate-400), 0.68);
-  --settings-form-input-ring: rgba(147, 51, 234, 0.34);
+  --settings-form-input-ring: rgba(var(--neu-surface-bg-green), 0.34);
   --settings-form-input-shadow: var(--neu-inset-shadow);
   --settings-form-input-shadow-focus: var(--neu-inset-shadow);
   --settings-secondary-bg: var(--neu-raised-bg);
@@ -4707,7 +4713,7 @@
     var(--neu-primary),
     var(--neu-primary-dark)
   );
-  --preview-label-text-solid: var(--neu-accent-text);
+  --preview-label-text-solid: var(--neu-surface-bg-green);
   --preview-markdown-container-bg: var(--neu-raised-bg);
   --preview-markdown-codeblock-bg: var(--neu-inset-bg);
   --preview-markdown-text: rgba(var(--rgb-white), 0.9);

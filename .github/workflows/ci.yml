@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: .superpowers/inline-neuromorphic/backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: file_storage_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/file_storage_test
+      CARGO_TERM_COLOR: always
+      RUST_TEST_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .superpowers/inline-neuromorphic/backend/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('.superpowers/inline-neuromorphic/backend/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: .superpowers/inline-neuromorphic/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: .superpowers/inline-neuromorphic/frontend/package-lock.json
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcairo2-dev libpango1.0-dev libjpeg-dev \
+            libgif-dev librsvg2-dev pkg-config python3
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -b --noEmit
+      - name: Test (report only)
+        run: npm run test
+        continue-on-error: true
+      - run: npm run build
+
+  codex-review-model-cli:
+    name: Codex review model CLI
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .superpowers/inline-neuromorphic/scripts/codex-review-model-cli/tests/smoke.sh

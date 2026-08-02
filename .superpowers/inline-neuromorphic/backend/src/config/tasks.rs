@@ -1,6 +1,10 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct TasksConfig {
     pub queue_backend: String,
@@ -10,6 +14,9 @@ pub struct TasksConfig {
     pub files_consistency_check_batch_size: i64,
     pub orphan_cleanup_interval_secs: u64,
     pub orphan_cleanup_batch_limit: u32,
+    // 孤儿存储清理总开关；默认开启，设为 false 可临时禁用 24 小时轮询清理
+    #[serde(default = "default_true")]
+    pub orphan_cleanup_enabled: bool,
     pub transcode_max_concurrent: usize,
     #[serde(default)]
     pub task_type_concurrency: HashMap<String, usize>,

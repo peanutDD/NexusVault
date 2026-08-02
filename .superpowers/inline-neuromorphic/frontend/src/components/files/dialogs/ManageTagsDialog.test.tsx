@@ -10,6 +10,8 @@ vi.mock("../../../services/tags", () => ({
   tagsService: {
     list: vi.fn(),
     create: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
     setFileTags: vi.fn(),
   },
 }));
@@ -57,7 +59,7 @@ describe("ManageTagsDialog", () => {
     expect(screen.getByTestId("manage-tags-list")).toHaveClass(
       "fileActionDialogInsetList",
     );
-    expect(await screen.findByText("UI")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("UI")).toBeInTheDocument();
   });
 
   it("invalidates file list and smart collection counts after saving tag assignments", async () => {
@@ -66,7 +68,7 @@ describe("ManageTagsDialog", () => {
     const { queryClient, onClose } = renderDialog();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    await screen.findByText("UI");
+    await screen.findByDisplayValue("UI");
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(tagsService.setFileTags).toHaveBeenCalledWith("file-1", ["tag-1"]);
@@ -75,5 +77,51 @@ describe("ManageTagsDialog", () => {
       queryKey: ["file-collection-counts"],
     });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("renames an existing tag and refreshes tag-backed file state", async () => {
+    const user = userEvent.setup();
+    vi.mocked(tagsService.update).mockResolvedValue({
+      id: "tag-1",
+      name: "Design",
+      color: "#22c55e",
+    });
+    const { queryClient } = renderDialog();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    await screen.findByDisplayValue("UI");
+    await user.clear(screen.getByDisplayValue("UI"));
+    await user.type(screen.getByLabelText("重命名标签 UI"), "Design");
+    await user.click(screen.getByRole("button", { name: "保存标签 UI" }));
+
+    expect(tagsService.update).toHaveBeenCalledWith("tag-1", {
+      name: "Design",
+      color: "#22c55e",
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["files"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["file-collection-counts"],
+    });
+  });
+
+  it("deletes a tag, removes its file assignment locally, and saves without the deleted tag", async () => {
+    const user = userEvent.setup();
+    vi.mocked(tagsService.remove).mockResolvedValue(undefined);
+    vi.mocked(tagsService.setFileTags).mockResolvedValue(undefined);
+    const { queryClient } = renderDialog();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    await screen.findByDisplayValue("UI");
+    await user.click(screen.getByRole("button", { name: "删除标签 UI" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(tagsService.remove).toHaveBeenCalledWith("tag-1");
+    expect(tagsService.setFileTags).toHaveBeenCalledWith("file-1", []);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["files"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["file-collection-counts"],
+    });
   });
 });

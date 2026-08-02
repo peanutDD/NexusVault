@@ -19,6 +19,8 @@ export default function Files() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [fileActionDialogOpen, setFileActionDialogOpen] = useState(false);
+  const [tagDialogOpen, setTagDialogOpen] = useState(false);
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -41,7 +43,7 @@ export default function Files() {
     <PageLayout
       username={user?.username}
       onLogout={handleLogout}
-      hideFooter={uploadDialogOpen}
+      hideFooter={uploadDialogOpen || fileActionDialogOpen || tagDialogOpen}
       data-oid="_.p3.bw"
     >
       {/* 上传对话框 - 懒加载 */}
@@ -59,7 +61,9 @@ export default function Files() {
       {/* 文件列表 */}
       <FileList
         key={refreshKey}
+        onActionDialogOpenChange={setFileActionDialogOpen}
         onOpenUpload={() => setUploadDialogOpen(true)}
+        onTagDialogOpenChange={setTagDialogOpen}
         data-oid="b.s_-vo"
       />
     </PageLayout>

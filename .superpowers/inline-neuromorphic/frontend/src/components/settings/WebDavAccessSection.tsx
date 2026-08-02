@@ -274,7 +274,7 @@ export default function WebDavAccessSection() {
             </div>
           </div>
 
-          <div className="neu-inset mt-[clamp(1rem,2.25vw,1.25rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
+          <div className="neu-pressed mt-[clamp(1rem,2.25vw,1.25rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
             <p className="font-brand text-[length:var(--settings-text-xs)] font-normal tracking-wide text-[var(--settings-panel-label)]">
               Server URL
             </p>
@@ -307,7 +307,7 @@ export default function WebDavAccessSection() {
           </div>
 
           <div className="mt-[clamp(0.78rem,1.8vw,1rem)] grid gap-[clamp(0.585rem,1.35vw,0.75rem)] sm:grid-cols-2">
-            <div className="neu-inset rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
+            <div className="neu-pressed rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
               <p className="font-brand text-[length:var(--settings-text-xs)] tracking-wide text-[var(--settings-kpi-label)]">
                 Username
               </p>
@@ -327,7 +327,7 @@ export default function WebDavAccessSection() {
                 </button>
               )}
             </div>
-            <div className="neu-inset rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
+            <div className="neu-pressed rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.78rem,1.8vw,1rem)]">
               <p className="font-brand text-[length:var(--settings-text-xs)] tracking-wide text-[var(--settings-kpi-label)]">
                 Password
               </p>
@@ -412,7 +412,7 @@ export default function WebDavAccessSection() {
                 )}
               />
             </div>
-            <label className="neu-inset group relative grid cursor-pointer grid-cols-[clamp(2.1rem,4vw,2.4rem)_minmax(0,1fr)] gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border-0 px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.85rem)] text-[var(--settings-panel-value)] lg:col-span-2">
+            <label className="neu-pressed group relative grid cursor-pointer grid-cols-[clamp(2.1rem,4vw,2.4rem)_minmax(0,1fr)] gap-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.7rem,1.6vw,0.875rem)] border-0 px-[clamp(0.78rem,1.8vw,1rem)] py-[clamp(0.68rem,1.5vw,0.85rem)] text-[var(--settings-panel-value)] lg:col-span-2">
               <input
                 type="checkbox"
                 checked={wizardReadOnly}

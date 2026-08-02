@@ -622,7 +622,8 @@ impl FilesRepository for SqlxFilesRepo {
             None => None,
             Some(s) => {
                 let t = s.trim();
-                if t.is_empty() || t.eq_ignore_ascii_case("null") || t == "root" {
+                if t.is_empty() || t.eq_ignore_ascii_case("null") || t.eq_ignore_ascii_case("root")
+                {
                     Some(None)
                 } else {
                     Uuid::parse_str(t).ok().map(Some)

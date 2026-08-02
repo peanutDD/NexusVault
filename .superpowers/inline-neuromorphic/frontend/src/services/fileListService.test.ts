@@ -144,7 +144,31 @@ describe("fileListService fulltext search", () => {
     expect(counts.tags["tag-s"]).toBe(3);
   });
 
-  it("applies the list timeout to root fulltext searches too", async () => {
+  it("keeps the root folder scope when loading smart collection counts", async () => {
+    apiGet.mockResolvedValueOnce({
+      data: {
+        collections: { images: 5 },
+        tags: {},
+      },
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    });
+
+    await fileListService.getCollectionCounts({
+      folder_id: "root",
+      search: "111",
+      mime_type: "image/",
+    });
+
+    expect(apiGet).toHaveBeenCalledWith(
+      "/api/files/collection-counts?folder_id=root&search=111&mime_type=image%2F",
+      { timeout: REQUEST.LIST_QUERY_TIMEOUT_MS },
+    );
+  });
+
+  it("keeps the root folder scope for fulltext searches too", async () => {
     limitedGet.mockResolvedValueOnce({
       data: {
         query: "3",
@@ -167,10 +191,48 @@ describe("fileListService fulltext search", () => {
       config: { headers: new AxiosHeaders() },
     });
 
-    await fileListService.listFiles({ search: "3" });
+    await fileListService.listFiles({ search: "3", folder_id: null });
 
     expect(limitedGet).toHaveBeenCalledWith(
-      "/api/files/search/fulltext?q=3",
+      "/api/files/search/fulltext?q=3&folder_id=root",
+      { timeout: REQUEST.LIST_QUERY_TIMEOUT_MS },
+    );
+  });
+
+  it("preserves pagination and sorting parameters for fulltext searches", async () => {
+    limitedGet.mockResolvedValueOnce({
+      data: {
+        query: "r",
+        count: 31,
+        search: {
+          index_status: "fallback",
+          count: 31,
+          ocr: {
+            enabled: true,
+            pdf_max_pages: 5,
+            tesseract_available: true,
+            poppler_available: true,
+          },
+        },
+        files: [],
+      },
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    });
+
+    await fileListService.listFiles({
+      search: "r",
+      folder_id: null,
+      page: 2,
+      limit: 30,
+      sort_by: "type",
+      sort_order: "asc",
+    });
+
+    expect(limitedGet).toHaveBeenCalledWith(
+      "/api/files/search/fulltext?q=r&limit=30&page=2&folder_id=root&sort_by=type&sort_order=asc",
       { timeout: REQUEST.LIST_QUERY_TIMEOUT_MS },
     );
   });

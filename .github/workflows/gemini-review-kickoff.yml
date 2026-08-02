@@ -1,0 +1,31 @@
+name: Gemini Review Kickoff (Legacy)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to request a legacy Gemini review for.
+        required: true
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  gemini-legacy-kickoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      GH_TOKEN: ${{ secrets.GEMINI_REVIEW_TOKEN || secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ inputs.pr_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Request legacy Gemini review without polling
+        run: |
+          set -euo pipefail
+          SUMMARY="Gemini consumer code review is legacy and scheduled to stop code review activity on 2026-07-17."
+          DETAILS="Primary automatic review has moved to Codex Code Review. This manual workflow only posts /gemini review and exits without a 600s watchdog wait."
+          STATUS=legacy TITLE="NexusVault Auto Review Status" SUMMARY="$SUMMARY" DETAILS="$DETAILS" \
+            bash .github/scripts/review-status-comment.sh
+          gh pr comment "${PR_NUMBER}" --body "/gemini review"

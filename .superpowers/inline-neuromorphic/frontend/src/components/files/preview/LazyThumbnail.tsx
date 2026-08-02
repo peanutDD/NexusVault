@@ -362,11 +362,10 @@ export default function LazyThumbnail({
     if (imageUrl !== thumbnailUrl) return undefined;
     if (imageUrl.startsWith("blob:")) return undefined;
     const baseUrl =
-      typeof window !== "undefined" ? window.location.origin : "http://localhost";
-    const url = new URL(
-      imageUrl,
-      baseUrl,
-    );
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost";
+    const url = new URL(imageUrl, baseUrl);
     // 生成不同尺寸的缩略图 URL
     // w=200: 小屏幕/移动端
     // w=400: 默认尺寸 (FileGrid 默认列宽)
@@ -382,14 +381,39 @@ export default function LazyThumbnail({
   const renderContent = () => {
     if (effectiveState.error || !showThumbnail) {
       if (isImageType(mimeType))
-        return <ImageIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="78tehfw" />;
+        return (
+          <ImageIcon
+            className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]"
+            data-oid="78tehfw"
+          />
+        );
       if (isVideoType(mimeType))
-        return <VideoIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="u16s9eb" />;
+        return (
+          <VideoIcon
+            className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]"
+            data-oid="u16s9eb"
+          />
+        );
       if (isPdfType(mimeType))
-        return <PdfIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="vke9l2f" />;
+        return (
+          <PdfIcon
+            className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]"
+            data-oid="vke9l2f"
+          />
+        );
       if (isAudioType(mimeType))
-        return <AudioIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="dc9_cfq" />;
-      return <FileIcon className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]" data-oid="o2qrgfz" />;
+        return (
+          <AudioIcon
+            className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]"
+            data-oid="dc9_cfq"
+          />
+        );
+      return (
+        <FileIcon
+          className="h-[clamp(1.75rem,3.6vw,2rem)] w-[clamp(1.75rem,3.6vw,2rem)]"
+          data-oid="o2qrgfz"
+        />
+      );
     }
 
     if (effectiveState.imageUrl) {
@@ -430,7 +454,7 @@ export default function LazyThumbnail({
 
     return (
       <div
-        className="neu-inset w-full h-full animate-pulse"
+        className="neu-pressed w-full h-full animate-pulse"
         data-oid="7d2zgz5"
       />
     );
@@ -440,7 +464,7 @@ export default function LazyThumbnail({
     <div
       ref={containerRef}
       className={cn(
-        "neu-inset relative flex items-center justify-center rounded overflow-hidden shrink-0",
+        "neu-pressed relative flex items-center justify-center rounded overflow-hidden shrink-0",
         className,
       )}
       data-oid="fn8s5gu"

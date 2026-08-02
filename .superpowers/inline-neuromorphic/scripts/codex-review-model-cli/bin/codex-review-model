@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+model="${CODEX_REVIEW_MODEL:-gtp-5.5}"
+timeout_seconds="${CODEX_REVIEW_TIMEOUT_SECONDS:-900}"
+status_marker="<!-- nexusvault-auto-review-status -->"
+review_marker="<!-- nexusvault-codex-review -->"
+
+repo_root() {
+  git rev-parse --show-toplevel 2>/dev/null || pwd
+}
+
+project_root() {
+  local root
+  root="$(repo_root)"
+  if [[ -d "${root}/.superpowers/inline-neuromorphic" ]]; then
+    printf '%s\n' "${root}/.superpowers/inline-neuromorphic"
+  else
+    printf '%s\n' "$root"
+  fi
+}
+
+status_script() {
+  local root
+  root="$(repo_root)"
+  printf '%s\n' "${root}/.github/scripts/review-status-comment.sh"
+}
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: codex-review-model <command>
+
+commands:
+  plan
+  changed-paths [--repo owner/name --pr-number N]
+  targeted-checks [--changed-only] [--print]
+  review-pr --repo owner/name --pr-number N
+USAGE
+}
+
+require_pr_env() {
+  if [[ -z "${GH_REPO:-}" || -z "${PR_NUMBER:-}" ]]; then
+    echo "GH_REPO and PR_NUMBER are required" >&2
+    exit 2
+  fi
+}
+
+changed_paths() {
+  local repo="${GH_REPO:-}"
+  local pr_number="${PR_NUMBER:-}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --repo) repo="$2"; shift 2 ;;
+      --pr-number) pr_number="$2"; shift 2 ;;
+      *) echo "unknown changed-paths arg: $1" >&2; exit 2 ;;
+    esac
+  done
+
+  if [[ -n "${CHANGED_FILES:-}" ]]; then
+    printf '%s\n' "${CHANGED_FILES}" | tr ' ' '\n' | sed '/^$/d'
+  elif [[ -n "$repo" && -n "$pr_number" ]]; then
+    gh pr diff "$pr_number" --repo "$repo" --name-only
+  else
+    git diff --name-only "${BASE_REF:-origin/main}...HEAD"
+  fi
+}
+
+upsert_status_file() {
+  local body_file="$1"
+  require_pr_env
+  BODY_FILE="$body_file" bash "$(status_script)"
+}
+
+write_status() {
+  local state="$1"
+  local summary="$2"
+  local details="$3"
+  require_pr_env
+  STATUS="$state" SUMMARY="$summary" DETAILS="$details" bash "$(status_script)"
+}
+
+run_review_with_timeout() {
+  local seconds="$1"
+  local prompt="$2"
+  local output="$3"
+
+  ( bash -lc "$CODEX_REVIEW_COMMAND" < "$prompt" > "$output" ) &
+  local command_pid=$!
+  (
+    sleep "$seconds"
+    kill "$command_pid" 2>/dev/null || true
+  ) &
+  local timer_pid=$!
+
+  set +e
+  wait "$command_pid"
+  local status=$?
+  set -e
+  kill "$timer_pid" 2>/dev/null || true
+  wait "$timer_pid" 2>/dev/null || true
+  return "$status"
+}
+
+cmd_plan() {
+  printf 'model=%s\n' "$model"
+  printf 'timeout_seconds=%s\n' "$timeout_seconds"
+  printf 'status_marker=%s\n' "$status_marker"
+  printf 'review_marker=%s\n' "$review_marker"
+  printf 'project_root=%s\n' "$(project_root)"
+}
+
+cmd_targeted_checks() {
+  local print_only=false
+  local changed_only=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --print) print_only=true; shift ;;
+      --changed-only) changed_only=true; shift ;;
+      *) echo "unknown targeted-checks arg: $1" >&2; exit 2 ;;
+    esac
+  done
+
+  local project changed tmp has_backend=false has_frontend=false has_review_cli=false
+  project="$(project_root)"
+  tmp="$(mktemp)"
+  if [[ "$changed_only" == "true" ]]; then
+    changed_paths > "$tmp"
+  else
+    git status --short | awk '{print $2}' > "$tmp"
+  fi
+
+  while IFS= read -r changed; do
+    case "$changed" in
+      .superpowers/inline-neuromorphic/backend/*|backend/*) has_backend=true ;;
+      .superpowers/inline-neuromorphic/frontend/*|frontend/*) has_frontend=true ;;
+      .superpowers/inline-neuromorphic/scripts/codex-review-model-cli/*|scripts/codex-review-model-cli/*) has_review_cli=true ;;
+    esac
+  done < "$tmp"
+
+  run_or_print() {
+    if [[ "$print_only" == "true" ]]; then
+      printf '%s\n' "$*"
+    else
+      bash -lc "$*"
+    fi
+  }
+
+  if [[ "$has_frontend" == "true" ]]; then
+    run_or_print "cd '$project/frontend' && npm ci --ignore-scripts && npm run lint && npx --no-install tsc -b --noEmit"
+  fi
+  if [[ "$has_backend" == "true" ]]; then
+    run_or_print "cd '$project/backend' && cargo fmt --all -- --check && cargo clippy --all-targets --all-features -- -D warnings"
+  fi
+  if [[ "$has_review_cli" == "true" ]]; then
+    run_or_print "bash '$project/scripts/codex-review-model-cli/tests/smoke.sh'"
+  fi
+  if [[ "$has_backend" == "false" && "$has_frontend" == "false" && "$has_review_cli" == "false" ]]; then
+    printf 'No targeted checks for changed paths.\n'
+  fi
+}
+
+cmd_review_pr() {
+  local repo="${GH_REPO:-}"
+  local pr_number="${PR_NUMBER:-}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --repo) repo="$2"; shift 2 ;;
+      --pr-number) pr_number="$2"; shift 2 ;;
+      *) echo "unknown review-pr arg: $1" >&2; exit 2 ;;
+    esac
+  done
+  export GH_REPO="$repo"
+  export PR_NUMBER="$pr_number"
+  require_pr_env
+
+  write_status "running" "Codex code review started with model \`${model}\`." "Changed paths and PR diff are being prepared."
+
+  local tmpdir prompt review diff changed
+  tmpdir="$(mktemp -d)"
+  prompt="${tmpdir}/prompt.md"
+  review="${tmpdir}/review.md"
+  diff="${tmpdir}/diff.patch"
+  changed="${tmpdir}/changed.txt"
+
+  changed_paths --repo "$repo" --pr-number "$pr_number" > "$changed"
+  gh pr diff "$pr_number" --repo "$repo" > "$diff"
+
+  {
+    echo "# Codex PR Review"
+    echo
+    echo "Model: ${model}"
+    echo "Repository: ${repo}"
+    echo "PR: ${pr_number}"
+    echo
+    echo "Review only changed code. Prioritize correctness, security, data loss, tests, and CI risk."
+    echo "Return concise Markdown with severity labels: Critical, High, Medium, Low."
+    echo
+    echo "## Changed Paths"
+    sed 's/^/- /' "$changed"
+    echo
+    echo "## Diff"
+    sed -n '1,12000p' "$diff"
+  } > "$prompt"
+
+  if [[ -z "${CODEX_REVIEW_COMMAND:-}" ]]; then
+    write_status "blocked" "CODEX_REVIEW_COMMAND is not configured; Codex review did not run." "Set CODEX_REVIEW_COMMAND as a repository secret or variable. The intended review model is \`${model}\`."
+    exit 1
+  fi
+
+  export CODEX_REVIEW_MODEL="$model"
+  export CODEX_AGENT_MODEL="$model"
+  if ! run_review_with_timeout "$timeout_seconds" "$prompt" "$review"; then
+    write_status "blocked" "Codex review command failed or timed out." "Timeout: ${timeout_seconds}s. Model: \`${model}\`."
+    exit 1
+  fi
+
+  if [[ ! -s "$review" ]]; then
+    write_status "blocked" "Codex review command returned empty output." "Model: \`${model}\`."
+    exit 1
+  fi
+
+  local body="${tmpdir}/status.md"
+  {
+    echo "$status_marker"
+    echo "$review_marker"
+    echo "## NexusVault Auto Review Status"
+    echo
+    echo "- Status: completed"
+    echo "- Reviewer: Codex"
+    echo "- Model: \`${model}\`"
+    echo "- Updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    echo
+    echo "### Changed Paths"
+    sed 's/^/- /' "$changed"
+    echo
+    echo "### Review"
+    cat "$review"
+  } > "$body"
+  upsert_status_file "$body"
+}
+
+main() {
+  local command="${1:-}"
+  shift || true
+  case "$command" in
+    plan) cmd_plan "$@" ;;
+    changed-paths) changed_paths "$@" ;;
+    targeted-checks) cmd_targeted_checks "$@" ;;
+    review-pr) cmd_review_pr "$@" ;;
+    -h|--help|help|"") usage; [[ -n "$command" ]] ;;
+    *) usage; exit 2 ;;
+  esac
+}
+
+main "$@"

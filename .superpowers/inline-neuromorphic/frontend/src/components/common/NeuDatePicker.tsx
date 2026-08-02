@@ -10,6 +10,8 @@ import { cn } from "../../utils/cn";
 
 interface NeuDatePickerProps {
   ariaLabel: string;
+  maxDate?: string;
+  minDate?: string;
   onChange: (value: string) => void;
   testIdPrefix: string;
   today?: Date;
@@ -19,7 +21,7 @@ interface NeuDatePickerProps {
 const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"] as const;
 
 const triggerClassName =
-  "neu-inset relative flex w-full min-w-0 min-h-[clamp(2.5rem,5.8vw,2.75rem)] items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.7rem,1.6vw,0.75rem)] px-[clamp(0.78rem,1.8vw,1rem)] pr-[clamp(2.7rem,6.4vw,3.1rem)] py-[clamp(0.68rem,1.5vw,0.75rem)] text-left text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-form-input-text)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]";
+  "neu-pressed relative flex w-full min-w-0 min-h-[clamp(2.5rem,5.8vw,2.75rem)] items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.7rem,1.6vw,0.75rem)] px-[clamp(0.78rem,1.8vw,1rem)] pr-[clamp(2.7rem,6.4vw,3.1rem)] py-[clamp(0.68rem,1.5vw,0.75rem)] text-left text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-form-input-text)] focus:outline-none focus:ring-2 focus:ring-[var(--settings-form-input-ring)]";
 
 const popoverClassName =
   "neu-raised fixed z-40 overflow-y-auto overscroll-contain rounded-[clamp(1rem,2vw,1.1rem)] p-[clamp(0.62rem,1.7vw,0.76rem)]";
@@ -37,15 +39,24 @@ interface PopoverPosition {
 }
 
 function getViewportWidth() {
-  return Math.min(window.innerWidth, window.visualViewport?.width ?? window.innerWidth);
+  return Math.min(
+    window.innerWidth,
+    window.visualViewport?.width ?? window.innerWidth,
+  );
 }
 
 function getViewportHeight() {
-  return Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight);
+  return Math.min(
+    window.innerHeight,
+    window.visualViewport?.height ?? window.innerHeight,
+  );
 }
 
 function resolvePopoverMaxHeight() {
-  return Math.max(0, getViewportHeight() - CALENDAR_POPOVER_VIEWPORT_GUTTER_PX * 2);
+  return Math.max(
+    0,
+    getViewportHeight() - CALENDAR_POPOVER_VIEWPORT_GUTTER_PX * 2,
+  );
 }
 
 function resolvePopoverLeft(triggerRect: DOMRect) {
@@ -58,8 +69,7 @@ function resolvePopoverLeft(triggerRect: DOMRect) {
     Math.max(triggerRect.width, CALENDAR_POPOVER_MIN_WIDTH_PX),
     Math.min(CALENDAR_POPOVER_MAX_WIDTH_PX, maxWidth),
   );
-  const maxLeft =
-    viewportWidth - CALENDAR_POPOVER_VIEWPORT_GUTTER_PX - width;
+  const maxLeft = viewportWidth - CALENDAR_POPOVER_VIEWPORT_GUTTER_PX - width;
   const left = Math.min(
     Math.max(triggerRect.left, CALENDAR_POPOVER_VIEWPORT_GUTTER_PX),
     Math.max(CALENDAR_POPOVER_VIEWPORT_GUTTER_PX, maxLeft),
@@ -101,9 +111,7 @@ function resolvePopoverTop(triggerRect: DOMRect, popoverHeight: number) {
 
   return Math.max(
     minTop,
-    viewportHeight -
-      CALENDAR_POPOVER_VIEWPORT_GUTTER_PX -
-      clampedHeight,
+    viewportHeight - CALENDAR_POPOVER_VIEWPORT_GUTTER_PX - clampedHeight,
   );
 }
 
@@ -175,8 +183,27 @@ function isAfterCalendarDay(left: Date, right: Date) {
   return leftValue > rightValue;
 }
 
+function isBeforeCalendarDay(left: Date, right: Date) {
+  const leftValue = new Date(
+    left.getFullYear(),
+    left.getMonth(),
+    left.getDate(),
+    12,
+  ).getTime();
+  const rightValue = new Date(
+    right.getFullYear(),
+    right.getMonth(),
+    right.getDate(),
+    12,
+  ).getTime();
+
+  return leftValue < rightValue;
+}
+
 export function NeuDatePicker({
   ariaLabel,
+  maxDate,
+  minDate,
   onChange,
   testIdPrefix,
   today,
@@ -184,14 +211,30 @@ export function NeuDatePicker({
 }: NeuDatePickerProps) {
   const todayDate = today ?? new Date();
   const [isOpen, setIsOpen] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => parseDateValue(value) ?? todayDate);
+  const [viewMonth, setViewMonth] = useState(
+    () => parseDateValue(value) ?? todayDate,
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [popoverPosition, setPopoverPosition] = useState<PopoverPosition | null>(null);
+  const [popoverPosition, setPopoverPosition] =
+    useState<PopoverPosition | null>(null);
 
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
+  const minimumDate = useMemo(
+    () => (minDate ? parseDateValue(minDate) : null),
+    [minDate],
+  );
+  const maximumDate = useMemo(
+    () => (maxDate ? parseDateValue(maxDate) : null),
+    [maxDate],
+  );
   const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
+
+  const isDateDisabled = (date: Date) =>
+    isAfterCalendarDay(date, todayDate) ||
+    (minimumDate !== null && isBeforeCalendarDay(date, minimumDate)) ||
+    (maximumDate !== null && isAfterCalendarDay(date, maximumDate));
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -325,111 +368,119 @@ export function NeuDatePicker({
               width: popoverPosition.width,
             }}
           >
-          <div className="neu-inset mb-[clamp(0.62rem,1.6vw,0.76rem)] flex items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.84rem,2vw,1rem)] px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.58rem,1.6vw,0.72rem)]">
-            <div className="min-w-max">
-              <span className="block text-[length:var(--settings-text-xs)] font-semibold uppercase tracking-[0.14em] text-[var(--settings-panel-label)]">
-                Calendar
-              </span>
-              <span className="mt-[clamp(0.06rem,0.18vw,0.1rem)] block whitespace-nowrap text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-title)]">
-                {`${viewMonth.getFullYear()}年${String(viewMonth.getMonth() + 1).padStart(2, "0")}月`}
-              </span>
-            </div>
-            <div className="neu-inset flex items-center gap-[clamp(0.34rem,0.9vw,0.46rem)] rounded-[clamp(0.84rem,2vw,1rem)] p-[clamp(0.18rem,0.52vw,0.26rem)]">
-              <button
-                aria-label={`上一个${ariaLabel}月份`}
-                className="neu-raised-sm inline-flex h-[clamp(1.9rem,5vw,2.15rem)] min-w-[clamp(1.9rem,5vw,2.15rem)] shrink-0 items-center justify-center rounded-[clamp(0.74rem,1.8vw,0.9rem)] px-0 py-0 leading-none active:shadow-[var(--neu-pressed-shadow)]"
-                type="button"
-                onClick={() => setViewMonth((current) => shiftMonth(current, -1))}
-              >
-                <ChevronLeft className="h-[clamp(0.78rem,2vw,0.92rem)] w-[clamp(0.78rem,2vw,0.92rem)] shrink-0" />
-              </button>
-              <button
-                aria-label={`下一个${ariaLabel}月份`}
-                className="neu-raised-sm inline-flex h-[clamp(1.9rem,5vw,2.15rem)] min-w-[clamp(1.9rem,5vw,2.15rem)] shrink-0 items-center justify-center rounded-[clamp(0.74rem,1.8vw,0.9rem)] px-0 py-0 leading-none active:shadow-[var(--neu-pressed-shadow)]"
-                type="button"
-                onClick={() => setViewMonth((current) => shiftMonth(current, 1))}
-              >
-                <ChevronRight className="h-[clamp(0.78rem,2vw,0.92rem)] w-[clamp(0.78rem,2vw,0.92rem)] shrink-0" />
-              </button>
-            </div>
-          </div>
-
-          <div className="neu-inset rounded-[clamp(0.92rem,2.2vw,1rem)] p-[clamp(0.56rem,1.5vw,0.7rem)]">
-            <div className="grid grid-cols-7 gap-[clamp(0.24rem,0.7vw,0.34rem)]">
-              {weekdayLabels.map((weekday) => (
-                <span
-                  key={weekday}
-                  className="pb-[clamp(0.12rem,0.4vw,0.2rem)] text-center text-[length:var(--settings-text-xs)] font-semibold text-[var(--settings-panel-label)]"
-                >
-                  {weekday}
+            <div className="neu-inset mb-[clamp(0.62rem,1.6vw,0.76rem)] flex items-center justify-between gap-[clamp(0.64rem,1.75vw,0.8rem)] rounded-[clamp(0.84rem,2vw,1rem)] px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.58rem,1.6vw,0.72rem)]">
+              <div className="min-w-max">
+                <span className="block text-[length:var(--settings-text-xs)] font-semibold uppercase tracking-[0.14em] text-[var(--settings-panel-label)]">
+                  Calendar
                 </span>
-              ))}
-              {calendarDays.map((day) => {
-                const dayValue = formatDateValue(day);
-                const inCurrentMonth = day.getMonth() === viewMonth.getMonth();
-                const today = isSameCalendarDay(day, todayDate);
-                const future = isAfterCalendarDay(day, todayDate);
-                const selected =
-                  selectedDate !== null && isSameCalendarDay(day, selectedDate);
+                <span className="mt-[clamp(0.06rem,0.18vw,0.1rem)] block whitespace-nowrap text-[length:var(--settings-text-sm)] font-semibold text-[var(--settings-title)]">
+                  {`${viewMonth.getFullYear()}年${String(viewMonth.getMonth() + 1).padStart(2, "0")}月`}
+                </span>
+              </div>
+              <div className="neu-inset flex items-center gap-[clamp(0.34rem,0.9vw,0.46rem)] rounded-[clamp(0.84rem,2vw,1rem)] p-[clamp(0.18rem,0.52vw,0.26rem)]">
+                <button
+                  aria-label={`上一个${ariaLabel}月份`}
+                  className="neu-raised-sm inline-flex h-[clamp(1.9rem,5vw,2.15rem)] min-w-[clamp(1.9rem,5vw,2.15rem)] shrink-0 items-center justify-center rounded-full px-0 py-0 leading-none active:shadow-[var(--neu-pressed-shadow)]"
+                  type="button"
+                  onClick={() =>
+                    setViewMonth((current) => shiftMonth(current, -1))
+                  }
+                >
+                  <ChevronLeft className="h-[clamp(0.78rem,2vw,0.92rem)] w-[clamp(0.78rem,2vw,0.92rem)] shrink-0" />
+                </button>
+                <button
+                  aria-label={`下一个${ariaLabel}月份`}
+                  className="neu-raised-sm inline-flex h-[clamp(1.9rem,5vw,2.15rem)] min-w-[clamp(1.9rem,5vw,2.15rem)] shrink-0 items-center justify-center rounded-full px-0 py-0 leading-none active:shadow-[var(--neu-pressed-shadow)]"
+                  type="button"
+                  onClick={() =>
+                    setViewMonth((current) => shiftMonth(current, 1))
+                  }
+                >
+                  <ChevronRight className="h-[clamp(0.78rem,2vw,0.92rem)] w-[clamp(0.78rem,2vw,0.92rem)] shrink-0" />
+                </button>
+              </div>
+            </div>
 
-                return (
-                  <button
-                    key={dayValue}
-                    aria-pressed={selected}
-                    aria-disabled={future}
-                    className={cn(
-                      "neuDatePickerDay flex h-[clamp(1.8rem,4.7vw,2rem)] items-center justify-center rounded-[clamp(0.62rem,1.6vw,0.76rem)] text-[length:var(--settings-text-sm)] font-semibold transition-[background,box-shadow,filter,color,opacity] duration-200",
-                      selected
-                        ? "neu-pressed neuDatePickerDaySelected"
-                        : today
-                          ? "neuDatePickerDayToday"
-                          : inCurrentMonth
-                            ? "text-[var(--settings-title)]"
-                            : "neuDatePickerDayMuted",
-                      future && "neuDatePickerDayDisabled",
-                    )}
-                    data-testid={`${testIdPrefix}-day-${dayValue}`}
-                    disabled={future}
-                    type="button"
-                    onClick={() => {
-                      if (future) return;
-                      onChange(dayValue);
-                      setViewMonth(day);
-                      setIsOpen(false);
-                    }}
+            <div className="neu-inset rounded-[clamp(0.92rem,2.2vw,1rem)] p-[clamp(0.56rem,1.5vw,0.7rem)]">
+              <div className="grid grid-cols-7 gap-[clamp(0.24rem,0.7vw,0.34rem)]">
+                {weekdayLabels.map((weekday) => (
+                  <span
+                    key={weekday}
+                    className="pb-[clamp(0.12rem,0.4vw,0.2rem)] text-center text-[length:var(--settings-text-xs)] font-semibold text-[var(--settings-panel-label)]"
                   >
-                    {day.getDate()}
-                  </button>
-                );
-              })}
-            </div>
+                    {weekday}
+                  </span>
+                ))}
+                {calendarDays.map((day) => {
+                  const dayValue = formatDateValue(day);
+                  const inCurrentMonth =
+                    day.getMonth() === viewMonth.getMonth();
+                  const today = isSameCalendarDay(day, todayDate);
+                  const disabled = isDateDisabled(day);
+                  const selected =
+                    selectedDate !== null &&
+                    isSameCalendarDay(day, selectedDate);
 
-            <div className="mt-[clamp(0.62rem,1.6vw,0.76rem)] flex items-center justify-between gap-[clamp(0.56rem,1.5vw,0.7rem)]">
-              <button
-                className="neu-raised-sm px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.34rem,0.95vw,0.46rem)] text-[length:var(--settings-text-xs)] active:shadow-[var(--neu-pressed-shadow)]"
-                data-testid={`${testIdPrefix}-clear`}
-                type="button"
-                onClick={() => {
-                  onChange("");
-                  setIsOpen(false);
-                }}
-              >
-                清除
-              </button>
-              <button
-                className="neu-raised-sm px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.34rem,0.95vw,0.46rem)] text-[length:var(--settings-text-xs)] active:shadow-[var(--neu-pressed-shadow)]"
-                data-testid={`${testIdPrefix}-today`}
-                type="button"
-                onClick={() => {
-                  onChange(formatDateValue(todayDate));
-                  setViewMonth(todayDate);
-                  setIsOpen(false);
-                }}
-              >
-                今天
-              </button>
+                  return (
+                    <button
+                      key={dayValue}
+                      aria-pressed={selected}
+                      aria-disabled={disabled}
+                      className={cn(
+                        "neuDatePickerDay flex h-[clamp(1.8rem,4.7vw,2rem)] items-center justify-center rounded-[clamp(0.3rem,1vw,0.4rem)] text-[length:var(--settings-text-sm)] font-semibold transition-[background,box-shadow,filter,color,opacity] duration-200",
+                        selected
+                          ? "neu-pressed neuDatePickerDaySelected"
+                          : today
+                            ? "neuDatePickerDayToday"
+                            : inCurrentMonth
+                              ? "text-[var(--settings-title)]"
+                              : "neuDatePickerDayMuted",
+                        disabled && "neuDatePickerDayDisabled",
+                      )}
+                      data-testid={`${testIdPrefix}-day-${dayValue}`}
+                      disabled={disabled}
+                      type="button"
+                      onClick={() => {
+                        if (disabled) return;
+                        onChange(dayValue);
+                        setViewMonth(day);
+                        setIsOpen(false);
+                      }}
+                    >
+                      {day.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-[clamp(0.62rem,1.6vw,0.76rem)] flex items-center justify-between gap-[clamp(0.56rem,1.5vw,0.7rem)]">
+                <button
+                  className="neu-raised-sm px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.34rem,0.95vw,0.46rem)] text-[length:var(--settings-text-xs)] active:shadow-[var(--neu-pressed-shadow)]"
+                  data-testid={`${testIdPrefix}-clear`}
+                  type="button"
+                  onClick={() => {
+                    onChange("");
+                    setIsOpen(false);
+                  }}
+                >
+                  清除
+                </button>
+                <button
+                  className="neu-raised-sm px-[clamp(0.7rem,1.85vw,0.86rem)] py-[clamp(0.34rem,0.95vw,0.46rem)] text-[length:var(--settings-text-xs)] active:shadow-[var(--neu-pressed-shadow)]"
+                  data-testid={`${testIdPrefix}-today`}
+                  disabled={isDateDisabled(todayDate)}
+                  type="button"
+                  onClick={() => {
+                    if (isDateDisabled(todayDate)) return;
+                    onChange(formatDateValue(todayDate));
+                    setViewMonth(todayDate);
+                    setIsOpen(false);
+                  }}
+                >
+                  今天
+                </button>
+              </div>
             </div>
-          </div>
           </div>,
           document.body,
         )}

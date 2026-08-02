@@ -251,7 +251,7 @@ export default function FileListGroupedView({
               />
             }
             icon={
-              <span className="neu-inset inline-flex h-[clamp(1.5rem,3.5vw,1.75rem)] w-[clamp(1.5rem,3.5vw,1.75rem)] shrink-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.875rem,2vw,1rem)] bg-[var(--filelist-check-bg-checked-on)] text-[var(--color-text-primary)]">
+              <span className="neu-flat inline-flex h-[clamp(1.5rem,3.5vw,1.75rem)] w-[clamp(1.5rem,3.5vw,1.75rem)] shrink-0 items-center justify-center rounded-[clamp(0.4rem,1vw,0.5rem)] text-[clamp(0.875rem,2vw,1rem)] bg-[var(--filelist-check-bg-checked-on)] text-[var(--color-text-primary)]">
                 <i className="bi bi-calendar3" aria-hidden />
               </span>
             }

@@ -75,6 +75,7 @@ impl Config {
             .set_default("tasks.files_consistency_check_batch_size", "500")?
             .set_default("tasks.orphan_cleanup_interval_secs", "86400")?
             .set_default("tasks.orphan_cleanup_batch_limit", "500")?
+            .set_default("tasks.orphan_cleanup_enabled", "true")?
             .set_default("tasks.transcode_max_concurrent", "2")?
             .set_default("tasks.zip_cache_enabled", "false")?
             .set_default("tasks.zip_cache_backend", "local")?
@@ -159,6 +160,10 @@ impl Config {
             (
                 "ORPHAN_CLEANUP_BATCH_LIMIT",
                 "tasks.orphan_cleanup_batch_limit",
+            ),
+            (
+                "ORPHAN_CLEANUP_ENABLED",
+                "tasks.orphan_cleanup_enabled",
             ),
             ("TRANSCODE_MAX_CONCURRENT", "tasks.transcode_max_concurrent"),
             ("ZIP_CACHE_ENABLED", "tasks.zip_cache_enabled"),
@@ -313,6 +318,7 @@ impl Config {
                 files_consistency_check_batch_size: 500,
                 orphan_cleanup_interval_secs: 86_400,
                 orphan_cleanup_batch_limit: 500,
+                orphan_cleanup_enabled: true,
                 transcode_max_concurrent: 2,
                 task_type_concurrency: std::collections::HashMap::new(),
                 zip_cache_enabled: false,

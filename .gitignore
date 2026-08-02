@@ -28,19 +28,7 @@ pnpm-debug.log*
 .pnpm-debug.log*
 
 # Environment files and secrets
-.env
-.env.*
-**/.env
-**/.env.*
-!.env.example
-!**/.env.example
-!.env.sample
-!**/.env.sample
-!.env.template
-!**/.env.template
-!.env.production.example
-!**/.env.production.example
-!.superpowers/inline-neuromorphic/frontend/.env.production
+
 *.pem
 *.key
 *.p12
@@ -99,11 +87,7 @@ playwright-report/
 uploads/
 **/uploads/
 **/frontend/files/gif-files/
-*.db
-*.sqlite
-*.sqlite3
-*.dump
-*.sql.gz
+
 
 # Temporary and backup files
 *.tmp

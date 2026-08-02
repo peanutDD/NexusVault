@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, useMemo } from "react";
 import { clearFileListCache } from "../../../utils/fileListCache";
 import type { FileMetadata } from "../../../types/files";
 import type { Folder } from "../../../types/folders";
@@ -15,6 +15,7 @@ const ConfirmDialog = lazy(() => import("../../common/dialog/ConfirmDialog"));
 
 interface FileListDialogsProps {
   previewFile: FileMetadata | null;
+  previewFiles: FileMetadata[];
   displayFiles: FileMetadata[];
   displayFileIndexById: Map<string, number>;
   setPreviewFile: (file: FileMetadata | null) => void;
@@ -55,6 +56,7 @@ interface FileListDialogsProps {
 
 export default function FileListDialogs({
   previewFile,
+  previewFiles,
   displayFiles,
   displayFileIndexById,
   setPreviewFile,
@@ -88,14 +90,28 @@ export default function FileListDialogs({
   executeDelete,
   setDeleteConfirm,
 }: FileListDialogsProps) {
+  const previewNavigationFiles =
+    previewFiles.length > 0 ? previewFiles : displayFiles;
+  const previewNavigationIndexById = useMemo(() => {
+    const indexById = new Map<string, number>();
+    for (let i = 0; i < previewNavigationFiles.length; i += 1) {
+      indexById.set(previewNavigationFiles[i]!.id, i);
+    }
+    return indexById;
+  }, [previewNavigationFiles]);
+
   return (
     <>
       {previewFile && (
         <FilePreview
           key={previewFile.id}
           file={previewFile}
-          files={displayFiles}
-          currentIndex={displayFileIndexById.get(previewFile.id) ?? -1}
+          files={previewNavigationFiles}
+          currentIndex={
+            previewNavigationIndexById.get(previewFile.id) ??
+            displayFileIndexById.get(previewFile.id) ??
+            -1
+          }
           onClose={() => setPreviewFile(null)}
           onNavigate={(file) => setPreviewFile(file)}
           data-oid="wdj1-t:"

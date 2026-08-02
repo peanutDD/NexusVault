@@ -50,7 +50,7 @@ export default function UploadProgressList({
           data-oid="yznpezc"
         >
           <div
-            className="neu-inset uploadStatRow flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
+            className="neu-pressed uploadStatRow flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
             data-testid="upload-total-stat-row"
             data-oid="g0ntg:8"
           >
@@ -69,7 +69,7 @@ export default function UploadProgressList({
             </span>
           </div>
           <div
-            className="neu-inset uploadStatRow flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
+            className="neu-pressed uploadStatRow flex items-center justify-between rounded-[clamp(0.4rem,1vw,0.5rem)] px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-stat-text)]"
             data-testid="upload-large-stat-row"
             data-oid="woge7mu"
           >
@@ -92,7 +92,7 @@ export default function UploadProgressList({
       )}
       {totalLimitWarning && (
         <div
-          className="neu-inset font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
+          className="neu-raised font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
           data-oid="pap8bih"
         >
           {totalLimitWarning}
@@ -100,7 +100,7 @@ export default function UploadProgressList({
       )}
       {largeLimitWarning && (
         <div
-          className="neu-inset font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
+          className="neu-raised font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
           data-oid="n.4sq-9"
         >
           {largeLimitWarning}
@@ -108,7 +108,7 @@ export default function UploadProgressList({
       )}
       {duplicateWarning && (
         <div
-          className="neu-inset font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-text-muted)]"
+          className="neu-raised font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-text-muted)]"
           data-oid="9mpex2h"
         >
           {duplicateWarning}
@@ -116,7 +116,7 @@ export default function UploadProgressList({
       )}
       {uploadFiles.length > 0 && totalAtLimit && !totalLimitWarning && (
         <div
-          className="neu-inset font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
+          className="neu-raised font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
           data-oid="mkphsir"
         >
           单次最多 {maxBatchCount} 个文件，当前已满。请先完成或取消后再添加。
@@ -124,7 +124,7 @@ export default function UploadProgressList({
       )}
       {uploadFiles.length > 0 && largeAtLimit && !largeLimitWarning && (
         <div
-          className="neu-inset font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
+          className="neu-raised font-brand mb-[clamp(0.585rem,1.35vw,0.75rem)] rounded-[clamp(0.4rem,1vw,0.5rem)] border-0 px-[clamp(0.585rem,1.35vw,0.75rem)] py-[clamp(0.39rem,0.9vw,0.5rem)] text-[clamp(0.68rem,1.6vw,0.75rem)] font-normal tracking-widest text-[var(--upload-warning-text)]"
           data-oid="hzvtxeq"
         >
           大文件（≥100MB）最多 {LARGE_FILE_UPLOAD.MAX_CONCURRENT}{" "}

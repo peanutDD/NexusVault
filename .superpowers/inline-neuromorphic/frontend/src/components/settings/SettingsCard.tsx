@@ -43,7 +43,7 @@ export default function SettingsCard({
       >
         {icon && (
           <div
-            className="neu-raised-sm mt-[clamp(0.0975rem,0.3vw,0.125rem)] shrink-0 rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-chip-icon)] transition-[box-shadow,color] duration-300"
+            className="neu-pressed mt-[clamp(0.0975rem,0.3vw,0.125rem)] shrink-0 rounded-[clamp(0.7rem,1.6vw,0.75rem)] border-0 p-[clamp(0.39rem,0.9vw,0.5rem)] text-[var(--settings-chip-icon)] transition-[box-shadow,color] duration-300"
             data-oid="9ktkh.m"
           >
             {icon}
@@ -72,7 +72,10 @@ export default function SettingsCard({
         )}
       </header>
 
-      <div className="relative z-10 mt-[clamp(1rem,2.25vw,1.25rem)]" data-oid="4462rmf">
+      <div
+        className="relative z-10 mt-[clamp(1rem,2.25vw,1.25rem)]"
+        data-oid="4462rmf"
+      >
         {children}
       </div>
     </section>

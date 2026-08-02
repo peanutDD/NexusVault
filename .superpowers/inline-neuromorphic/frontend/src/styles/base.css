@@ -49,7 +49,7 @@
 
   /* 焦点可见性改进 */
   *:focus-visible {
-    outline: 0.125rem solid var(--color-focus-ring);
+    outline: 0.125rem solid var(--neu-surface-bg-green);
     outline-offset: 0.125rem;
   }
 
@@ -610,6 +610,7 @@
     --flat-reference-border: transparent;
     --flat-reference-white: #ffffff;
     --filelist-check-bg-checked-on: #10b981;
+    --filelist-check-bg-tag-dot: #6366f1;
   }
 
   :root[data-theme="light"],
@@ -641,6 +642,7 @@
     --activity-filter-menu-bg: rgba(255, 255, 255, 0.96);
     --activity-filter-menu-text: #065f46;
     --filelist-check-bg-checked-on: #6366f1;
+    --filelist-check-bg-tag-dot: #10b981;
   }
 
   .shareCenterTabSwitcher {
@@ -1044,7 +1046,7 @@
     box-shadow:
       var(--neu-inset-shadow),
       0 0 0 clamp(0.1rem, 0.22vw, 0.14rem)
-        color-mix(in srgb, var(--flat-reference-purple) 24%, transparent) !important;
+        color-mix(in srgb, var(--neu-surface-bg-green) 50%, transparent) !important;
   }
 
   .fileRequestCreateButton,
@@ -1324,7 +1326,7 @@
   .activityIdentityPanel {
     background: var(--neu-inset-bg) !important;
     background-image: none !important;
-    box-shadow: var(--neu-inset-shadow) !important;
+    box-shadow: var(--neu-pressed-shadow) !important;
   }
 
   .activityIdentityPanel {
@@ -1420,7 +1422,7 @@
     --settings-form-input-bg: var(--neu-inset-bg);
     --settings-form-input-border: transparent;
     --settings-form-input-border-focus: rgba(99, 102, 241, 0.22);
-    --settings-form-input-ring: rgba(99, 102, 241, 0.2);
+    --settings-form-input-ring: var(--neu-surface-bg-green);
     --settings-form-input-shadow: var(--neu-inset-shadow);
     --settings-form-input-shadow-focus: var(--neu-inset-shadow);
     --settings-surface-bg: var(--neu-raised-bg);

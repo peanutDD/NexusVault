@@ -26,7 +26,7 @@ export default function UploadDialog({
 
   return (
     <div
-      className="uploadDialogNeuBackdrop fixed inset-x-0 bottom-0 top-[calc(clamp(4.75rem,7.6vw,6.25rem)+env(safe-area-inset-top))] z-[60] flex items-center justify-center bg-black/40 p-[clamp(0.78rem,1.8vw,1rem)]"
+      className="uploadDialogNeuBackdrop fixed inset-x-0 bottom-0 top-[calc(clamp(4.75rem,7.6vw,6.25rem)+env(safe-area-inset-top))] z-[60] flex items-center justify-center bg-[var(--neu-surface-bg)]/80 p-[clamp(0.78rem,1.8vw,1rem)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="upload-dialog-title"

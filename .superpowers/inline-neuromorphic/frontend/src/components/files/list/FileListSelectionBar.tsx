@@ -55,7 +55,7 @@ export default function FileListSelectionBar({
   const selectedCount = selectedFileCount + selectedFolderCount;
   const countQuery = useMemo(
     () => ({
-      folder_id: currentFolderId,
+      folder_id: currentFolderId ?? "root",
       search: searchQuery,
       mime_type: mimeType,
     }),

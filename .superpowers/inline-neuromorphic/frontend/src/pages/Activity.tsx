@@ -367,6 +367,24 @@ export default function Activity() {
   const [apiTokenId, setApiTokenId] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  const handleDateFromChange = useCallback(
+    (value: string) => {
+      setDateFrom(value);
+      if (value && dateTo && dateTo < value) {
+        setDateTo("");
+      }
+    },
+    [dateTo],
+  );
+
+  const handleDateToChange = useCallback(
+    (value: string) => {
+      if (value && dateFrom && value < dateFrom) return;
+      setDateTo(value);
+    },
+    [dateFrom],
+  );
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -781,21 +799,23 @@ export default function Activity() {
                 </label>
                 <label className={filterLabelClass}>
                   开始日期
-                  <NeuDatePicker
-                    ariaLabel="开始日期"
-                    onChange={setDateFrom}
-                    testIdPrefix="activity-date-from"
-                    value={dateFrom}
-                  />
+	                  <NeuDatePicker
+	                    ariaLabel="开始日期"
+	                    maxDate={dateTo || undefined}
+	                    onChange={handleDateFromChange}
+	                    testIdPrefix="activity-date-from"
+	                    value={dateFrom}
+	                  />
                 </label>
                 <label className={filterLabelClass}>
                   结束日期
-                  <NeuDatePicker
-                    ariaLabel="结束日期"
-                    onChange={setDateTo}
-                    testIdPrefix="activity-date-to"
-                    value={dateTo}
-                  />
+	                  <NeuDatePicker
+	                    ariaLabel="结束日期"
+	                    minDate={dateFrom || undefined}
+	                    onChange={handleDateToChange}
+	                    testIdPrefix="activity-date-to"
+	                    value={dateTo}
+	                  />
                 </label>
               </div>
               <button
@@ -1104,7 +1124,7 @@ export default function Activity() {
                                   <div
                                     key={identity.key}
                                     data-testid={`activity-event-identity-${identity.key}-${event.id}`}
-                                    className="grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-[clamp(0.46rem,1.1vw,0.56rem)]"
+                                    className="grid w-full grid-cols-[auto_minmax(0,1fr)] my-1 items-center gap-[clamp(0.46rem,1.1vw,0.56rem)]"
                                   >
                                     {(() => {
                                       const IdentityIcon = identityBadgeIcon(

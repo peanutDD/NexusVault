@@ -149,7 +149,7 @@ export default function NavBar({
               {username != null && (
                 <div
                   className={cn(
-                    "neu-inset nav-chip hidden items-center text-[var(--nav-chip-text)] sm:flex",
+                    "neu-pressed nav-chip hidden items-center text-[var(--nav-chip-text)] sm:flex",
                   )}
                   title={username}
                   data-oid="s_n1clb"

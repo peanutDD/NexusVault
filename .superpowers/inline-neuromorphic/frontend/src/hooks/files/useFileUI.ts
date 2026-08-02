@@ -11,7 +11,8 @@ export interface DeleteConfirmState {
 }
 
 export function useFileUI() {
-  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  const [previewFile, setPreviewFileState] = useState<FileMetadata | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<FileMetadata[]>([]);
   const [shareFile, setShareFile] = useState<FileMetadata | null>(null);
   const [showBatchShare, setShowBatchShare] = useState(false);
   const [batchShareFileIds, setBatchShareFileIds] = useState<string[]>([]);
@@ -22,10 +23,30 @@ export function useFileUI() {
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const setPreviewFile = useCallback((
+    file: FileMetadata | null,
+    filesForPreview?: FileMetadata[],
+  ) => {
+    setPreviewFileState(file);
+    if (!file) {
+      setPreviewFiles([]);
+      return;
+    }
+    if (filesForPreview) {
+      const nextFiles = filesForPreview.some((item) => item.id === file.id)
+        ? filesForPreview
+        : [file, ...filesForPreview];
+      setPreviewFiles(nextFiles);
+      return;
+    }
+    setPreviewFiles((current) => (current.length > 0 ? current : [file]));
+  }, []);
+
   const clearError = useCallback(() => setError(null), []);
 
   return {
     previewFile,
+    previewFiles,
     setPreviewFile,
     shareFile,
     setShareFile,

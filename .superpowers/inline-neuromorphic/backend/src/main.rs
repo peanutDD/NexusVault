@@ -166,7 +166,7 @@ async fn async_main() -> anyhow::Result<()> {
         config.tasks.files_consistency_check_batch_size,
     );
 
-    if config.storage.backend == "local" {
+    if config.storage.backend == "local" && config.tasks.orphan_cleanup_enabled {
         spawn_orphan_storage_files_cleanup(
             app_state.pool.clone(),
             config.storage.path.clone(),
@@ -177,6 +177,11 @@ async fn async_main() -> anyhow::Result<()> {
             "orphan storage files cleanup started (interval={}s, batch_limit={})",
             config.tasks.orphan_cleanup_interval_secs,
             config.tasks.orphan_cleanup_batch_limit
+        );
+    } else if config.storage.backend == "local" && !config.tasks.orphan_cleanup_enabled {
+        tracing::warn!(
+            "orphan storage files cleanup is DISABLED by config (orphan_cleanup_enabled=false); \
+             24h polling cleanup will NOT run. Set ORPHAN_CLEANUP_ENABLED=true to re-enable."
         );
     }
 

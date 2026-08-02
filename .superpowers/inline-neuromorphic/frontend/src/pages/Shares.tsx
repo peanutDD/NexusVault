@@ -173,9 +173,11 @@ function managementListScrollClass(itemCount: number) {
 }
 
 function shareBadgeToneClass(tone: "green" | "yellow" | "red") {
-  if (tone === "red") return "bg-red-900 text-red-200";
-  if (tone === "yellow") return "bg-amber-900 text-amber-200";
-  return "bg-emerald-900 text-emerald-200";
+  if (tone === "red")
+    return "bg-[var(--neu-surface-bg-red)] text-[var(--neu-surface-text)]";
+  if (tone === "yellow")
+    return "bg-[var(--neu-surface-bg-yellow)] text-[var(--neu-surface-text)]";
+  return "bg-[var(--neu-surface-bg-green-hover)] text-[var(--neu-surface-text)]";
 }
 
 function shareStatusTone(status: string) {

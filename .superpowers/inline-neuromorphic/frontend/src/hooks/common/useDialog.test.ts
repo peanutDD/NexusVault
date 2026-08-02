@@ -8,6 +8,8 @@ describe('useDialog', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
   });
 
   it('should return dialogRef and handleBackdropClick', () => {
@@ -16,6 +18,47 @@ describe('useDialog', () => {
 
     expect(result.current.dialogRef).toBeDefined();
     expect(typeof result.current.handleBackdropClick).toBe('function');
+  });
+
+  it('locks background page scrolling while the dialog is open and restores it on close', () => {
+    const onClose = vi.fn();
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
+
+    const { rerender } = renderHook(
+      (props) => useDialog({ open: props.open, onClose }),
+      { initialProps: { open: true } },
+    );
+
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.documentElement.style.overflow).toBe('hidden');
+
+    rerender({ open: false });
+
+    expect(document.body.style.overflow).toBe('auto');
+    expect(document.documentElement.style.overflow).toBe('auto');
+  });
+
+  it('keeps page scrolling locked until every stacked dialog closes', () => {
+    const onClose = vi.fn();
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
+
+    const outer = renderHook(() => useDialog({ open: true, onClose }));
+    const inner = renderHook(() => useDialog({ open: true, onClose }));
+
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.documentElement.style.overflow).toBe('hidden');
+
+    inner.unmount();
+
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.documentElement.style.overflow).toBe('hidden');
+
+    outer.unmount();
+
+    expect(document.body.style.overflow).toBe('auto');
+    expect(document.documentElement.style.overflow).toBe('auto');
   });
 
   it('should call onClose when Escape key is pressed', () => {

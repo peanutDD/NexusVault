@@ -1,14 +1,19 @@
-import { lazy, Suspense, useCallback, useEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import "./FileListGlass.css";
 import { useFileList } from "../useFileList";
 import { useThrottledCallback } from "../../../hooks/useThrottledCallback";
-import { stopDragAutoScroll, updateDragAutoScroll } from "../../../utils/dragAutoScroll";
+import {
+  stopDragAutoScroll,
+  updateDragAutoScroll,
+} from "../../../utils/dragAutoScroll";
 import { lazyWithRetry } from "../../../utils/lazyWithRetry";
 import { FileCardSkeleton } from "../../common/feedback/Skeleton";
-import FileListBackgroundLayer from "./FileListBackgroundLayer";
+// import FileListBackgroundLayer from "./FileListBackgroundLayer";
 
 interface FileListProps {
   onOpenUpload?: () => void;
+  onActionDialogOpenChange?: (open: boolean) => void;
+  onTagDialogOpenChange?: (open: boolean) => void;
 }
 
 // 懒加载重型对话框组件
@@ -16,7 +21,11 @@ const FileListHeader = lazy(() => import("./FileListHeader"));
 const FileListContent = lazy(() => import("./FileListContent"));
 const FileListDialogs = lazy(lazyWithRetry(() => import("./FileListDialogs")));
 
-export default function FileList({ onOpenUpload }: FileListProps) {
+export default function FileList({
+  onActionDialogOpenChange,
+  onOpenUpload,
+  onTagDialogOpenChange,
+}: FileListProps) {
   const {
     files,
     folderPath,
@@ -75,6 +84,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     clearSelection,
     addFolderToList,
     previewFile,
+    previewFiles = [],
     setPreviewFile,
     shareFile,
     setShareFile,
@@ -96,10 +106,30 @@ export default function FileList({ onOpenUpload }: FileListProps) {
     setDeleteConfirm,
     batchDownloading,
   } = useFileList();
+  const [contentActionDialogOpen, setContentActionDialogOpen] = useState(false);
 
   const throttledLoadMore = useThrottledCallback(() => {
     void loadMore();
   }, 400);
+
+  const fileListDialogOpen = Boolean(
+    previewFile ||
+      shareFile ||
+      showBatchShare ||
+      showBatchMove ||
+      showCreateFolder ||
+      renamingFolder ||
+      renamingFile ||
+      deleteConfirm,
+  );
+  const actionDialogOpen = fileListDialogOpen || contentActionDialogOpen;
+
+  useEffect(() => {
+    onActionDialogOpenChange?.(actionDialogOpen);
+    return () => {
+      onActionDialogOpenChange?.(false);
+    };
+  }, [actionDialogOpen, onActionDialogOpenChange]);
 
   useEffect(() => {
     const handleDragOver = (event: DragEvent) => {
@@ -129,46 +159,54 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       handleSortChange(value as import("./FileListFilters").SortOption),
     [handleSortChange],
   );
-  const handleOpenFolderAdapter = useCallback((folderId: string) => {
-    // 由于 FileListContent 期望 folderId 字符串，但 handleOpenFolder 需要 Folder 对象
-    // 这里简化处理，直接导航到文件夹
-    navigateToFolder(folderId);
-  }, [navigateToFolder]);
-  const handleDropOnBreadcrumbAdapter = useCallback((
-    e: React.DragEvent,
-    folderId: string | null,
-  ) => {
-    handleDropOnBreadcrumb(folderId, e);
-  }, [handleDropOnBreadcrumb]);
-  const handleDeleteAdapter = useCallback((
-    item: { id: string; name?: string; original_filename?: string },
-    type: "file" | "folder",
-  ) => {
-    if (type === "file") {
-      handleDelete(item.id);
-    } else if (type === "folder") {
-      setDeleteConfirm({
-        type: "folder",
-        id: item.id,
-        name: item.name || "文件夹",
-      });
-    }
-  }, [handleDelete, setDeleteConfirm]);
-  const handleFileDragStartAdapter = useCallback((fileId: string, e: React.DragEvent) => {
-    // 由于 FileListContent 期望 fileId 字符串和 e，而 handleFileDragStart 需要 e 和 file 对象
-    // 这里简化处理，只设置 dataTransfer
-    e.dataTransfer.setData("application/file-id", fileId);
-    e.dataTransfer.effectAllowed = "move";
-  }, []);
-  const handleDropOnFolderAdapter = useCallback((
-    folderId: string,
-    fileIds: string[],
-    folderIds: string[],
-  ) => {
-    if (fileIds.length > 0 || folderIds.length > 0) {
-      void handleDropOnFolder(folderId, fileIds, folderIds);
-    }
-  }, [handleDropOnFolder]);
+  const handleOpenFolderAdapter = useCallback(
+    (folderId: string) => {
+      // 由于 FileListContent 期望 folderId 字符串，但 handleOpenFolder 需要 Folder 对象
+      // 这里简化处理，直接导航到文件夹
+      navigateToFolder(folderId);
+    },
+    [navigateToFolder],
+  );
+  const handleDropOnBreadcrumbAdapter = useCallback(
+    (e: React.DragEvent, folderId: string | null) => {
+      handleDropOnBreadcrumb(folderId, e);
+    },
+    [handleDropOnBreadcrumb],
+  );
+  const handleDeleteAdapter = useCallback(
+    (
+      item: { id: string; name?: string; original_filename?: string },
+      type: "file" | "folder",
+    ) => {
+      if (type === "file") {
+        handleDelete(item.id);
+      } else if (type === "folder") {
+        setDeleteConfirm({
+          type: "folder",
+          id: item.id,
+          name: item.name || "文件夹",
+        });
+      }
+    },
+    [handleDelete, setDeleteConfirm],
+  );
+  const handleFileDragStartAdapter = useCallback(
+    (fileId: string, e: React.DragEvent) => {
+      // 由于 FileListContent 期望 fileId 字符串和 e，而 handleFileDragStart 需要 e 和 file 对象
+      // 这里简化处理，只设置 dataTransfer
+      e.dataTransfer.setData("application/file-id", fileId);
+      e.dataTransfer.effectAllowed = "move";
+    },
+    [],
+  );
+  const handleDropOnFolderAdapter = useCallback(
+    (folderId: string, fileIds: string[], folderIds: string[]) => {
+      if (fileIds.length > 0 || folderIds.length > 0) {
+        void handleDropOnFolder(folderId, fileIds, folderIds);
+      }
+    },
+    [handleDropOnFolder],
+  );
 
   return (
     <div
@@ -181,7 +219,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
         data-testid="filelist-background-effect-layer"
       >
-        <FileListBackgroundLayer />
+        {/*<FileListBackgroundLayer />*/}
       </div>
 
       <div
@@ -191,7 +229,12 @@ export default function FileList({ onOpenUpload }: FileListProps) {
       >
         {/* 头部组件：包含面包屑和工具栏 */}
         <Suspense
-          fallback={<div className="h-[var(--filelist-header-skeleton-height)]" data-oid="r-g:0nh" />}
+          fallback={
+            <div
+              className="h-[var(--filelist-header-skeleton-height)]"
+              data-oid="r-g:0nh"
+            />
+          }
           data-oid="3jfxvzo"
         >
           <FileListHeader
@@ -268,6 +311,8 @@ export default function FileList({ onOpenUpload }: FileListProps) {
             onCollectionChange={handleCollectionChange}
             onResetFilters={handleResetFilters}
             onTagChange={handleTagChange}
+            onActionDialogOpenChange={setContentActionDialogOpen}
+            onTagDialogOpenChange={onTagDialogOpenChange}
             data-oid="kdv9r9i"
           />
         </Suspense>
@@ -276,6 +321,7 @@ export default function FileList({ onOpenUpload }: FileListProps) {
         <Suspense fallback={null} data-oid="m7bndss">
           <FileListDialogs
             previewFile={previewFile}
+            previewFiles={previewFiles}
             displayFiles={displayFiles}
             displayFileIndexById={displayFileIndexById}
             setPreviewFile={setPreviewFile}

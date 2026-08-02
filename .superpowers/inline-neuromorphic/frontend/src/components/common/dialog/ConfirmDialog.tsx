@@ -155,7 +155,7 @@ export default function ConfirmDialog({
       {/* 背景遮罩 */}
       <div
         className={cn(
-          "absolute inset-0 animate-in fade-in bg-black/40 duration-150",
+          "absolute inset-0 animate-in fade-in bg-[var(--neu-surface-bg)]/80 duration-150",
         )}
         onClick={() => !loading && onCancel()}
         data-oid="r8-ttbu"

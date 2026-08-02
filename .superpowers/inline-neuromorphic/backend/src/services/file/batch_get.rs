@@ -5,7 +5,7 @@
 use uuid::Uuid;
 
 use crate::constants::MAX_BATCH_GET_IDS;
-use crate::models::file::FileResponse;
+use crate::models::file::{File, FileResponse};
 use crate::utils::AppError;
 
 use super::FileService;
@@ -37,5 +37,24 @@ impl FileService {
         let ordered: Vec<Option<FileResponse>> =
             ids.iter().map(|id| map.get(id).cloned()).collect();
         Ok(ordered)
+    }
+
+    pub(crate) async fn get_file_entities_by_ids(
+        &self,
+        user_id: Uuid,
+        ids: &[Uuid],
+    ) -> Result<Vec<Option<File>>, AppError> {
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut map = std::collections::HashMap::new();
+        for chunk in ids.chunks(MAX_BATCH_GET_IDS) {
+            for file in self.files_repo.find_by_ids(user_id, chunk).await? {
+                map.insert(file.id, file);
+            }
+        }
+
+        Ok(ids.iter().map(|id| map.get(id).cloned()).collect())
     }
 }

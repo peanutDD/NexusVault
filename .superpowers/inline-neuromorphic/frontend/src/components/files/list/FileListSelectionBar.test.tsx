@@ -202,6 +202,25 @@ describe("FileListSelectionBar", () => {
     expect(screen.getByLabelText("当前文件夹")).toBeInTheDocument();
   });
 
+  it("loads counts in the root folder scope instead of account-wide counts", async () => {
+    vi.mocked(tagsService.list).mockResolvedValue([]);
+
+    renderSelectionBar({
+      currentFolderId: null,
+      searchQuery: "111",
+      mimeType: "image/",
+    });
+
+    await waitFor(() => {
+      expect(fileListService.getCollectionCounts).toHaveBeenCalledWith({
+        folder_id: "root",
+        search: "111",
+        mime_type: "image/",
+      });
+    });
+    expect(screen.getByLabelText("All Files")).toBeInTheDocument();
+  });
+
   it("refetches counts after file metadata invalidates the collection query", async () => {
     vi.mocked(tagsService.list).mockResolvedValue([]);
     vi.mocked(fileListService.getCollectionCounts)
@@ -262,6 +281,52 @@ describe("FileListSelectionBar", () => {
     expect(onCollectionChange).toHaveBeenCalledWith("recent");
     expect(onTagChange).toHaveBeenCalledWith("tag-1");
     expect(onResetFilters).toHaveBeenCalledOnce();
+  });
+
+  it("routes every visible screenshot chip through Files filter callbacks", async () => {
+    const user = userEvent.setup();
+    const onCollectionChange = vi.fn();
+    const onResetFilters = vi.fn();
+    const onTagChange = vi.fn();
+    vi.mocked(tagsService.list).mockResolvedValue([
+      { id: "tag-3", name: "3", color: "#6366f1" },
+      { id: "tag-s", name: "s", color: "#6366f1" },
+    ]);
+
+    renderSelectionBar({
+      onCollectionChange,
+      onResetFilters,
+      onTagChange,
+    });
+
+    const collectionChips = [
+      ["收藏", "favorites"],
+      ["置顶", "pinned"],
+      ["最近", "recent"],
+      ["未标记", "untagged"],
+      ["文件", "large"],
+      ["重复", "duplicates"],
+      ["图片", "images"],
+      ["PDF", "pdfs"],
+      ["视频", "videos"],
+    ] as const;
+
+    for (const [label] of collectionChips) {
+      await user.click(screen.getByRole("button", { name: label }));
+    }
+    await user.click(await screen.findByRole("button", { name: "标签：3" }));
+    await user.click(await screen.findByRole("button", { name: "标签：s" }));
+    await user.click(screen.getByRole("button", { name: "重置筛选" }));
+    await user.click(screen.getByRole("button", { name: "全部" }));
+
+    expect(onCollectionChange.mock.calls.map(([value]) => value)).toEqual(
+      collectionChips.map(([, value]) => value),
+    );
+    expect(onTagChange.mock.calls.map(([value]) => value)).toEqual([
+      "tag-3",
+      "tag-s",
+    ]);
+    expect(onResetFilters).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the expanded collection rail open when clicking a chip", async () => {
